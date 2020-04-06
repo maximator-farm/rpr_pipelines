@@ -19,36 +19,41 @@ def call(String osName, String tool, Map options)
     if (customBuildLink.startsWith("https://builds.rpr")) 
     {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'builsRPRCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-            switch(osName)
-            {
-                case 'Windows':
-                    bat """
-                        curl -L -o RadeonProRender${tool}_${osName}.zip -u %USERNAME%:%PASSWORD% "${customBuildLink}"
-                    """
-                // OSX & Ubuntu18
-                default:
-                    sh """
-                        curl -L -o RadeonProRender${tool}_${osName}.zip -u %USERNAME%:%PASSWORD% "${customBuildLink}"
-                    """
+            if (osName == "Windows") {
+                bat """
+                    curl -L -o RadeonProRender${tool}_${osName}.zip -u %USERNAME%:%PASSWORD% "${customBuildLink}"
+                """
+            } else {
+                sh """
+                    curl -L -o RadeonProRender${tool}_${osName}.zip -u %USERNAME%:%PASSWORD% '"${customBuildLink}"'
+                """
             }
         }
     }
     else
     {
-        switch(osName)
-        {
-            case 'Windows':
-                bat """
-                    curl -L -o RadeonProRender${tool}_${osName}.zip "${customBuildLink}"
-                """
-            // OSX & Ubuntu18
-            default:
-                sh """
-                    curl -L -o RadeonProRender${tool}_${osName}.zip "${customBuildLink}"
-                """
+        if (osName == "Windows") {
+            bat """
+                curl -L -o RadeonProRender${tool}_${osName}.zip "${customBuildLink}"
+            """
+        } else {
+            sh """
+                curl -L -o RadeonProRender${tool}_${osName}.zip "${customBuildLink}"
+            """
         }
     }
 
     // We haven't any branch so we use sha1 for idetifying plugin build
-    options.commitSHA = sha1 "RadeonProRender${tool}_${osName}.zip"
+    def pluginSha = sha1 "RadeonProRender${tool}_${osName}.zip"
+    switch(osName)
+    {
+        case 'Windows':
+            options.pluginWinSha = pluginSha
+            break;
+        case 'OSX':
+            options.pluginOSXSha = pluginSha
+            break;
+        default:
+            options.pluginUbuntuSha = pluginSha
+    }
 }

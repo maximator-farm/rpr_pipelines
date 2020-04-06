@@ -1,26 +1,25 @@
-def call(String osName, String tool_version, Map options, boolean clear=true, String matlib='')
+def call(String osName, String tool_version, Map options, Boolean matlib=false)
 {
     // temp code for deleting old plugin
     if (osName == 'Windows'){
         println '[INFO] Uninstalling old plugin'
         uninstallMSI("Radeon%Blender%", options.stageName)
     }
-   
-    if (checkExistenceOfBlenderAddon(osName, tool_version, options)) {
-        println '[INFO] Current plugin is already installed.'
-        return false
 
-    } else {
-        println '[INFO] Uninstalling Blender addon'
-        uninstallBlenderAddon(osName, tool_version, options)
-        println '[INFO] Installing plugin'
-        installBlenderAddon(osName, tool_version, options)
-        if (matlib){
-            echo '[INFO] Reinstalling Material Library'
-            uninstallMSI("Radeon%Material%", options.stageName)
-            installMSI(matlib, options.stageName)
-        }
+    // Prebuilt plugin will be reinstalled in any cases
+    if (options.isPreBuilt) { 
+        reinstallBlenderAddon(osName, tool_version, options, matlib)
         return true
+
+    // Check installed plugin and reinstall if needed
+    } else {
+        if (checkExistenceOfBlenderAddon(osName, tool_version, options)) {
+            println '[INFO] Current plugin is already installed.'
+            return false
+        } else {
+            reinstallBlenderAddon(osName, tool_version, options, matlib)
+            return true
+        }
     }
 }
 
@@ -30,7 +29,7 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
 
     println "[INFO] Checking existence of the Blender Addon on test PC."
     println "[INFO] Installer name: ${options.commitSHA}_${osName}.zip"
-    println "[INFO] Installed Blender Addon commit hash: ${options.commitShortSHA}"
+    println "[INFO] Built Blender Addon commit hash: ${options.commitShortSHA}"
 
     try {
 
@@ -41,14 +40,15 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
             case 'Windows':
                 // Reading commit hash from installed addon
                 bat """
-                    echo import getpass >> getInstallerCommitHash.py
+                    echo import os >> getInstallerCommitHash.py
                     echo commit_hash = "unknown" >> getInstallerCommitHash.py
-                    echo init_path = r"C:\\Users\\{username}\\AppData\\Roaming\\Blender Foundation\\Blender\\${tool_version}\\scripts\\addons\\rprblender\\__init__.py".format(username=getpass.getuser()) >> getInstallerCommitHash.py
-                    echo with open(init_path) as f: >> getInstallerCommitHash.py
-                    echo     lines = f.readlines() >> getInstallerCommitHash.py
-                    echo     for line in lines: >> getInstallerCommitHash.py
-                    echo         if line.startswith("version_build"): >> getInstallerCommitHash.py 
-                    echo             commit_hash = line[17:24] >> getInstallerCommitHash.py
+                    echo init_path = r"C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Blender Foundation\\Blender\\${tool_version}\\scripts\\addons\\rprblender\\__init__.py" >> getInstallerCommitHash.py
+                    echo if os.path.exists(init_path): >> getInstallerCommitHash.py
+                    echo     with open(init_path) as f: >> getInstallerCommitHash.py
+                    echo         lines = f.readlines() >> getInstallerCommitHash.py
+                    echo         for line in lines: >> getInstallerCommitHash.py
+                    echo             if line.startswith("version_build"): >> getInstallerCommitHash.py 
+                    echo                 commit_hash = line[17:24] >> getInstallerCommitHash.py
                     echo print(commit_hash) >> getInstallerCommitHash.py 
                 """
 
@@ -58,14 +58,15 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
             case 'OSX':
                 // Reading commit hash from installed addon
                 sh """
-                    echo import getpass >> getInstallerCommitHash.py
+                    echo import os >> getInstallerCommitHash.py
                     echo commit_hash = '"unknown"' >> getInstallerCommitHash.py
-                    echo init_path = r'"/Users/{username}/Library/Application Support/Blender/${tool_version}/scripts/addons/rprblender/__init__.py".format(username=getpass.getuser())' >> getInstallerCommitHash.py
-                    echo with open'(init_path)' as f: >> getInstallerCommitHash.py
-                    echo '    'lines = f.readlines'()' >> getInstallerCommitHash.py
-                    echo '    'for line in lines: >> getInstallerCommitHash.py
-                    echo '        'if line.startswith'("version_build")': >> getInstallerCommitHash.py 
-                    echo '            'commit_hash = line[17:24] >> getInstallerCommitHash.py
+                    echo init_path = r'"/Users/${env.USERNAME}/Library/Application Support/Blender/${tool_version}/scripts/addons/rprblender/__init__.py"' >> getInstallerCommitHash.py
+                    echo if os.path.exists'(init_path)': >> getInstallerCommitHash.py
+                    echo '    'with open'(init_path)' as f: >> getInstallerCommitHash.py
+                    echo '        'lines = f.readlines'()' >> getInstallerCommitHash.py
+                    echo '        'for line in lines: >> getInstallerCommitHash.py
+                    echo '            'if line.startswith'("version_build")': >> getInstallerCommitHash.py 
+                    echo '                'commit_hash = line[17:24] >> getInstallerCommitHash.py
                     echo print'(commit_hash)' >> getInstallerCommitHash.py 
                 """ 
 
@@ -75,14 +76,15 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
             default:
                 // Reading commit hash from installed addon
                 sh """
-                    echo import getpass >> getInstallerCommitHash.py
+                    echo import os >> getInstallerCommitHash.py
                     echo commit_hash = '"unknown"' >> getInstallerCommitHash.py
-                    echo init_path = r'"/home/{username}/.config/blender/${tool_version}/scripts/addons/rprblender/__init__.py".format(username=getpass.getuser())' >> getInstallerCommitHash.py
-                    echo with open'(init_path)' as f: >> getInstallerCommitHash.py
-                    echo '    'lines = f.readlines'()' >> getInstallerCommitHash.py
-                    echo '    'for line in lines: >> getInstallerCommitHash.py
-                    echo '        'if line.startswith'("version_build")': >> getInstallerCommitHash.py 
-                    echo '            'commit_hash = line[17:24] >> getInstallerCommitHash.py
+                    echo init_path = r'"/home/${env.USERNAME}/.config/blender/${tool_version}/scripts/addons/rprblender/__init__.py"' >> getInstallerCommitHash.py
+                    echo if os.path.exists'(init_path)': >> getInstallerCommitHash.py
+                    echo '    'with open'(init_path)' as f: >> getInstallerCommitHash.py
+                    echo '        'lines = f.readlines'()' >> getInstallerCommitHash.py
+                    echo '        'for line in lines: >> getInstallerCommitHash.py
+                    echo '            'if line.startswith'("version_build")': >> getInstallerCommitHash.py 
+                    echo '                'commit_hash = line[17:24] >> getInstallerCommitHash.py
                     echo print'(commit_hash)' >> getInstallerCommitHash.py 
                 """         
                 blenderAddonCommitHash = python3("getInstallerCommitHash.py").trim()
@@ -100,6 +102,19 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
     
     return false
 }
+
+
+def reinstallBlenderAddon(String osName, String tool_version, Map options, Boolean matlib){
+    
+    println '[INFO] Uninstalling Blender addon'
+    uninstallBlenderAddon(osName, tool_version, options)
+    println '[INFO] Installing Blender addon'
+    installBlenderAddon(osName, tool_version, options)
+    if (matlib){
+        installMatLib(osName, options)
+    }
+}
+
 
 
 def uninstallBlenderAddon(String osName, String tool_version, Map options)
@@ -163,11 +178,16 @@ def installBlenderAddon(String osName, String tool_version, Map options)
     {
         switch(osName)
         {
-            case 'Windows':
+            case "Windows":
+                if (options['isPreBuilt']) {
+                    addon_name = "${options.pluginWinSha}"
+                } else {
+                    addon_name = "${options.commitSHA}_Windows"
+                }
                 bat """
                     echo "Installing RPR Addon in Blender" >> ${options.stageName}.install.log
                     echo import bpy >> registerRPRinBlender.py
-                    echo addon_path = "${CIS_TOOLS}\\..\\PluginsBinaries\\\\${options.commitSHA}_${osName}.zip" >> registerRPRinBlender.py
+                    echo addon_path = "${CIS_TOOLS}\\..\\PluginsBinaries\\\\${addon_name}.zip" >> registerRPRinBlender.py
                     echo bpy.ops.preferences.addon_install(filepath=addon_path) >> registerRPRinBlender.py
                     echo bpy.ops.preferences.addon_enable(module="rprblender") >> registerRPRinBlender.py
                     echo bpy.ops.wm.save_userpref() >> registerRPRinBlender.py
@@ -175,12 +195,35 @@ def installBlenderAddon(String osName, String tool_version, Map options)
                     "C:\\Program Files\\Blender Foundation\\Blender ${tool_version}\\blender.exe" -b -P registerRPRinBlender.py >> ${options.stageName}.install.log 2>&1
                 """
                 break;
-            // OSX & Ubuntu18
-            default:
+          
+            case "OSX":
+                if (options['isPreBuilt']) {
+                    addon_name = "${options.pluginOSXSha}"
+                } else {
+                    addon_name = "${options.commitSHA}_OSX"
+                }
                 sh """
                     echo "Installing RPR Addon in Blender" >> ${options.stageName}.install.log
                     echo import bpy >> registerRPRinBlender.py
-                    echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"' >> registerRPRinBlender.py
+                    echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"' >> registerRPRinBlender.py
+                    echo bpy.ops.preferences.addon_install'(filepath=addon_path)' >> registerRPRinBlender.py
+                    echo bpy.ops.preferences.addon_enable'(module="rprblender")' >> registerRPRinBlender.py
+                    echo bpy.ops.wm.save_userpref'()' >> registerRPRinBlender.py
+
+                    blender -b -P registerRPRinBlender.py >> ${options.stageName}.install.log 2>&1
+                """
+                break;
+
+            default:
+                if (options['isPreBuilt']) {
+                    addon_name = "${options.pluginUbuntuSha}"
+                } else {
+                    addon_name = "${options.commitSHA}_${osName}"
+                }
+                sh """
+                    echo "Installing RPR Addon in Blender" >> ${options.stageName}.install.log
+                    echo import bpy >> registerRPRinBlender.py
+                    echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"' >> registerRPRinBlender.py
                     echo bpy.ops.preferences.addon_install'(filepath=addon_path)' >> registerRPRinBlender.py
                     echo bpy.ops.preferences.addon_enable'(module="rprblender")' >> registerRPRinBlender.py
                     echo bpy.ops.wm.save_userpref'()' >> registerRPRinBlender.py
@@ -197,13 +240,3 @@ def installBlenderAddon(String osName, String tool_version, Map options)
     }
 }
 
-
-def installMatLibLinux(String msiName, String logs)
-{
-    receiveFiles("bin_storage/RadeonProRenderMaterialLibraryInstaller_2.0.run", "${CIS_TOOLS}/../TestResources/")
-
-    sh """
-        #!/bin/bash
-        ${CIS_TOOLS}/../TestResources/RadeonProRenderMaterialLibraryInstaller_2.0.run --nox11 -- --just-do-it >> ${logs}.matlib.install.log 2>&1
-    """
-}
