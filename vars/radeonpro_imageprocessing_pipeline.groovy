@@ -13,7 +13,7 @@ def executeTestCommand(String osName)
         dir("unittest")
         {
             bat "mkdir testSave"
-            bat "..\\bin\\release\\x64\\UnitTest64.exe  --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ..\\${STAGE_NAME}.log  2>&1"
+            bat "..\\bin\\Release\\UnitTest.exe -t .\\testSave -r .\\referenceImages --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ..\\${STAGE_NAME}.log  2>&1"
         }
         break;
     case 'OSX':
@@ -28,7 +28,7 @@ def executeTestCommand(String osName)
         dir("unittest")
         {
             sh "mkdir testSave"
-            sh "../bin/release/x64/UnitTest64           --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            sh "../bin/Release/UnitTest  -t ./testSave -r ./referenceImages --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
         }
         break;
     default:
@@ -43,7 +43,7 @@ def executeTestCommand(String osName)
         dir("unittest")
         {
             sh "mkdir testSave"
-            sh "../bin/release/x64/UnitTest64           --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            sh "../bin/Release/UnitTest  -t ./testSave -r ./referenceImages --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
         }
     }
 }
@@ -95,14 +95,9 @@ def executeBuildWindows(String cmakeKeys)
     samplesName = samplesName.replaceAll('[^a-zA-Z0-9-_.]+','')
 
     bat """
-    set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-    set target=build
-    set maxcpucount=/maxcpucount
-    set PATH=C:\\Python27\\;%PATH%
-    .\\tools\\premake\\win\\premake5 --embed_kernels vs2017 --generate_build_info ${cmakeKeys} >> ${STAGE_NAME}.log 2>&1
-    set solution=.\\RadeonImageFilters.sln
-    %msbuild% /target:%target% %maxcpucount% /property:Configuration=Release;Platform=x64 %parameters% %solution% >> ${STAGE_NAME}.log 2>&1
-    %msbuild% /target:%target% %maxcpucount% /property:Configuration=Debug;Platform=x64 %parameters% %solution% >> ${STAGE_NAME}.log 2>&1
+    cmake -G "Visual Studio 15 2017 Win64" ${cmakeKeys} . >> ${STAGE_NAME}.log 2>&1
+    cmake --build . --config Release --target install >> ${STAGE_NAME}.log 2>&1
+    cmake --build . --config Debug --target install >> ${STAGE_NAME}.log 2>&1
     """
 
     bat """
@@ -112,16 +107,19 @@ def executeBuildWindows(String cmakeKeys)
 
     xcopy ${packageName}-dbg ${packageName}-rel /s/y/i
 
-    xcopy bin\\debug\\x64 ${packageName}-dbg\\bin /s/y/i
-    xcopy bin\\release\\x64 ${packageName}-rel\\bin /s/y/i
+    xcopy bin\\debug ${packageName}-dbg\\bin /s/y/i
+    xcopy bin\\release ${packageName}-rel\\bin /s/y/i
 
     cd ${packageName}-rel
-    del /S Gtest64*
-    del /S UnitTest64*
+    del /S Gtest*
+    del /S UnitTest*
+    
+    del /S/Q bin\\models
 
     cd ..\\${packageName}-dbg
-    del /S Gtest64*
-    del /S UnitTest64*
+    del /S Gtest*
+    del /S UnitTest*
+    del /S/Q bin\\models
     """
 
     dir("${packageName}-rel/bin") {
@@ -173,10 +171,12 @@ def executeBuildUnix(String cmakeKeys, String osName, String premakeDir, String 
     String SRC_BUILD = compilerName == "clang-5.0" ? "RadeonImageFilters" : "all"
     sh """
     ${EXPORT_CXX}
-    chmod +x tools/premake/${premakeDir}/premake5
-    tools/premake/${premakeDir}/premake5 --embed_kernels gmake --generate_build_info ${cmakeKeys} >> ${STAGE_NAME}.log 2>&1
-    make ${SRC_BUILD} config=release_x64                                             >> ${STAGE_NAME}.log 2>&1
-    make ${SRC_BUILD} config=debug_x64                                               >> ${STAGE_NAME}.log 2>&1
+    cmake ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release . >> ${STAGE_NAME}.log 2>&1
+    make ${SRC_BUILD} >> ${STAGE_NAME}.log 2>&1
+    make install >> ${STAGE_NAME}.log 2>&1
+    cmake ${cmakeKeys} -DCMAKE_BUILD_TYPE=Debug . >> ${STAGE_NAME}.log 2>&1
+    make ${SRC_BUILD} >> ${STAGE_NAME}.log 2>&1
+    make install >> ${STAGE_NAME}.log 2>&1
     """
 
     sh """
@@ -187,19 +187,21 @@ def executeBuildUnix(String cmakeKeys, String osName, String premakeDir, String 
     cp ${copyKeys} ${packageName}-dbg ${packageName}-rel
 
     mkdir ${packageName}-dbg/bin
-    cp ${copyKeys} bin/debug/x64/* ${packageName}-dbg/bin
+    cp ${copyKeys} bin/Debug/* ${packageName}-dbg/bin
 
     mkdir ${packageName}-rel/bin
-    cp ${copyKeys} bin/release/x64/* ${packageName}-rel/bin
+    cp ${copyKeys} bin/Release/* ${packageName}-rel/bin
     """
 
     if (compilerName != "clang-5.0") {
         sh """
         rm ${packageName}-rel/bin/UnitTest*
         rm ${packageName}-rel/bin/libGtest*
+        rm -fdr ${packageName}-rel/bin/models
 
         rm ${packageName}-dbg/bin/UnitTest*
         rm ${packageName}-dbg/bin/libGtest*
+        rm -fdr ${packageName}-dbg/bin/models
         """
     }
 
@@ -267,7 +269,7 @@ def executeBuild(String osName, Map options)
             executeBuildUnix(options.cmakeKeys, osName, 'linux64', '-r');
             break;
         case 'Ubuntu18-Clang':
-            executeBuildUnix("${options.cmakeKeys} --cxxflags=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, 'linux64', '-r', 'clang-5.0');
+            executeBuildUnix("${options.cmakeKeys} -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, 'linux64', '-r', 'clang-5.0');
             break;
         default:
             error('Unsupported OS');
