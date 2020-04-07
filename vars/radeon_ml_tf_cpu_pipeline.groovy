@@ -28,7 +28,7 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS()
     String error_message = ""
 
     try {

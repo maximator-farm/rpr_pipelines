@@ -25,7 +25,7 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS(osName)
     String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
     String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
     
@@ -143,7 +143,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 {
     if(options['executeTests'] && testResultList)
     {
-        cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        cleanWS()
 
         dir("BuildsArtifacts")
         {

@@ -288,7 +288,7 @@ def executeBuild(String osName, Map options)
 
 def executeDeploy(Map options, List platformList, List testResultList)
 {
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS()
     checkOutBranchOrScm("master", "git@github.com:Radeon-Pro/RadeonProImageProcessingSDK.git")
 
     bat """

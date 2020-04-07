@@ -159,7 +159,7 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS(osName)
     try {
         checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
 
@@ -352,7 +352,7 @@ def executeBuildOSX(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    // cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    // cleanWS(osName)
     try {
         dir('RadeonProRenderMayaPlugin')
         {
@@ -397,7 +397,7 @@ def executePreBuild(Map options)
         //plugin is pre built
         return;
     }
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS()
     currentBuild.description = ""
     ['projectBranch'].each
     {
@@ -586,7 +586,7 @@ def executePreBuild(Map options)
 
 def executeDeploy(Map options, List platformList, List testResultList)
 {
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS()
     try {
         if(options['executeTests'] && testResultList)
         {

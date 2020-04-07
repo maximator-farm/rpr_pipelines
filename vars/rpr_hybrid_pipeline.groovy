@@ -52,7 +52,7 @@ def executeTestCommand(String osName, Map options)
 
 def executeTestsCustomQuality(String osName, String asicName, Map options)
 {
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS(osName)
     String REF_PATH_PROFILE="${options.REF_PATH}/${options.RENDER_QUALITY}/${asicName}-${osName}"
     String JOB_PATH_PROFILE="${options.JOB_PATH}/${options.RENDER_QUALITY}/${asicName}-${osName}"
     String error_message = ""
@@ -283,7 +283,7 @@ def executeBuild(String osName, Map options)
 
 def executeDeploy(Map options, List platformList, List testResultList)
 {
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS()
     if(options['executeTests'] && testResultList) {
         try {
             String reportFiles = ""

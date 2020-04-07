@@ -66,7 +66,7 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS(osName)
 
     downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Assets/", 'RprViewer')
 

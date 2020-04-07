@@ -171,7 +171,7 @@ def executePreBuild(Map options)
 
 def executeDeploy(Map options, List platformList, List testResultList)
 {
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS()
     try
     { 
        

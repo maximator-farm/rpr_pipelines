@@ -95,7 +95,7 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS(osName)
     try {
         checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_max.git')
 
@@ -235,7 +235,7 @@ def executeBuildWindows(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+    cleanWS(osName)
     try {
         dir('RadeonProRenderMaxPlugin')
         {

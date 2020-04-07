@@ -14,7 +14,7 @@ def call(String branchName, String repoName, Boolean disableSubmodules=false, Bo
             echo "[GIT] index.lock file detected. Try to resolve..."
 
             // if has been fount index.lock file - remove all files from workspace and unsafe retry
-            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+            cleanWS()
             executeCheckout(branchName, repoName, disableSubmodules, polling, changelog, credId)
         }
     }
