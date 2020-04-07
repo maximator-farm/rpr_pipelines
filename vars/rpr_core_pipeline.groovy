@@ -1,5 +1,8 @@
 import RBSDevelopment
 import RBSProduction
+import hudson.plugins.git.GitException
+import java.nio.channels.ClosedChannelException
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 
 def executeGenTestRefCommand(String osName, Map options)
@@ -38,20 +41,97 @@ def executeGenTestRefCommand(String osName, Map options)
     }
 }
 
+def getCoreSDK(String osName, Map options)
+{
+    switch(osName)
+    {
+        case 'Windows':
+
+            if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip")) {
+
+                clearBinariesWin()
+
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                unstash "WindowsSDK"
+                
+                bat """
+                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                    copy binWin64.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
+                """
+
+            } else {
+                println "[INFO] The plugin ${options.pluginWinSha}.zip exists in the storage."
+                bat """
+                    copy "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip" binWin64.zip
+                """
+            }
+
+            unzip zipFile: "binWin64.zip", dir: "rprSdk", quiet: true
+
+            break;
+
+        case 'OSX':
+
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip")) {
+
+                clearBinariesUnix()
+
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                unstash "OSXSDK"
+                
+                sh """
+                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                    cp binMacOS.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
+                """ 
+
+            } else {
+                println "[INFO] The plugin ${options.pluginOSXSha}.zip exists in the storage."
+                sh """
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip" binMacOS.zip
+                """
+            }
+
+            unzip zipFile: "binMacOS.zip", dir: "rprSdk", quiet: true
+
+            break;
+
+        default:
+            
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
+
+                clearBinariesUnix()
+
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                unstash "Ubuntu18SDK"
+                
+                sh """
+                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                    cp binUbuntu18.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                """ 
+
+            } else {
+
+                println "[INFO] The plugin ${options.pluginUbuntuSha}.zip exists in the storage."
+                sh """
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip" binUbuntu18.zip
+                """
+            }
+
+            unzip zipFile: "binUbuntu18.zip", dir: "rprSdk", quiet: true
+
+            break;
+    }
+}
+
+
 def executeTestCommand(String osName, Map options)
 {
-    if (!options.skipBuild) {
-        dir('rprSdk') {
-                unstash "${osName}SDK"
-            }
-    }
-
     switch(osName) {
         case 'Windows':
             dir('scripts')
             {
                 bat """
-                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} \"${options.engine}\" >> ../${STAGE_NAME}.log 2>&1
+                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break;
@@ -60,7 +140,7 @@ def executeTestCommand(String osName, Map options)
             {
                 withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                     sh """
-                    ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} \"${options.engine}\" >> ../${STAGE_NAME}.log 2>&1
+                    ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}.log 2>&1
                     """
                 }
             }
@@ -70,7 +150,7 @@ def executeTestCommand(String osName, Map options)
             {
                 withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                     sh """
-                    ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} \"${options.engine}\" >> ../${STAGE_NAME}.log 2>&1
+                    ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}.log 2>&1
                     """
                 }
             }
@@ -84,14 +164,14 @@ def executeTests(String osName, String asicName, Map options)
 
         checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
 
-//        Enable for testing Core Split
-//        if (options.sendToRBS) {
-//            options.rbs_prod.setTester(options)
-//            options.rbs_dev.setTester(options)
-//        }
-
+        if (options.sendToRBS) {
+            options.rbs_prod.setTester(options)
+            options.rbs_dev.setTester(options)
+        }
 
         downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/", 'CoreAssets')
+
+        getCoreSDK(osName, options)
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
         String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
@@ -107,6 +187,8 @@ def executeTests(String osName, String asicName, Map options)
         }
         else if(options.updateRefsByOne)
         {
+            // Update ref images from one card to others 
+            // TODO: Fix hardcode naming
             executeGenTestRefCommand(osName, options)
             ['AMD_RXVEGA', 'AMD_WX9100', 'AMD_WX7100'].each
             {
@@ -116,12 +198,17 @@ def executeTests(String osName, String asicName, Map options)
         else
         {
             try {
-                receiveFiles("${REF_PATH_PROFILE}/*", './Work/Baseline/')
+                options.tests.split(" ").each() {
+                    receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
+                }
             } catch(e) {
                 println("No baseline")
             }
             executeTestCommand(osName, options)
         }
+    }
+    catch(GitException | ClosedChannelException | FlowInterruptedException e) {
+        throw e
     }
     catch (e) {
         println(e.toString());
@@ -134,28 +221,22 @@ def executeTests(String osName, String asicName, Map options)
         echo "Stashing test results to : ${options.testResultsName}"
         dir('Work')
         {
+            def sessionReport = null
             stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
-
-            try
-            {
-                def sessionReport = readJSON file: 'Results/Core/session_report.json'
+            if (fileExists("Results/Core/session_report.json")) {
+                sessionReport = readJSON file: 'Results/Core/session_report.json'
                 // if none launched tests - mark build failed
                 if (sessionReport.summary.total == 0)
                 {
                     options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
                     currentBuild.result = "FAILED"
                 }
-
+            
                 if (options.sendToRBS)
                 {
                     options.rbs_prod.sendSuiteResult(sessionReport, options)
                     options.rbs_dev.sendSuiteResult(sessionReport, options)
                 }
-            }
-            catch (e)
-            {
-                println(e.toString())
-                println(e.getMessage())
             }
         }
     }
@@ -165,8 +246,9 @@ def executeBuildWindows(Map options)
 {
     dir('RadeonProRenderSDK/RadeonProRender/binWin64')
     {
-        stash includes: '**', name: 'WindowsSDK'
         zip archive: true, dir: '.', glob: '', zipFile: 'binWin64.zip'
+        stash includes: 'binWin64.zip', name: 'WindowsSDK'
+        options.pluginWinSha = sha1 'binWin64.zip'
     }
 }
 
@@ -174,8 +256,9 @@ def executeBuildOSX(Map options)
 {
     dir('RadeonProRenderSDK/RadeonProRender/binMacOS')
     {
-        stash includes: '**', name: 'OSXSDK'
         zip archive: true, dir: '.', glob: '', zipFile: 'binMacOS.zip'
+        stash includes: 'binMacOS.zip', name: 'OSXSDK'
+        options.pluginOSXSha = sha1 'binMacOS.zip'
     }
 
 }
@@ -184,11 +267,9 @@ def executeBuildLinux(Map options)
 {
     dir('RadeonProRenderSDK/RadeonProRender/binUbuntu18')
     {
-        stash includes: '**', name: 'Ubuntu18SDK'
         zip archive: true, dir: '.', glob: '', zipFile: 'binUbuntu18.zip'
-
-        // stash includes: 'binCentOS7/*', name: 'CentOSSDK'
-        // zip archive: true, dir: 'binCentOS7', glob: '', zipFile: 'binCentOS7.zip'
+        stash includes: 'binUbuntu18.zip', name: 'Ubuntu18SDK'
+        options.pluginUbuntuSha = sha1 'binUbuntu18.zip'
     }
 
 }
@@ -423,14 +504,12 @@ def call(String projectBranch = "",
          Boolean updateRefs = false,
          Boolean updateRefsByOne = false,
          Boolean enableNotifications = true,
-         Boolean skipBuild = false,
          String renderDevice = "gpu",
          String testsPackage = "Full",
          String tests = "",
          String width = "0",
          String height = "0",
          String iterations = "0",
-         String engine = "",
          Boolean sendToRBS = true) {
     try
     {
@@ -465,7 +544,6 @@ def call(String projectBranch = "",
                                 PRJ_ROOT:PRJ_ROOT,
                                 BUILDER_TAG:'BuilderS',
                                 slackChannel:"${SLACK_CORE_CHANNEL}",
-                                skipBuild:skipBuild,
                                 renderDevice:renderDevice,
                                 testsPackage:testsPackage,
                                 tests:tests.replace(',', ' '),
@@ -476,7 +554,6 @@ def call(String projectBranch = "",
                                 gpusCount:gpusCount,
                                 height:height,
                                 iterations:iterations,
-                                engine:engine.replace(',', ' '),
                                 sendToRBS:sendToRBS,
                                 rbs_prod: rbs_prod,
                                 rbs_dev: rbs_dev
