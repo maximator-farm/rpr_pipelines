@@ -180,20 +180,18 @@ def executeTests(String osName, String asicName, Map options)
                     println "[INFO] Install function return ${newPluginInstalled}"
                 }
                 if (newPluginInstalled) {
-                    // Continue working if cache building will failed 
-                    try {
-                        timeout(time: "3", unit: 'MINUTES') {
-                            buildRenderCache(osName, options.toolVersion, options.stageName)
-                        }
-                    } catch (e) {
-                        println(e.toString())
-                        println("[ERROR] Failed to build cache.")
+                    buildRenderCache(osName, options.toolVersion, options.stageName)
+                    if(!fileExists("./Work/Results/Maya/cache_building.jpg")){
+                        println "[ERROR] Failed to build cache. No output image found."
+                        throw new Exception("No output image")
                     }
                 }
             }
             catch(e) {
                 println(e.toString())
                 println("[ERROR] Failed to install plugin.")
+                // deinstalling broken addon
+                installMSIPlugin(osName, "Maya", options, false, true)
                 currentBuild.result = "FAILED"
                 throw e
             }

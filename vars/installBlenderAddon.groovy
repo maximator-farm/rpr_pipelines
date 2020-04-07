@@ -1,5 +1,12 @@
-def call(String osName, String tool_version, Map options, Boolean matlib=false)
+def call(String osName, String tool_version, Map options, Boolean matlib=false, Boolean deinstall=false)
 {
+    // deinstall plugin from tool pipeline
+    if (deinstall) {
+        println '[INFO] Uninstalling Blender addon'
+        uninstallBlenderAddon(osName, tool_version, options)
+        return
+    }
+
     // temp code for deleting old plugin
     if (osName == 'Windows'){
         println '[INFO] Uninstalling old plugin'

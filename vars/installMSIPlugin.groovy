@@ -1,5 +1,12 @@
-def call(String osName, String tool, Map options, Boolean matlib=false)
+def call(String osName, String tool, Map options, Boolean matlib=false, Boolean deinstall=false)
 {
+
+    // deinstall plugin from tool pipeline
+    if (deinstall) {
+        println "[INFO] Uninstalling RPR Plugin for ${osName}"
+        uninstallPlugin(osName, tool, options)
+        return
+    }
 
     // Prebuilt plugin will be reinstalled in any cases
     if (options.isPreBuilt) { 

@@ -215,20 +215,20 @@ def executeTests(String osName, String asicName, Map options)
                 }
 
                 if (newPluginInstalled) {
-                    // Continue working if cache building will failed 
-                    try {
-                        timeout(time: "3", unit: 'MINUTES') {
-                            buildRenderCache(osName, options.stageName)
+                    timeout(time: "3", unit: 'MINUTES') {
+                        buildRenderCache(osName, options.stageName)
+                        if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
+                            println "[ERROR] Failed to build cache. No output image found."
+                            throw new Exception("No output image")
                         }
-                    } catch (e) {
-                        println(e.toString())
-                        println("[ERROR] Failed to build cache.")
                     }
                 }
-            }
-            catch(e) {
+                
+            } catch(e) {
                 println(e.toString())
                 println("[ERROR] Failed to install plugin")
+                // deinstalling broken addon
+                installBlenderAddon(osName, "2.82", options, false, true)
                 currentBuild.result = "FAILED"
                 throw e
             }
