@@ -152,19 +152,17 @@ def executeGenTestRefCommand(String osName, Map options)
     }
 }
 
-def buildRenderCache(String osName, String log_name)
+def buildRenderCache(String osName, String toolVersion, String log_name)
 {
-    switch(osName)
-    {
-        case 'Windows':
-            // FIX: relative path to blender.exe
-            bat """
-                "C:\\Program Files\\Blender Foundation\\Blender 2.82\\blender.exe" -b -E RPR -f 0 >> ${log_name}.cb.log  2>&1
-            """
-            break;
-        // OSX & Ubuntu18
-        default:
-            sh "blender -b -E RPR -f 0 >> ${log_name}.cb.log  2>&1"
+    dir("scripts") {
+        switch(osName)
+        {
+            case 'Windows':
+                bat "build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}.cb.log  2>&1"
+                break;
+            default:
+                sh "./build_rpr_cache.sh ${toolVersion} >> ../${log_name}.cb.log 2>&1"        
+        }
     }
 }
 
@@ -216,7 +214,7 @@ def executeTests(String osName, String asicName, Map options)
 
                 if (newPluginInstalled) {
                     timeout(time: "3", unit: 'MINUTES') {
-                        buildRenderCache(osName, options.stageName)
+                        buildRenderCache(osName, "2.82", options.stageName)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
                             println "[ERROR] Failed to build cache. No output image found."
                             throw new Exception("No output image")
