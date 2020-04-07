@@ -140,9 +140,22 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
 
                     "C:\\Program Files\\Blender Foundation\\Blender ${tool_version}\\blender.exe" -b -P removeRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
                 """
+
+                if (fileExists("C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Blender Foundation\\Blender\\${tool_version}\\scripts\\addons\\rprblender")) {
+
+                    println "[ERROR] Failed to delete Blender Addon via python script."
+
+                    dir("C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Blender Foundation\\Blender\\${tool_version}\\scripts\\addons") {
+                        bat """
+                            del /q *
+                            for /d %%x in (*) do @rd /s /q "%%x"
+                        """
+                    }
+                }
+
                 break;
-            // OSX & Ubuntu18
-            default:
+            
+            case 'OSX':
                 sh """
                     echo "Disabling RPR Addon for Blender." >> ${options.stageName}.uninstall.log 2>&1
 
@@ -159,6 +172,49 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
 
                     blender -b -P removeRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
                 """
+
+                if (fileExists("/Users/${env.USERNAME}/Library/Application Support/Blender/${tool_version}/scripts/addons/rprblender")) {
+
+                    println "[ERROR] Failed to delete Blender Addon via python script."
+
+                    dir("/Users/${env.USERNAME}/Library/Application Support/Blender/${tool_version}/scripts/addons") {
+                        bat """
+                            rm -rf *
+                        """
+                    }
+                }
+
+                break;
+
+            default:
+
+                sh """
+                    echo "Disabling RPR Addon for Blender." >> ${options.stageName}.uninstall.log 2>&1
+
+                    echo import bpy >> disableRPRAddon.py
+                    echo bpy.ops.preferences.addon_disable'(module="rprblender")'  >> disableRPRAddon.py
+                    echo bpy.ops.wm.save_userpref'()' >> disableRPRAddon.py
+                    blender -b -P disableRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
+
+                    echo "Removing RPR Addon for Blender." >> ${options.stageName}.uninstall.log 2>&1
+
+                    echo import bpy >> removeRPRAddon.py
+                    echo bpy.ops.preferences.addon_remove'(module="rprblender")' >> removeRPRAddon.py
+                    echo bpy.ops.wm.save_userpref'()' >> removeRPRAddon.py
+
+                    blender -b -P removeRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
+                """
+
+                if (fileExists("/home/${env.USERNAME}/.config/blender/${tool_version}/scripts/addons/rprblender")) {
+
+                    println "[ERROR] Failed to delete Blender Addon via python script."
+
+                    dir("/home/${env.USERNAME}/.config/blender/${tool_version}/scripts/addons") {
+                        bat """
+                            rm -rf *
+                        """
+                    }
+                }
         }
     }
     catch(e)
