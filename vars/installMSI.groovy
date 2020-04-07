@@ -1,9 +1,9 @@
-def call(String msiName, String logs="")
+def call(String msiName, String log)
 {
-    logs = logs ?: "${STAGE_NAME}"
+    log = log ?: "${STAGE_NAME}"
     if (fileExists(msiName)){
         bat """
-            msiexec /i "${msiName}" /quiet /qn /L+ie ${logs}.msi.install.log /norestart
+            msiexec /i "${msiName}" /quiet /qn /L+ie ${env.WORKSPACE}\\${log}.msi.install.log /norestart
         """
     }else{
         echo "Missing msi ${msiName}"

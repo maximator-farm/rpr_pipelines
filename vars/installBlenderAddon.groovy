@@ -87,7 +87,7 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
                     echo '                'commit_hash = line[17:24] >> getInstallerCommitHash.py
                     echo print'(commit_hash)' >> getInstallerCommitHash.py 
                 """         
-                blenderAddonCommitHash = python3("getInstallerCommitHash.py").trim()
+                blenderAddonCommitHash = python3("getInstallerCommitHash.py").trim()[1..-2]
         }
 
         println "[INFO] Built Blender Addon commit hash: ${blenderAddonCommitHash}"

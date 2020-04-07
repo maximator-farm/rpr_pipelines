@@ -5,6 +5,53 @@ import java.nio.channels.ClosedChannelException
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 
+def getMaxPluginInstaller(String osName, Map options)
+{
+    switch(osName)
+    {
+        case 'Windows':
+
+            if (options['isPreBuilt']) {
+                if (options.pluginWinSha) {
+                    addon_name = options.pluginWinSha
+                } else {
+                    addon_name = "unknown"
+                }
+            } else {
+                addon_name = options.productCode
+            }
+
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.msi")) {
+
+                clearBinariesWin()
+
+                if (options['isPreBuilt']) {
+                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                    downloadPlugin(osName, "Max", options)
+                    addon_name = options.pluginWinSha
+                } else {
+                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                    unstash "appWindows"
+                }
+
+                bat """
+                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${addon_name}.msi"
+                """
+
+            } else {
+                println "[INFO] The plugin ${addon_name}.msi exists in the storage."
+            }
+
+            break;
+
+        default:
+            echo "[WARNING] ${osName} is not supported"
+    }
+
+}
+
+
 def executeGenTestRefCommand(String osName, Map options)
 {
     executeTestCommand(osName, options)
@@ -25,100 +72,15 @@ def executeGenTestRefCommand(String osName, Map options)
         {
             case 'Windows':
                 bat """
-                make_results_baseline.bat
-                """
-                break;
-            case 'OSX':
-                sh """
-                echo 'sample image' > ./ReferenceImages/sample_image.txt
+                    make_results_baseline.bat
                 """
                 break;
             default:
-                sh """
-                echo 'sample image' > ./ReferenceImages/sample_image.txt
-                """
+                echo "[WARNING] ${osName} is not supported"
         }
     }
 }
 
-def getPlugin(String osName, Map options)
-{
-    String customBuildLink = ""
-    String extension = ""
-
-    switch(osName)
-    {
-        case 'Windows':
-            customBuildLink = options['customBuildLinkWindows']
-            extension = "msi"
-            break;
-        case 'OSX':
-            customBuildLink = options['customBuildLinkOSX']
-            extension = "dmg"
-            break;
-        default:
-            customBuildLink = options['customBuildLinkLinux']
-            extension = "run"
-    }
-
-    if (options['isPreBuilt']) 
-    {
-        print "Use specified pre built plugin .${extension}"
-
-        if (customBuildLink.startsWith("https://builds.rpr")) 
-        {
-            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'builsRPRCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-                if (osName == "Windows")
-                {
-                    bat """
-                    curl -L -o RadeonProRenderMax.${extension} -u %USERNAME%:%PASSWORD% "${customBuildLink}"
-                    """
-                }
-                else
-                {
-                    sh """
-                    curl -L -o RadeonProRenderMax.${extension} -u %USERNAME%:%PASSWORD% "${customBuildLink}"
-                    """
-                }
-            }
-        }
-        else
-        {
-            if (osName == "Windows")
-            {
-                bat """
-                curl -L -o RadeonProRenderMax.${extension} "${customBuildLink}"
-                """
-            }
-            else
-            {
-                sh """
-                curl -L -o RadeonProRenderMax.${extension} "${customBuildLink}"
-                """
-            }
-        }
-
-        def pluginSha = sha1 "RadeonProRenderMax.${extension}"
-
-        switch(osName)
-        {
-            case 'Windows':
-                options.pluginWinSha = pluginSha
-                break;
-            case 'OSX':
-                options.pluginOSXSha = pluginSha
-                break;
-            default:
-                options.pluginUbuntuSha = pluginSha
-        }
-    }
-    else
-    {
-        print "Use plugin ${extension} which is built from source code"
-
-        unstash "app${osName}"
-    }
-}
 
 def executeTestCommand(String osName, Map options)
 {
@@ -147,9 +109,11 @@ def executeTests(String osName, String asicName, Map options)
 
         if (!options['skipBuild']) {
             try {
+                Boolean newPluginInstalled = false
                 timeout(time: "30", unit: 'MINUTES') {
-                    getPlugin(osName, options)
-                    installMSIPlugin(osName, options, 'Max', options.stageName)
+                    getMaxPluginInstaller(osName, options)
+                    newPluginInstalled = installMSIPlugin(osName, 'Max', options)
+                    println "[INFO] Install function return ${newPluginInstalled}"
                 }
             } catch(e) {
                 println(e.toString())
@@ -209,12 +173,12 @@ def executeTests(String osName, String asicName, Map options)
                     options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
                     currentBuild.result = "FAILED"
                 }
-            }
 
-            if (options.sendToRBS)
-            {
-                options.rbs_prod.sendSuiteResult(sessionReport, options)
-                options.rbs_dev.sendSuiteResult(sessionReport, options)
+                if (options.sendToRBS)
+                {
+                    options.rbs_prod.sendSuiteResult(sessionReport, options)
+                    options.rbs_dev.sendSuiteResult(sessionReport, options)
+                }
             }
         }
     }
@@ -225,7 +189,7 @@ def executeBuildWindows(Map options)
     dir("RadeonProRenderMaxPlugin/Package")
     {
         bat """
-        build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
+            build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
 
         String branch_postfix = ""
@@ -240,7 +204,7 @@ def executeBuildWindows(Map options)
         if(branch_postfix)
         {
             bat """
-            rename RadeonProRender*msi *.(${branch_postfix}).msi
+                rename RadeonProRender*msi *.(${branch_postfix}).msi
             """
         }
 
@@ -248,24 +212,26 @@ def executeBuildWindows(Map options)
         String BUILD_NAME = branch_postfix ? "RadeonProRender3dsMax_${options.pluginVersion}.(${branch_postfix}).msi" : "RadeonProRender3dsMax_${options.pluginVersion}.msi"
         rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
-        bat '''
-        for /r %%i in (RadeonProRender*.msi) do copy %%i RadeonProRenderMax.msi
-        '''
+        bat """
+            rename  RadeonProRender*.msi RadeonProRenderMax.msi
+        """
+
+        bat """
+            echo import msilib >> getMsiProductCode.py
+            echo db = msilib.OpenDatabase(r'RadeonProRenderMax.msi', msilib.MSIDBOPEN_READONLY) >> getMsiProductCode.py
+            echo view = db.OpenView("SELECT Value FROM Property WHERE Property='ProductCode'") >> getMsiProductCode.py
+            echo view.Execute(None) >> getMsiProductCode.py
+            echo print(view.Fetch().GetString(1)) >> getMsiProductCode.py
+        """
+
+        options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
+
+        println "[INFO] Built MSI product code: ${options.productCode}"
 
         stash includes: 'RadeonProRenderMax.msi', name: 'appWindows'
-        options.pluginWinSha = sha1 'RadeonProRenderMax.msi'
     }
 }
 
-def executeBuildOSX(Map options)
-{
-
-}
-
-def executeBuildLinux(Map options)
-{
-
-}
 
 def executeBuild(String osName, Map options)
 {
@@ -283,11 +249,8 @@ def executeBuild(String osName, Map options)
         case 'Windows':
             executeBuildWindows(options);
             break;
-        case 'OSX':
-            executeBuildOSX(options);
-            break;
         default:
-            executeBuildLinux(options);
+            echo "[WARNING] ${osName} is not supported"
         }
 
         //stash includes: 'Bin/**/*', name: "app${osName}"

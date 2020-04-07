@@ -5,6 +5,83 @@ import java.nio.channels.ClosedChannelException
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 
+def getMayaPluginInstaller(String osName, Map options)
+{
+    switch(osName)
+    {
+        case 'Windows':
+
+            if (options['isPreBuilt']) {
+                if (options.pluginWinSha) {
+                    addon_name = options.pluginWinSha
+                } else {
+                    addon_name = "unknown"
+                }
+            } else {
+                addon_name = options.productCode
+            }
+
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.msi")) {
+
+                clearBinariesWin()
+
+                if (options['isPreBuilt']) {
+                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                    downloadPlugin(osName, "Maya", options)
+                    addon_name = options.pluginWinSha
+                } else {
+                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                    unstash "appWindows"
+                }
+
+                bat """
+                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${addon_name}.msi"
+                """
+
+            } else {
+                println "[INFO] The plugin ${addon_name}.msi exists in the storage."
+            }
+
+            break;
+
+        case "OSX":
+
+            if (!options.pluginOSXSha) {
+                options.pluginOSXSha = "unknown"
+            }
+
+            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg"))
+            {
+                clearBinariesUnix()
+
+                if (options['isPreBuilt']) {
+                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                    downloadPlugin(osName, "Maya", options)
+                    addon_name = options.pluginOSXSha
+                } else {
+                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                    unstash "appOSX"
+                }
+
+                sh """
+                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                    mv RadeonProRenderMaya*.dmg "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg"
+                """
+
+            } else {
+                println "[INFO] The plugin ${options.pluginOSXSha}.dmg exists in the storage."
+            }
+
+            break;
+
+        default:
+            echo "[WARNING] ${osName} is not supported"
+    }
+
+}
+
+
 def executeGenTestRefCommand(String osName, Map options)
 {
     executeTestCommand(osName, options)
@@ -28,113 +105,30 @@ def executeGenTestRefCommand(String osName, Map options)
                 make_results_baseline.bat
                 """
                 break;
-            case 'OSX':
-                sh """
-                ./make_results_baseline.sh
-                """
-                break;
+            // OSX 
             default:
                 sh """
                 ./make_results_baseline.sh
                 """
+                break;
         }
     }
 }
 
-def getPlugin(String osName, Map options)
-{
-    String customBuildLink = ""
-    String extension = ""
-
-    switch(osName)
-    {
-        case 'Windows':
-            customBuildLink = options['customBuildLinkWindows']
-            extension = "msi"
-            break;
-        case 'OSX':
-            customBuildLink = options['customBuildLinkOSX']
-            extension = "dmg"
-            break;
-        default:
-            customBuildLink = options['customBuildLinkLinux']
-            extension = "run"
-    }
-
-    if (options['isPreBuilt']) 
-    {
-        print "Use specified pre built plugin .${extension}"
-
-        if (customBuildLink.startsWith("https://builds.rpr")) 
-        {
-            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'builsRPRCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-                if (osName == "Windows")
-                {
-                    bat """
-                    curl -L -o RadeonProRenderMaya.${extension} -u %USERNAME%:%PASSWORD% "${customBuildLink}"
-                    """
-                }
-                else
-                {
-                    sh """
-                    curl -L -o RadeonProRenderMaya.${extension} -u %USERNAME%:%PASSWORD% "${customBuildLink}"
-                    """
-                }
-            }
-        }
-        else
-        {
-            if (osName == "Windows")
-            {
-                bat """
-                curl -L -o RadeonProRenderMaya.${extension} "${customBuildLink}"
-                """
-            }
-            else
-            {
-                sh """
-                curl -L -o RadeonProRenderMaya.${extension} "${customBuildLink}"
-                """
-            }
-        }
-
-        def pluginSha = sha1 "RadeonProRenderMaya.${extension}"
-
-        switch(osName)
-        {
-            case 'Windows':
-                options.pluginWinSha = pluginSha
-                break;
-            case 'OSX':
-                options.pluginOSXSha = pluginSha
-                break;
-            default:
-                options.pluginUbuntuSha = pluginSha
-        }
-    }
-    else
-    {
-        print "Use plugin ${extension} which is built from source code"
-
-        unstash "app${osName}"
-    }
-}
 
 def buildRenderCache(String osName, String toolVersion, String log_name)
 {
-    switch(osName) {
-        case 'Windows':
-            dir("scripts") {
+    dir("scripts") {
+        switch(osName) {
+            case 'Windows':
                 bat "build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}.cb.log  2>&1"
-            }
-            break;
-        case 'OSX':
-            dir("scripts") {
+                break;
+            case 'OSX':
                 sh "./build_rpr_cache.sh ${toolVersion} >> ../${log_name}.cb.log 2>&1"
-            }
-            break;
-        default:
-            echo "pass"
+                break;
+            default:
+                echo "[WARNING] ${osName} is not supported"
+        }
     }
 }
 
@@ -142,26 +136,24 @@ def executeTestCommand(String osName, Map options)
 {
     switch(osName)
     {
-    case 'Windows':
-        dir('scripts')
-        {
-            bat """
-                run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} >> ../${options.stageName}.log  2>&1
-            """
-        }
-        break;
-    case 'OSX':
-        dir('scripts')
-        {
-            sh """
-                ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} >> ../${options.stageName}.log 2>&1
-            """
-        }
-        break;
-    default:
-        sh """
-            echo 'sample image' > ./OutputImages/sample_image.txt
-        """
+        case 'Windows':
+            dir('scripts')
+            {
+                bat """
+                    run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} >> ../${options.stageName}.log  2>&1
+                """
+            }
+            break;
+        case 'OSX':
+            dir('scripts')
+            {
+                sh """
+                    ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} >> ../${options.stageName}.log 2>&1
+                """
+            }
+            break;
+        default:
+            echo "[WARNING] ${osName} is not supported"
     }
 }
 
@@ -183,8 +175,8 @@ def executeTests(String osName, String asicName, Map options)
             try {
                 Boolean newPluginInstalled = false
                 timeout(time: "30", unit: 'MINUTES') {
-                    getPlugin(osName, options)
-                    newPluginInstalled = installMSIPlugin(osName, options, 'Maya', options.stageName)
+                    getMayaPluginInstaller(osName, options)
+                    newPluginInstalled = installMSIPlugin(osName, 'Maya', options)
                     println "[INFO] Install function return ${newPluginInstalled}"
                 }
                 if (newPluginInstalled) {
@@ -258,12 +250,12 @@ def executeTests(String osName, String asicName, Map options)
                     options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
                     currentBuild.result = "FAILED"
                 }
-            }
 
-            if (options.sendToRBS)
-            {
-                options.rbs_prod.sendSuiteResult(sessionReport, options)
-                options.rbs_dev.sendSuiteResult(sessionReport, options)
+                if (options.sendToRBS)
+                {
+                    options.rbs_prod.sendSuiteResult(sessionReport, options)
+                    options.rbs_dev.sendSuiteResult(sessionReport, options)
+                }
             }
         }
     }
@@ -274,26 +266,23 @@ def executeBuildWindows(Map options)
     dir('RadeonProRenderMayaPlugin\\MayaPkg')
     {
         bat """
-        build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
+            build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
 
         String branch_postfix = ""
         if(env.BRANCH_NAME && BRANCH_NAME != "master")
         {
             branch_postfix = BRANCH_NAME.replace('/', '-').trim()
-            echo "Detected as autobuild, postfix: ${branch_postfix}"
         }
         if(env.Branch && Branch != "master")
         {
             branch_postfix = Branch.replace('/', '-').trim()
-            echo "Detected as manualbuild, postfix: ${branch_postfix}"
         }
         if(branch_postfix)
         {
             bat """
-            rename RadeonProRender*msi *.(${branch_postfix}).msi
+                rename RadeonProRender*msi *.(${branch_postfix}).msi
             """
-            echo "Rename build"
         }
 
         archiveArtifacts "RadeonProRender*.msi"
@@ -301,11 +290,22 @@ def executeBuildWindows(Map options)
         rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
         bat """
-        for /r %%i in (RadeonProRender*.msi) do copy %%i RadeonProRenderMaya.msi
+            rename RadeonProRender*.msi RadeonProRenderMaya.msi
         """
 
+        bat """
+            echo import msilib >> getMsiProductCode.py
+            echo db = msilib.OpenDatabase(r'RadeonProRenderMaya.msi', msilib.MSIDBOPEN_READONLY) >> getMsiProductCode.py
+            echo view = db.OpenView("SELECT Value FROM Property WHERE Property='ProductCode'") >> getMsiProductCode.py
+            echo view.Execute(None) >> getMsiProductCode.py
+            echo print(view.Fetch().GetString(1)) >> getMsiProductCode.py
+        """
+
+        options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
+
+        println "[INFO] Built MSI product code: ${options.productCode}"
+
         stash includes: 'RadeonProRenderMaya.msi', name: 'appWindows'
-        options.pluginWinSha = sha1 'RadeonProRenderMaya.msi'
     }
 }
 
@@ -314,7 +314,7 @@ def executeBuildOSX(Map options)
     dir('RadeonProRenderMayaPlugin/MayaPkg')
     {
         sh """
-        ./build_osx_installer.sh >> ../../${STAGE_NAME}.log 2>&1
+            ./build_osx_installer.sh >> ../../${STAGE_NAME}.log 2>&1
         """
 
         dir('.installer_build')
@@ -323,35 +323,32 @@ def executeBuildOSX(Map options)
             if(env.BRANCH_NAME && BRANCH_NAME != "master")
             {
                 branch_postfix = BRANCH_NAME.replace('/', '-').trim()
-                echo "Detected as autobuild, postfix: ${branch_postfix}"
             }
             if(env.Branch && Branch != "master")
             {
                 branch_postfix = Branch.replace('/', '-').trim()
-                echo "Detected as manualbuild, postfix: ${branch_postfix}"
             }
             if(branch_postfix)
             {
                 sh"""
-                for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${branch_postfix})\${i#\$name}"; done
+                    for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${branch_postfix})\${i#\$name}"; done
                 """
-                echo "Rename build"
             }
+
             archiveArtifacts "RadeonProRender*.dmg"
             String BUILD_NAME = branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${branch_postfix}).dmg" : "RadeonProRenderMaya_${options.pluginVersion}.dmg"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             sh "cp RadeonProRender*.dmg RadeonProRenderMaya.dmg"
             stash includes: 'RadeonProRenderMaya.dmg', name: "appOSX"
+
+            // TODO: detect ID of installed plugin
+            options.productCode = "unknown"
             options.pluginOSXSha = sha1 'RadeonProRenderMaya.dmg'
         }
     }
 }
 
-def executeBuildLinux(Map options)
-{
-
-}
 
 def executeBuild(String osName, Map options)
 {
@@ -373,10 +370,9 @@ def executeBuild(String osName, Map options)
             executeBuildOSX(options);
             break;
         default:
-            executeBuildLinux(options);
+            echo "[WARNING] ${osName} is not supported"
         }
-    }
-    catch (e) {
+    } catch (e) {
         currentBuild.result = "FAILED"
         if (options.sendToRBS)
         {

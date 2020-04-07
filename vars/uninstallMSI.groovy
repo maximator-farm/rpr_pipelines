@@ -1,13 +1,13 @@
-def call(String name, String logs="") //for example: "Blender%' and Version ='2.80.0"
+def call(String name, String log)
 {
-    logs = logs ?: "${STAGE_NAME}"
+    log = log ?: "${STAGE_NAME}"
     try{
         powershell"""
             \$rpr_plugin = Get-WmiObject -Class Win32_Product -Filter "Name LIKE '${name}'"
             if (\$rpr_plugin) {
                 Write "Uninstalling..."
                 \$rpr_plugin_id = \$rpr_plugin.IdentifyingNumber
-                start-process "msiexec.exe" -arg "/X \$rpr_plugin_id /qn /quiet /L+ie ${logs}.msi.uninstall.log /norestart" -Wait
+                start-process "msiexec.exe" -arg "/X \$rpr_plugin_id /qn /quiet /L+ie ${env.WORKSPACE}\\${log}.msi.uninstall.log /norestart" -Wait
             }else{
                 Write "Plugin not found"
             }
