@@ -75,6 +75,21 @@ def executeBuildWindows(Map options)
     xcopy ..\\third_party\\miopen\\MIOpen.dll .\\Release\\MIOpen.dll*
     """
 
+    if (env.TAG_NAME) {
+        dir("rml-deploy") {
+            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
+            bat """
+                MD "miopen\\${CIS_OS}"
+                xcopy ..\\build-direct\\Release "miopen\\${CIS_OS}" /s/y/i
+                git config --local user.name "radeonbuildmaster"
+                git config --local user.email "radeonprorender.buildmaster@gmail.com"
+                git add --all
+                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
+                git push origin HEAD:master
+            """
+        }
+    }
+
     bat """
     mkdir build-direct-debug
     cd build-direct-debug
@@ -100,7 +115,23 @@ def executeBuildLinux(Map options)
     
     tar cf ${CIS_OS}_Release.tar Release
     """
+
     archiveArtifacts "build-direct/${CIS_OS}_Release.tar"
+
+    if (env.TAG_NAME) {
+        dir("rml-deploy") {
+            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
+            sh """
+                mkdir -p miopen/${CIS_OS}
+                cp -r ../build-direct/Release/* ./miopen/${CIS_OS}
+                git config --local user.name "radeonbuildmaster"
+                git config --local user.email "radeonprorender.buildmaster@gmail.com"
+                git add --all
+                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
+                git push origin HEAD:master
+            """
+        }
+    }
 
     sh """
     mkdir build-direct-debug
