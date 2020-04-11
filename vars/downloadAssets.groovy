@@ -2,7 +2,7 @@ def call(String repo)
 {
     print('Try clone repo with assets')
     try{
-        dir("${CIS_TOOLS}/../../TestResources/${repo}")
+        dir("${CIS_TOOLS}/../TestResources/${repo}")
         {
             checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/${repo}.git", true)
         }
