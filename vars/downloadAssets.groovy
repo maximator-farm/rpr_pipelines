@@ -1,4 +1,4 @@
-def call(String repo)
+def call(String osName, String repo)
 {
     print('Try clone repo with assets#')
     try{
@@ -10,7 +10,7 @@ def call(String repo)
                     checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/{$repo}.git")
                 }
             break;
-            
+
             default:
                 dir("/mnt/c/TestResources/")
                 {
