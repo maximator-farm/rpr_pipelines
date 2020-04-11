@@ -69,7 +69,7 @@ def executeBuildWindows(Map options)
     bat """
     mkdir build-direct
     cd build-direct
-    cmake -G "Visual Studio 15 2017 Win64" ${options['cmakeKeys']} .. >> ..\\${STAGE_NAME}.Release.log 2>&1
+    cmake -G "Visual Studio 15 2017 Win64" ${options.cmakeKeys(env.WORKSPACE)} .. >> ..\\${STAGE_NAME}.Release.log 2>&1
     set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
     %msbuild% RadeonML.sln -property:Configuration=Release >> ..\\${STAGE_NAME}.Release.log 2>&1
     xcopy ..\\third_party\\miopen\\MIOpen.dll .\\Release\\MIOpen.dll*
@@ -93,7 +93,7 @@ def executeBuildWindows(Map options)
     bat """
     mkdir build-direct-debug
     cd build-direct-debug
-    cmake -G "Visual Studio 15 2017 Win64" ${options['cmakeKeys']} -DRML_LOG_LEVEL=Debug .. >> ..\\${STAGE_NAME}.Debug.log 2>&1
+    cmake -G "Visual Studio 15 2017 Win64" ${options.cmakeKeys(env.WORKSPACE)} -DRML_LOG_LEVEL=Debug .. >> ..\\${STAGE_NAME}.Debug.log 2>&1
     set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
     %msbuild% RadeonML.sln -property:Configuration=Debug >> ..\\${STAGE_NAME}.Debug.log 2>&1
     """
@@ -108,7 +108,7 @@ def executeBuildLinux(Map options)
     sh """
     mkdir build-direct
     cd build-direct
-    cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.Release.log 2>&1
+    cmake ${options.cmakeKeys(env.WORKSPACE)} .. >> ../${STAGE_NAME}.Release.log 2>&1
     make -j >> ../${STAGE_NAME}.Release.log 2>&1
     mv bin Release
     cp ../third_party/miopen/libMIOpen.so* ./Release
@@ -136,7 +136,7 @@ def executeBuildLinux(Map options)
     sh """
     mkdir build-direct-debug
     cd build-direct-debug
-    cmake ${options['cmakeKeys']} -DRML_LOG_LEVEL=Debug .. >> ../${STAGE_NAME}.Debug.log 2>&1
+    cmake ${options.cmakeKeys(env.WORKSPACE)} -DRML_LOG_LEVEL=Debug .. >> ../${STAGE_NAME}.Debug.log 2>&1
     make -j >> ../${STAGE_NAME}.Debug.log 2>&1
     mv bin Debug
     """
@@ -251,7 +251,7 @@ def call(String projectBranch = "",
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
-         String cmakeKeys = '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DMIOpen_INCLUDE_DIR=../third_party/miopen -DMIOpen_LIBRARY_DIR=../third_party/miopen')
+         def cmakeKeys = { cdws -> "-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DMIOpen_INCLUDE_DIR=${cdws}/third_party/miopen -DMIOpen_LIBRARY_DIR=${cdws}/third_party/miopen"})
 {
 
 
