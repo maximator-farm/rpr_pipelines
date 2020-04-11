@@ -5,16 +5,16 @@ def call(String osName, String repo)
         switch(osName)
         {
             case 'Windows':
-                dir("${CIS_TOOLS}/../../TestResources/$repo")
+                dir("${CIS_TOOLS}/../../TestResources/${repo}")
                 {
-                    checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/$repo\.git")
+                    checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/${repo}.git")
                 }
             break;
 
             default:
-                dir("/mnt/c/TestResources/$repo")
+                dir("/mnt/c/TestResources/${repo}")
                 {
-                    checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/$repo\.git")
+                    checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/${repo}.git")
                 }
         }
     } catch(e){
