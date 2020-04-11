@@ -1,21 +1,10 @@
-def call(String osName, String repo)
+def call(String repo)
 {
     print('Try clone repo with assets')
     try{
-        switch(osName)
+        dir("${CIS_TOOLS}/../../TestResources/${repo}")
         {
-            case 'Windows':
-                dir("${CIS_TOOLS}/../../TestResources/${repo}")
-                {
-                    checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/${repo}.git", true)
-                }
-            break;
-
-            default:
-                dir("/mnt/c/TestResources/${repo}")
-                {
-                    checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/${repo}.git", true)
-                }
+            checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/${repo}.git", true)
         }
     } catch(e){
         println(e.toString());
