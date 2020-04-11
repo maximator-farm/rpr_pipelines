@@ -84,8 +84,6 @@ def getMayaPluginInstaller(String osName, Map options)
 
 def executeGenTestRefCommand(String osName, Map options)
 {
-    executeTestCommand(osName, options)
-
     try
     {
         //for update existing manifest file
@@ -159,14 +157,28 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    cleanWS(osName)
+    // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
+    Boolean stashResults = true
+    
     try {
-        checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
 
-        // setTester in rbs
-        if (options.sendToRBS) {
-            options.rbs_prod.setTester(options)
-            options.rbs_dev.setTester(options)
+        timeout(time: "5", unit: 'MINUTES') {
+            try {
+
+                cleanWS(osName)
+                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
+
+                // setTester in rbs
+                if (options.sendToRBS) {
+                    options.rbs_prod.setTester(options)
+                    options.rbs_dev.setTester(options)
+                }
+            } catch(e) {
+                println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
+                println(e.toString())
+                currentBuild.result = "FAILED"
+                throw e
+            }
         }
 
         downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MayaAssets/", 'MayaAssets')
@@ -174,22 +186,24 @@ def executeTests(String osName, String asicName, Map options)
         if (!options['skipBuild']) {
             try {
                 Boolean newPluginInstalled = false
-                timeout(time: "30", unit: 'MINUTES') {
+                timeout(time: "15", unit: 'MINUTES') {
                     getMayaPluginInstaller(osName, options)
                     newPluginInstalled = installMSIPlugin(osName, 'Maya', options)
-                    println "[INFO] Install function return ${newPluginInstalled}"
+                    println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
                 if (newPluginInstalled) {
-                    buildRenderCache(osName, options.toolVersion, options.stageName)
-                    if(!fileExists("./Work/Results/Maya/cache_building.jpg")){
-                        println "[ERROR] Failed to build cache. No output image found."
-                        throw new Exception("No output image")
+                    timeout(time: "5", unit: 'MINUTES') {
+                        buildRenderCache(osName, options.toolVersion, options.stageName)
+                        if(!fileExists("./Work/Results/Maya/cache_building.jpg")){
+                            println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
+                            throw new Exception("No output image during build cache")
+                        }
                     }
                 }
             }
             catch(e) {
                 println(e.toString())
-                println("[ERROR] Failed to install plugin.")
+                println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
                 // deinstalling broken addon
                 installMSIPlugin(osName, "Maya", options, false, true)
                 currentBuild.result = "FAILED"
@@ -206,55 +220,72 @@ def executeTests(String osName, String asicName, Map options)
 
         if(options['updateRefs'])
         {
+            executeTestCommand(osName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         }
         else
         {
-            try {
+            try 
+            {
+                println "[INFO] Downloading reference images for ${options.tests}"
                 receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
                 }
-            } catch (e) {println("Baseline doesn't exist.")}
+            } catch (e) {
+                println("[WARNING] Baseline doesn't exist.")
+            }
 
             executeTestCommand(osName, options)
         }
-    }
-    catch(GitException | ClosedChannelException | FlowInterruptedException e) {
-        throw e
-    }
-    catch (e) {
-        println(e.toString());
-        println(e.getMessage());
-        if (!options.splitTestsExecution) {
+    } catch (e) {
+        if (options.currentTry < options.nodeReallocateTries) {
+            stashResults = false
+        } else {
+            // will not be retried. mark as feailed
             currentBuild.result = "FAILED"
-            throw e
         }
-    }
-    finally
-    {
+        println(e.toString())
+        println(e.getMessage())
+        options.failureMessage = "Failed during testing: ${asicName}-${osName}"
+        options.failureError = e.getMessage()
+        throw e
+    } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-        echo "Stashing test results to : ${options.testResultsName}"
-        dir('Work')
-        {
-            def sessionReport = null
-            stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
-            if (fileExists("Results/Maya/session_report.json")) {
-                sessionReport = readJSON file: 'Results/Maya/session_report.json'
-                // if none launched tests - mark build failed
-                if (sessionReport.summary.total == 0)
-                {
-                    options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
-                    currentBuild.result = "FAILED"
-                }
+        if (stashResults) {
+            dir('Work')
+            {
+                if (fileExists("Results/Maya/session_report.json")) {
 
-                if (options.sendToRBS)
-                {
-                    options.rbs_prod.sendSuiteResult(sessionReport, options)
-                    options.rbs_dev.sendSuiteResult(sessionReport, options)
+                    def sessionReport = null
+                    sessionReport = readJSON file: 'Results/Maya/session_report.json'
+
+                    // if none launched tests - mark build failed
+                    if (sessionReport.summary.total == 0)
+                    {
+                        options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
+                        currentBuild.result = "FAILED"
+                    }
+
+                    // deinstalling broken addon
+                    if (sessionReport.summary.total == sessionReport.summary.error) {
+                        installMSIPlugin(osName, "Maya", options, false, true)
+                    }
+
+                    if (options.sendToRBS)
+                    {
+                        options.rbs_prod.sendSuiteResult(sessionReport, options)
+                        options.rbs_dev.sendSuiteResult(sessionReport, options)
+                    }
+
+                    echo "Stashing test results to : ${options.testResultsName}"
+                    stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+
                 }
             }
+        } else {
+            println "[INFO] Task ${options.tests} will be retried."
         }
     }
 }
@@ -733,7 +764,7 @@ def call(String projectBranch = "",
         String tests = "",
         String toolVersion = "2020",
         Boolean forceBuild = false,
-        Boolean splitTestsExecution = false,
+        Boolean splitTestsExecution = true,
         Boolean sendToRBS = true,
         String resX = '0',
         String resY = '0',
@@ -824,7 +855,7 @@ def call(String projectBranch = "",
                                 splitTestsExecution:splitTestsExecution,
                                 sendToRBS:sendToRBS,
                                 gpusCount:gpusCount,
-                                TEST_TIMEOUT:660,
+                                TEST_TIMEOUT:120,
                                 DEPLOY_TIMEOUT:120,
                                 TESTER_TAG:'Maya',
                                 rbs_prod: rbs_prod,

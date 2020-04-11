@@ -25,13 +25,15 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                         String testerTag = options.TESTER_TAG ? "${options.TESTER_TAG} && Tester" : "Tester"
                         // reallocate node for each test
                         String nodeLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
-                        int nodeReallocateTries = 3
+                        options.nodeLabels = nodeLabels
+                        options.nodeReallocateTries = 3
                         boolean successCurrentNode = false
-                        for (int i = 0; i < nodeReallocateTries; i++)
+                        for (int i = 0; i < options.nodeReallocateTries; i++)
                         {
                             node(nodeLabels)
                             {
-                                println("Launched at: ${NODE_NAME}")
+                                println("[INFO] Launched ${testName} task at: ${env.NODE_NAME}")
+                                options.currentTry = i
                                 timeout(time: "${options.TEST_TIMEOUT}", unit: 'MINUTES')
                                 {
                                     ws("WS/${options.PRJ_NAME}_Test")
@@ -42,22 +44,22 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                         newOptions['tests'] = testName ? testName : options.tests
                                         try {
                                             executeTests(osName, asicName, newOptions)
-                                            i = nodeReallocateTries + 1
+                                            i = options.nodeReallocateTries + 1
                                             successCurrentNode = true
                                         }
-                                        catch( GitException | ClosedChannelException | FlowInterruptedException | RequestAbortedException | IllegalArgumentException e) {
-                                            println("[ERROR] on allocated node")
-                                            println("Exception:")
-                                            println(e.toString())
-                                            println("Exception message:")
-                                            println(e.getMessage())
-                                            println("Exception cause:")
-                                            println(e.getCause())
-                                            println("Exception stack trace:")
-                                            println(e.getStackTrace())
+                                        // old exceptions : GitException | ClosedChannelException | FlowInterruptedException | RequestAbortedException | IllegalArgumentException
+                                        catch(Exception e) {
+                                            println "[ERROR] Failed during tests on ${env.NODE_NAME} node"
+                                            println "Exception: ${e.toString()}"
+                                            println "Exception message: ${e.getMessage()}"
+                                            println "Exception cause: ${e.getCause()}"
+                                            println "Exception stack trace: ${e.getStackTrace()}"
+
                                             // currentBuild.result = 'FAILURE'
                                             // nodeLabels += " && !${NODE_NAME}"
-                                            if (i >= nodeReallocateTries) {
+
+                                            if (i >= options.nodeReallocateTries) {
+                                                println "[ERROR] All attempts are exhausted."
                                                 throw e
                                             }
                                         }
@@ -66,7 +68,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                             }
                         }
                         if (!successCurrentNode) {
-                            error "All allocated nodes corrupted"
+                            error "[ERROR] All allocated nodes failed."
                         }
                     }
 
@@ -77,7 +79,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
     }
     else
     {
-        echo "No tests found for ${osName}"
+        echo "[WARNING] No tests found for ${osName}"
     }
 }
 
@@ -108,12 +110,12 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
         }
         catch (e)
         {
-            println("[ERROR] executePlatform throw the exception:")
-            println(e.toString());
-            println(e.getMessage());
-            println(e.getCause())
-            println(e.getStackTrace())
-            println("---")
+            println "[ERROR] executePlatform throw the exception"
+            println "Exception: ${e.toString()}"
+            println "Exception message: ${e.getMessage()}"
+            println "Exception cause: ${e.getCause()}"
+            println "Exception stack trace: ${e.getStackTrace()}"
+
             currentBuild.result = "FAILURE"
             options.FAILED_STAGES.add(e.toString())
             throw e
