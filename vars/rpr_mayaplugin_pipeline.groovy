@@ -170,7 +170,7 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         dir("${CIS_TOOLS}/../TestResources/"){
-            checkOutBranchOrScm(options['testsBranch'], "https://gitlab.cts.luxoft.com/dtarasenko/maya_assets.git")
+            checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/maya_assets.git")
         }
 
         if (!options['skipBuild']) {
