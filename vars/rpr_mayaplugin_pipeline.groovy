@@ -169,9 +169,7 @@ def executeTests(String osName, String asicName, Map options)
             options.rbs_dev.setTester(options)
         }
 
-        dir("${CIS_TOOLS}/../TestResources/"){
-            checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/maya_assets.git")
-        }
+        downloadAssets('maya_assets')
 
         if (!options['skipBuild']) {
             try {
