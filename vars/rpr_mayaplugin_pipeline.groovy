@@ -169,7 +169,7 @@ def executeTests(String osName, String asicName, Map options)
             options.rbs_dev.setTester(options)
         }
 
-        downloadAssets(osName, 'maya_assets')
+        downloadAssets(osName, 'maya_assets', true)
 
         if (!options['skipBuild']) {
             try {
