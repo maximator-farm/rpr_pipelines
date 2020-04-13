@@ -169,7 +169,7 @@ def executeTests(String osName, String asicName, Map options)
             options.rbs_dev.setTester(options)
         }
 
-        dir("${CIS_TOOLS}/../TestResources/${repo}")
+        dir("${CIS_TOOLS}/../TestResources/maya_assets")
         {
             checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/maya_assets.git", true)
         }
