@@ -68,7 +68,8 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                             }
                         }
                         if (!successCurrentNode) {
-                            error "[ERROR] All allocated nodes failed."
+                            currentBuild.result = "FAILED"
+                            println "[ERROR] All allocated nodes failed."
                         }
                     }
 
@@ -259,7 +260,6 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
     {
         println(e.toString());
         println(e.getMessage());
-        currentBuild.result = "ABORTED"
         echo "Job was ABORTED by user. Job status: ${currentBuild.result}"
     }
     catch (e)
@@ -283,5 +283,8 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
         echo "Send Slack message to debug channels"
         sendBuildStatusToDebugSlack(options)
+
+        println "[INFO] BUILD RESULT: ${currentBuild.result}"
+        println "[INFO] BUILD CURRENT RESULT: ${currentBuild.currentResult}"
     }
 }

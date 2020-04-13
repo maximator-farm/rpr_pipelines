@@ -176,7 +176,6 @@ def executeTests(String osName, String asicName, Map options)
             } catch(e) {
                 println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
                 println(e.toString())
-                currentBuild.result = "FAILED"
                 throw e
             }
         }
@@ -206,7 +205,6 @@ def executeTests(String osName, String asicName, Map options)
                 println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
                 // deinstalling broken addon
                 installMSIPlugin(osName, "Maya", options, false, true)
-                currentBuild.result = "FAILED"
                 throw e
             }
         }
@@ -242,10 +240,7 @@ def executeTests(String osName, String asicName, Map options)
     } catch (e) {
         if (options.currentTry < options.nodeReallocateTries) {
             stashResults = false
-        } else {
-            // will not be retried. mark as feailed
-            currentBuild.result = "FAILED"
-        }
+        } 
         println(e.toString())
         println(e.getMessage())
         options.failureMessage = "Failed during testing: ${asicName}-${osName}"
@@ -692,6 +687,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 else if (summaryReport.failed > 0) {
                     println("Some tests failed")
                     currentBuild.result="UNSTABLE"
+                } else {
+                    currentBuild.result="SUCCESS"
                 }
             }
             catch(e)
