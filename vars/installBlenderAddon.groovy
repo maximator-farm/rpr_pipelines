@@ -168,7 +168,7 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
             case 'OSX':
                 try 
                 {
-                    timeout(time: "10", unit: 'MINUTES') {
+                    timeout(time: "5", unit: 'MINUTES') {
                         sh """
                             echo "Disabling RPR Addon for Blender." >> ${options.stageName}.uninstall.log 2>&1
 

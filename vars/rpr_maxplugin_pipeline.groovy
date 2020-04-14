@@ -121,6 +121,9 @@ def executeTests(String osName, String asicName, Map options)
 
         downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MaxAssets/", 'MaxAssets')
 
+        // temp 
+        installMSIPlugin(osName, "Max", options, false, true)
+
         if (!options['skipBuild']) {
             try {
                 Boolean newPluginInstalled = false
