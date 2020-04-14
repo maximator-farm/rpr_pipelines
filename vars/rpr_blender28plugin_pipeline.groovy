@@ -720,6 +720,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
 
+
+            List lostStashes = []
+
             dir("summaryTestResults")
             {
                 testResultList.each()
@@ -729,15 +732,28 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         try
                         {
                             unstash "$it"
-                        }
-                        catch(e)
+                        }catch(e)
                         {
                             echo "[ERROR] Failed to unstash ${it}"
-                            println(e.toString())
-                            println(e.getMessage())
+                            lostStashes.add("'$it'".replace("testResult-", ""))
+                            println(e.toString());
+                            println(e.getMessage());
                         }
+
                     }
                 }
+            }
+
+            try {
+                Boolean isRegression = options.testsPackage.endsWith('.json')
+
+                dir("jobs_launcher") {
+                    bat """
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${isRegression}
+                    """
+                }
+            } catch (e) {
+                println("[ERROR] Can't generate number of lost tests")
             }
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
