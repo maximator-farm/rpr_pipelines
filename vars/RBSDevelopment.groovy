@@ -1,4 +1,5 @@
 import java.text.SimpleDateFormat;
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 import RBSInstance
 
 
@@ -59,6 +60,10 @@ class RBSDevelopment {
             try {
                 func.call()
                 return true
+            } catch (FlowInterruptedException error) {
+                println "INFO[job was aborted]"
+                println "[INFO] Task was aborted during assets downloading"
+                throw error
             } catch(error) {
                 this.context.println(error)
                 this.context.sleep(timeout)

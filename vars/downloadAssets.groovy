@@ -1,3 +1,5 @@
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+
 def call(String original_folder, String destination_folder)
 {
     int times = 5
@@ -21,6 +23,9 @@ def call(String original_folder, String destination_folder)
             }else{
                 print('Partial transfer due to vanished source files')
             }
+        } catch (FlowInterruptedException error) {
+            println "INFO[job was aborted]"
+            throw error
         } catch(e){
             println(e.toString());
             println(e.getMessage());
