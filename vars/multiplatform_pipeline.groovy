@@ -161,7 +161,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
             // if timeout doesn't set - use default
             // value in minutes
-            options['PREBUILD_TIMEOUT'] = options['PREBUILD_TIMEOUT'] ?: 15
+            options['PREBUILD_TIMEOUT'] = options['PREBUILD_TIMEOUT'] ?: 60
             options['BUILD_TIMEOUT'] = options['BUILD_TIMEOUT'] ?: 60
             options['TEST_TIMEOUT'] = options['TEST_TIMEOUT'] ?: 60
             options['DEPLOY_TIMEOUT'] = options['DEPLOY_TIMEOUT'] ?: 60
