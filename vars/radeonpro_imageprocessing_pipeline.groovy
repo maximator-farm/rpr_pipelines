@@ -269,7 +269,7 @@ def executeBuild(String osName, Map options)
             executeBuildUnix(options.cmakeKeys, osName, 'linux64', '-r');
             break;
         case 'Ubuntu18-Clang':
-            executeBuildUnix("${options.cmakeKeys} -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, 'linux64', '-r', 'clang-5.0');
+            executeBuildUnix("${options.cmakeKeys} -DRIF_UNITTEST=OFF -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, 'linux64', '-r', 'clang-5.0');
             break;
         default:
             error('Unsupported OS');
