@@ -206,14 +206,9 @@ def executeTests(String osName, String asicName, Map options)
             }
             executeTestCommand(osName, options)
         }
-    }
-    catch(GitException | ClosedChannelException | FlowInterruptedException e) {
-        throw e
-    }
-    catch (e) {
+    } catch (e) {
         println(e.toString());
         println(e.getMessage());
-        currentBuild.result = "FAILED"
         throw e
     }
     finally {
@@ -449,6 +444,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 else if (summaryReport.failed > 0) {
                     println("Some tests failed")
                     currentBuild.result="UNSTABLE"
+                } else {
+                    currentBuild.result="SUCCESS"
                 }
             }
             catch(e)

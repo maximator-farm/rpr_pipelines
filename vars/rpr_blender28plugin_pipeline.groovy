@@ -122,8 +122,6 @@ def getBlenderAddonInstaller(String osName, Map options)
 
 def executeGenTestRefCommand(String osName, Map options)
 {
-    executeTestCommand(osName, options)
-
     try
     {
         //for update existing manifest file
@@ -191,43 +189,57 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    cleanWS(osName)
-    try {
-        checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
+    // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
+    Boolean stashResults = true
 
-        // setTester in rbs
-        if (options.sendToRBS) {
-            options.rbs_prod.setTester(options)
-            options.rbs_dev.setTester(options)
+    try {
+
+        timeout(time: "5", unit: 'MINUTES') {
+            try {
+                cleanWS(osName)
+                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
+                // setTester in rbs
+                if (options.sendToRBS) {
+                    options.rbs_prod.setTester(options)
+                    options.rbs_dev.setTester(options)
+                }
+                println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
+
+            } catch(e) {
+                println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
+                println(e.toString())
+                throw e
+            }
         }
 
         downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Blender2.8Assets/", 'Blender2.8Assets')
 
         if (!options['skipBuild']) {
+
             try {
+
                 Boolean newPluginInstalled = false
-                timeout(time: "30", unit: 'MINUTES') {
+                timeout(time: "12", unit: 'MINUTES') {
                     getBlenderAddonInstaller(osName, options)
                     newPluginInstalled = installBlenderAddon(osName, "2.82", options)
-                    println "[INFO] Install function return ${newPluginInstalled}"
+                    println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
 
                 if (newPluginInstalled) {
                     timeout(time: "3", unit: 'MINUTES') {
                         buildRenderCache(osName, "2.82", options.stageName)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
-                            println "[ERROR] Failed to build cache. No output image found."
+                            println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
                             throw new Exception("No output image")
                         }
                     }
                 }
                 
             } catch(e) {
+                println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
                 println(e.toString())
-                println("[ERROR] Failed to install plugin")
                 // deinstalling broken addon
                 installBlenderAddon(osName, "2.82", options, false, true)
-                currentBuild.result = "FAILED"
                 throw e
             }
         }
@@ -240,58 +252,67 @@ def executeTests(String osName, String asicName, Map options)
         outputEnvironmentInfo(osName, options.stageName)
 
         if (options['updateRefs']) {
+            executeTestCommand(osName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         } else {
             // TODO: receivebaseline for json suite
             try {
+                println "[INFO] Downloading reference images for ${options.tests}"
                 receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
                 }
             } catch (e) {
-                println("Baseline doesn't exist.")
+                println("[WARNING] Baseline doesn't exist.")
             }
-
             executeTestCommand(osName, options)
         }
-    } catch (GitException | ClosedChannelException e) {
-        currentBuild.result = "FAILED"
-        throw e
-    } catch (e) {
 
+    } catch (e) {
+        if (options.currentTry < options.nodeReallocateTries) {
+            stashResults = false
+        } 
         println(e.toString())
         println(e.getMessage())
         options.failureMessage = "Failed during testing: ${asicName}-${osName}"
         options.failureError = e.getMessage()
-        if (!options.splitTestsExecution) {
-            currentBuild.result = "FAILED"
-            throw e
-        }
-    }
-    finally {
+        throw e
+    } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-        echo "Stashing test results to : ${options.testResultsName}"
-        dir('Work')
-            {
-                def sessionReport = null
-                stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
-                if (fileExists("Results/Blender28/session_report.json")) {
-                    sessionReport = readJSON file: 'Results/Blender28/session_report.json'
-                    // if none launched tests - mark build failed
-                    if (sessionReport.summary.total == 0)
-                    {
-                        options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
-                        currentBuild.result = "FAILED"
-                    }
-                
-                    if (options.sendToRBS)
-                    {
-                        options.rbs_prod.sendSuiteResult(sessionReport, options)
-                        options.rbs_dev.sendSuiteResult(sessionReport, options)
+        if (stashResults) {
+            dir('Work')
+                {
+                    if (fileExists("Results/Blender28/session_report.json")) {
+                        
+                        def sessionReport = null
+                        sessionReport = readJSON file: 'Results/Blender28/session_report.json'
+
+                        // if none launched tests - mark build failed
+                        if (sessionReport.summary.total == 0)
+                        {
+                            options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
+                            currentBuild.result = "FAILED"
+                        }
+
+                        // deinstalling broken addon
+                        if (sessionReport.summary.total == sessionReport.summary.error) {
+                            installBlenderAddon(osName, "2.82", options, false, true)
+                        }
+                    
+                        if (options.sendToRBS)
+                        {
+                            options.rbs_prod.sendSuiteResult(sessionReport, options)
+                            options.rbs_dev.sendSuiteResult(sessionReport, options)
+                        }
+
+                        echo "Stashing test results to : ${options.testResultsName}"
+                        stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
                     }
                 }
-            }
+        } else {
+            println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
+        }
     }
 }
 
@@ -624,7 +645,7 @@ def executePreBuild(Map options)
     } else if (env.JOB_NAME == "RadeonProRenderBlenderPlugin-WeeklyFull") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '60']]]);
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '50']]]);
     } else {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
@@ -699,6 +720,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
 
+
+            List lostStashes = []
+
             dir("summaryTestResults")
             {
                 testResultList.each()
@@ -708,15 +732,28 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         try
                         {
                             unstash "$it"
-                        }
-                        catch(e)
+                        }catch(e)
                         {
-                            echo "Can't unstash ${it}"
-                            println(e.toString())
-                            println(e.getMessage())
+                            echo "[ERROR] Failed to unstash ${it}"
+                            lostStashes.add("'$it'".replace("testResult-", ""))
+                            println(e.toString());
+                            println(e.getMessage());
                         }
+
                     }
                 }
+            }
+
+            try {
+                Boolean isRegression = options.testsPackage.endsWith('.json')
+
+                dir("jobs_launcher") {
+                    bat """
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${isRegression}
+                    """
+                }
+            } catch (e) {
+                println("[ERROR] Can't generate number of lost tests")
             }
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
@@ -739,7 +776,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     }
                 }
             } catch(e) {
-                println("ERROR during report building")
+                println("[ERROR] Failed to build report.")
                 println(e.toString())
                 println(e.getMessage())
             }
@@ -752,7 +789,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
             catch(e)
             {
-                println("ERROR during slack status generation")
+                println("[ERROR] Failed to generate slack status.")
                 println(e.toString())
                 println(e.getMessage())
             }
@@ -761,11 +798,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
             {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 if (summaryReport.error > 0) {
-                    println("Some tests crashed")
+                    println("[INFO] Some tests marked as error. Build result = FAILED.")
                     currentBuild.result="FAILED"
                 }
                 else if (summaryReport.failed > 0) {
-                    println("Some tests failed")
+                    println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result="UNSTABLE"
                 }
             }
@@ -807,6 +844,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println(e.getMessage())
                 }
             }
+
+            println "BUILD RESULT: ${currentBuild.result}"
+            println "BUILD CURRENT RESULT: ${currentBuild.currentResult}"
         }
     }
     catch(e)
@@ -841,7 +881,7 @@ def call(String projectBranch = "",
     String testsPackage = "",
     String tests = "",
     Boolean forceBuild = false,
-    Boolean splitTestsExecution = false,
+    Boolean splitTestsExecution = true,
     Boolean sendToRBS = true,
     String resX = '0',
     String resY = '0',
@@ -934,7 +974,7 @@ def call(String projectBranch = "",
                                 splitTestsExecution:splitTestsExecution,
                                 sendToRBS: sendToRBS,
                                 gpusCount:gpusCount,
-                                TEST_TIMEOUT:660,
+                                TEST_TIMEOUT:90,
                                 DEPLOY_TIMEOUT:150,
                                 TESTER_TAG:"Blender2.8",
                                 BUILDER_TAG:"BuildBlender2.8",

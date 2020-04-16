@@ -97,10 +97,86 @@ def executeBuildWindows(Map options)
     set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
     %msbuild% RadeonML.sln -property:Configuration=Debug >> ..\\${STAGE_NAME}.Debug.log 2>&1
     """
+    bat """
+    mkdir build-direct
+    cd build-direct
+    cmake ${options['cmakeKeys']} .. >> ..\\${STAGE_NAME}.Release.log 2>&1
+    set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
+    %msbuild% RadeonML.sln -property:Configuration=Release >> ..\\${STAGE_NAME}.Release.log 2>&1
+    """
+
+    if (env.TAG_NAME) {
+        dir("rml-deploy") {
+            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
+            bat """
+                MD directml\\${CIS_OS}
+                xcopy ..\\build-direct\\Release "directml\\${CIS_OS}" /s/y/i
+                git config --local user.name "radeonbuildmaster"
+                git config --local user.email "radeonprorender.buildmaster@gmail.com"
+                git add --all
+                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
+                git push origin HEAD:master
+            """
+        }
+    }
+
+    bat """
+    mkdir build-direct-debug
+    cd build-direct-debug
+    cmake ${options['cmakeKeys']} -DRML_LOG_LEVEL=Debug .. >> ..\\${STAGE_NAME}.Debug.log 2>&1
+    set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
+    %msbuild% RadeonML.sln -property:Configuration=Debug >> ..\\${STAGE_NAME}.Debug.log 2>&1
+    """
+
+    bat """
+        mkdir build
+        cd build
+        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\..\\${STAGE_NAME}.log 2>&1
+        cmake -G "Visual Studio 15 2017 Win64" ${options['cmakeKeys']} -DRML_TENSORFLOW_DIR=${WORKSPACE}\\tensorflow_cc .. >> ..\\..\\${STAGE_NAME}.log 2>&1
+        MSBuild.exe RadeonML.sln -property:Configuration=Release >> ..\\..\\${STAGE_NAME}.log 2>&1
+        """
+
+    if (env.TAG_NAME) {
+        dir("rml-deploy") {
+            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
+            bat """
+                    MD tf_cpu\\${CIS_OS}
+                    xcopy ..\\build\\Release tf_cpu\\${CIS_OS} /s/y/i
+                    git config --local user.name "radeonbuildmaster"
+                    git config --local user.email "radeonprorender.buildmaster@gmail.com"
+                    git add --all
+                    git commit -m "${CIS_OS} release v${env.TAG_NAME}"
+                    git push origin HEAD:master
+                """
+        }
+    }
 }
 
 def executeBuildOSX(Map options)
 {
+    sh """
+    mkdir build
+    cd build
+    cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.Release.log 2>&1
+    make -j >> ../${STAGE_NAME}.Release.log 2>&1
+
+    tar cf ${CIS_OS}_Release.tar bin
+    """
+
+    if (env.TAG_NAME) {
+        dir("rml-deploy") {
+            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
+            sh """
+                mkdir -p mps/${CIS_OS}
+                cp -r ../build/bin/* ./mps/${CIS_OS}
+                git config --local user.name "radeonbuildmaster"
+                git config --local user.email "radeonprorender.buildmaster@gmail.com"
+                git add --all
+                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
+                git push origin HEAD:master
+            """
+        }
+    }
 }
 
 def executeBuildLinux(Map options)
@@ -140,6 +216,58 @@ def executeBuildLinux(Map options)
     make -j >> ../${STAGE_NAME}.Debug.log 2>&1
     mv bin Debug
     """
+
+    sh """
+        mkdir build
+        cd build
+        cmake ${options['cmakeKeys']} -DRML_TENSORFLOW_DIR=${WORKSPACE}/tensorflow_cc .. >> ../../${STAGE_NAME}.log 2>&1
+        make -j >> ../../${STAGE_NAME}.log 2>&1
+        make
+        mv bin Release
+        
+        tar cf ${CIS_OS}_Release.tar Release
+        """
+    archiveArtifacts "build/${CIS_OS}_Release.tar"
+
+    if (env.TAG_NAME) {
+        dir("rml-deploy") {
+            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
+            sh """
+                    mkdir -p tf_cpu/${CIS_OS}
+                    cp -r ../build/Release/* ./tf_cpu/${CIS_OS}
+                    git config --local user.name "radeonbuildmaster"
+                    git config --local user.email "radeonprorender.buildmaster@gmail.com"
+                    git add --all
+                    git commit -m "${CIS_OS} release v${env.TAG_NAME}"
+                    git push origin HEAD:master
+                """
+        }
+    }
+
+    sh """
+    mkdir build
+    cd build
+    cmake ${options['cmakeKeys']} -DRML_TENSORFLOW_DIR=${WORKSPACE}/tensorflow_cc .. >> ../../${STAGE_NAME}.log 2>&1
+    make -j >> ../../${STAGE_NAME}.log 2>&1
+    make
+    mv bin Release
+    
+    tar cf ${CIS_OS}_Release.tar Release
+    """
+    if (env.TAG_NAME) {
+        dir("rml-deploy") {
+            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
+            sh """
+                mkdir -p tf_cuda/${CIS_OS}
+                cp -r ../build/Release/* ./tf_cuda/${CIS_OS}
+                git config --local user.name "radeonbuildmaster"
+                git config --local user.email "radeonprorender.buildmaster@gmail.com"
+                git add --all
+                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
+                git push origin HEAD:master
+            """
+        }
+    }
 }
 
 def executePreBuild(Map options)

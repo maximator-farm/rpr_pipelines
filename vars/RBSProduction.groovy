@@ -1,4 +1,5 @@
 import java.text.SimpleDateFormat;
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 import RBSInstance
 
 
@@ -60,6 +61,10 @@ class RBSProduction {
             try {
                 func.call()
                 return true
+            } catch (FlowInterruptedException error) {
+                println "INFO[job was aborted]"
+                println "[INFO] Task was aborted during assets downloading"
+                throw error
             } catch(error) {
                 this.context.println(error)
                 this.context.sleep(timeout)
@@ -100,17 +105,16 @@ class RBSProduction {
                     """.replaceAll("\n", "")
 
                     def res = this.context.httpRequest(
-
-                            acceptType: 'APPLICATION_JSON',
-                            consoleLogResponseBody: true,
-                            contentType: 'APPLICATION_JSON',
-                            customHeaders: [
-                                    [name: 'Authorization', value: "Token ${i.token}"]
-                            ],
-                            httpMode: 'POST',
-                            ignoreSslErrors: true,
-                            url: "${i.url}/report/job?data=${java.net.URLEncoder.encode(requestData, 'UTF-8')}",
-                            validResponseCodes: '200'
+                        acceptType: 'APPLICATION_JSON',
+                        consoleLogResponseBody: true,
+                        contentType: 'APPLICATION_JSON',
+                        customHeaders: [
+                                [name: 'Authorization', value: "Token ${i.token}"]
+                        ],
+                        httpMode: 'POST',
+                        ignoreSslErrors: true,
+                        url: "${i.url}/report/job?data=${java.net.URLEncoder.encode(requestData, 'UTF-8')}",
+                        validResponseCodes: '200'
                     )
 
                     this.context.echo requestData

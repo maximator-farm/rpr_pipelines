@@ -54,8 +54,6 @@ def getMaxPluginInstaller(String osName, Map options)
 
 def executeGenTestRefCommand(String osName, Map options)
 {
-    executeTestCommand(osName, options)
-
     try
     {
         //for update existing manifest file
@@ -95,30 +93,48 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    cleanWS(osName)
+    // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
+    Boolean stashResults = true
+    
     try {
-        checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_max.git')
 
-        // setTester in rbs
-        if (options.sendToRBS) {
-            options.rbs_prod.setTester(options)
-            options.rbs_dev.setTester(options)
+        timeout(time: "5", unit: 'MINUTES') {
+            try {
+                cleanWS(osName)
+
+                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_max.git')
+
+                // setTester in rbs
+                if (options.sendToRBS) {
+                    options.rbs_prod.setTester(options)
+                    options.rbs_dev.setTester(options)
+                }
+
+                println "[INFO] Preparing successfully finished."
+
+            } catch(e) {
+                println("[ERROR] Failed to prepare test group")
+                println(e.toString())
+                throw e
+            }
         }
 
         downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MaxAssets/", 'MaxAssets')
 
+        // temp 
+        installMSIPlugin(osName, "Max", options, false, true)
+
         if (!options['skipBuild']) {
             try {
                 Boolean newPluginInstalled = false
-                timeout(time: "30", unit: 'MINUTES') {
+                timeout(time: "15", unit: 'MINUTES') {
                     getMaxPluginInstaller(osName, options)
                     newPluginInstalled = installMSIPlugin(osName, 'Max', options)
                     println "[INFO] Install function return ${newPluginInstalled}"
                 }
             } catch(e) {
                 println(e.toString())
-                println("[ERROR] Failed to install plugin.")
-                currentBuild.result = "FAILED"
+                println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
                 throw e
             }
         }
@@ -132,54 +148,67 @@ def executeTests(String osName, String asicName, Map options)
 
         if(options['updateRefs'])
         {
+            executeTestCommand(osName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         }
         else
         {
             try {
+                println "[INFO] Downloading reference images for ${options.tests}"
                 receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
                 }
-            } catch (e) {println("Baseline doesn't exist.")}
+            } catch (e) {
+                println("[WARNING] Baseline doesn't exist.")
+            }
             executeTestCommand(osName, options)
         }
-    }
-    catch(GitException | ClosedChannelException e) {
-        currentBuild.result = "FAILED"
-        throw e
-    }
-    catch (e) {
-        println(e.toString());
-        println(e.getMessage());
-        currentBuild.result = "FAILED"
-        if (!options.splitTestsExecution) {
-            throw e
+    } catch (e) {
+        if (options.currentTry < options.nodeReallocateTries) {
+            stashResults = false
         }
+        println(e.toString())
+        println(e.getMessage())
+        options.failureMessage = "Failed during testing: ${asicName}-${osName}"
+        options.failureError = e.getMessage()
+        throw e
     }
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-        echo "Stashing test results to : ${options.testResultsName}"
-        dir('Work')
-        {
-            def sessionReport = null
-            stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
-            if (fileExists("Results/Max/session_report.json")) {
-                sessionReport = readJSON file: 'Results/Max/session_report.json'
-                // if none launched tests - mark build failed
-                if (sessionReport.summary.total == 0)
-                {
-                    options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
-                    currentBuild.result = "FAILED"
-                }
+        if (stashResults) {
+            dir('Work')
+            {
+                if (fileExists("Results/Max/session_report.json")) {
+                    
+                    def sessionReport = null
+                    sessionReport = readJSON file: 'Results/Max/session_report.json'
 
-                if (options.sendToRBS)
-                {
-                    options.rbs_prod.sendSuiteResult(sessionReport, options)
-                    options.rbs_dev.sendSuiteResult(sessionReport, options)
+                    // if none launched tests - mark build failed
+                    if (sessionReport.summary.total == 0)
+                    {
+                        options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
+                        currentBuild.result = "FAILED"
+                    }
+
+                    // deinstalling broken addon
+                    if (sessionReport.summary.total == sessionReport.summary.error) {
+                        installMSIPlugin(osName, "Maya", options, false, true)
+                    }
+
+                    if (options.sendToRBS)
+                    {
+                        options.rbs_prod.sendSuiteResult(sessionReport, options)
+                        options.rbs_dev.sendSuiteResult(sessionReport, options)
+                    }
+
+                    echo "Stashing test results to : ${options.testResultsName}"
+                    stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
                 }
             }
+        } else {
+            println "[INFO] Task ${options.tests} will be retried."
         }
     }
 }
@@ -475,19 +504,40 @@ def executeDeploy(Map options, List platformList, List testResultList)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_max.git')
 
+            List lostStashes = []
+
             dir("summaryTestResults")
             {
                 testResultList.each()
                 {
-                    try {
-                        dir("$it".replace("testResult-", ""))
+                    dir("$it".replace("testResult-", ""))
+                    {
+                        try
                         {
                             unstash "$it"
+                        }catch(e)
+                        {
+                            echo "Can't unstash ${it}"
+                            lostStashes.add("'$it'".replace("testResult-", ""))
+                            println(e.toString());
+                            println(e.getMessage());
                         }
-                    }catch(e) {
-                        echo "Can't unstash ${it}"
+
                     }
                 }
+            }
+
+            
+            try {
+                Boolean isRegression = options.testsPackage.endsWith('.json')
+
+                dir("jobs_launcher") {
+                    bat """
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${isRegression}
+                    """
+                }
+            } catch (e) {
+                println("[ERROR] Can't generate number of lost tests")
             }
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
@@ -539,6 +589,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 else if (summaryReport.failed > 0) {
                     println("Some tests failed")
                     currentBuild.result="UNSTABLE"
+                } else {
+                    currentBuild.result="SUCCESS"
                 }
             }
             catch(e)
@@ -609,7 +661,7 @@ def call(String projectBranch = "",
         String tests = "",
         String toolVersion = "2020",
         Boolean forceBuild = false,
-        Boolean splitTestsExecution = false,
+        Boolean splitTestsExecution = true,
         Boolean sendToRBS = true,
         String resX = '0',
         String resY = '0',
@@ -693,7 +745,7 @@ def call(String projectBranch = "",
                                 splitTestsExecution:splitTestsExecution,
                                 sendToRBS: sendToRBS,
                                 gpusCount:gpusCount,
-                                TEST_TIMEOUT:720,
+                                TEST_TIMEOUT:180,
                                 TESTER_TAG:'Max',
                                 rbs_prod: rbs_prod,
                                 rbs_dev: rbs_dev,

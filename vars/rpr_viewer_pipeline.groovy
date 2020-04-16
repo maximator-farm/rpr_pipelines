@@ -49,9 +49,11 @@ def executeTestCommand(String osName, Map options)
             """
         }
         break;
+
     case 'OSX':
-        echo "empty"
-        break
+        echo "OSX is not supported"
+        break;
+
     default:
         dir('scripts')
         {
@@ -76,6 +78,7 @@ def executeTests(String osName, String asicName, Map options)
     options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
     try {
+
         checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rprviewer.git')
         outputEnvironmentInfo(osName)
 
@@ -105,15 +108,9 @@ def executeTests(String osName, String asicName, Map options)
             } catch (e) {println("Baseline doesn't exist.")}
             executeTestCommand(osName, options)
         }
-    }
-    catch(GitException | ClosedChannelException e) {
-        currentBuild.result = "FAILED"
-        throw e
-    }
-    catch (e) {
+    } catch (e) {
         println(e.toString());
         println(e.getMessage());
-        currentBuild.result = "FAILED"
         throw e
     }
     finally {
@@ -273,6 +270,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rprviewer.git')
 
+            List lostStashes = []
+
             dir("summaryTestResults")
             {
                 testResultList.each()
@@ -282,15 +281,28 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         try
                         {
                             unstash "$it"
-                        }
-                        catch(e)
+                        }catch(e)
                         {
-                            echo "Can't unstash ${it}"
-                            println(e.toString())
-                            println(e.getMessage())
+                            echo "[ERROR] Failed to unstash ${it}"
+                            lostStashes.add("'$it'".replace("testResult-", ""))
+                            println(e.toString());
+                            println(e.getMessage());
                         }
+
                     }
                 }
+            }
+
+            try {
+                Boolean isRegression = options.testsPackage.endsWith('.json')
+
+                dir("jobs_launcher") {
+                    bat """
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${isRegression}
+                    """
+                }
+            } catch (e) {
+                println("[ERROR] Can't generate number of lost tests")
             }
             String branchName = env.BRANCH_NAME ?: options.projectBranch
 
@@ -332,6 +344,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 else if (summaryReport.failed > 0) {
                     println("Some tests failed")
                     currentBuild.result="UNSTABLE"
+                } else {
+                    currentBuild.result="SUCCESS"
                 }
             }
             catch(e)
