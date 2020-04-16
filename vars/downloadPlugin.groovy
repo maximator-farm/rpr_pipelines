@@ -53,6 +53,7 @@ def call(String osName, String tool, Map options)
 
     // We haven't any branch so we use sha1 for idetifying plugin build
     def pluginSha = sha1 "RadeonProRender${tool}_${osName}.${extentsion}"
+    println "Downloaded plugin sha1: ${pluginSha}"
 
     switch(osName)
     {

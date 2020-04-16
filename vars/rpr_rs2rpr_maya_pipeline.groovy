@@ -84,7 +84,7 @@ def executeTests(String osName, String asicName, Map options)
         {
             receiveFiles("bin_storage/RadeonProRenderMaya_2.8.44.msi", "/mnt/c/TestResources/")	
             options.pluginWinSha = 'c:\\TestResources\\RadeonProRenderMaya_2.8.44'
-            installMSIPlugin(osName, options, 'Maya', options.stageName, false)
+            installMSIPlugin(osName, 'Maya', options, false)
 
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
@@ -93,7 +93,7 @@ def executeTests(String osName, String asicName, Map options)
         {	
             receiveFiles("bin_storage/RadeonProRenderMaya_2.8.44.msi", "/mnt/c/TestResources/")	
             options.pluginWinSha = 'c:\\TestResources\\RadeonProRenderMaya_2.8.44'
-            installMSIPlugin(osName, options, 'Maya', options.stageName, false)
+            installMSIPlugin(osName, 'Maya', options, false)
             try
             {
                 options.tests.split(" ").each() {

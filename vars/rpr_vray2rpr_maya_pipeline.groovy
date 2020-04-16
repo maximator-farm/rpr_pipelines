@@ -1,7 +1,44 @@
+
+
+def getMayaPluginInstaller(String osName, Map options)
+{
+    switch(osName)
+    {
+        case 'Windows':
+
+            if (options.pluginWinSha) {
+                addon_name = options.pluginWinSha
+            } else {
+                addon_name = "unknown"
+            }
+
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.msi")) {
+
+                clearBinariesWin()
+                
+                println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                downloadPlugin(osName, "Maya", options)
+                addon_name = options.pluginWinSha
+
+                bat """
+                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${addon_name}.msi"
+                """
+
+            } else {
+                println "[INFO] The plugin ${addon_name}.msi exists in the storage."
+            }
+
+            break;
+
+        default:
+            echo "[WARNING] ${osName} is not supported"
+    }
+
+}
+
 def executeGenTestRefCommand(String osName, Map options)
 {
-    executeTestCommand(osName, options)
-
     dir('scripts')
     {
         switch(osName)
@@ -24,44 +61,86 @@ def executeGenTestRefCommand(String osName, Map options)
     }
 }
 
+
+def buildRenderCache(String osName, String toolVersion, String log_name)
+{
+    dir("scripts") {
+        switch(osName) {
+            case 'Windows':
+                bat "build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}.cb.log  2>&1"
+                break;
+            default:
+                echo "[WARNING] ${osName} is not supported"
+        }
+    }
+}
+
 def executeTestCommand(String osName, Map options)
 {
     switch(osName)
     {
-    case 'Windows':
-        dir('scripts')
-        {
-            bat """
-            render_rpr.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
-            """
-        }
-        break;
-    case 'OSX':
-        sh """
-        echo 'sample image' > ./OutputImages/sample_image.txt
-        """
-        break;
-    default:
-        sh """
-        echo 'sample image' > ./OutputImages/sample_image.txt
-        """
+        case 'Windows':
+            dir('scripts')
+            {
+                bat """
+                render_rpr.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
+                """
+            }
+            break;
+        default:
+            echo "[WARNING] ${osName} is not supported"
     }
 }
 
 
 def executeTests(String osName, String asicName, Map options)
 {
+    // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
+    Boolean stashResults = true
+
     try {
-        checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
-        dir('jobs/Scripts')
-        {
-            if(fileExists("convertVR2RPR.py")){
-                bat "del convertVR2RPR.py"
+
+        timeout(time: "5", unit: 'MINUTES') {
+            try {
+                cleanWS(osName)
+                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
+                dir('jobs/Scripts')
+                {
+                    unstash "convertionScript"
+                }
+            } catch(e) {
+                println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
+                println(e.toString())
+                throw e
             }
-            unstash "convertionScript"
         }
 
         downloadAssets("/${options.PRJ_PATH}/VRay2MayaAssets/", 'VRay2MayaAssets')
+
+        try {
+            Boolean newPluginInstalled = false
+            timeout(time: "15", unit: 'MINUTES') {
+                getMayaPluginInstaller(osName, options)
+                newPluginInstalled = installMSIPlugin(osName, 'Maya', options)
+                println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
+            }
+            if (newPluginInstalled) {
+                timeout(time: "5", unit: 'MINUTES') {
+                    buildRenderCache(osName, options.toolVersion, options.stageName)
+                    if(!fileExists("./Work/Results/vray2rpr/cache_building.jpg")){
+                        println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
+                        throw new Exception("No output image during build cache")
+                    }
+                }
+            }
+        }
+        catch(e) {
+            println(e.toString())
+            println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
+            // deinstalling broken addon
+            installMSIPlugin(osName, "Maya", options, false, true)
+            throw e
+        }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
         String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
@@ -75,107 +154,84 @@ def executeTests(String osName, String asicName, Map options)
         {
             dir('scripts')
             {
-                bat """render_or.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1"""
+                bat """
+                render_or.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
+                """
                 bat "make_original_baseline.bat"
             }
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE_OR)
         }
+
         if(options['updateRefs'])
         {
-            receiveFiles("bin_storage/RadeonProRenderMaya_2.8.44.msi", "/mnt/c/TestResources/")	
-            options.pluginWinSha = 'c:\\TestResources\\RadeonProRenderMaya_2.8.44'
-            installMSIPlugin(osName, options, 'Maya', options.stageName, false)
-
+            executeTestCommand(osName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         }
+
         if (!options['updateORRefs'] && !options['updateRefs'])
         {	
-            receiveFiles("bin_storage/RadeonProRenderMaya_2.8.44.msi", "/mnt/c/TestResources/")	
-            options.pluginWinSha = 'c:\\TestResources\\RadeonProRenderMaya_2.8.44'
-            installMSIPlugin(osName, options, 'Maya', options.stageName, false)
             try
             {
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
                 }
-            } catch (e) {}
+            } catch (e) {
+                println("[WARNING] Baseline doesn't exist.")
+            }
             try
             {
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE_OR}/${it}", './Work/Baseline/')
                 }
-            } catch (e) {}
+            } catch (e) {
+                println("[WARNING] Baseline doesn't exist.")
+            }
             executeTestCommand(osName, options)
         }
-    }
-    catch (e) {
-        println(e.toString());
-        println(e.getMessage());
-        currentBuild.result = "FAILED"
-        throw e
-    }
-    finally {
-        archiveArtifacts "*.log"
-        echo "Stashing test results to : ${options.testResultsName}"
-        dir('Work')
-        {
-            stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
-            def sessionReport = readJSON file: 'Results/vray2rpr/session_report.json'
-            if (sessionReport.summary.total == 0) {
-                options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
-                currentBuild.result = "FAILED"
+    } catch (e) {
+        if (options.currentTry < options.nodeReallocateTries) {
+            stashResults = false
+        } 
+        println(e.toString())
+        println(e.getMessage())
+        options.failureMessage = "Failed during testing: ${asicName}-${osName}"
+        options.failureError = e.getMessage()
+        throw e
+    } finally {
+        archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+        if (stashResults) {
+            dir('Work')
+            {
+                if (fileExists("Results/vray2rpr/session_report.json")) {
+
+                    def sessionReport = null
+                    sessionReport = readJSON file: 'Results/vray2rpr/session_report.json'
+
+                    // if none launched tests - mark build failed
+                    if (sessionReport.summary.total == 0)
+                    {
+                        options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
+                        currentBuild.result = "FAILED"
+                    }
+
+                    // deinstalling broken addon
+                    if (sessionReport.summary.total == sessionReport.summary.error) {
+                        installMSIPlugin(osName, "Maya", options, false, true)
+                    }
+
+                    echo "Stashing test results to : ${options.testResultsName}"
+                    stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+                }
             }
         }
     }
 }
 
-def executeBuildWindows(Map options)
-{
-
-}
-
-def executeBuildOSX(Map options)
-{
-
-}
-
-def executeBuildLinux(Map options)
-{
-
-}
-
-def executeBuild(String osName, Map options)
-{
-    try {
-        outputEnvironmentInfo(osName)
-
-        switch(osName)
-        {
-        case 'Windows':
-            executeBuildWindows(options);
-            break;
-        case 'OSX':
-            executeBuildOSX(options);
-            break;
-        default:
-            executeBuildLinux(options);
-        }
-
-    }
-    catch (e) {
-        currentBuild.result = "FAILED"
-        throw e
-    }
-    finally {
-        archiveArtifacts "*.log"
-    }
-}
 
 def executePreBuild(Map options)
 {
-    //properties([])
 
     dir('Vray2RPRConvertTool-Maya')
     {
@@ -340,26 +396,32 @@ def executeDeploy(Map options, List platformList, List testResultList)
     {}
 }
 
-def call(String projectBranch = "",
+def call(String customBuildLinkWindows = "",
+         String projectBranch = "",
          String testsBranch = "master",
          String platforms = 'Windows:NVIDIA_GF1080TI',
          Boolean updateORRefs = false,
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String testsPackage = "",
-         String tests = "") {
+         String tests = "",
+         String toolVersion = "2020") {
     try
     {
         String PRJ_NAME="Vray2RPRConvertTool-Maya"
         String PRJ_ROOT="rpr-tools"
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
-                               [projectBranch:projectBranch,
+        multiplatform_pipeline(platforms, this.&executePreBuild, null, this.&executeTests, this.&executeDeploy,
+                                [customBuildLinkWindows:customBuildLinkWindows,
+                                projectBranch:projectBranch,
                                 testsBranch:testsBranch,
                                 updateORRefs:updateORRefs,
                                 updateRefs:updateRefs,
                                 enableNotifications:enableNotifications,
+                                skipBuild:true,
+                                isPreBuilt:true,
                                 executeTests:true,
+                                toolVersion:toolVersion,
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 testsPackage:testsPackage,

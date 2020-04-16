@@ -90,7 +90,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
     {
         try
         {
-            if(!options['skipBuild'] && options['executeBuild'])
+            if(!options['skipBuild'] && options['executeBuild'] && executeBuild)
             {
                 node("${osName} && ${options.BUILDER_TAG}")
                 {
