@@ -18,7 +18,7 @@ def executeTestCommand(String osName, Map options)
                 break;
             default:
                 sh """
-                chmod +x tests-MIOpen
+                chmod +x tests
                 export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
                 ./tests --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ../../${STAGE_NAME}.log 2>&1
                 """
