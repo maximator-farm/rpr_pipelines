@@ -8,7 +8,7 @@ def executeTestCommand(String osName, Map options)
         switch(osName) {
             case 'Windows':
                 bat """
-                tests-DirectML.exe --gtest_output=xml:..\\..\\${STAGE_NAME}.gtest.xml >> ..\\..\\${STAGE_NAME}.log 2>&1
+                tests.exe --gtest_output=xml:..\\..\\${STAGE_NAME}.gtest.xml >> ..\\..\\${STAGE_NAME}.log 2>&1
                 """
                 break;
             case 'OSX':
