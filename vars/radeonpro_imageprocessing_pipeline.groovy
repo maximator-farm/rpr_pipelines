@@ -111,13 +111,10 @@ def executeBuildWindows(String cmakeKeys)
     xcopy bin\\release ${packageName}-rel\\bin /s/y/i
 
     cd ${packageName}-rel
-    del /S Gtest*
     del /S UnitTest*
-    
     del /S/Q bin\\models
 
     cd ..\\${packageName}-dbg
-    del /S Gtest*
     del /S UnitTest*
     del /S/Q bin\\models
     """
@@ -196,11 +193,9 @@ def executeBuildUnix(String cmakeKeys, String osName, String premakeDir, String 
     if (compilerName != "clang-5.0") {
         sh """
         rm ${packageName}-rel/bin/UnitTest*
-        rm ${packageName}-rel/bin/libGtest*
         rm -fdr ${packageName}-rel/bin/models
 
         rm ${packageName}-dbg/bin/UnitTest*
-        rm ${packageName}-dbg/bin/libGtest*
         rm -fdr ${packageName}-dbg/bin/models
         """
     }
