@@ -47,7 +47,8 @@ def call(String projectBranch = "",
                                 TESTER_TAG:"Blender2.8",
                                 BUILDER_TAG:"BuildBlender2.8",
                                 WAIT_TIEMOUT:1,
-                                testsJobName:"RadeonProRenderBlender2.8Tests"
+                                testsJobName:"RadeonProRenderBlender2.8Tests",
+                                deployJobName:"RadeonProRenderBlender2.8Deploy"
                                 ])
     } catch(e) {
         currentBuild.result = "FAILED"

@@ -161,7 +161,17 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
 
             }
             finally {
-                //TODO run report job
+                // convert options Map to json to specify it as String parameter for report job
+                def jsonOptions = new JsonBuilder(options).toPrettyString()
+                // convert Map with ids of tests builds to json to specify it as String parameter for report job
+                def jsonTestsBuildsIds = new JsonBuilder(testsBuildsIds).toPrettyString()
+                build(
+                    job: options.deployJobName,
+                    parameters: [
+                        [$class: 'StringParameterValue', name: 'TestsBuilds', value: jsonTestsBuildsIds],
+                        [$class: 'StringParameterValue', name: 'Options', value: jsonOptions]
+                    ]
+                )
             }
         }
     }
