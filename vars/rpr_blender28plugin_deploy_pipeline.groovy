@@ -6,7 +6,8 @@ def executeDeploy(Map jsonTestsBuildsIds, Map jsonOptions) {
 }
 
 
-def call(String jsonTestsBuildsIds = "",
+def call(String testsBranch = "master",
+    String jsonTestsBuildsIds = "",
     String jsonOptions = "master") {
 
     try {

@@ -29,7 +29,8 @@ def executeBuild(String osName, Map options) {
 }
 
 
-def call(String projectBranch = "",
+def call(String pipelinesBranch = "",
+    String projectBranch = "",
     String testsBranch = "master",
     String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;Ubuntu18:AMD_RadeonVII;OSX:AMD_RXVEGA',
     String renderDevice = "gpu",
@@ -38,7 +39,8 @@ def call(String projectBranch = "",
 
     try {
         multiplatform_pipeline(platforms, this.&executePreparation, this.&executePreBuild, this.&executeBuild,
-                               [projectBranch:projectBranch,
+                               [pipelinesBranch:pipelinesBranch,
+                                projectBranch:projectBranch,
                                 testsBranch:testsBranch,
                                 testsPackage:testsPackage,
                                 tests:tests,

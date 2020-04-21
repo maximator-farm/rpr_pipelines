@@ -39,6 +39,8 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                         def testsBuild = build(
                             job: options.testsJobName,
                             parameters: [
+                                [$class: 'StringParameterValue', name: 'PipelinesBranch', value: options.pipelinesBranch],
+                                [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
                                 [$class: 'StringParameterValue', name: 'BuildName', value: "${currentJobName}-${options.globalId}"],
                                 [$class: 'StringParameterValue', name: 'AsicName', value: asicName],
                                 [$class: 'StringParameterValue', name: 'OsName', value: osName],
@@ -168,6 +170,9 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
                 build(
                     job: options.deployJobName,
                     parameters: [
+                        [$class: 'StringParameterValue', name: 'PipelinesBranch', value: options.pipelinesBranch],
+                        [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
+                        [$class: 'StringParameterValue', name: 'BuildName', value: "Report build #${options.globalId} (auto)"],
                         [$class: 'StringParameterValue', name: 'TestsBuilds', value: jsonTestsBuildsIds],
                         [$class: 'StringParameterValue', name: 'Options', value: jsonOptions]
                     ]

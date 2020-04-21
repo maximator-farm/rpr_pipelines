@@ -6,7 +6,8 @@ def executeTests(String osName, String asicName, Map options) {
 }
 
 
-def call(String asicName,
+def call(String testsBranch = "master",
+    String asicName,
     String asicName,
     String testName,
     String jsonOptions) {
