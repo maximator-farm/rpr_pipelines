@@ -954,7 +954,7 @@ def call(String projectBranch = "",
         }
 
         def universeClient = new Client(this, "https://universeapi.cis.luxoft.com", env)
-        client.tokenSetup()
+        universeClient.tokenSetup()
         println platforms
         println tests
         println testsPackage
