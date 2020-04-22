@@ -498,15 +498,15 @@ def executeBuild(String osName, Map options)
         options.failureMessage = "[ERROR] Failed to build plugin on ${osName}"
         options.failureError = e.getMessage()
         currentBuild.result = "FAILED"
-        if (options.sendToRBS)
-        {
-            try {
-                options.rbs_prod.setFailureStatus()
-                options.rbs_dev.setFailureStatus()
-            } catch (err) {
-                println(err)
-            }
-        }
+        // if (options.sendToRBS)
+        // {
+        //     try {
+        //         options.rbs_prod.setFailureStatus()
+        //         options.rbs_dev.setFailureStatus()
+        //     } catch (err) {
+        //         println(err)
+        //     }
+        // }
         throw e
     }
     finally {
@@ -852,16 +852,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
                          reportName: 'Test Report',
                          reportTitles: 'Summary Report, Performance Report, Compare Report'])
 
-            if (options.sendToRBS) {
-                try {
-                    String status = currentBuild.result ?: 'SUCCESSFUL'
-                    options.rbs_prod.finishBuild(options, status)
-                    options.rbs_dev.finishBuild(options, status)
-                }
-                catch (e){
-                    println(e.getMessage())
-                }
-            }
+            // if (options.sendToRBS) {
+            //     try {
+            //         String status = currentBuild.result ?: 'SUCCESSFUL'
+            //         options.rbs_prod.finishBuild(options, status)
+            //         options.rbs_dev.finishBuild(options, status)
+            //     }
+            //     catch (e){
+            //         println(e.getMessage())
+            //     }
+            // }
 
             println "BUILD RESULT: ${currentBuild.result}"
             println "BUILD CURRENT RESULT: ${currentBuild.currentResult}"
