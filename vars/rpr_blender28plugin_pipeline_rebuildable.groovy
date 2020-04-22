@@ -1,9 +1,9 @@
-def executePreparation(Map options) {
+def executePreparation(String platforms, Map options) {
     String PRJ_NAME="RadeonProRenderBlender2.8Plugin_Rebuildable"
     String PRJ_ROOT="rpr-plugins"
 
     gpusCount = 0
-    options.platforms.split(';').each()
+    platforms.split(';').each()
     { platform ->
         List tokens = platform.tokenize(':')
         if (tokens.size() > 1)
@@ -38,7 +38,7 @@ def call(String pipelinesBranch = "",
     String tests = "") {
 
     try {
-        multiplatform_pipeline(platforms, this.&executePreparation, this.&executePreBuild, this.&executeBuild,
+        multiplatform_pipeline_rebuildable(platforms, this.&executePreparation, this.&executePreBuild, this.&executeBuild,
                                [pipelinesBranch:pipelinesBranch,
                                 projectBranch:projectBranch,
                                 testsBranch:testsBranch,
@@ -48,9 +48,8 @@ def call(String pipelinesBranch = "",
                                 TEST_TIMEOUT:90,
                                 TESTER_TAG:"Blender2.8",
                                 BUILDER_TAG:"BuildBlender2.8",
-                                WAIT_TIEMOUT:1,
-                                testsJobName:"RadeonProRenderBlender2.8Tests",
-                                deployJobName:"RadeonProRenderBlender2.8Deploy"
+                                testsJobName:"DevRadeonProRenderBlender2.8Tests",
+                                deployJobName:"DevRadeonProRenderBlender2.8Deploy"
                                 ])
     } catch(e) {
         currentBuild.result = "FAILED"

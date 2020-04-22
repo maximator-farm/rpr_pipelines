@@ -22,43 +22,66 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                 }
             }
             Map currentTestsBuildsIds = [:]
-            String launchTestsStageName = "Launch-Tests-${osName}"
+            String launchTestsStageName = "Launch&Wait-Tests-${osName}"
             def jobsCount = 0
+            def failedJobsCount = 0
             stage(launchTestsStageName) {
                 def testTasks = [:]
-                // get build number of current master job as id for tests jobs  
-                options.globalId = env.BUILD_NUMBER
                 // convert options Map to json to specify it as String parameter for called job
                 def jsonOptions = new JsonBuilder(options).toPrettyString()
                 gpuNames.split(',').each() {
                     String asicName = it
                     options.testsList = options.testsList ?: ['']
 
-                    options.testsList.each() { testName ->
-                        String currentJobName = "${asicName}-${osName}-${testName}"
-                        def testsBuild = build(
-                            job: options.testsJobName,
-                            parameters: [
-                                [$class: 'StringParameterValue', name: 'PipelinesBranch', value: options.pipelinesBranch],
-                                [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
-                                [$class: 'StringParameterValue', name: 'BuildName', value: "${currentJobName}-${options.globalId}"],
-                                [$class: 'StringParameterValue', name: 'AsicName', value: asicName],
-                                [$class: 'StringParameterValue', name: 'OsName', value: osName],
-                                [$class: 'StringParameterValue', name: 'TestName', value: testName],
-                                [$class: 'StringParameterValue', name: 'Options', value: jsonOptions]
-                            ]
-                        )
-                        jobsCount++
-                        currentTestsBuildsIds[currentJobName] = testsBuild.number
+                    options.testsList.split(' ').each() { testName ->
+
+                        String currentTestName = "${asicName}-${osName}-${testName}"
+                        String currentBuildName = "${currentTestName}-${options.globalId}"
+
+                        testTasks[currentTestName] = {
+                            def testBuild
+                            try {
+                                println("Run ${currentBuildName}")
+                                testBuild = build(
+                                    job: options.testsJobName,
+                                    parameters: [
+                                        [$class: 'StringParameterValue', name: 'PipelineBranch', value: options.pipelinesBranch],
+                                        [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
+                                        [$class: 'StringParameterValue', name: 'BuildName', value: currentBuildName],
+                                        [$class: 'StringParameterValue', name: 'AsicName', value: asicName],
+                                        [$class: 'StringParameterValue', name: 'OsName', value: osName],
+                                        [$class: 'StringParameterValue', name: 'TestName', value: testName],
+                                        [$class: 'StringParameterValue', name: 'Options', value: jsonOptions]
+                                    ],
+                                    quietPeriod: 0
+                                )
+                                println(testBuild)
+                            } catch (e) {
+                                failedJobsCount++
+                                // -1 means that tests build failed and deploy build don't need to check its artifacts
+                                currentTestsBuildsIds[currentTestName] = -1
+                                println "[ERROR] ${currentBuildName} finished with status 'FAILURE'"
+                            } finally {
+                                jobsCount++
+                                currentTestsBuildsIds[currentTestName] = testBuild.number
+                            }
+                        }
+
                     }
                 }
+
+                parallel testTasks
                 // write jobs which were run for this platform in common map
                 testsBuildsIds << currentTestsBuildsIds
 
-                println("[INFO] During ${launchTestsStageName} ${jobsCount} tests jobs were launched:")
+                println("[INFO] During ${launchTestsStageName} ${jobsCount} tests builds were run (${failedJobsCount} builds failed):")
                 for (element in currentTestsBuildsIds) {
-                    String formattedKey = sprintf("%-50s", "${element.key}")
-                    println("[INFO] ${formattedKey}: run build with number #${element.value}")
+                    String formattedTestName = sprintf("%-50s", "${element.key}")
+                    if (element.value != -1) {
+                        println("[INFO]  ${formattedTestName}: run build with number #${element.value}")
+                    } else {
+                        println("[ERROR] ${formattedTestName}: build failed")
+                    }
                 }
 
             }
@@ -82,8 +105,11 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
 
     try {
         stage("Preparation") {
-            executePreparation(options)
+            executePreparation(platforms, options)
         }
+
+        // get build number of current master job as id for tests jobs  
+        options.globalId = env.BUILD_NUMBER
 
         //TODO call executePreBuild method and report testsList initialization from this pipeline
         options.testsList = options.tests
@@ -113,6 +139,8 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
             Map testsBuildsIds = [:]
 
             try {
+                def tasks = [:]
+
                 platforms.split(';').each() {
                     List tokens = it.tokenize(':')
                     String osName = tokens.get(0)
@@ -133,36 +161,15 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
                             }
                         }
                     }
-                    tasks[osName]=executePlatform(osName, gpuNames, executeBuild, options, testsBuildsIds)
+                    tasks[osName] = executePlatform(osName, gpuNames, executeBuild, options, testsBuildsIds)
                 }
+
                 parallel tasks
 
-                // get names of all incompleted builds
-                List incompletedTestsBuilds = testsBuildsIds.keySet() as List
-                while (!incompletedTestsBuilds.isEmpty()) {
-                    // remove completed builds from incompletedTestsBuilds after iteration for avoid ConcurrentModificationException
-                    List completedTestsBuilds = []
-                    for (buildName in incompletedTestsBuilds) {
-                        def build = Jenkins.instance.getItem(options.testsJobName).getBuildByNumber(testsBuildsIds[buildName])
-                        // if build completed with any result, add it to completedTestsBuilds
-                        if (build.getResult != 'BUILDING') {
-                            completedTestsBuilds.add(buildName)
-                        }
-                    }
-                    incompletedTestsBuilds.removeAll(completedTestsBuilds)
-
-                    println("[INFO] Tests builds checked. Now running ${incompletedTestsBuilds.size} builds:")
-                    for (element in currentTestsBuildsIds) {
-                        String formattedKey = sprintf("%-50s", "${element.key}")
-                        println("[INFO] ${formattedKey} running (build number #${element.value})")
-                    }
-                    //TODO add param for control output info (short or complete)
-                    // wait next check
-                    sleep(time: options.WAIT_TIEMOUT, unit: 'MINUTES')
-                }
-
-            }
-            finally {
+            } catch (e) {
+                println(e.toString());
+                println(e.getMessage());
+            } finally {
                 // convert options Map to json to specify it as String parameter for report job
                 def jsonOptions = new JsonBuilder(options).toPrettyString()
                 // convert Map with ids of tests builds to json to specify it as String parameter for report job
@@ -170,12 +177,14 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
                 build(
                     job: options.deployJobName,
                     parameters: [
-                        [$class: 'StringParameterValue', name: 'PipelinesBranch', value: options.pipelinesBranch],
+                        [$class: 'StringParameterValue', name: 'PipelineBranch', value: options.pipelinesBranch],
                         [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
                         [$class: 'StringParameterValue', name: 'BuildName', value: "Report build #${options.globalId} (auto)"],
                         [$class: 'StringParameterValue', name: 'TestsBuilds', value: jsonTestsBuildsIds],
                         [$class: 'StringParameterValue', name: 'Options', value: jsonOptions]
-                    ]
+                    ],
+                    quietPeriod: 0,
+                    wait: false
                 )
             }
         }

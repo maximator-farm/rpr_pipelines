@@ -8,13 +8,13 @@ def executeTests(String osName, String asicName, Map options) {
 
 def call(String testsBranch = "master",
     String asicName,
-    String asicName,
+    String osName,
     String testName,
     String jsonOptions) {
 
     try {
     // parse converted options
-    Map options = new JsonSlurper().parseText(jsonOptions)
+    Map options = new HashMap<>(new JsonSlurper().parseText(jsonOptions))
 
         tests_launch_pipeline(this.&executeTests, asicName, osName, testName, options)
     } catch(e) {

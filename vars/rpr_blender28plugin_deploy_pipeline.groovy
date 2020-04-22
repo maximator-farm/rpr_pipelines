@@ -1,7 +1,7 @@
 import groovy.json.JsonSlurper
 
 
-def executeDeploy(Map jsonTestsBuildsIds, Map jsonOptions) {
+def executeDeploy(Map testsBuildsIds, Map options) {
     //TODO add deploy logic
 }
 
@@ -12,10 +12,10 @@ def call(String testsBranch = "master",
 
     try {
         // parse converted ids of tests builds and options
-        Map testsBuildsIds = new JsonSlurper().parseText(jsonTestsBuildsIds)
-        Map options = new JsonSlurper().parseText(jsonOptions)
+        Map testsBuildsIds = new HashMap<>(new JsonSlurper().parseText(jsonTestsBuildsIds))
+        Map options = new HashMap<>(new JsonSlurper().parseText(jsonOptions))
 
-        executeDeploy(jsonTestsBuildsIds, jsonOptions)
+        executeDeploy(testsBuildsIds, options)
     } catch(e) {
         currentBuild.result = "FAILED"
         failureMessage = "INIT FAILED"

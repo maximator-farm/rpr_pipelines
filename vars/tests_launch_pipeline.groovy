@@ -1,8 +1,7 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
-import groovy.json.JsonBuilder
 
 
-def call(def executeTests , String gpuName, String asicName, String testName, Map options) {
+def call(def executeTests , String asicName, String osName, String testName, Map options) {
     try {
         timestamps {
             println("Scheduling ${osName}:${asicName} ${testName}")
@@ -16,16 +15,12 @@ def call(def executeTests , String gpuName, String asicName, String testName, Ma
             options.nodeReallocateTries = nodesCount + 1
             boolean successCurrentNode = false
             
-            for (int i = 0; i < options.nodeReallocateTries; i++)
-            {
-                node(nodeLabels)
-                {
+            for (int i = 0; i < options.nodeReallocateTries; i++) {
+                node(nodeLabels) {
                     println("[INFO] Launched ${testName} task at: ${env.NODE_NAME}")
                     options.currentTry = i
-                    timeout(time: "${options.TEST_TIMEOUT}", unit: 'MINUTES')
-                    {
-                        ws("WS/${options.PRJ_NAME}_Test")
-                        {
+                    timeout(time: "${options.TEST_TIMEOUT}", unit: 'MINUTES') {
+                        ws("WS/${options.PRJ_NAME}_Test") {
                             Map newOptions = options.clone()
                             newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                             newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
