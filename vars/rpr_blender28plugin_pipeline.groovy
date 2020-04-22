@@ -953,14 +953,14 @@ def call(String projectBranch = "",
             }
         }
 
-        def universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env)
-        universeClient.tokenSetup()
+        // def universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env)
+        // universeClient.tokenSetup()
         println platforms
         println tests
         println testsPackage
         println splitTestsExecution
 
-        // rbs_prod = new RBSProduction(this, "Blender28", env.JOB_NAME, env)
+        rbs_prod = new RBSProduction(this, "Blender28", env.JOB_NAME, env)
         // rbs_dev = new RBSDevelopment(this, "Blender28", env.JOB_NAME, env)
 
 
