@@ -180,9 +180,9 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        dir("${CIS_TOOLS}/../TestResources/maya_assets")
+        dir("${CIS_TOOLS}/../TestResources/rpr_maya")
         {
-            checkOutBranchOrScm('master', "https://gitlab.cts.luxoft.com/dtarasenko/maya_assets.git", true)
+            checkOutBranchOrScm(options.autotest_assets, "ssh://git@gitlab.cts.luxoft.com:30122/autotest_assets/maya_assets.git", true)
         }
 
         if (!options['skipBuild']) {
@@ -788,7 +788,8 @@ def call(String projectBranch = "",
         String iter = '50',
         String theshold = '0.05',
         String customBuildLinkWindows = "",
-        String customBuildLinkOSX = "")
+        String customBuildLinkOSX = "",
+        String autotest_assets = 'master')
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
