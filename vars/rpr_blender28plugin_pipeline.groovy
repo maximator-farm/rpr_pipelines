@@ -191,6 +191,13 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
+    // TODO: improve envs, now working on Windows testers only
+    universeClient.stage("Tests-${osName}-${asicName}", "begin")
+    bat "set RBS_BUILD_ID=${universeClient.build["id"]}"
+    bat "set RBS_JOB_ID=${universeClient.build["job_id"]}"
+    bat "set RBS_URL=${universeClient.url}"
+    bat "set RBS_ENV_LABEL=${osName}-${asicName}"
+
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
@@ -302,8 +309,9 @@ def executeTests(String osName, String asicName, Map options)
                     
                         if (options.sendToRBS)
                         {
-                            options.rbs_prod.sendSuiteResult(sessionReport, options)
-                            options.rbs_dev.sendSuiteResult(sessionReport, options)
+                            universeClient.stage("Tests-" + osName, "end")
+                            // options.rbs_prod.sendSuiteResult(sessionReport, options)
+                            // options.rbs_dev.sendSuiteResult(sessionReport, options)
                         }
 
                         echo "Stashing test results to : ${options.testResultsName}"
@@ -450,7 +458,7 @@ def executeBuildLinux(String osName, Map options)
 
 def executeBuild(String osName, Map options)
 {
-    client.stage("Build", "begin")
+    universeClient.stage("Build-" + osName , "begin")
     try {
         dir('RadeonProRenderBlenderAddon')
         {
@@ -503,9 +511,9 @@ def executeBuild(String osName, Map options)
     }
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+        universeClient.stage("Build-" + osName, "end")
     }
 
-    client.stage("Build", "end")
 }
 
 def executePreBuild(Map options)
@@ -707,7 +715,7 @@ def executePreBuild(Map options)
         try
         {
             // Universe : auth because now we in node
-            // If use httpRequest in master slave will 408 error
+            // If use httpRequest in master slave will catch 408 error
             universeClient.tokenSetup()
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
