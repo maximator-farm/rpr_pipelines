@@ -700,10 +700,14 @@ def executePreBuild(Map options)
     {
         try
         {
-            // RBS : start build
-            def envs = []
-            def suites = []
-            options.universeClient.createBuild(envs, suites)
+            // Universe : auth because now we in node
+            // If use httpRequest in master slave will 408 error
+            options.universeClient.tokenSetup()
+
+            // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+            options.universeClient.createBuild(options.universePlatforms, options.groupsRBS)
+            
+            // old version RBS
             // options.rbs_dev.startBuild(options)
         }
         catch (e)
@@ -953,51 +957,55 @@ def call(String projectBranch = "",
             }
         }
 
-        // def universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env)
-        // universeClient.tokenSetup()
+        
+        def universePlatforms = convertPlatforms(platforms);
+        def universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env)
         println platforms
         println tests
         println testsPackage
         println splitTestsExecution
+        println universePlatforms
 
-        rbs_prod = new RBSProduction(this, "Blender28", env.JOB_NAME, env)
+
+        // rbs_prod = new RBSProduction(this, "Blender28", env.JOB_NAME, env)
         // rbs_dev = new RBSDevelopment(this, "Blender28", env.JOB_NAME, env)
 
 
-        // multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
-        //                        [projectBranch:projectBranch,
-        //                         testsBranch:testsBranch,
-        //                         updateRefs:updateRefs,
-        //                         enableNotifications:enableNotifications,
-        //                         PRJ_NAME:PRJ_NAME,
-        //                         PRJ_ROOT:PRJ_ROOT,
-        //                         incrementVersion:incrementVersion,
-        //                         skipBuild:skipBuild,
-        //                         renderDevice:renderDevice,
-        //                         testsPackage:testsPackage,
-        //                         tests:tests,
-        //                         isPreBuilt:isPreBuilt,
-        //                         forceBuild:forceBuild,
-        //                         reportName:'Test_20Report',
-        //                         splitTestsExecution:splitTestsExecution,
-        //                         sendToRBS: sendToRBS,
-        //                         gpusCount:gpusCount,
-        //                         TEST_TIMEOUT:90,
-        //                         DEPLOY_TIMEOUT:150,
-        //                         TESTER_TAG:"Blender2.8",
-        //                         BUILDER_TAG:"BuildBlender2.8",
-        //                         // rbs_dev: rbs_dev,
-        //                         // rbs_prod: rbs_prod,
-        //                         universeClient: universeClient,
-        //                         resX: resX,
-        //                         resY: resY,
-        //                         SPU: SPU,
-        //                         iter: iter,
-        //                         theshold: theshold,
-        //                         customBuildLinkWindows: customBuildLinkWindows,
-        //                         customBuildLinkLinux: customBuildLinkLinux,
-        //                         customBuildLinkOSX: customBuildLinkOSX
-        //                         ])
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
+                               [projectBranch:projectBranch,
+                                testsBranch:testsBranch,
+                                updateRefs:updateRefs,
+                                enableNotifications:enableNotifications,
+                                PRJ_NAME:PRJ_NAME,
+                                PRJ_ROOT:PRJ_ROOT,
+                                incrementVersion:incrementVersion,
+                                skipBuild:skipBuild,
+                                renderDevice:renderDevice,
+                                testsPackage:testsPackage,
+                                tests:tests,
+                                isPreBuilt:isPreBuilt,
+                                forceBuild:forceBuild,
+                                reportName:'Test_20Report',
+                                splitTestsExecution:splitTestsExecution,
+                                sendToRBS: sendToRBS,
+                                gpusCount:gpusCount,
+                                TEST_TIMEOUT:90,
+                                DEPLOY_TIMEOUT:150,
+                                TESTER_TAG:"Blender2.8",
+                                BUILDER_TAG:"BuildBlender2.8",
+                                // rbs_dev: rbs_dev,
+                                // rbs_prod: rbs_prod,
+                                universeClient: universeClient,
+                                universePlatforms: universePlatforms,
+                                resX: resX,
+                                resY: resY,
+                                SPU: SPU,
+                                iter: iter,
+                                theshold: theshold,
+                                customBuildLinkWindows: customBuildLinkWindows,
+                                customBuildLinkLinux: customBuildLinkLinux,
+                                customBuildLinkOSX: customBuildLinkOSX
+                                ])
     }
     catch(e)
     {
