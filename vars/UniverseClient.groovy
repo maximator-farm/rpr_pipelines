@@ -43,7 +43,7 @@ class UniverseClient {
     }
 
     def tokenSetup(cred) {
-        def response = this.context.httpRequest consoleLogResponseBody: true, authentication: "	f77c6e5e-aa5b-46f0-8604-c052b0b8fcce", httpMode: 'POST',  url: "${this.url}/user/login", validResponseCodes: '200'
+        def response = this.context.httpRequest consoleLogResponseBody: true, authentication: "f77c6e5e-aa5b-46f0-8604-c052b0b8fcce", httpMode: 'POST',  url: "${this.url}/user/login", validResponseCodes: '200'
         def token = this.context.readJSON text: "${response.content}"
         this.token = "${token['token']}"
         this.context.echo this.token
