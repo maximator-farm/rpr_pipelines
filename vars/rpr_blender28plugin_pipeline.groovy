@@ -1,10 +1,11 @@
-import hudson.plugins.git.GitException
+import groovy.transform.Field
 import java.nio.channels.ClosedChannelException
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
-import RBSProduction
+import hudson.plugins.git.GitException
 import UniverseClient
 
-universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env)
+import RBSProduction
+@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env)
 
 def getBlenderAddonInstaller(String osName, Map options)
 {
@@ -449,6 +450,7 @@ def executeBuildLinux(String osName, Map options)
 
 def executeBuild(String osName, Map options)
 {
+    client.stage("Build", "begin")
     try {
         dir('RadeonProRenderBlenderAddon')
         {
@@ -502,6 +504,8 @@ def executeBuild(String osName, Map options)
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
+
+    client.stage("Build", "end")
 }
 
 def executePreBuild(Map options)
