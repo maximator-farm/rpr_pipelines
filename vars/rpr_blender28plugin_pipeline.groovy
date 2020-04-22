@@ -1,9 +1,8 @@
-import RBSProduction
-import RBSDevelopment
 import hudson.plugins.git.GitException
 import java.nio.channels.ClosedChannelException
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
-
+import RBSProduction
+import UniverseClient
 
 def getBlenderAddonInstaller(String osName, Map options)
 {
@@ -198,11 +197,9 @@ def executeTests(String osName, String asicName, Map options)
             try {
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
-                // setTester in rbs
-                if (options.sendToRBS) {
-                    options.rbs_prod.setTester(options)
-                    options.rbs_dev.setTester(options)
-                }
+
+                // RBS: setTester in rbs at last version
+
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
 
             } catch(e) {
@@ -703,8 +700,11 @@ def executePreBuild(Map options)
     {
         try
         {
-            options.rbs_prod.startBuild(options)
-            options.rbs_dev.startBuild(options)
+            // RBS : start build
+            def envs = []
+            def suites = []
+            options.universeClient.createBuild(envs, suites)
+            // options.rbs_dev.startBuild(options)
         }
         catch (e)
         {
@@ -953,42 +953,51 @@ def call(String projectBranch = "",
             }
         }
 
-        rbs_prod = new RBSProduction(this, "Blender28", env.JOB_NAME, env)
-        rbs_dev = new RBSDevelopment(this, "Blender28", env.JOB_NAME, env)
+        def universeClient = new Client(this, "https://universeapi.cis.luxoft.com", env)
+        client.tokenSetup()
+        println platforms
+        println tests
+        println testsPackage
+        println splitTestsExecution
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
-                               [projectBranch:projectBranch,
-                                testsBranch:testsBranch,
-                                updateRefs:updateRefs,
-                                enableNotifications:enableNotifications,
-                                PRJ_NAME:PRJ_NAME,
-                                PRJ_ROOT:PRJ_ROOT,
-                                incrementVersion:incrementVersion,
-                                skipBuild:skipBuild,
-                                renderDevice:renderDevice,
-                                testsPackage:testsPackage,
-                                tests:tests,
-                                isPreBuilt:isPreBuilt,
-                                forceBuild:forceBuild,
-                                reportName:'Test_20Report',
-                                splitTestsExecution:splitTestsExecution,
-                                sendToRBS: sendToRBS,
-                                gpusCount:gpusCount,
-                                TEST_TIMEOUT:90,
-                                DEPLOY_TIMEOUT:150,
-                                TESTER_TAG:"Blender2.8",
-                                BUILDER_TAG:"BuildBlender2.8",
-                                rbs_dev: rbs_dev,
-                                rbs_prod: rbs_prod,
-                                resX: resX,
-                                resY: resY,
-                                SPU: SPU,
-                                iter: iter,
-                                theshold: theshold,
-                                customBuildLinkWindows: customBuildLinkWindows,
-                                customBuildLinkLinux: customBuildLinkLinux,
-                                customBuildLinkOSX: customBuildLinkOSX
-                                ])
+        // rbs_prod = new RBSProduction(this, "Blender28", env.JOB_NAME, env)
+        // rbs_dev = new RBSDevelopment(this, "Blender28", env.JOB_NAME, env)
+
+
+        // multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
+        //                        [projectBranch:projectBranch,
+        //                         testsBranch:testsBranch,
+        //                         updateRefs:updateRefs,
+        //                         enableNotifications:enableNotifications,
+        //                         PRJ_NAME:PRJ_NAME,
+        //                         PRJ_ROOT:PRJ_ROOT,
+        //                         incrementVersion:incrementVersion,
+        //                         skipBuild:skipBuild,
+        //                         renderDevice:renderDevice,
+        //                         testsPackage:testsPackage,
+        //                         tests:tests,
+        //                         isPreBuilt:isPreBuilt,
+        //                         forceBuild:forceBuild,
+        //                         reportName:'Test_20Report',
+        //                         splitTestsExecution:splitTestsExecution,
+        //                         sendToRBS: sendToRBS,
+        //                         gpusCount:gpusCount,
+        //                         TEST_TIMEOUT:90,
+        //                         DEPLOY_TIMEOUT:150,
+        //                         TESTER_TAG:"Blender2.8",
+        //                         BUILDER_TAG:"BuildBlender2.8",
+        //                         // rbs_dev: rbs_dev,
+        //                         // rbs_prod: rbs_prod,
+        //                         universeClient: universeClient,
+        //                         resX: resX,
+        //                         resY: resY,
+        //                         SPU: SPU,
+        //                         iter: iter,
+        //                         theshold: theshold,
+        //                         customBuildLinkWindows: customBuildLinkWindows,
+        //                         customBuildLinkLinux: customBuildLinkLinux,
+        //                         customBuildLinkOSX: customBuildLinkOSX
+        //                         ])
     }
     catch(e)
     {
