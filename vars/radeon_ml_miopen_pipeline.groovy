@@ -8,7 +8,7 @@ def executeTestCommand(String osName, Map options)
         switch(osName) {
             case 'Windows':
                 bat """
-                tests-MIOpen.exe --gtest_output=xml:..\\..\\${STAGE_NAME}.gtest.xml >> ..\\..\\${STAGE_NAME}.log 2>&1
+                tests.exe --gtest_output=xml:..\\..\\${STAGE_NAME}.gtest.xml >> ..\\..\\${STAGE_NAME}.log 2>&1
                 """
                 break;
             case 'OSX':
@@ -18,9 +18,9 @@ def executeTestCommand(String osName, Map options)
                 break;
             default:
                 sh """
-                chmod +x tests-MIOpen
+                chmod +x tests
                 export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
-                ./tests-MIOpen --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ../../${STAGE_NAME}.log 2>&1
+                ./tests --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ../../${STAGE_NAME}.log 2>&1
                 """
         }
     }

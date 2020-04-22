@@ -82,7 +82,7 @@ def executeTests(String osName, String asicName, Map options)
         {
             receiveFiles("bin_storage/RadeonProRender3dsMax_2.3.403.msi", "/mnt/c/TestResources/")
             options.pluginWinSha = 'c:\\TestResources\\RadeonProRender3dsMax_2.3.403'
-            installMSIPlugin(osName, options, 'Max', options.stageName, false)
+            installMSIPlugin(osName, 'Max', options, false)
 
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
@@ -91,7 +91,7 @@ def executeTests(String osName, String asicName, Map options)
         {
             receiveFiles("bin_storage/RadeonProRender3dsMax_2.3.403.msi", "/mnt/c/TestResources/")
             options.pluginWinSha = 'c:\\TestResources\\RadeonProRender3dsMax_2.3.403'
-            installMSIPlugin(osName, options, 'Max', options.stageName, false)
+            installMSIPlugin(osName, 'Max', options, false)
             try
             {
                 options.tests.split(" ").each() {

@@ -13,9 +13,9 @@ def executeTestCommand(String osName, Map options)
                 break;
             case 'OSX':
                 sh """
-                chmod +x tests-MPS
+                chmod +x tests
                 export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
-                ./tests-MPS --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ../../${STAGE_NAME}.log 2>&1
+                ./tests --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ../../${STAGE_NAME}.log 2>&1
                 """
                 break;
             default:

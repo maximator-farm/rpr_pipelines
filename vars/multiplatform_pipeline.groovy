@@ -90,7 +90,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
     {
         try
         {
-            if(!options['skipBuild'] && options['executeBuild'])
+            if(!options['skipBuild'] && options['executeBuild'] && executeBuild)
             {
                 node("${osName} && ${options.BUILDER_TAG}")
                 {
@@ -181,14 +181,23 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                         {
                             stage("PreBuild")
                             {
-                                timeout(time: "${options.PREBUILD_TIMEOUT}", unit: 'MINUTES')
-                                {
-                                    executePreBuild(options)
-                                    if(!options['executeBuild'])
+                                try {
+                                    timeout(time: "${options.PREBUILD_TIMEOUT}", unit: 'MINUTES')
                                     {
-                                        options.CBR = 'SKIPPED'
-                                        echo "Build SKIPPED"
+                                        executePreBuild(options)
+                                        if(!options['executeBuild'])
+                                        {
+                                            options.CBR = 'SKIPPED'
+                                            echo "Build SKIPPED"
+                                        }
                                     }
+                                }
+                                catch (e)
+                                {
+                                    println("[ERROR] Failed during prebuild stage on ${env.NODE_NAME}")
+                                    println(e.toString());
+                                    println(e.getMessage());
+                                    throw e
                                 }
                             }
                         }
@@ -226,6 +235,12 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 }
                 parallel tasks
             }
+            catch (e) 
+            {
+                println(e.toString());
+                println(e.getMessage());
+                currentBuild.result = "FAILURE"
+            }
             finally
             {
                 node("Windows && ReportBuilder")
@@ -246,7 +261,6 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                 catch (e) {
                                     println(e.toString());
                                     println(e.getMessage());
-                                    currentBuild.result = "FAILURE"
                                     throw e
                                 }
                             }
