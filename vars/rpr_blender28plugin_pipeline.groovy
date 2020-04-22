@@ -4,6 +4,8 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 import RBSProduction
 import UniverseClient
 
+universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env)
+
 def getBlenderAddonInstaller(String osName, Map options)
 {
 
@@ -702,10 +704,10 @@ def executePreBuild(Map options)
         {
             // Universe : auth because now we in node
             // If use httpRequest in master slave will 408 error
-            options.universeClient.tokenSetup()
+            universeClient.tokenSetup()
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            options.universeClient.createBuild(options.universePlatforms, options.groupsRBS)
+            universeClient.createBuild(options.universePlatforms, options.groupsRBS)
             
             // old version RBS
             // options.rbs_dev.startBuild(options)
@@ -959,7 +961,7 @@ def call(String projectBranch = "",
 
         
         def universePlatforms = convertPlatforms(platforms);
-        def universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env)
+        
         println platforms
         println tests
         println testsPackage
@@ -993,9 +995,6 @@ def call(String projectBranch = "",
                                 DEPLOY_TIMEOUT:150,
                                 TESTER_TAG:"Blender2.8",
                                 BUILDER_TAG:"BuildBlender2.8",
-                                // rbs_dev: rbs_dev,
-                                // rbs_prod: rbs_prod,
-                                universeClient: universeClient,
                                 universePlatforms: universePlatforms,
                                 resX: resX,
                                 resY: resY,
