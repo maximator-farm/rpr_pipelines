@@ -182,7 +182,7 @@ def executeTests(String osName, String asicName, Map options)
 
         dir("${CIS_TOOLS}/../TestResources/rpr_maya")
         {
-            checkOutBranchOrScm(options.autotest_assets, "ssh://git@gitlab.cts.luxoft.com:30122/autotest_assets/maya_assets.git", true)
+            checkOutBranchOrScm(options.autotest_assets, "ssh://git@gitlab.cts.luxoft.com:30122/autotest_assets/maya_assets.git", true, false, true, 'radeonprorender', true)
         }
 
         if (!options['skipBuild']) {
