@@ -5,7 +5,7 @@ import hudson.plugins.git.GitException
 import UniverseClient
 
 import RBSProduction
-@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env)
+@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "http://172.26.157.251:8031")
 
 def getBlenderAddonInstaller(String osName, Map options)
 {
@@ -166,6 +166,29 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
     }
 }
 
+def universeConfig()
+{
+    switch(osName)
+    {
+    case 'Windows':
+        dir('scripts')
+        {
+            bat """
+            universe.bat ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url}
+            """
+        }
+        break;
+    // OSX & Ubuntu18
+    default:
+        dir("scripts")
+        {
+            sh """
+            universe.sh ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url}
+            """
+        }
+    }
+}
+
 def executeTestCommand(String osName, Map options)
 {
     switch(osName)
@@ -174,7 +197,7 @@ def executeTestCommand(String osName, Map options)
         dir('scripts')
         {
             bat """
-            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ..\\${options.stageName}.log  2>&1
+            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName}>> ..\\${options.stageName}.log  2>&1
             """
         }
         break;
@@ -193,11 +216,6 @@ def executeTests(String osName, String asicName, Map options)
 {
     // TODO: improve envs, now working on Windows testers only
     universeClient.stage("Tests-${osName}-${asicName}", "begin")
-    bat "set RBS_BUILD_ID=${universeClient.build["id"]}"
-    bat "set RBS_JOB_ID=${universeClient.build["job_id"]}"
-    bat "set RBS_URL=${universeClient.url}"
-    bat "set RBS_ENV_LABEL=${osName}-${asicName}"
-
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
@@ -273,6 +291,7 @@ def executeTests(String osName, String asicName, Map options)
             } catch (e) {
                 println("[WARNING] Baseline doesn't exist.")
             }
+            universeConfig()
             executeTestCommand(osName, options)
         }
 

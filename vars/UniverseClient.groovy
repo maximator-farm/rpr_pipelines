@@ -8,12 +8,14 @@ class UniverseClient {
     def url;
     def token;
     def build;
-    def env
+    def env;
+    def is_url;
 
-    UniverseClient(context, url, env) {
+    UniverseClient(context, url, env, is_url) {
         this.url = url;
         this.context = context;
         this.env = env;
+        this.is_url = is_url;
     }
 
     def retryWrapper(func) {
