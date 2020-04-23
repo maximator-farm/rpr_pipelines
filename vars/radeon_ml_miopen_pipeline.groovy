@@ -193,7 +193,7 @@ def executeBuild(String osName, Map options)
     try
     {
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
-        receiveFiles("bin_storage/MIOpen/*", './third_party/miopen')
+        receiveFiles("rpr-ml/MIOpen/*", './third_party/miopen')
         outputEnvironmentInfo(osName, "${STAGE_NAME}.Release")
         outputEnvironmentInfo(osName, "${STAGE_NAME}.Debug")
 
