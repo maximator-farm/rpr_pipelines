@@ -181,9 +181,12 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
                     for (build in builds) {
                         String currentBuildName = build.getDisplayName()
                         if (testsBuildsIds.containsKey(currentBuildName)) {
-                            testsBuildsIds[currentBuildName] = build.getNumber()
-                            if (--buildsLeft == 0) {
-                                break
+                            // save build id if it's the first id with this name older builds will be ignored
+                            if (testsBuildsIds[currentBuildName] == -1) {
+                                testsBuildsIds[currentBuildName] = build.getNumber()
+                                if (--buildsLeft == 0) {
+                                    break
+                                }
                             }
                         }
                     }
