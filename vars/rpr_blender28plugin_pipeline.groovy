@@ -166,7 +166,7 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
     }
 }
 
-def executeTestCommand(String osName, Map options)
+def executeTestCommand(String osName, String asicName, Map options)
 {
     switch(osName)
     {
