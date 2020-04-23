@@ -166,7 +166,7 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
     }
 }
 
-def universeConfig()
+def universeConfig(String osName, String asicName)
 {
     switch(osName)
     {
@@ -291,7 +291,7 @@ def executeTests(String osName, String asicName, Map options)
             } catch (e) {
                 println("[WARNING] Baseline doesn't exist.")
             }
-            universeConfig()
+            universeConfig(osName, asicName)
             executeTestCommand(osName, options)
         }
 
