@@ -505,7 +505,7 @@ def call(String projectBranch = "",
          String width = "0",
          String height = "0",
          String iterations = "0",
-         Boolean sendToRBS = true) {
+         Boolean sendToRBS = false) {
     try
     {
         String PRJ_NAME="RadeonProRenderCore"
