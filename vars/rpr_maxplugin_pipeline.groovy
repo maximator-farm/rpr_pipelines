@@ -119,7 +119,10 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MaxAssets/", 'MaxAssets')
+        dir("${CIS_TOOLS}/../TestResources/rpr_max")
+        {
+            checkOutBranchOrScm(options.autotest_assets, "https://gitlab.cts.luxoft.com/autotest_assets/rpr_max.git", true, false, true, 'radeonprorender', true)
+        }
 
         // temp 
         installMSIPlugin(osName, "Max", options, false, true)

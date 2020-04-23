@@ -212,7 +212,10 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Blender2.8Assets/", 'Blender2.8Assets')
+        dir("${CIS_TOOLS}/../TestResources/rpr_blender")
+        {
+            checkOutBranchOrScm(options.autotest_assets, "https://gitlab.cts.luxoft.com/autotest_assets/rpr_blender.git", true, false, true, 'radeonprorender', true)
+        }
 
         if (!options['skipBuild']) {
 
