@@ -155,7 +155,7 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
                         gpuNames.split(',').each() {
                             // if not split - testsList doesn't exists
                             options.testsList = options.testsList ?: ['']
-                            options['testsList'].each() { testName ->
+                            options['testsList'].split(' ').each() { testName ->
                                 String asicName = it
                                 String buildName = getTestsBuildName(asicName, osName, testName, options.buildId)
                                 testsBuildsIds[buildName] = -1
@@ -185,6 +185,15 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
                             if (--buildsLeft == 0) {
                                 break
                             }
+                        }
+                    }
+                    println("Found ${testsBuildsIds.size() - buildsLeft} of ${testsBuildsIds.size()} jobs. Details:")
+                    for (element in testsBuildsIds) {
+                        String formattedTestName = sprintf("%-50s", "${element.key}")
+                        if (element.value != -1) {
+                            println("[INFO]  ${formattedTestName}: found build with number #${element.value}")
+                        } else {
+                            println("[ERROR] ${formattedTestName}: build not found")
                         }
                     }
                 }
