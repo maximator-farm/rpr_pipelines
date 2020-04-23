@@ -8,6 +8,11 @@ import groovy.json.JsonBuilder
 import jenkins.model.Jenkins
 
 
+def getTestsBuildName(String asicName, String osName, String testName, String buildId) {
+    return "${asicName}-${osName}-${testName}-${buildId}"
+}
+
+
 def executePlatform(String osName, String gpuNames, def executeBuild, Map options, Map testsBuildsIds) {
     def retNode = {
         try {
@@ -35,10 +40,9 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
 
                     options.testsList.split(' ').each() { testName ->
 
-                        String currentTestName = "${asicName}-${osName}-${testName}"
-                        String currentBuildName = "${currentTestName}-${options.globalId}"
+                        String currentBuildName = getTestsBuildName(asicName, osName, testName, options.buildId)
 
-                        testTasks[currentTestName] = {
+                        testTasks[currentBuildName] = {
                             def testBuild
                             try {
                                 println("Run ${currentBuildName}")
@@ -59,11 +63,11 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                             } catch (e) {
                                 failedJobsCount++
                                 // -1 means that tests build failed and deploy build don't need to check its artifacts
-                                currentTestsBuildsIds[currentTestName] = -1
+                                currentTestsBuildsIds[currentBuildName] = -1
                                 println "[ERROR] ${currentBuildName} finished with status 'FAILURE'"
                             } finally {
                                 jobsCount++
-                                currentTestsBuildsIds[currentTestName] = testBuild.number
+                                currentTestsBuildsIds[currentBuildName] = testBuild.number
                             }
                         }
 
@@ -101,15 +105,12 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
     return retNode
 }
 
-def call(def platforms, def executePreparation, def executePreBuild, def executeBuild, Map options) {
+def call(def platforms, def executePreparation, def executePreBuild, def executeBuild, def executeDeploy, Map options) {
 
     try {
         stage("Preparation") {
             executePreparation(platforms, options)
         }
-
-        // get build number of current master job as id for tests jobs  
-        options.globalId = env.BUILD_NUMBER
 
         //TODO call executePreBuild method and report testsList initialization from this pipeline
         options.testsList = options.tests
@@ -135,7 +136,6 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
             options['FAILED_STAGES'] = []
 
             List platformList = []
-            List testResultList = []
             Map testsBuildsIds = [:]
 
             try {
@@ -150,42 +150,62 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
                     }
 
                     platformList << osName
-                    if(gpuNames) {
+
+                    if(options['rebuildReport'] && gpuNames) {
                         gpuNames.split(',').each() {
                             // if not split - testsList doesn't exists
                             options.testsList = options.testsList ?: ['']
                             options['testsList'].each() { testName ->
                                 String asicName = it
-                                String testResultItem = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
-                                testResultList << testResultItem
+                                String buildName = getTestsBuildName(asicName, osName, testName, options.buildId)
+                                testsBuildsIds[buildName] = -1
                             }
                         }
                     }
+
                     tasks[osName] = executePlatform(osName, gpuNames, executeBuild, options, testsBuildsIds)
                 }
 
-                parallel tasks
+                if (options['executeTests']) {
+                    parallel tasks
+                }
 
             } catch (e) {
                 println(e.toString());
                 println(e.getMessage());
             } finally {
-                // convert options Map to json to specify it as String parameter for report job
-                def jsonOptions = new JsonBuilder(options).toPrettyString()
-                // convert Map with ids of tests builds to json to specify it as String parameter for report job
-                def jsonTestsBuildsIds = new JsonBuilder(testsBuildsIds).toPrettyString()
-                build(
-                    job: options.deployJobName,
-                    parameters: [
-                        [$class: 'StringParameterValue', name: 'PipelineBranch', value: options.pipelinesBranch],
-                        [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
-                        [$class: 'StringParameterValue', name: 'BuildName', value: "Report build #${options.globalId} (auto)"],
-                        [$class: 'StringParameterValue', name: 'TestsBuilds', value: jsonTestsBuildsIds],
-                        [$class: 'StringParameterValue', name: 'Options', value: jsonOptions]
-                    ],
-                    quietPeriod: 0,
-                    wait: false
-                )
+                if (options['rebuildReport']) {
+                    // search ids of tests builds before rebuild report
+                    buildsLeft = testsBuildsIds.size()
+                    List builds = Jenkins.instance.getItem(options.testsJobName).getBuilds()
+                    for (build in builds) {
+                        String currentBuildName = build.getDisplayName()
+                        if (testsBuildsIds.containsKey(currentBuildName)) {
+                            testsBuildsIds[currentBuildName] = build.getNumber()
+                            if (--buildsLeft == 0) {
+                                break
+                            }
+                        }
+                    }
+                }
+
+                node("Windows && ReportBuilder") {
+                    stage("Deploy") {
+                        timeout(time: "${options.DEPLOY_TIMEOUT}", unit: 'MINUTES') {
+                            ws("WS/${options.PRJ_NAME}_Deploy") {
+                                try {
+                                    if(executeDeploy && options['executeTests'] || options['rebuildReport']) {
+                                        executeDeploy(options, platformList, testsBuildsIds)
+                                    }
+                                } catch (e) {
+                                    println(e.toString());
+                                    println(e.getMessage());
+                                    throw e
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
