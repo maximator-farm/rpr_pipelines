@@ -166,29 +166,6 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
     }
 }
 
-def universeConfig(String osName, String asicName)
-{
-    switch(osName)
-    {
-    case 'Windows':
-        dir('scripts')
-        {
-            bat """
-            universe.bat ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url}
-            """
-        }
-        break;
-    // OSX & Ubuntu18
-    default:
-        dir("scripts")
-        {
-            sh """
-            universe.sh ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url}
-            """
-        }
-    }
-}
-
 def executeTestCommand(String osName, Map options)
 {
     switch(osName)
@@ -197,6 +174,7 @@ def executeTestCommand(String osName, Map options)
         dir('scripts')
         {
             bat """
+            universe.bat ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url}
             run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ..\\${options.stageName}.log  2>&1
             """
         }
@@ -206,6 +184,7 @@ def executeTestCommand(String osName, Map options)
         dir("scripts")
         {
             sh """
+            ./universe.sh ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url}
             ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ../${options.stageName}.log 2>&1
             """
         }
@@ -277,7 +256,7 @@ def executeTests(String osName, String asicName, Map options)
         outputEnvironmentInfo(osName, options.stageName)
 
         if (options['updateRefs']) {
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         } else {
@@ -291,8 +270,7 @@ def executeTests(String osName, String asicName, Map options)
             } catch (e) {
                 println("[WARNING] Baseline doesn't exist.")
             }
-            universeConfig(osName, asicName)
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
         }
 
     } catch (e) {
