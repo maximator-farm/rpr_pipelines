@@ -1,5 +1,4 @@
 import RBSProduction
-import RBSDevelopment
 import hudson.plugins.git.GitException
 import java.nio.channels.ClosedChannelException
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
@@ -201,7 +200,6 @@ def executeTests(String osName, String asicName, Map options)
                 // setTester in rbs
                 if (options.sendToRBS) {
                     options.rbs_prod.setTester(options)
-                    options.rbs_dev.setTester(options)
                 }
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
 
@@ -303,7 +301,6 @@ def executeTests(String osName, String asicName, Map options)
                         if (options.sendToRBS)
                         {
                             options.rbs_prod.sendSuiteResult(sessionReport, options)
-                            options.rbs_dev.sendSuiteResult(sessionReport, options)
                         }
 
                         echo "Stashing test results to : ${options.testResultsName}"
@@ -493,7 +490,6 @@ def executeBuild(String osName, Map options)
         {
             try {
                 options.rbs_prod.setFailureStatus()
-                options.rbs_dev.setFailureStatus()
             } catch (err) {
                 println(err)
             }
@@ -704,7 +700,6 @@ def executePreBuild(Map options)
         try
         {
             options.rbs_prod.startBuild(options)
-            options.rbs_dev.startBuild(options)
         }
         catch (e)
         {
@@ -838,7 +833,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
                     options.rbs_prod.finishBuild(options, status)
-                    options.rbs_dev.finishBuild(options, status)
                 }
                 catch (e){
                     println(e.getMessage())
@@ -882,7 +876,7 @@ def call(String projectBranch = "",
     String tests = "",
     Boolean forceBuild = false,
     Boolean splitTestsExecution = true,
-    Boolean sendToRBS = false,
+    Boolean sendToRBS = true,
     String resX = '0',
     String resY = '0',
     String SPU = '25',
@@ -954,7 +948,6 @@ def call(String projectBranch = "",
         }
 
         rbs_prod = new RBSProduction(this, "Blender28", env.JOB_NAME, env)
-        rbs_dev = new RBSDevelopment(this, "Blender28", env.JOB_NAME, env)
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
@@ -978,7 +971,6 @@ def call(String projectBranch = "",
                                 DEPLOY_TIMEOUT:150,
                                 TESTER_TAG:"Blender2.8",
                                 BUILDER_TAG:"BuildBlender2.8",
-                                rbs_dev: rbs_dev,
                                 rbs_prod: rbs_prod,
                                 resX: resX,
                                 resY: resY,
