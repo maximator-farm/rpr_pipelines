@@ -214,7 +214,7 @@ def executeTests(String osName, String asicName, Map options)
 
         dir("${CIS_TOOLS}/../TestResources/rpr_blender")
         {
-            checkOutBranchOrScm(options.autotest_assets, "https://gitlab.cts.luxoft.com/autotest_assets/rpr_blender.git", true, false, true, 'radeonprorender-gitlab', true)
+            checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_blender.git", true, false, true, 'radeonprorender-gitlab', true)
         }
 
         if (!options['skipBuild']) {
@@ -893,7 +893,8 @@ def call(String projectBranch = "",
     String theshold = '0.05',
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
-    String customBuildLinkOSX = "")
+    String customBuildLinkOSX = "",
+    String autotest_assets = 'master')
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY

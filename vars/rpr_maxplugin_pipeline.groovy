@@ -121,7 +121,7 @@ def executeTests(String osName, String asicName, Map options)
 
         dir("${CIS_TOOLS}/../TestResources/rpr_max")
         {
-            checkOutBranchOrScm(options.autotest_assets, "https://gitlab.cts.luxoft.com/autotest_assets/rpr_max.git", true, false, true, 'radeonprorender-gitlab', true)
+            checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_max.git", true, false, true, 'radeonprorender-gitlab', true)
         }
 
         // temp 
@@ -671,7 +671,8 @@ def call(String projectBranch = "",
         String SPU = '25',
         String iter = '50',
         String theshold = '0.05',
-        String customBuildLinkWindows = "") 
+        String customBuildLinkWindows = "",
+        String autotest_assets = 'master') 
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
