@@ -758,7 +758,8 @@ def call(String projectBranch = "",
                                 SPU: SPU,
                                 iter: iter,
                                 theshold: theshold,
-                                customBuildLinkWindows: customBuildLinkWindows
+                                customBuildLinkWindows: customBuildLinkWindows,
+                                autotest_assets: autotest_assets
                                 ])
         }
         catch (e) {

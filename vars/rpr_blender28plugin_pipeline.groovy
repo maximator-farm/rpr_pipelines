@@ -991,7 +991,8 @@ def call(String projectBranch = "",
                                 theshold: theshold,
                                 customBuildLinkWindows: customBuildLinkWindows,
                                 customBuildLinkLinux: customBuildLinkLinux,
-                                customBuildLinkOSX: customBuildLinkOSX
+                                customBuildLinkOSX: customBuildLinkOSX,
+                                autotest_assets: autotest_assets
                                 ])
     }
     catch(e)

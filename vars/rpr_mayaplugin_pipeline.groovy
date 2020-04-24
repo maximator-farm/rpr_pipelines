@@ -883,7 +883,8 @@ def call(String projectBranch = "",
                                 iter: iter,
                                 theshold: theshold,
                                 customBuildLinkWindows: customBuildLinkWindows,
-                                customBuildLinkOSX: customBuildLinkOSX
+                                customBuildLinkOSX: customBuildLinkOSX,
+                                autotest_assets: autotest_assets
                                 ])
     }
     catch(e) {
