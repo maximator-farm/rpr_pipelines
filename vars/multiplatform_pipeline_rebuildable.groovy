@@ -1,31 +1,45 @@
 import java.text.SimpleDateFormat;
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
-import hudson.plugins.git.GitException;
-import java.nio.channels.ClosedChannelException;
-import hudson.remoting.RequestAbortedException;
-import java.lang.IllegalArgumentException;
 import groovy.json.JsonBuilder
 import jenkins.model.Jenkins
 
 
-def getTestsBuildName(String asicName, String osName, String testName, String buildId) {
-    return "${asicName}-${osName}-${testName}-${buildId}"
+def getTestsName(String asicName, String osName, String testName) {
+    return "${asicName}-${osName}-${testName}"
+}
+
+
+Map collectTestsOptions(Map options) {
+    Map testsOptions = options.clone()
+    testsOptions.remove('rbs_dev')
+    testsOptions.remove('rbs_prod')
+    Map masterEnv = [:]
+    masterEnv['BUILD_NUMBER'] = env.BUILD_NUMBER
+    masterEnv['BUILD_DISPLAY_NAME'] = env.BUILD_DISPLAY_NAME
+    testsOptions['masterEnv'] = masterEnv
+
+    return testsOptions
 }
 
 
 def executePlatform(String osName, String gpuNames, def executeBuild, Map options, Map testsBuildsIds) {
     def retNode = {
         try {
-            node("${osName} && ${options.BUILDER_TAG}") {
-                println("Started build at ${NODE_NAME}")
-                stage("Build-${osName}") {
-                    timeout(time: "${options.BUILD_TIMEOUT}", unit: 'MINUTES') {
-                        ws("WS/${options.PRJ_NAME}_Build") {
-                            executeBuild(osName, options)
+            if(!options['skipBuild'] && options['executeBuild'] && executeBuild) {
+                node("${osName} && ${options.BUILDER_TAG}") {
+                    println("Started build at ${NODE_NAME}")
+                    stage("Build-${osName}") {
+                        timeout(time: "${options.BUILD_TIMEOUT}", unit: 'MINUTES') {
+                            ws("WS/${options.PRJ_NAME}_Build") {
+                                executeBuild(osName, options)
+                            }
                         }
                     }
                 }
             }
+            options.masterJobName = env.JOB_NAME
+            options.masterBuildNumber = env.BUILD_NUMBER
+
             Map currentTestsBuildsIds = [:]
             String launchTestsStageName = "Launch&Wait-Tests-${osName}"
             def jobsCount = 0
@@ -33,25 +47,25 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
             stage(launchTestsStageName) {
                 def testTasks = [:]
                 // convert options Map to json to specify it as String parameter for called job
-                def jsonOptions = new JsonBuilder(options).toPrettyString()
+                Map newOptions = collectTestsOptions(options)
+                def jsonOptions = new JsonBuilder(newOptions).toPrettyString()
                 gpuNames.split(',').each() {
                     String asicName = it
                     options.testsList = options.testsList ?: ['']
 
-                    options.testsList.split(' ').each() { testName ->
+                    options.testsList.each() { testName ->
+                        String currentTestsName = getTestsName(asicName, osName, testName)
 
-                        String currentBuildName = getTestsBuildName(asicName, osName, testName, options.buildId)
-
-                        testTasks[currentBuildName] = {
+                        testTasks[currentTestsName] = {
                             def testBuild
                             try {
-                                println("Run ${currentBuildName}")
+                                println("Run ${currentTestsName}")
                                 testBuild = build(
                                     job: options.testsJobName,
                                     parameters: [
                                         [$class: 'StringParameterValue', name: 'PipelineBranch', value: options.pipelinesBranch],
                                         [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
-                                        [$class: 'StringParameterValue', name: 'BuildName', value: currentBuildName],
+                                        [$class: 'StringParameterValue', name: 'BuildName', value: "${currentTestsName}-options.buildId"],
                                         [$class: 'StringParameterValue', name: 'AsicName', value: asicName],
                                         [$class: 'StringParameterValue', name: 'OsName', value: osName],
                                         [$class: 'StringParameterValue', name: 'TestName', value: testName],
@@ -59,15 +73,14 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                                     ],
                                     quietPeriod: 0
                                 )
-                                println(testBuild)
+                                currentTestsBuildsIds[currentTestsName] = testBuild.number
                             } catch (e) {
                                 failedJobsCount++
                                 // -1 means that tests build failed and deploy build don't need to check its artifacts
-                                currentTestsBuildsIds[currentBuildName] = -1
-                                println "[ERROR] ${currentBuildName} finished with status 'FAILURE'"
+                                currentTestsBuildsIds[currentTestsName] = -1
+                                println "[ERROR] ${currentTestsName} finished with status 'FAILURE'"
                             } finally {
                                 jobsCount++
-                                currentTestsBuildsIds[currentBuildName] = testBuild.number
                             }
                         }
 
@@ -105,19 +118,29 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
     return retNode
 }
 
-def call(def platforms, def executePreparation, def executePreBuild, def executeBuild, def executeDeploy, Map options) {
+def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy, Map options) {
 
     try {
-        stage("Preparation") {
-            executePreparation(platforms, options)
-        }
 
-        //TODO call executePreBuild method and report testsList initialization from this pipeline
-        options.testsList = options.tests
+        // if it's PR - supersede all previously launched executions
+        if(env.CHANGE_ID) {
+            //set logRotation for PRs
+            properties([[$class: 'BuildDiscarderProperty', strategy:
+                [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5']]]);
+
+            def buildNumber = env.BUILD_NUMBER as int
+            if (buildNumber > 1) milestone(buildNumber - 1)
+            milestone(buildNumber)
+
+        }
 
         def date = new Date()
         dateFormatter = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss")
         options.JOB_STARTED_TIME = dateFormatter.format(date)
+
+        /*properties([[$class: 'BuildDiscarderProperty', strategy:
+                     [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                      artifactNumToKeepStr: '10', daysToKeepStr: '', numToKeepStr: '']]]);*/
 
         timestamps {
             String PRJ_PATH="${options.PRJ_ROOT}/${options.PRJ_NAME}"
@@ -132,6 +155,7 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
             options['PREBUILD_TIMEOUT'] = options['PREBUILD_TIMEOUT'] ?: 60
             options['BUILD_TIMEOUT'] = options['BUILD_TIMEOUT'] ?: 60
             options['TEST_TIMEOUT'] = options['TEST_TIMEOUT'] ?: 60
+            options['DEPLOY_TIMEOUT'] = options['DEPLOY_TIMEOUT'] ?: 60
 
             options['FAILED_STAGES'] = []
 
@@ -139,6 +163,29 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
             Map testsBuildsIds = [:]
 
             try {
+                if(executePreBuild) {
+                    node("Windows && PreBuild") {
+                        ws("WS/${options.PRJ_NAME}_PreBuild") {
+                            stage("PreBuild") {
+                                try {
+                                    timeout(time: "${options.PREBUILD_TIMEOUT}", unit: 'MINUTES') {
+                                        executePreBuild(options)
+                                        if(!options['executeBuild']) {
+                                            options.CBR = 'SKIPPED'
+                                            echo "Build SKIPPED"
+                                        }
+                                    }
+                                } catch (e) {
+                                    println("[ERROR] Failed during prebuild stage on ${env.NODE_NAME}")
+                                    println(e.toString());
+                                    println(e.getMessage());
+                                    throw e
+                                }
+                            }
+                        }
+                    }
+                }
+
                 def tasks = [:]
 
                 platforms.split(';').each() {
@@ -157,8 +204,8 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
                             options.testsList = options.testsList ?: ['']
                             options['testsList'].split(' ').each() { testName ->
                                 String asicName = it
-                                String buildName = getTestsBuildName(asicName, osName, testName, options.buildId)
-                                testsBuildsIds[buildName] = -1
+                                String testsName = getTestsName(asicName, osName, testName)
+                                testsBuildsIds[testsName] = -1
                             }
                         }
                     }
@@ -179,11 +226,25 @@ def call(def platforms, def executePreparation, def executePreBuild, def execute
                     buildsLeft = testsBuildsIds.size()
                     List builds = Jenkins.instance.getItem(options.testsJobName).getBuilds()
                     for (build in builds) {
-                        String currentBuildName = build.getDisplayName()
-                        if (testsBuildsIds.containsKey(currentBuildName)) {
+                        String[] nameParts = build.getDisplayName().split('-')
+                        String currentTestName = ""
+                        String currentBuildId = ""
+                        for (int i = 0; i < nameParts.length; i++) {
+                            // parse displayName: last part - buildId, string before it - testName
+                            if (i + 1 != nameParts.length) {
+                                testName = testName + nameParts[i]
+                            } else {
+                                buildId = nameParts[i]
+                            }
+                        }
+                        // if global id isn't equal skip this build
+                        if (currentBuildId == options.buildId) {
+                            continue
+                        }
+                        if (testsBuildsIds.containsKey(currentTestName)) {
                             // save build id if it's the first id with this name older builds will be ignored
-                            if (testsBuildsIds[currentBuildName] == -1) {
-                                testsBuildsIds[currentBuildName] = build.getNumber()
+                            if (testsBuildsIds[currentTestName] == -1) {
+                                testsBuildsIds[currentTestName] = build.getNumber()
                                 if (--buildsLeft == 0) {
                                     break
                                 }
