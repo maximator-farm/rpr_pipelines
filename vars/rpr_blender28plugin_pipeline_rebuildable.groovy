@@ -539,6 +539,7 @@ def call(String pipelinesBranch = "",
         }
 
         String PRJ_NAME="RadeonProRenderBlender2.8Plugin_Rebuildable"
+        String ASSETS_NAME="RadeonProRenderBlender2.8Plugin"
         String PRJ_ROOT="rpr-plugins"
 
         gpusCount = 0
@@ -562,6 +563,7 @@ def call(String pipelinesBranch = "",
                                 updateRefs:updateRefs,
                                 enableNotifications:enableNotifications,
                                 PRJ_NAME:PRJ_NAME,
+                                ASSETS_NAME:ASSETS_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 incrementVersion:incrementVersion,
                                 skipBuild:skipBuild,

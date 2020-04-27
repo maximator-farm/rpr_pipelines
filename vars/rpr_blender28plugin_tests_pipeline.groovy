@@ -194,7 +194,7 @@ def executeTests(String osName, String asicName, Map options) {
             }
         }
 
-        downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Blender2.8Assets/", 'Blender2.8Assets')
+        downloadAssets("${options.PRJ_ROOT}/${options.ASSETS_NAME}/Blender2.8Assets/", 'Blender2.8Assets')
 
         if (!options['skipBuild']) {
 

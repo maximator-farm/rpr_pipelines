@@ -144,7 +144,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
 
         timestamps {
             String PRJ_PATH="${options.PRJ_ROOT}/${options.PRJ_NAME}"
-            String REF_PATH="${PRJ_PATH}/ReferenceImages"
+            String REF_PATH="${options.PRJ_ROOT}/${options.ASSETS_NAME}/ReferenceImages"
             String JOB_PATH="${PRJ_PATH}/${JOB_NAME}/Build-${BUILD_ID}".replace('%2F', '_')
             options['PRJ_PATH']="${PRJ_PATH}"
             options['REF_PATH']="${REF_PATH}"
