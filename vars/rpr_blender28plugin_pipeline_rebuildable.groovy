@@ -541,7 +541,10 @@ def call(String pipelinesBranch = "",
                                 theshold: theshold,
                                 testsJobName:"DevRadeonProRenderBlender2.8Tests",
                                 buildId:buildId,
-                                rebuildReport:rebuildReport
+                                rebuildReport:rebuildReport,
+                                customBuildLinkWindows: customBuildLinkWindows,
+                                customBuildLinkLinux: customBuildLinkLinux,
+                                customBuildLinkOSX: customBuildLinkOSX
                                 ])
     } catch(e) {
         currentBuild.result = "FAILED"
