@@ -202,7 +202,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                         gpuNames.split(',').each() {
                             // if not split - testsList doesn't exists
                             options.testsList = options.testsList ?: ['']
-                            options['testsList'].split(' ').each() { testName ->
+                            options.testsList.each() { testName ->
                                 String asicName = it
                                 String testsName = getTestsName(asicName, osName, testName)
                                 testsBuildsIds[testsName] = -1
@@ -232,13 +232,17 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                         for (int i = 0; i < nameParts.length; i++) {
                             // parse displayName: last part - buildId, string before it - testName
                             if (i + 1 != nameParts.length) {
-                                testName = testName + nameParts[i]
+                                if (!currentTestName) {
+                                    currentTestName = nameParts[i]
+                                } else {
+                                    currentTestName = currentTestName + "-" + nameParts[i]
+                                }
                             } else {
-                                buildId = nameParts[i]
+                                currentBuildId = nameParts[i]
                             }
                         }
                         // if global id isn't equal skip this build
-                        if (currentBuildId == options.buildId) {
+                        if (currentBuildId != options.buildId) {
                             continue
                         }
                         if (testsBuildsIds.containsKey(currentTestName)) {

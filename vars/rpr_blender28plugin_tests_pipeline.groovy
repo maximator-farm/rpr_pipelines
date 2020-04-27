@@ -61,7 +61,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
                     addon_name = options.pluginOSXSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Copying artifact..."
-                    copyArtifacts(filter: "${options.OSXPluginName}.zip", fingerprintArtifacts: true, projectName: "${options.masterJobName}", selector: specific("${options.masterBuildNumber}"))
+                    copyArtifacts(filter: "${options.OSXPluginName}.zip", fingerprintArtifacts: false, projectName: "${options.masterJobName}", selector: specific("${options.masterBuildNumber}"))
                 }
 
                 sh """
@@ -97,7 +97,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
                     addon_name = options.pluginUbuntuSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Copying artifact..."
-                    copyArtifacts(filter: "${options.LinuxPluginName}.zip", fingerprintArtifacts: true, projectName: "${options.masterJobName}", selector: specific("${options.masterBuildNumber}"))
+                    copyArtifacts(filter: "${options.LinuxPluginName}.zip", fingerprintArtifacts: false, projectName: "${options.masterJobName}", selector: specific("${options.masterBuildNumber}"))
                 }
 
                 sh """

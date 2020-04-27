@@ -177,7 +177,7 @@ def executePreBuild(Map options) {
         options.tests = tests.join(" ")
     }
 
-    
+
     if (options['isPreBuilt']) {
         //plugin is pre built
         options['executeBuild'] = false
@@ -328,7 +328,7 @@ def executeDeploy(Map options, List platformList, Map testsBuildsIds) {
                         String artifactName = "testResult-${key}.zip"
                         try {
                             println("Copy artifact with name ${artifactName}")
-                            copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: true, projectName: "${options.testsJobName}", selector: specific("${value}"))
+                            copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: false, projectName: "${options.testsJobName}", selector: specific("${value}"))
                             unzip(zipFile: "${artifactName}", dir: "${key}.zip")
                         } catch(e) {
                             echo "[ERROR] Failed to copy test results for ${artifactName}"
