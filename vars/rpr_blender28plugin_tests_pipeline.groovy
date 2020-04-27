@@ -283,33 +283,11 @@ def executeTests(String osName, String asicName, Map options) {
                     if (options.sendToRBS) {
                         options.rbs_prod.sendSuiteResult(sessionReport, options)
                         options.rbs_dev.sendSuiteResult(sessionReport, options)
-                    }
-
-                    // move Results dir to additional dir to not change its dirs structure
-                    dir('Archive') {
-                        switch(osName)  {
-                            case 'Windows':
-                                bat """
-                                    move ..\\Results .
-                                """
-                                break;
-                            case 'OSX':
-                                sh """
-                                    mv ../Results/ .
-                                """
-                                break;
-                            default:
-                                sh """
-                                    mv ../Results/ .
-                                """
-                            }
-                    }
-
-
-                    echo "Archive test results to: ${options.testResultsName}"
-                    zip(archive: true, dir: 'Archive', zipFile: "${options.testResultsName}.zip")
+                    }                    
                 }
             }
+            echo "Archive test results to: ${options.testResultsName}"
+            zip(archive: true, dir: 'Work', zipFile: "${options.testResultsName}.zip")
         } else {
             println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
         }
