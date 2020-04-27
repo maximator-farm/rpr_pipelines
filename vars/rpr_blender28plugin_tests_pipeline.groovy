@@ -26,7 +26,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
                     addon_name = options.pluginWinSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Copying artifact..."
-                    copyArtifacts(filter: "${options.WindowsPluginName}.zip", fingerprintArtifacts: true, projectName: "${options.masterJobName}", selector: specific("${options.masterBuildNumber}"))
+                    copyArtifacts(filter: "${options.WindowsPluginName}.zip", fingerprintArtifacts: false, projectName: "${options.masterJobName}", selector: specific("${options.masterBuildNumber}"))
                 }
 
                 bat """
