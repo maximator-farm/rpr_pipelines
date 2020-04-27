@@ -5,7 +5,12 @@ import jenkins.model.Jenkins
 
 
 def getTestsName(String asicName, String osName, String testName) {
-    return "${asicName}-${osName}-${testName}"
+    if (testName) {
+        return "${asicName}-${osName}-${testName}"
+    } else {
+        return "${asicName}-${osName}"
+    }
+
 }
 
 
@@ -51,7 +56,6 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                 def jsonOptions = new JsonBuilder(newOptions).toPrettyString()
                 gpuNames.split(',').each() {
                     String asicName = it
-                    options.testsList = options.testsList ?: ['']
 
                     options.testsList.each() { testName ->
                         String currentTestsName = getTestsName(asicName, osName, testName)
