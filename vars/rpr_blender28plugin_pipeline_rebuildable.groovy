@@ -141,6 +141,43 @@ def executeBuild(String osName, Map options) {
 }
 
 def executePreBuild(Map options) {
+    def tests = []
+    if(options.testsPackage != "none") {
+        dir('jobs_test_blender') {
+            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
+            // json means custom test suite. Split doesn't supported
+            if(options.testsPackage.endsWith('.json')) {
+                def testsByJson = readJSON file: "jobs/${options.testsPackage}"
+            }
+            else {
+                String tempTests = readFile("jobs/${options.testsPackage}")
+                tempTests.split("\n").each {
+                    // TODO: fix: duck tape - error with line ending
+                    tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
+                }
+                options.tests = tests
+                options.testsPackage = "none"
+            }
+        }
+    }
+    else {
+        options.tests.split(" ").each() {
+            tests << "${it}"
+        }
+        options.tests = tests
+    }
+
+    if(!options.testsPackage.endsWith('.json')) {
+        // if testsPackage wasn't specified or it isn't regression.json
+        options.testsList = options.tests
+    }
+    else {
+        // if testsPackage is regression.json
+        options.testsList = ['']
+        options.tests = tests.join(" ")
+    }
+
+    
     if (options['isPreBuilt']) {
         //plugin is pre built
         options['executeBuild'] = false
@@ -276,43 +313,6 @@ def executePreBuild(Map options) {
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     }
-
-    
-    def tests = []
-    if(options.testsPackage != "none") {
-        dir('jobs_test_blender') {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
-            // json means custom test suite. Split doesn't supported
-            if(options.testsPackage.endsWith('.json')) {
-                def testsByJson = readJSON file: "jobs/${options.testsPackage}"
-            }
-            else {
-                String tempTests = readFile("jobs/${options.testsPackage}")
-                tempTests.split("\n").each {
-                    // TODO: fix: duck tape - error with line ending
-                    tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
-                }
-                options.tests = tests
-                options.testsPackage = "none"
-            }
-        }
-    }
-    else {
-        options.tests.split(" ").each() {
-            tests << "${it}"
-        }
-        options.tests = tests
-    }
-
-    if(!options.testsPackage.endsWith('.json')) {
-        // if testsPackage wasn't specified or it isn't regression.json
-        options.testsList = options.tests
-    }
-    else {
-        // if testsPackage is regression.json
-        options.testsList = ['']
-        options.tests = tests.join(" ")
-    }
 }
 
 def executeDeploy(Map options, List platformList, Map testsBuildsIds) {
@@ -325,8 +325,8 @@ def executeDeploy(Map options, List platformList, Map testsBuildsIds) {
             dir("summaryTestResults") {
                 testsBuildsIds.each { key, value ->
                     dir("${key}") {
+                        String artifactName = "testResult-${key}.zip"
                         try {
-                            String artifactName = "testResult-${key}.zip"
                             println("Copy artifact with name ${artifactName}")
                             copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: true, projectName: "${options.testsJobName}", selector: specific("${value}"))
                             unzip(zipFile: "${artifactName}", dir: "${key}.zip")
