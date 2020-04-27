@@ -315,7 +315,7 @@ def executePreBuild(Map options) {
     }
 }
 
-def executeDeploy(Map options, List platformList, Map testsBuildsIds) {
+def executeDeploy(Map options, Map testsBuildsIds) {
     try {
         if(options['executeTests'] || options['rebuildReport']) {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
@@ -324,17 +324,22 @@ def executeDeploy(Map options, List platformList, Map testsBuildsIds) {
 
             dir("summaryTestResults") {
                 testsBuildsIds.each { key, value ->
-                    dir("${key}") {
-                        String artifactName = "testResult-${key}.zip"
-                        try {
-                            println("Copy artifact with name ${artifactName}")
-                            copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: false, projectName: "${options.testsJobName}", selector: specific("${value}"))
-                            unzip(zipFile: "${artifactName}", dir: "${key}.zip")
-                        } catch(e) {
-                            echo "[ERROR] Failed to copy test results for ${artifactName}"
-                            lostArchive.add("${buildName}")
-                            println(e.toString());
-                            println(e.getMessage());
+                    if (value == -1) {
+                        //tests build terminated with 'FAILURE' or 'ABORTED' status
+                        lostArchive.add("'${key}'")
+                    } else if (value != 0) {
+                        dir("${key}") {
+                            String artifactName = "testResult-${key}.zip"
+                            try {
+                                println("Copy artifact with name ${artifactName}")
+                                copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: false, projectName: "${options.testsJobName}", selector: specific("${value}"))
+                                unzip(zipFile: "${artifactName}", dir: "${key}.zip")
+                            } catch(e) {
+                                echo "[ERROR] Failed to copy test results for ${artifactName}"
+                                lostArchive.add("'${key}'")
+                                println(e.toString());
+                                println(e.getMessage());
+                            }
                         }
                     }
                 }

@@ -78,7 +78,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                                 failedJobsCount++
                                 // -1 means that tests build failed and deploy build don't need to check its artifacts
                                 currentTestsBuildsIds[currentTestsName] = -1
-                                println "[ERROR] ${currentTestsName} finished with status 'FAILURE'"
+                                println "[ERROR] ${currentTestsName} finished not successful"
                             } finally {
                                 jobsCount++
                             }
@@ -159,7 +159,6 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
 
             options['FAILED_STAGES'] = []
 
-            List platformList = []
             Map testsBuildsIds = [:]
 
             try {
@@ -196,8 +195,6 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                         gpuNames = tokens.get(1)
                     }
 
-                    platformList << osName
-
                     if(options['rebuildReport'] && gpuNames) {
                         gpuNames.split(',').each() {
                             // if not split - testsList doesn't exists
@@ -205,7 +202,8 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                             options.testsList.each() { testName ->
                                 String asicName = it
                                 String testsName = getTestsName(asicName, osName, testName)
-                                testsBuildsIds[testsName] = -1
+                                // 0 means that id of tests build isn't specified
+                                testsBuildsIds[testsName] = 0
                             }
                         }
                     }
@@ -247,7 +245,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                         }
                         if (testsBuildsIds.containsKey(currentTestName)) {
                             // save build id if it's the first id with this name older builds will be ignored
-                            if (testsBuildsIds[currentTestName] == -1) {
+                            if (testsBuildsIds[currentTestName] == 0) {
                                 testsBuildsIds[currentTestName] = build.getNumber()
                                 if (--buildsLeft == 0) {
                                     break
@@ -258,7 +256,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                     println("Found ${testsBuildsIds.size() - buildsLeft} of ${testsBuildsIds.size()} jobs. Details:")
                     for (element in testsBuildsIds) {
                         String formattedTestName = sprintf("%-50s", "${element.key}")
-                        if (element.value != -1) {
+                        if (element.value != 0) {
                             println("[INFO]  ${formattedTestName}: found build with number #${element.value}")
                         } else {
                             println("[ERROR] ${formattedTestName}: build not found")
@@ -272,7 +270,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                             ws("WS/${options.PRJ_NAME}_Deploy") {
                                 try {
                                     if(executeDeploy && options['executeTests'] || options['rebuildReport']) {
-                                        executeDeploy(options, platformList, testsBuildsIds)
+                                        executeDeploy(options, testsBuildsIds)
                                     }
                                 } catch (e) {
                                     println(e.toString());
