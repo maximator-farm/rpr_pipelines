@@ -1,7 +1,3 @@
-import RBSProduction
-import RBSDevelopment
-
-
 def executeBuildWindows(Map options) {
     dir('RadeonProRenderBlenderAddon\\BlenderPkg') {
         bat """
@@ -137,14 +133,6 @@ def executeBuild(String osName, Map options) {
         options.failureMessage = "[ERROR] Failed to build plugin on ${osName}"
         options.failureError = e.getMessage()
         currentBuild.result = "FAILED"
-        if (options.sendToRBS) {
-            try {
-                options.rbs_prod.setFailureStatus()
-                options.rbs_dev.setFailureStatus()
-            } catch (err) {
-                println(err)
-            }
-        }
         throw e
     }
     finally {
@@ -291,20 +279,14 @@ def executePreBuild(Map options) {
 
     
     def tests = []
-    options.groupsRBS = []
     if(options.testsPackage != "none") {
         dir('jobs_test_blender') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
             // json means custom test suite. Split doesn't supported
             if(options.testsPackage.endsWith('.json')) {
                 def testsByJson = readJSON file: "jobs/${options.testsPackage}"
-                testsByJson.each() {
-                    options.groupsRBS << "${it.key}"
-                }
-                options.splitTestsExecution = false
             }
             else {
-                // options.splitTestsExecution = false
                 String tempTests = readFile("jobs/${options.testsPackage}")
                 tempTests.split("\n").each {
                     // TODO: fix: duck tape - error with line ending
@@ -312,7 +294,6 @@ def executePreBuild(Map options) {
                 }
                 options.tests = tests
                 options.testsPackage = "none"
-                options.groupsRBS = tests
             }
         }
     }
@@ -321,26 +302,16 @@ def executePreBuild(Map options) {
             tests << "${it}"
         }
         options.tests = tests
-        options.groupsRBS = tests
     }
 
-    if(options.splitTestsExecution) {
+    if(!options.testsPackage.endsWith('.json')) {
+        // if testsPackage wasn't specified or it isn't regression.json
         options.testsList = options.tests
     }
     else {
+        // if testsPackage is regression.json
         options.testsList = ['']
         options.tests = tests.join(" ")
-    }
-
-    if (options.sendToRBS)
-    {
-        try {
-            options.rbs_prod.startBuild(options)
-            options.rbs_dev.startBuild(options)
-        }
-        catch (e) {
-            println(e.toString())
-        }
     }
 }
 
@@ -445,16 +416,6 @@ def executeDeploy(Map options, List platformList, Map testsBuildsIds) {
                          reportName: 'Test Report',
                          reportTitles: 'Summary Report, Performance Report, Compare Report'])
 
-            if (options.sendToRBS) {
-                try {
-                    String status = currentBuild.result ?: 'SUCCESSFUL'
-                    options.rbs_prod.finishBuild(options, status)
-                    options.rbs_dev.finishBuild(options, status)
-                } catch (e){
-                    println(e.getMessage())
-                }
-            }
-
             println "BUILD RESULT: ${currentBuild.result}"
             println "BUILD CURRENT RESULT: ${currentBuild.currentResult}"
         }
@@ -488,8 +449,6 @@ def call(String pipelinesBranch = "",
     String testsPackage = "",
     String tests = "",
     Boolean forceBuild = false,
-    Boolean splitTestsExecution = true,
-    Boolean sendToRBS = true,
     String resX = '0',
     String resY = '0',
     String SPU = '25',
@@ -553,9 +512,6 @@ def call(String pipelinesBranch = "",
             }
         }
 
-        rbs_prod = new RBSProduction(this, "Blender28", env.JOB_NAME, env)
-        rbs_dev = new RBSDevelopment(this, "Blender28", env.JOB_NAME, env)
-
         multiplatform_pipeline_rebuildable(platforms, this.&executePreBuild, this.&executeBuild, this.&executeDeploy,
                                [pipelinesBranch:pipelinesBranch,
                                 projectBranch:projectBranch,
@@ -573,15 +529,11 @@ def call(String pipelinesBranch = "",
                                 isPreBuilt:isPreBuilt,
                                 forceBuild:forceBuild,
                                 reportName:'Test_20Report',
-                                splitTestsExecution:splitTestsExecution,
-                                sendToRBS: sendToRBS,
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:90,
                                 DEPLOY_TIMEOUT:150,
                                 TESTER_TAG:"Blender2.8",
                                 BUILDER_TAG:"BuildBlender2.8",
-                                rbs_dev: rbs_dev,
-                                rbs_prod: rbs_prod,
                                 resX: resX,
                                 resY: resY,
                                 SPU: SPU,

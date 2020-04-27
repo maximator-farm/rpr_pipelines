@@ -180,11 +180,6 @@ def executeTests(String osName, String asicName, Map options) {
             try {
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
-                // setTester in rbs
-                if (options.sendToRBS) {
-                    options.rbs_prod.setTester(options)
-                    options.rbs_dev.setTester(options)
-                }
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
 
             } catch(e) {
@@ -278,12 +273,7 @@ def executeTests(String osName, String asicName, Map options) {
                     // deinstalling broken addon
                     if (sessionReport.summary.total == sessionReport.summary.error) {
                         installBlenderAddon(osName, "2.82", options, false, true)
-                    }
-                
-                    if (options.sendToRBS) {
-                        options.rbs_prod.sendSuiteResult(sessionReport, options)
-                        options.rbs_dev.sendSuiteResult(sessionReport, options)
-                    }                    
+                    }               
                 }
             }
             echo "Archive test results to: ${options.testResultsName}"
@@ -305,9 +295,6 @@ def call(String testsBranch = "master",
         // parse converted options
         Map options = [:] << new JsonSlurper().parseText(jsonOptions)
         options.masterEnv = [:] << options.masterEnv
-
-        options.rbs_prod = new RBSProduction(this, "Blender28", options.masterJobName, options.masterEnv)
-        options.rbs_dev = new RBSDevelopment(this, "Blender28", options.masterJobName, options.masterEnv)
 
         tests_launch_pipeline(this.&executeTests, asicName, osName, testName, options)
     } catch(e) {

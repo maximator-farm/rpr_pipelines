@@ -11,8 +11,8 @@ def getTestsName(String asicName, String osName, String testName) {
 
 Map collectTestsOptions(Map options) {
     Map testsOptions = options.clone()
-    testsOptions.remove('rbs_dev')
-    testsOptions.remove('rbs_prod')
+    //testsOptions.remove('rbs_dev')
+    //testsOptions.remove('rbs_prod')
     Map masterEnv = [:]
     masterEnv['BUILD_NUMBER'] = env.BUILD_NUMBER
     masterEnv['BUILD_DISPLAY_NAME'] = env.BUILD_DISPLAY_NAME
