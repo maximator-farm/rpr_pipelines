@@ -65,7 +65,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                                     parameters: [
                                         [$class: 'StringParameterValue', name: 'PipelineBranch', value: options.pipelinesBranch],
                                         [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
-                                        [$class: 'StringParameterValue', name: 'BuildName', value: "${currentTestsName}-options.buildId"],
+                                        [$class: 'StringParameterValue', name: 'BuildName', value: "${currentTestsName}-${options.buildId}"],
                                         [$class: 'StringParameterValue', name: 'AsicName', value: asicName],
                                         [$class: 'StringParameterValue', name: 'OsName', value: osName],
                                         [$class: 'StringParameterValue', name: 'TestName', value: testName],
