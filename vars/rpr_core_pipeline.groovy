@@ -1,4 +1,3 @@
-import RBSDevelopment
 import RBSProduction
 import hudson.plugins.git.GitException
 import java.nio.channels.ClosedChannelException
@@ -166,7 +165,6 @@ def executeTests(String osName, String asicName, Map options)
 
         if (options.sendToRBS) {
             options.rbs_prod.setTester(options)
-            options.rbs_dev.setTester(options)
         }
 
         downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/", 'CoreAssets')
@@ -230,7 +228,6 @@ def executeTests(String osName, String asicName, Map options)
                 if (options.sendToRBS)
                 {
                     options.rbs_prod.sendSuiteResult(sessionReport, options)
-                    options.rbs_dev.sendSuiteResult(sessionReport, options)
                 }
             }
         }
@@ -297,7 +294,6 @@ def executeBuild(String osName, Map options)
         {
             try {
                 options.rbs_prod.setFailureStatus()
-                options.rbs_dev.setFailureStatus()
             } catch (err) {
                 println(err)
             }
@@ -378,7 +374,6 @@ def executePreBuild(Map options)
                 }
             }
             options.rbs_prod.startBuild(options)
-            options.rbs_dev.startBuild(options)
         }
         catch (e)
         {
@@ -474,7 +469,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
                     options.rbs_prod.finishBuild(options, status)
-                    options.rbs_dev.finishBuild(options, status)
                 }
                 catch (e){
                     println(e.getMessage())
@@ -527,7 +521,6 @@ def call(String projectBranch = "",
         }
 
         rbs_prod = new RBSProduction(this, "Core", env.JOB_NAME, env)
-        rbs_dev = new RBSDevelopment(this, "Core", env.JOB_NAME, env)
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
@@ -551,7 +544,6 @@ def call(String projectBranch = "",
                                 iterations:iterations,
                                 sendToRBS:sendToRBS,
                                 rbs_prod: rbs_prod,
-                                rbs_dev: rbs_dev
                                 ])
     }
     catch(e) {

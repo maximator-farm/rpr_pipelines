@@ -542,7 +542,7 @@ def executePreBuild(Map options)
         // for autojobs - push only weekly job and master branch
         if (env.BRANCH_NAME && env.BRANCH_NAME == "master" || env.JOB_NAME == "RadeonProRenderCreoPlugin-WeeklyFull")
         {
-            options.sendToRBS = true
+            options.sendToRBS = false
         }
     }
     else
