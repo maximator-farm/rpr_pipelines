@@ -352,13 +352,13 @@ def executeDeploy(Map options, List platformList, Map testsBuildsIds) {
             List lostArchive = []
 
             dir("summaryTestResults") {
-                for (buildName in testsBuildsIds) {
-                    dir("${buildName.key}") {
+                testsBuildsIds.each { key, value ->
+                    dir("${key}") {
                         try {
-                            String artifactName = "testResult-${buildName.key}.zip"
+                            String artifactName = "testResult-${key}.zip"
                             println("Copy artifact with name ${artifactName}")
-                            copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: true, projectName: "${options.testsJobName}", selector: specific("${buildName.value}"))
-                            unzip(zipFile: "${artifactName}", dir: "${buildName.key}.zip")
+                            copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: true, projectName: "${options.testsJobName}", selector: specific("${value}"))
+                            unzip(zipFile: "${artifactName}", dir: "${key}.zip")
                         } catch(e) {
                             echo "[ERROR] Failed to copy test results for ${artifactName}"
                             lostArchive.add("${buildName}")
@@ -366,7 +366,7 @@ def executeDeploy(Map options, List platformList, Map testsBuildsIds) {
                             println(e.getMessage());
                         }
                     }
-                } 
+                }
             }
 
             try {

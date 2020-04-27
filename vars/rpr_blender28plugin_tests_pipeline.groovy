@@ -285,8 +285,29 @@ def executeTests(String osName, String asicName, Map options) {
                         options.rbs_dev.sendSuiteResult(sessionReport, options)
                     }
 
+                    // move Results dir to additional dir to not change its dirs structure
+                    dir('Archive') {
+                        switch(osName)  {
+                            case 'Windows':
+                                bat """
+                                    move ..\\Results .
+                                """
+                                break;
+                            case 'OSX':
+                                sh """
+                                    mv ../Results/ .
+                                """
+                                break;
+                            default:
+                                sh """
+                                    mv ../Results/ .
+                                """
+                            }
+                    }
+
+
                     echo "Archive test results to: ${options.testResultsName}"
-                    zip(archive: true, dir: 'Results', zipFile: "${options.testResultsName}.zip")
+                    zip(archive: true, dir: 'Archive', zipFile: "${options.testResultsName}.zip")
                 }
             }
         } else {
