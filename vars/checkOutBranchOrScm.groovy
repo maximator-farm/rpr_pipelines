@@ -1,22 +1,20 @@
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import hudson.plugins.git.GitException
 import hudson.AbortException
 
 def call(String branchName, String repoName, Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, String credId='radeonprorender') {
     try {
         executeCheckout(branchName, repoName, disableSubmodules, polling, changelog, credId)
-    }
-    catch (GitException | AbortException e) {
+    } catch (FlowInterruptedException e) {
+        println "[INFO] Task was aborted during checkout"
+        throw e
+    } catch (e) {
         println(e.toString())
         println(e.getMessage())
 
-        if (e.getClass().getCanonicalName() == "hudson.AbortException" &&
-                e.getCause().getClass().getCanonicalName() == "hudson.plugins.git.GitException") {
-            echo "[GIT] index.lock file detected. Try to resolve..."
-
-            // if has been fount index.lock file - remove all files from workspace and unsafe retry
-            cleanWS()
-            executeCheckout(branchName, repoName, disableSubmodules, polling, changelog, credId)
-        }
+        println "[ERROR] Failed to checkout git on ${env.NODE_NAME}. Cleaning workspace and try again."
+        cleanWS()
+        executeCheckout(branchName, repoName, disableSubmodules, polling, changelog, credId)
     }
 }
 

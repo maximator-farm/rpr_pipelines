@@ -128,14 +128,14 @@ def executeBuild(String osName, Map options) {
                     executeBuildLinux(osName, options);
                 }
         }
-    }
-    catch (e) {
+    } catch (e) {
+        println(e.toString());
+        println(e.getMessage());
         options.failureMessage = "[ERROR] Failed to build plugin on ${osName}"
         options.failureError = e.getMessage()
         currentBuild.result = "FAILED"
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
 }
