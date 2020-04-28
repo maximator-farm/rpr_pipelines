@@ -1,8 +1,4 @@
 import RBSProduction
-import hudson.plugins.git.GitException
-import java.nio.channels.ClosedChannelException
-import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
-
 
 def getBlenderAddonInstaller(String osName, Map options)
 {
@@ -228,7 +224,7 @@ def executeTests(String osName, String asicName, Map options)
                         buildRenderCache(osName, "2.82", options.stageName)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
                             println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
-                            throw new Exception("No output image")
+                            throw new Exception("No output image after cache building.")
                         }
                     }
                 }
@@ -286,18 +282,21 @@ def executeTests(String osName, String asicName, Map options)
                         def sessionReport = null
                         sessionReport = readJSON file: 'Results/Blender28/session_report.json'
 
+                        // deinstalling broken addon & reallocate node if there are still attempts
+                        if (sessionReport.summary.total == sessionReport.summary.error) {
+                            installBlenderAddon(osName, "2.82", options, false, true)
+                            if (options.currentTry < options.nodeReallocateTries) {
+                                throw new Exception("All tests crashed")
+                            } 
+                        }
+
                         // if none launched tests - mark build failed
                         if (sessionReport.summary.total == 0)
                         {
-                            options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
+                            options.failureMessage = "None test was finished for: ${asicName}-${osName}"
                             currentBuild.result = "FAILED"
                         }
 
-                        // deinstalling broken addon
-                        if (sessionReport.summary.total == sessionReport.summary.error) {
-                            installBlenderAddon(osName, "2.82", options, false, true)
-                        }
-                    
                         if (options.sendToRBS)
                         {
                             options.rbs_prod.sendSuiteResult(sessionReport, options)

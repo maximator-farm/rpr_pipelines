@@ -1,8 +1,4 @@
 import RBSProduction
-import hudson.plugins.git.GitException
-import java.nio.channels.ClosedChannelException
-import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
-
 
 def getMayaPluginInstaller(String osName, Map options)
 {
@@ -254,16 +250,19 @@ def executeTests(String osName, String asicName, Map options)
                     def sessionReport = null
                     sessionReport = readJSON file: 'Results/Maya/session_report.json'
 
+                    // deinstalling broken addon & reallocate node if there are still attempts
+                    if (sessionReport.summary.total == sessionReport.summary.error) {
+                        installMSIPlugin(osName, "Maya", options, false, true)
+                        if (options.currentTry < options.nodeReallocateTries) {
+                            throw new Exception("All tests crashed")
+                        }
+                    }
+
                     // if none launched tests - mark build failed
                     if (sessionReport.summary.total == 0)
                     {
                         options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
                         currentBuild.result = "FAILED"
-                    }
-
-                    // deinstalling broken addon
-                    if (sessionReport.summary.total == sessionReport.summary.error) {
-                        installMSIPlugin(osName, "Maya", options, false, true)
                     }
 
                     if (options.sendToRBS)
