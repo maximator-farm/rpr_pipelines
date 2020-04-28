@@ -305,7 +305,7 @@ def executeTests(String osName, String asicName, Map options)
                     
                         if (options.sendToRBS)
                         {
-                            universeClient.stage("Tests-" + osName, "end")
+                            universeClient.stage("Tests-${osName}-${asicName}", "end")
                             // options.rbs_prod.sendSuiteResult(sessionReport, options)
                             // options.rbs_dev.sendSuiteResult(sessionReport, options)
                         }
@@ -455,7 +455,9 @@ def executeBuildLinux(String osName, Map options)
 def executeBuild(String osName, Map options)
 {
     universeClient.stage("Build-" + osName , "begin")
+
     try {
+
         dir('RadeonProRenderBlenderAddon')
         {
             checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderBlenderAddon.git')
@@ -507,9 +509,9 @@ def executeBuild(String osName, Map options)
     }
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-        universeClient.stage("Build-" + osName, "end")
     }
 
+    universeClient.stage("Build-" + osName, "end")
 }
 
 def executePreBuild(Map options)
