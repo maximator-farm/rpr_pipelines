@@ -1,9 +1,9 @@
 import groovy.json.JsonSlurper
 
 
-def getBlenderAddonInstaller(String osName, Map options) {
+def getBlenderAddonInstaller(Map options) {
 
-    switch(osName) {
+    switch(options.osName) {
         case 'Windows':
 
             if (options['isPreBuilt']) {
@@ -22,7 +22,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
 
                 if (options['isPreBuilt']) {
                     println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                    downloadPlugin(osName, "Blender", options)
+                    downloadPlugin(options.osName, "Blender", options)
                     addon_name = options.pluginWinSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Copying artifact..."
@@ -57,7 +57,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
 
                 if (options['isPreBuilt']) {
                     println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                    downloadPlugin(osName, "Blender", options)
+                    downloadPlugin(options.osName, "Blender", options)
                     addon_name = options.pluginOSXSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Copying artifact..."
@@ -66,7 +66,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"
+                    mv RadeonProRender*.zip "${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"
                 """
 
             } else {
@@ -84,7 +84,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
                     addon_name = "unknown"
                 }
             } else {
-                addon_name = "${options.commitSHA}_${osName}"
+                addon_name = "${options.commitSHA}_${options.osName}"
             }
 
             if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"))
@@ -93,7 +93,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
 
                 if (options['isPreBuilt']) {
                     println "[INFO] The prebuilt plugin does not exist in the storage. Downloading and copying..."
-                    downloadPlugin(osName, "Blender", options)
+                    downloadPlugin(options.osName, "Blender", options)
                     addon_name = options.pluginUbuntuSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Copying artifact..."
@@ -102,7 +102,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                     mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"
+                     mv RadeonProRender*.zip "${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"
                 """
 
             } else {
@@ -113,7 +113,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
 }
 
 
-def executeGenTestRefCommand(String osName, Map options) {
+def executeGenTestRefCommand(Map options) {
     try {
         //for update existing manifest file
         receiveFiles("${options.REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
@@ -123,7 +123,7 @@ def executeGenTestRefCommand(String osName, Map options) {
     }
 
     dir('scripts') {
-        switch(osName) {
+        switch(options.osName) {
         case 'Windows':
             bat """
             make_results_baseline.bat
@@ -138,9 +138,10 @@ def executeGenTestRefCommand(String osName, Map options) {
     }
 }
 
-def buildRenderCache(String osName, String toolVersion, String log_name) {
+def buildRenderCache(Map options, String toolVersion) {
+    String log_name = options.stageName
     dir("scripts") {
-        switch(osName) {
+        switch(options.osName) {
             case 'Windows':
                 bat "build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}.cb.log  2>&1"
                 break;
@@ -150,12 +151,12 @@ def buildRenderCache(String osName, String toolVersion, String log_name) {
     }
 }
 
-def executeTestCommand(String osName, Map options) {
-    switch(osName) {
+def executeTestCommand(Map options) {
+    switch(options.osName) {
     case 'Windows':
         dir('scripts') {
             bat """
-            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ..\\${options.stageName}.log  2>&1
+            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.testName}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ..\\${options.stageName}.log  2>&1
             """
         }
         break;
@@ -163,14 +164,14 @@ def executeTestCommand(String osName, Map options) {
     default:
         dir("scripts") {
             sh """
-            ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ../${options.stageName}.log 2>&1
+            ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.testName}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ../${options.stageName}.log 2>&1
             """
         }
     }
 }
 
 
-def executeTests(String osName, String asicName, Map options) {
+def executeTests(Map options) {
     // used for mark archive results or not. It needed for not archiving failed tasks which will be retried.
     Boolean archiveResults = true
 
@@ -178,7 +179,7 @@ def executeTests(String osName, String asicName, Map options) {
 
         timeout(time: "5", unit: 'MINUTES') {
             try {
-                cleanWS(osName)
+                cleanWS(options.osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
 
@@ -197,14 +198,14 @@ def executeTests(String osName, String asicName, Map options) {
 
                 Boolean newPluginInstalled = false
                 timeout(time: "12", unit: 'MINUTES') {
-                    getBlenderAddonInstaller(osName, options)
-                    newPluginInstalled = installBlenderAddon(osName, "2.82", options)
+                    getBlenderAddonInstaller(options)
+                    newPluginInstalled = installBlenderAddon(options.osName, "2.82", options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
 
                 if (newPluginInstalled) {
                     timeout(time: "3", unit: 'MINUTES') {
-                        buildRenderCache(osName, "2.82", options.stageName)
+                        buildRenderCache(options, "2.82")
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
                             println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
                             throw new Exception("No output image")
@@ -216,34 +217,32 @@ def executeTests(String osName, String asicName, Map options) {
                 println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
                 println(e.toString())
                 // deinstalling broken addon
-                installBlenderAddon(osName, "2.82", options, false, true)
+                installBlenderAddon(options.osName, "2.82", options, false, true)
                 throw e
             }
         }
 
-        String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
+        String REF_PATH_PROFILE="${options.REF_PATH}/${options.asicName}-${options.osName}"
+        String JOB_PATH_PROFILE="${options.JOB_PATH}/${options.asicName}-${options.osName}"
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
-        outputEnvironmentInfo(osName, options.stageName)
+        outputEnvironmentInfo(options.osName, options.stageName)
 
         if (options['updateRefs']) {
-            executeTestCommand(osName, options)
-            executeGenTestRefCommand(osName, options)
+            executeTestCommand(options)
+            executeGenTestRefCommand(options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         } else {
             // TODO: receivebaseline for json suite
             try {
-                println "[INFO] Downloading reference images for ${options.tests}"
+                println "[INFO] Downloading reference images for ${options.testName}"
                 receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
-                options.tests.split(" ").each() {
-                    receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
-                }
+                receiveFiles("${REF_PATH_PROFILE}/${options.testName}", './Work/Baseline/')
             } catch (e) {
                 println("[WARNING] Baseline doesn't exist.")
             }
-            executeTestCommand(osName, options)
+            executeTestCommand(options)
         }
 
     } catch (e) {
@@ -252,7 +251,7 @@ def executeTests(String osName, String asicName, Map options) {
         } 
         println(e.toString())
         println(e.getMessage())
-        options.failureMessage = "Failed during testing: ${asicName}-${osName}"
+        options.failureMessage = "Failed during testing: ${options.asicName}-${options.osName}"
         options.failureError = e.getMessage()
         throw e
     } finally {
@@ -266,20 +265,20 @@ def executeTests(String osName, String asicName, Map options) {
 
                     // if none launched tests - mark build failed
                     if (sessionReport.summary.total == 0) {
-                        options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
+                        options.failureMessage = "Noone test was finished for: ${options.asicName}-${options.osName}"
                         currentBuild.result = "FAILED"
                     }
 
                     // deinstalling broken addon
                     if (sessionReport.summary.total == sessionReport.summary.error) {
-                        installBlenderAddon(osName, "2.82", options, false, true)
+                        installBlenderAddon(options.osName, "2.82", options, false, true)
                     }               
                 }
             }
             echo "Archive test results to: ${options.testResultsName}"
             zip(archive: true, dir: 'Work', zipFile: "${options.testResultsName}.zip")
         } else {
-            println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
+            println "[INFO] Task ${options.testName} on ${options.nodeLabels} labels will be retried."
         }
     }
 }
@@ -299,7 +298,12 @@ def call(String testsBranch = "master",
         additionalSettings.addAll(options.additionalSettings)
         options.additionalSettings = additionalSettings
 
-        tests_launch_pipeline(this.&executeTests, asicName, osName, testName, options)
+        options.asicName = asicName
+        options.osName = osName
+        options.testName = testName
+        options.testsBranch = testsBranch
+
+        tests_launch_pipeline(this.&executeTests, options)
     } catch(e) {
         currentBuild.result = "FAILED"
         failureMessage = "INIT FAILED"

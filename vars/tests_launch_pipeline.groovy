@@ -1,14 +1,14 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 
 
-def call(def executeTests , String asicName, String osName, String testName, Map options) {
+def call(def executeTests, Map options) {
     try {
         timestamps {
-            println("Scheduling ${osName}:${asicName} ${testName}")
+            println("Scheduling ${options.osName}:${options.asicName} ${options.testName}")
 
             def testerTag = options.TESTER_TAG ? "${options.TESTER_TAG} && Tester" : "Tester"
             // reallocate node for each test
-            def nodeLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
+            def nodeLabels = "${options.osName} && ${testerTag} && OpenCL && gpu${options.asicName}"
             def nodesList = nodesByLabel label: nodeLabels, offline: false
             println "Found the following PCs for the task: ${nodesList}"
             def nodesCount = nodesList.size()
@@ -17,16 +17,15 @@ def call(def executeTests , String asicName, String osName, String testName, Map
             
             for (int i = 0; i < options.nodeReallocateTries; i++) {
                 node(nodeLabels) {
-                    println("[INFO] Launched ${testName} task at: ${env.NODE_NAME}")
+                    println("[INFO] Launched ${options.testName} task at: ${env.NODE_NAME}")
                     options.currentTry = i
                     timeout(time: "${options.TEST_TIMEOUT}", unit: 'MINUTES') {
                         ws("WS/${options.PRJ_NAME}_Test") {
                             Map newOptions = options.clone()
-                            newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
-                            newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
-                            newOptions['tests'] = testName ? testName : options.tests
+                            newOptions['testResultsName'] = options.testName ? "testResult-${options.asicName}-${options.osName}-${options.testName}" : "testResult-${options.asicName}-${options.osName}"
+                            newOptions['stageName'] = options.testName ? "${options.asicName}-${options.osName}-${options.testName}" : "${options.asicName}-${options.osName}"
                             try {
-                                executeTests(osName, asicName, newOptions)
+                                executeTests(newOptions)
                                 i = options.nodeReallocateTries + 1
                                 successCurrentNode = true
                             } catch(Exception e) {

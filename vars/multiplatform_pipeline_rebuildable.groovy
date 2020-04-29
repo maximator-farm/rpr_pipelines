@@ -18,6 +18,11 @@ Map collectTestsOptions(Map options) {
     Map testsOptions = options.clone()
     //testsOptions.remove('rbs_dev')
     //testsOptions.remove('rbs_prod')
+    testsOptions.remove('buildId')
+    testsOptions.remove('pipelinesBranch')
+    testsOptions.remove('testsBranch')
+    testsOptions.remove('testsPackage')
+    testsOptions.remove('tests')
     Map masterEnv = [:]
     masterEnv['BUILD_NUMBER'] = env.BUILD_NUMBER
     masterEnv['BUILD_DISPLAY_NAME'] = env.BUILD_DISPLAY_NAME
@@ -72,10 +77,10 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                                     parameters: [
                                         [$class: 'StringParameterValue', name: 'PipelineBranch', value: options.pipelinesBranch],
                                         [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
-                                        [$class: 'StringParameterValue', name: 'BuildName', value: "${currentTestsName}-${options.buildId}"],
                                         [$class: 'StringParameterValue', name: 'AsicName', value: asicName],
                                         [$class: 'StringParameterValue', name: 'OsName', value: osName],
                                         [$class: 'StringParameterValue', name: 'TestName', value: testName],
+                                        [$class: 'StringParameterValue', name: 'BuildId', value: options.buildId],
                                         [$class: 'StringParameterValue', name: 'Options', value: jsonOptions]
                                     ],
                                     quietPeriod: 0
