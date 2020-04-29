@@ -223,7 +223,7 @@ def executeTests(String osName, String asicName, Map options)
         if (stashResults) {
             dir('Work')
             {
-                if (fileExists("Results/Blender28/session_report.json")) {
+                if (fileExists("Results/Core/session_report.json")) {
 
                     def sessionReport = null
                     sessionReport = readJSON file: 'Results/Core/session_report.json'
