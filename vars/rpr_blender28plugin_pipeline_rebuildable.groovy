@@ -177,9 +177,10 @@ def executePreBuild(Map options) {
         options.tests = tests.join(" ")
     }
 
+    options['executeDeploy'] = true
 
+    //if plugin is pre built
     if (options['isPreBuilt']) {
-        //plugin is pre built
         options['executeBuild'] = false
         options['executeTests'] = true
         return;
@@ -276,6 +277,7 @@ def executePreBuild(Map options) {
         if (env.CHANGE_TARGET != 'master') {
             options['executeBuild'] = false
             options['executeTests'] = false
+            options['executeDeploy'] = false
         }
         options.commitMessage = env.CHANGE_TITLE
     }
@@ -285,9 +287,15 @@ def executePreBuild(Map options) {
         options['executeTests'] = true
     }
     // if rebuild report
-    if(options['rebuildReport']) {
+    if(options['buildMode'] == 'Rebuild_Report') {
         options['executeBuild'] = false
         options['executeTests'] = false
+    }
+    // if only execute tests
+    if(options['buildMode'] == 'Execute_Tests') {
+        options['executeBuild'] = true
+        options['executeTests'] = true
+        options['executeDeploy'] = false
     }
 
     currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
@@ -317,113 +325,111 @@ def executePreBuild(Map options) {
 
 def executeDeploy(Map options, Map testsBuildsIds) {
     try {
-        if(options['executeTests'] || options['rebuildReport']) {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
+        checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
 
-            List lostArchive = []
+        List lostArchive = []
 
-            dir("summaryTestResults") {
-                testsBuildsIds.each { key, value ->
-                    if (value == -1) {
-                        //tests build terminated with 'FAILURE' or 'ABORTED' status
-                        lostArchive.add("'${key}'")
-                    } else if (value != 0) {
-                        dir("${key}") {
-                            String artifactName = "testResult-${key}.zip"
-                            try {
-                                println("Copy artifact with name ${artifactName}")
-                                copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: false, projectName: "${options.testsJobName}", selector: specific("${value}"))
-                                unzip(zipFile: "${artifactName}", dir: "${key}.zip")
-                            } catch(e) {
-                                echo "[ERROR] Failed to copy test results for ${artifactName}"
-                                lostArchive.add("'${key}'")
-                                println(e.toString());
-                                println(e.getMessage());
-                            }
+        dir("summaryTestResults") {
+            testsBuildsIds.each { key, value ->
+                if (value == -1) {
+                    //tests build terminated with 'FAILURE' or 'ABORTED' status
+                    lostArchive.add("'${key}'")
+                } else if (value != 0) {
+                    dir("${key}") {
+                        String artifactName = "testResult-${key}.zip"
+                        try {
+                            println("Copy artifact with name ${artifactName}")
+                            copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: false, projectName: "${options.testsJobName}", selector: specific("${value}"))
+                            unzip(zipFile: "${artifactName}", dir: "${key}.zip")
+                        } catch(e) {
+                            echo "[ERROR] Failed to copy test results for ${artifactName}"
+                            lostArchive.add("'${key}'")
+                            println(e.toString());
+                            println(e.getMessage());
                         }
                     }
                 }
             }
+        }
 
-            try {
-                Boolean isRegression = options.testsPackage.endsWith('.json')
+        try {
+            Boolean isRegression = options.testsPackage.endsWith('.json')
 
-                dir("jobs_launcher") {
-                    bat """
-                    count_lost_tests.bat \"${lostArchive}\" .. ..\\summaryTestResults ${isRegression}
-                    """
-                }
-            } catch (e) {
-                println("[ERROR] Can't generate number of lost tests")
+            dir("jobs_launcher") {
+                bat """
+                count_lost_tests.bat \"${lostArchive}\" .. ..\\summaryTestResults ${isRegression}
+                """
             }
+        } catch (e) {
+            println("[ERROR] Can't generate number of lost tests")
+        }
 
-            String branchName = env.BRANCH_NAME ?: options.projectBranch
-            try {
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
-                    dir("jobs_launcher") {
-                        if (options['isPreBuilt']) {
-                            bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.82')}" "PreBuilt" "PreBuilt" "PreBuilt"
-                            """
-                        } else {
-                            bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.82')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
-                            """
-                        }
+        String branchName = env.BRANCH_NAME ?: options.projectBranch
+        try {
+            withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
+                dir("jobs_launcher") {
+                    if (options['isPreBuilt']) {
+                        bat """
+                        build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.82')}" "PreBuilt" "PreBuilt" "PreBuilt"
+                        """
+                    } else {
+                        bat """
+                        build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.82')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                        """
                     }
                 }
-            } catch(e) {
-                println("[ERROR] Failed to build report.")
-                println(e.toString())
-                println(e.getMessage())
             }
+        } catch(e) {
+            println("[ERROR] Failed to build report.")
+            println(e.toString())
+            println(e.getMessage())
+        }
 
-            try {
-                dir("jobs_launcher") {
-                    bat "get_status.bat ..\\summaryTestResults"
-                }
-            } catch(e) {
-                println("[ERROR] Failed to generate slack status.")
-                println(e.toString())
-                println(e.getMessage())
+        try {
+            dir("jobs_launcher") {
+                bat "get_status.bat ..\\summaryTestResults"
             }
+        } catch(e) {
+            println("[ERROR] Failed to generate slack status.")
+            println(e.toString())
+            println(e.getMessage())
+        }
 
-            try {
-                def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
-                if (summaryReport.error > 0) {
-                    println("[INFO] Some tests marked as error. Build result = FAILED.")
-                    currentBuild.result="FAILED"
-                } else if (summaryReport.failed > 0) {
-                    println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
-                    currentBuild.result="UNSTABLE"
-                }
-            } catch(e) {
-                println(e.toString())
-                println(e.getMessage())
-                println("CAN'T GET TESTS STATUS")
+        try {
+            def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
+            if (summaryReport.error > 0) {
+                println("[INFO] Some tests marked as error. Build result = FAILED.")
+                currentBuild.result="FAILED"
+            } else if (summaryReport.failed > 0) {
+                println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                 currentBuild.result="UNSTABLE"
             }
-
-            try {
-                options.testsStatus = readFile("summaryTestResults/slack_status.json")
-            } catch(e) {
-                println(e.toString())
-                println(e.getMessage())
-                options.testsStatus = ""
-            }
-
-            publishHTML([allowMissing: false,
-                         alwaysLinkToLastBuild: false,
-                         keepAll: true,
-                         reportDir: 'summaryTestResults',
-                         reportFiles: 'summary_report.html, performance_report.html, compare_report.html',
-                         // TODO: custom reportName (issues with escaping)
-                         reportName: 'Test Report',
-                         reportTitles: 'Summary Report, Performance Report, Compare Report'])
-
-            println "BUILD RESULT: ${currentBuild.result}"
-            println "BUILD CURRENT RESULT: ${currentBuild.currentResult}"
+        } catch(e) {
+            println(e.toString())
+            println(e.getMessage())
+            println("CAN'T GET TESTS STATUS")
+            currentBuild.result="UNSTABLE"
         }
+
+        try {
+            options.testsStatus = readFile("summaryTestResults/slack_status.json")
+        } catch(e) {
+            println(e.toString())
+            println(e.getMessage())
+            options.testsStatus = ""
+        }
+
+        publishHTML([allowMissing: false,
+                     alwaysLinkToLastBuild: false,
+                     keepAll: true,
+                     reportDir: 'summaryTestResults',
+                     reportFiles: 'summary_report.html, performance_report.html, compare_report.html',
+                     // TODO: custom reportName (issues with escaping)
+                     reportName: 'Test Report',
+                     reportTitles: 'Summary Report, Performance Report, Compare Report'])
+
+        println "BUILD RESULT: ${currentBuild.result}"
+        println "BUILD CURRENT RESULT: ${currentBuild.currentResult}"
     }
     catch(e) {
         println(e.toString());
@@ -449,7 +455,6 @@ def call(String pipelinesBranch = "",
     Boolean updateRefs = false,
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
-    Boolean skipBuild = false,
     String renderDevice = "gpu",
     String testsPackage = "",
     String tests = "",
@@ -460,7 +465,8 @@ def call(String pipelinesBranch = "",
     String iter = '50',
     String theshold = '0.05',
     String buildId = "",
-    Boolean rebuildReport = false,
+    String buildMode = "",
+    String additionalSettings = "",
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
     String customBuildLinkOSX = "") {
@@ -517,6 +523,12 @@ def call(String pipelinesBranch = "",
             }
         }
 
+
+        List additionalSettingsList = []
+        additionalSettings.split(',').each() { setting ->
+            additionalSettingsList.add(setting)
+        }
+
         multiplatform_pipeline_rebuildable(platforms, this.&executePreBuild, this.&executeBuild, this.&executeDeploy,
                                [pipelinesBranch:pipelinesBranch,
                                 projectBranch:projectBranch,
@@ -527,7 +539,6 @@ def call(String pipelinesBranch = "",
                                 ASSETS_NAME:ASSETS_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 incrementVersion:incrementVersion,
-                                skipBuild:skipBuild,
                                 renderDevice:renderDevice,
                                 testsPackage:testsPackage,
                                 tests:tests,
@@ -546,7 +557,8 @@ def call(String pipelinesBranch = "",
                                 theshold: theshold,
                                 testsJobName:"DevRadeonProRenderBlender2.8Tests",
                                 buildId:buildId,
-                                rebuildReport:rebuildReport,
+                                buildMode:buildMode,
+                                additionalSettings:additionalSettingsList,
                                 customBuildLinkWindows: customBuildLinkWindows,
                                 customBuildLinkLinux: customBuildLinkLinux,
                                 customBuildLinkOSX: customBuildLinkOSX

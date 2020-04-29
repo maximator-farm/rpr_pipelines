@@ -30,7 +30,7 @@ Map collectTestsOptions(Map options) {
 def executePlatform(String osName, String gpuNames, def executeBuild, Map options, Map testsBuildsIds) {
     def retNode = {
         try {
-            if(!options['skipBuild'] && options['executeBuild'] && executeBuild) {
+            if(!options.additionalSettings.contains('Skip_Build') && options['executeBuild'] && executeBuild) {
                 node("${osName} && ${options.BUILDER_TAG}") {
                     println("Started build at ${NODE_NAME}")
                     stage("Build-${osName}") {
@@ -41,6 +41,9 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                         }
                     }
                 }
+            } else {
+                options.CBR = 'SKIPPED'
+                echo "[INFO] Build SKIPPED"
             }
             options.masterJobName = env.JOB_NAME
             options.masterBuildNumber = env.BUILD_NUMBER
@@ -173,10 +176,6 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                                 try {
                                     timeout(time: "${options.PREBUILD_TIMEOUT}", unit: 'MINUTES') {
                                         executePreBuild(options)
-                                        if(!options['executeBuild']) {
-                                            options.CBR = 'SKIPPED'
-                                            echo "Build SKIPPED"
-                                        }
                                     }
                                 } catch (e) {
                                     println("[ERROR] Failed during prebuild stage on ${env.NODE_NAME}")
@@ -199,7 +198,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                         gpuNames = tokens.get(1)
                     }
 
-                    if(options['rebuildReport'] && gpuNames) {
+                    if(options['buildMode'] == 'Rebuild_Report' && gpuNames) {
                         gpuNames.split(',').each() {
                             // if not split - testsList doesn't exists
                             options.testsList = options.testsList ?: ['']
@@ -223,7 +222,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                 println(e.toString());
                 println(e.getMessage());
             } finally {
-                if (options['rebuildReport']) {
+                if (options['buildMode'] == 'Rebuild_Report') {
                     // search ids of tests builds before rebuild report
                     buildsLeft = testsBuildsIds.size()
                     List builds = Jenkins.instance.getItem(options.testsJobName).getBuilds()
@@ -273,7 +272,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                         timeout(time: "${options.DEPLOY_TIMEOUT}", unit: 'MINUTES') {
                             ws("WS/${options.PRJ_NAME}_Deploy") {
                                 try {
-                                    if(executeDeploy && options['executeTests'] || options['rebuildReport']) {
+                                    if(executeDeploy && options['executeDeploy']) {
                                         executeDeploy(options, testsBuildsIds)
                                     }
                                 } catch (e) {

@@ -191,7 +191,7 @@ def executeTests(String osName, String asicName, Map options) {
 
         downloadAssets("${options.PRJ_ROOT}/${options.ASSETS_NAME}/Blender2.8Assets/", 'Blender2.8Assets')
 
-        if (!options['skipBuild']) {
+        if (!options.additionalSettings.contains('Skip_Build')) {
 
             try {
 
@@ -295,6 +295,9 @@ def call(String testsBranch = "master",
         // parse converted options
         Map options = [:] << new JsonSlurper().parseText(jsonOptions)
         options.masterEnv = [:] << options.masterEnv
+        List additionalSettings = []
+        additionalSettings.addAll(options.additionalSettings)
+        options.additionalSettings = additionalSettings
 
         tests_launch_pipeline(this.&executeTests, asicName, osName, testName, options)
     } catch(e) {
