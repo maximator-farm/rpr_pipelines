@@ -852,7 +852,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             if (options.sendToRBS) {
                 try {
-                    universeClient.changeStatus(currentBuild.result)
+                    String status = currentBuild.result ?: 'SUCCESSFUL'
+                    universeClient.changeStatus(status)
                 }
                 catch (e){
                     println(e.getMessage())
