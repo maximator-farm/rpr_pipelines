@@ -129,6 +129,7 @@ class UniverseClient {
     def changeStatus(status) {
         def request = {
             def mapStatuses = [
+                "FAILURE": "error",
                 "FAILED": "error",
                 "UNSTABLE": "error",
                 "ABORTED": "aborted",
