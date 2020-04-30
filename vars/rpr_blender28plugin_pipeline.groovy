@@ -5,7 +5,7 @@ import hudson.plugins.git.GitException
 import UniverseClient
 
 import RBSProduction
-@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "http://172.26.157.251:8031")
+@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com")
 
 def getBlenderAddonInstaller(String osName, Map options)
 {
@@ -850,16 +850,14 @@ def executeDeploy(Map options, List platformList, List testResultList)
                          reportName: 'Test Report',
                          reportTitles: 'Summary Report, Performance Report, Compare Report'])
 
-            // if (options.sendToRBS) {
-            //     try {
-            //         String status = currentBuild.result ?: 'SUCCESSFUL'
-            //         options.rbs_prod.finishBuild(options, status)
-            //         options.rbs_dev.finishBuild(options, status)
-            //     }
-            //     catch (e){
-            //         println(e.getMessage())
-            //     }
-            // }
+            if (options.sendToRBS) {
+                try {
+                    universeClient.changeStatus(currentBuild.result)
+                }
+                catch (e){
+                    println(e.getMessage())
+                }
+            }
 
             println "BUILD RESULT: ${currentBuild.result}"
             println "BUILD CURRENT RESULT: ${currentBuild.currentResult}"
@@ -1019,6 +1017,7 @@ def call(String projectBranch = "",
     catch(e)
     {
         currentBuild.result = "FAILED"
+        universeClient.changeStatus(currentBuild.result)
         failureMessage = "INIT FAILED"
         failureError = e.getMessage()
         println(e.toString());
