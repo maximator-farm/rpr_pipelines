@@ -5,7 +5,7 @@ import java.nio.channels.ClosedChannelException
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 import groovy.transform.Field
 import UniverseClient
-@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "http://172.26.157.251:8031")
+@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com/")
 
 
 def getMayaPluginInstaller(String osName, Map options)
