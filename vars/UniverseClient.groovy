@@ -131,7 +131,7 @@ class UniverseClient {
             def mapStatuses = [
                 "FAILURE": "error",
                 "FAILED": "error",
-                "UNSTABLE": "error",
+                "UNSTABLE": "failed",
                 "ABORTED": "aborted",
                 "SUCCESS": "passed",
                 "SUCCESSFUL": "passed"
