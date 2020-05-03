@@ -250,14 +250,6 @@ def executeTests(String osName, String asicName, Map options)
                     def sessionReport = null
                     sessionReport = readJSON file: 'Results/Maya/session_report.json'
 
-                    // deinstalling broken addon & reallocate node if there are still attempts
-                    if (sessionReport.summary.total == sessionReport.summary.error) {
-                        installMSIPlugin(osName, "Maya", options, false, true)
-                        if (options.currentTry < options.nodeReallocateTries) {
-                            throw new Exception("All tests crashed")
-                        }
-                    }
-
                     // if none launched tests - mark build failed
                     if (sessionReport.summary.total == 0)
                     {
@@ -272,6 +264,14 @@ def executeTests(String osName, String asicName, Map options)
 
                     echo "Stashing test results to : ${options.testResultsName}"
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+
+                    // deinstalling broken addon & reallocate node if there are still attempts
+                    if (sessionReport.summary.total == sessionReport.summary.error) {
+                        installMSIPlugin(osName, "Maya", options, false, true)
+                        if (options.currentTry < options.nodeReallocateTries) {
+                            throw new Exception("All tests crashed")
+                        }
+                    }
 
                 }
             }
