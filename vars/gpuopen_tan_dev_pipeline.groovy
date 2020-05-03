@@ -392,9 +392,9 @@ def call(String projectBranch = "",
         }
 
         winBuildConfiguration = winBuildConfiguration.split(',')
-        winTool = WinTool.split(',')
+        winTool = winTool.split(',')
         winVisualStudioVersion = winVisualStudioVersion.split(',')
-        osxTool = OSXTool.split(',')
+        osxTool = osxTool.split(',')
 
         println "Visual Studio version: ${winVisualStudioVersion}"
         println "Win configuration: ${winBuildConfiguration}"
