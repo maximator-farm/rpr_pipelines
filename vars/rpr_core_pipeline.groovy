@@ -1,4 +1,7 @@
-import RBSProduction
+import UniverseClient
+import groovy.transform.Field
+
+@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com")
 
 def getCoreSDK(String osName, Map options)
 {
@@ -116,14 +119,14 @@ def executeGenTestRefCommand(String osName, Map options)
     }
 }
 
-def executeTestCommand(String osName, Map options)
+def executeTestCommand(String osName, String asicName, Map options)
 {
     switch(osName) {
         case 'Windows':
             dir('scripts')
             {
                 bat """
-                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}.log 2>&1
+                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break;
@@ -151,6 +154,8 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
+    // TODO: improve envs, now working on Windows testers only
+    universeClient.stage("Tests-${osName}-${asicName}", "begin")
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
@@ -160,9 +165,6 @@ def executeTests(String osName, String asicName, Map options)
             try {
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
-                if (options.sendToRBS) {
-                    options.rbs_prod.setTester(options)
-                }
                 getCoreSDK(osName, options)
             } catch(e) {
                 println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
@@ -182,7 +184,7 @@ def executeTests(String osName, String asicName, Map options)
 
         if(options['updateRefs'])
         {
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         }
@@ -190,7 +192,7 @@ def executeTests(String osName, String asicName, Map options)
         {
             // Update ref images from one card to others 
             // TODO: Fix hardcode naming
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
             executeGenTestRefCommand(osName, options)
             ['AMD_RXVEGA', 'AMD_WX9100', 'AMD_WX7100', 'AMD_RadeonVII', 'NVIDIA_GF1080TI', 'NVIDIA_RTX2080'].each
             {
@@ -206,7 +208,7 @@ def executeTests(String osName, String asicName, Map options)
             } catch(e) {
                 println("No baseline")
             }
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
         }
     } catch (e) {
         if (options.currentTry < options.nodeReallocateTries) {
@@ -237,7 +239,7 @@ def executeTests(String osName, String asicName, Map options)
 
                     if (options.sendToRBS)
                     {
-                        options.rbs_prod.sendSuiteResult(sessionReport, options)
+                        universeClient.stage("Tests-${osName}-${asicName}", "end")
                     }
 
                     echo "Stashing test results to : ${options.testResultsName}"
@@ -289,6 +291,8 @@ def executeBuildLinux(Map options)
 
 def executeBuild(String osName, Map options)
 {
+    universeClient.stage("Build-" + osName , "begin")
+
     try {
         dir('RadeonProRenderSDK')
         {
@@ -324,6 +328,8 @@ def executeBuild(String osName, Map options)
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
+
+    universeClient.stage("Build-" + osName, "end")
 }
 
 def executePreBuild(Map options)
@@ -394,7 +400,12 @@ def executePreBuild(Map options)
                     options.groupsRBS = tests
                 }
             }
-            options.rbs_prod.startBuild(options)
+            // Universe : auth because now we in node
+            // If use httpRequest in master slave will catch 408 error
+            universeClient.tokenSetup()
+
+            // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+            universeClient.createBuild(options.universePlatforms, options.groupsRBS)
         }
         catch (e)
         {
@@ -489,7 +500,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             if (options.sendToRBS) {
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
-                    options.rbs_prod.finishBuild(options, status)
+                    universeClient.changeStatus(status)
                 }
                 catch (e){
                     println(e.getMessage())
@@ -541,7 +552,13 @@ def call(String projectBranch = "",
             }
         }
 
-        rbs_prod = new RBSProduction(this, "Core", env.JOB_NAME, env)
+        def universePlatforms = convertPlatforms(platforms);
+
+        println platforms
+        println tests
+        println testsPackage
+        println splitTestsExecution
+        println universePlatforms
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
@@ -564,11 +581,12 @@ def call(String projectBranch = "",
                                 height:height,
                                 iterations:iterations,
                                 sendToRBS:sendToRBS,
-                                rbs_prod: rbs_prod,
+                                universePlatforms: universePlatforms,
                                 ])
     }
     catch(e) {
         currentBuild.result = "FAILED"
+        universeClient.changeStatus(currentBuild.result)
         println(e.toString());
         println(e.getMessage());
         throw e
