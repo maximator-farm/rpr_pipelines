@@ -175,12 +175,12 @@ def executeBuildLinux(String osName, Map options) {
 
                 sh """
                     mkdir bin
-                    cp linux/cmake-TAN-bin/libTrueAudioNext.so bin
-                    cp linux/cmake-TrueAudioVR-bin/libTrueAudioVR.so bin
-                    cp linux/cmake-GPUUtilities-bin/libGPUUtilities.so bin
-                    cp linux/cmake-TALibDopplerTest-bin/TALibDopplerTest bin
-                    cp linux/cmake-TALibTestConvolution-bin/TALibTestConvolution bin
-                    cp linux/cmake-RoomAcousticQT-bin/RoomAcousticsQT bin
+                    cp cmake-TAN-bin/libTrueAudioNext.so bin
+                    cp cmake-TrueAudioVR-bin/libTrueAudioVR.so bin
+                    cp cmake-GPUUtilities-bin/libGPUUtilities.so bin
+                    cp cmake-TALibDopplerTest-bin/TALibDopplerTest bin
+                    cp cmake-TALibTestConvolution-bin/TALibTestConvolution bin
+                    cp cmake-RoomAcousticQT-bin/RoomAcousticsQT bin
                 """
                 zip archive: true, dir: 'bin', glob: '', zipFile: "Ubuntu18_Release.zip"
             } catch (e) {
