@@ -196,7 +196,7 @@ def executeBuild(String osName, Map options) {
     try {
 
         cleanWS(osName)
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:imatyushin/TAN.git', true)
+        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/TAN.git', true)
         
         switch(osName)
         {
@@ -362,7 +362,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
     String testsBranch = "",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;Ubuntu18:AMD_RadeonVII;OSX:AMD_RXVEGA',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100;OSX:AMD_RXVEGA',
     String winBuildConfiguration = "Release",
     String winTool = "cmake,msbuild",
     String winVisualStudioVersion = "2017",

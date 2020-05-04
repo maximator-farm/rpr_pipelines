@@ -233,7 +233,7 @@ def executePreBuild(Map options) {
         }
     }
 
-    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/TAN.git', true)
+    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/TAN.git', true)
 
     AUTHOR_NAME = bat (
         script: "git show -s --format=%%an HEAD ",
