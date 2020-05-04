@@ -1,8 +1,9 @@
-import RBSProduction
-import RBSDevelopment
 import hudson.plugins.git.GitException
 import java.nio.channels.ClosedChannelException
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+import groovy.transform.Field
+import UniverseClient
+@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com")
 
 
 def getMaxPluginInstaller(String osName, Map options)
@@ -80,12 +81,12 @@ def executeGenTestRefCommand(String osName, Map options)
 }
 
 
-def executeTestCommand(String osName, Map options)
+def executeTestCommand(String osName, String asicName, Map options)
 {
     dir('scripts')
     {
         bat"""
-        run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ../${options.stageName}.log  2>&1
+        run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS} >> ../${options.stageName}.log  2>&1
         """
     }
 }
@@ -93,6 +94,7 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
+    universeClient.stage("Tests-${osName}-${asicName}", "begin")
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
     
@@ -103,12 +105,6 @@ def executeTests(String osName, String asicName, Map options)
                 cleanWS(osName)
 
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_max.git')
-
-                // setTester in rbs
-                if (options.sendToRBS) {
-                    options.rbs_prod.setTester(options)
-                    options.rbs_dev.setTester(options)
-                }
 
                 println "[INFO] Preparing successfully finished."
 
@@ -148,7 +144,7 @@ def executeTests(String osName, String asicName, Map options)
 
         if(options['updateRefs'])
         {
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         }
@@ -163,7 +159,7 @@ def executeTests(String osName, String asicName, Map options)
             } catch (e) {
                 println("[WARNING] Baseline doesn't exist.")
             }
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
         }
     } catch (e) {
         if (options.currentTry < options.nodeReallocateTries) {
@@ -199,8 +195,7 @@ def executeTests(String osName, String asicName, Map options)
 
                     if (options.sendToRBS)
                     {
-                        options.rbs_prod.sendSuiteResult(sessionReport, options)
-                        options.rbs_dev.sendSuiteResult(sessionReport, options)
+                        universeClient.stage("Tests-${osName}-${asicName}", "end")
                     }
 
                     echo "Stashing test results to : ${options.testResultsName}"
@@ -265,6 +260,7 @@ def executeBuildWindows(Map options)
 def executeBuild(String osName, Map options)
 {
     cleanWS(osName)
+    universeClient.stage("Build-" + osName , "begin")
     try {
         dir('RadeonProRenderMaxPlugin')
         {
@@ -286,20 +282,12 @@ def executeBuild(String osName, Map options)
     }
     catch (e) {
         currentBuild.result = "FAILED"
-        if (options.sendToRBS)
-        {
-            try {
-                options.rbs_dev.setFailureStatus()
-                options.rbs_prod.setFailureStatus()
-            } catch (err) {
-                println(err)
-            }
-        }
         throw e
     }
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
+    universeClient.stage("Build-" + osName, "end")
 }
 
 def executePreBuild(Map options)
@@ -486,8 +474,12 @@ def executePreBuild(Map options)
     {
         try
         {
-            options.rbs_prod.startBuild(options)
-            options.rbs_dev.startBuild(options)
+            // Universe : auth because now we in node
+            // If use httpRequest in master slave will catch 408 error
+            universeClient.tokenSetup()
+
+            // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+            universeClient.createBuild(options.universePlatforms, options.groupsRBS)
         }
         catch (e)
         {
@@ -620,8 +612,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             if (options.sendToRBS) {
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
-                    options.rbs_dev.finishBuild(options, status)
-                    options.rbs_prod.finishBuild(options, status)
+                    universeClient.changeStatus(status)
                 } catch (e) {
                     println(e.getMessage())
                 }
@@ -721,8 +712,13 @@ def call(String projectBranch = "",
             }
         }
 
-        rbs_prod = new RBSProduction(this, "Max", env.JOB_NAME, env)
-        rbs_dev = new RBSDevelopment(this, "Max", env.JOB_NAME, env)
+        def universePlatforms = convertPlatforms(platforms);
+
+        println platforms
+        println tests
+        println testsPackage
+        println splitTestsExecution
+        println universePlatforms
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
@@ -747,8 +743,7 @@ def call(String projectBranch = "",
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:180,
                                 TESTER_TAG:'Max',
-                                rbs_prod: rbs_prod,
-                                rbs_dev: rbs_dev,
+                                universePlatforms: universePlatforms,
                                 resX: resX,
                                 resY: resY,
                                 SPU: SPU,
@@ -759,6 +754,7 @@ def call(String projectBranch = "",
         }
         catch (e) {
             currentBuild.result = "FAILED"
+            universeClient.changeStatus(currentBuild.result)
             println(e.toString());
             println(e.getMessage());
 
