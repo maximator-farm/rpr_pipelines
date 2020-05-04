@@ -1,11 +1,9 @@
-import groovy.transform.Field
-import java.nio.channels.ClosedChannelException
-import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
-import hudson.plugins.git.GitException
 import UniverseClient
+import groovy.transform.Field
 
-import RBSProduction
 @Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com")
+
+
 
 def getBlenderAddonInstaller(String osName, Map options)
 {
@@ -233,7 +231,7 @@ def executeTests(String osName, String asicName, Map options)
                         buildRenderCache(osName, "2.82", options.stageName)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
                             println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
-                            throw new Exception("No output image")
+                            throw new Exception("No output image after cache building.")
                         }
                     }
                 }
@@ -294,15 +292,10 @@ def executeTests(String osName, String asicName, Map options)
                         // if none launched tests - mark build failed
                         if (sessionReport.summary.total == 0)
                         {
-                            options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
+                            options.failureMessage = "None test was finished for: ${asicName}-${osName}"
                             currentBuild.result = "FAILED"
                         }
 
-                        // deinstalling broken addon
-                        if (sessionReport.summary.total == sessionReport.summary.error) {
-                            installBlenderAddon(osName, "2.82", options, false, true)
-                        }
-                    
                         if (options.sendToRBS)
                         {
                             universeClient.stage("Tests-${osName}-${asicName}", "end")
@@ -312,6 +305,14 @@ def executeTests(String osName, String asicName, Map options)
 
                         echo "Stashing test results to : ${options.testResultsName}"
                         stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+
+                        // deinstalling broken addon & reallocate node if there are still attempts
+                        if (sessionReport.summary.total == sessionReport.summary.error) {
+                            installBlenderAddon(osName, "2.82", options, false, true)
+                            if (options.currentTry < options.nodeReallocateTries) {
+                                throw new Exception("All tests crashed")
+                            }
+                        }
                     }
                 }
         } else {
@@ -457,7 +458,6 @@ def executeBuild(String osName, Map options)
     universeClient.stage("Build-" + osName , "begin")
 
     try {
-
         dir('RadeonProRenderBlenderAddon')
         {
             checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderBlenderAddon.git')
@@ -496,15 +496,6 @@ def executeBuild(String osName, Map options)
         options.failureMessage = "[ERROR] Failed to build plugin on ${osName}"
         options.failureError = e.getMessage()
         currentBuild.result = "FAILED"
-        // if (options.sendToRBS)
-        // {
-        //     try {
-        //         options.rbs_prod.setFailureStatus()
-        //         options.rbs_dev.setFailureStatus()
-        //     } catch (err) {
-        //         println(err)
-        //     }
-        // }
         throw e
     }
     finally {
@@ -718,7 +709,7 @@ def executePreBuild(Map options)
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
             universeClient.createBuild(options.universePlatforms, options.groupsRBS)
-            
+
             // old version RBS
             // options.rbs_dev.startBuild(options)
         }
@@ -968,9 +959,9 @@ def call(String projectBranch = "",
             }
         }
 
-        
+
         def universePlatforms = convertPlatforms(platforms);
-        
+
         println platforms
         println tests
         println testsPackage
