@@ -396,7 +396,7 @@ def executePreBuild(Map options)
             // If use httpRequest in master slave will catch 408 error
             universeClient.tokenSetup()
             println("Test groups:")
-            println()options.groupsRBS)
+            println(options.groupsRBS)
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
             universeClient.createBuild(options.universePlatforms, options.groupsRBS)
