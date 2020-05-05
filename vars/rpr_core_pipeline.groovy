@@ -377,20 +377,41 @@ def executePreBuild(Map options)
         try
         {
             def tests = []
+            options.groupsRBS = []
             if(options.testsPackage != "none")
             {
                 dir('jobs_test_core')
                 {
                     checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
-                    // options.splitTestsExecution = false
-                    String tempTests = readFile("jobs/${options.testsPackage}")
-                    tempTests.split("\n").each {
-                        // TODO: fix: duck tape - error with line ending
-                        tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
+                    // json means custom test suite. Split doesn't supported
+                    if(options.testsPackage.endsWith('.json'))
+                    {
+                        def testsByJson = readJSON file: "jobs/${options.testsPackage}"
+                        testsByJson.each() {
+                            options.groupsRBS << "${it.key}"
+                        }
+                        options.splitTestsExecution = false
                     }
-
-                    options.groupsRBS = tests
+                    else {
+                        // options.splitTestsExecution = false
+                        String tempTests = readFile("jobs/${options.testsPackage}")
+                        tempTests.split("\n").each {
+                            // TODO: fix: duck tape - error with line ending
+                            tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
+                        }
+                        options.tests = tests
+                        options.testsPackage = "none"
+                        options.groupsRBS = tests
+                    }
                 }
+            }
+            else {
+                options.tests.split(" ").each()
+                {
+                    tests << "${it}"
+                }
+                options.tests = tests
+                options.groupsRBS = tests
             }
             // Universe : auth because now we in node
             // If use httpRequest in master slave will catch 408 error
