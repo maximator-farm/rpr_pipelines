@@ -549,7 +549,6 @@ def call(String projectBranch = "",
         println platforms
         println tests
         println testsPackage
-        println splitTestsExecution
         println universePlatforms
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
