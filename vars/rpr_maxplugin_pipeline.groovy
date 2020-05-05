@@ -1,6 +1,3 @@
-import hudson.plugins.git.GitException
-import java.nio.channels.ClosedChannelException
-import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 import groovy.transform.Field
 import UniverseClient
 @Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com")
@@ -188,11 +185,6 @@ def executeTests(String osName, String asicName, Map options)
                         currentBuild.result = "FAILED"
                     }
 
-                    // deinstalling broken addon
-                    if (sessionReport.summary.total == sessionReport.summary.error) {
-                        installMSIPlugin(osName, "Maya", options, false, true)
-                    }
-
                     if (options.sendToRBS)
                     {
                         universeClient.stage("Tests-${osName}-${asicName}", "end")
@@ -200,6 +192,14 @@ def executeTests(String osName, String asicName, Map options)
 
                     echo "Stashing test results to : ${options.testResultsName}"
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+
+                    // deinstalling broken addon & reallocate node if there are still attempts
+                    if (sessionReport.summary.total == sessionReport.summary.error) {
+                        installMSIPlugin(osName, "Max", options, false, true)
+                        if (options.currentTry < options.nodeReallocateTries) {
+                            throw new Exception("All tests crashed")
+                        }
+                    }
                 }
             }
         } else {
@@ -240,17 +240,19 @@ def executeBuildWindows(Map options)
             rename  RadeonProRender*.msi RadeonProRenderMax.msi
         """
 
-        bat """
-            echo import msilib >> getMsiProductCode.py
-            echo db = msilib.OpenDatabase(r'RadeonProRenderMax.msi', msilib.MSIDBOPEN_READONLY) >> getMsiProductCode.py
-            echo view = db.OpenView("SELECT Value FROM Property WHERE Property='ProductCode'") >> getMsiProductCode.py
-            echo view.Execute(None) >> getMsiProductCode.py
-            echo print(view.Fetch().GetString(1)) >> getMsiProductCode.py
-        """
+        //bat """
+        //    echo import msilib >> getMsiProductCode.py
+        //    echo db = msilib.OpenDatabase(r'RadeonProRenderMax.msi', msilib.MSIDBOPEN_READONLY) >> getMsiProductCode.py
+        //   echo view = db.OpenView("SELECT Value FROM Property WHERE Property='ProductCode'") >> getMsiProductCode.py
+        //    echo view.Execute(None) >> getMsiProductCode.py
+        //    echo print(view.Fetch().GetString(1)) >> getMsiProductCode.py
+        //"""
 
-        options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
+        //options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
+        options.productCode = sha1 "RadeonProRenderMax.msi"
 
-        println "[INFO] Built MSI product code: ${options.productCode}"
+        //println "[INFO] Built MSI product code: ${options.productCode}"
+        println "[INFO] Built sha1 code: ${options.productCode}"
 
         stash includes: 'RadeonProRenderMax.msi', name: 'appWindows'
     }
