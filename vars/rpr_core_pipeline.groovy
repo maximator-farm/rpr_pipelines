@@ -155,7 +155,9 @@ def executeTestCommand(String osName, String asicName, Map options)
 def executeTests(String osName, String asicName, Map options)
 {
     // TODO: improve envs, now working on Windows testers only
-    universeClient.stage("Tests-${osName}-${asicName}", "begin")
+    if (options.sendToRBS){
+        universeClient.stage("Tests-${osName}-${asicName}", "begin")
+    }
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
@@ -291,7 +293,9 @@ def executeBuildLinux(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    universeClient.stage("Build-" + osName , "begin")
+    if (options.sendToRBS){
+        universeClient.stage("Build-" + osName , "begin")
+    }
 
     try {
         dir('RadeonProRenderSDK')
@@ -320,8 +324,9 @@ def executeBuild(String osName, Map options)
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
-
-    universeClient.stage("Build-" + osName, "end")
+    if (options.sendToRBS){
+        universeClient.stage("Build-" + osName, "end")
+    }
 }
 
 def executePreBuild(Map options)
@@ -415,12 +420,15 @@ def executePreBuild(Map options)
             }
             // Universe : auth because now we in node
             // If use httpRequest in master slave will catch 408 error
-            universeClient.tokenSetup()
-            println("Test groups:")
-            println(options.groupsRBS)
+            if (options.sendToRBS){
+                universeClient.tokenSetup()
 
-            // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            universeClient.createBuild(options.universePlatforms, options.groupsRBS)
+                println("Test groups:")
+                println(options.groupsRBS)
+
+                // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+                universeClient.createBuild(options.universePlatforms, options.groupsRBS)
+            }
         }
         catch (e)
         {
@@ -600,7 +608,9 @@ def call(String projectBranch = "",
     }
     catch(e) {
         currentBuild.result = "FAILED"
-        universeClient.changeStatus(currentBuild.result)
+        if (options.sendToRBS){
+            universeClient.changeStatus(currentBuild.result)
+        }
         println(e.toString());
         println(e.getMessage());
         throw e
