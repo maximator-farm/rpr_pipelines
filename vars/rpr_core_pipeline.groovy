@@ -121,12 +121,18 @@ def executeGenTestRefCommand(String osName, Map options)
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
+    build_id = "none"
+    job_id = "none"
+    if (options.sendToRBS){
+        build_id = universeClient.build["id"]
+        job_id = universeClient.build["job_id"]
+    }
     switch(osName) {
         case 'Windows':
             dir('scripts')
             {
                 bat """
-                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${STAGE_NAME}.log 2>&1
+                run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${build_id} ${job_id} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break;
@@ -420,15 +426,13 @@ def executePreBuild(Map options)
             }
             // Universe : auth because now we in node
             // If use httpRequest in master slave will catch 408 error
-            if (options.sendToRBS){
-                universeClient.tokenSetup()
+            universeClient.tokenSetup()
 
-                println("Test groups:")
-                println(options.groupsRBS)
+            println("Test groups:")
+            println(options.groupsRBS)
 
-                // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-                universeClient.createBuild(options.universePlatforms, options.groupsRBS)
-            }
+            // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+            universeClient.createBuild(options.universePlatforms, options.groupsRBS)
         }
         catch (e)
         {
