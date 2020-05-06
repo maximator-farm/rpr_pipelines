@@ -16,6 +16,7 @@ def getTestsName(String asicName, String osName, String testName="") {
 }
 
 
+@NonCPS
 @Synchronized
 def getNextTest(Iterator iterator) {
     if (iterator.hasNext()) {
