@@ -96,12 +96,13 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                         } else {
                             maxParallel = 1
                         }
+                        println("For case ${asicName}-${osName} found ${maxParallel} suitable nodes")
                         Iterator testsIterator = options.testsList.iterator()
                         for (int i = 0; i < maxParallel; i++) {
                             // run cases of one platform parallel without creation of all test builds at the same time
                             def testsExecutors = [:]
                             testsExecutors["Executor-${i}"] = {
-                                String testName = getNextTest(iterator)
+                                String testName = getNextTest(testsIterator)
                                 while (testName != null) {
                                     String currentTestsName = getTestsName(asicName, osName, testName)
                                     def testBuild
@@ -129,13 +130,13 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                                     } finally {
                                         jobsCount++
                                     }
+
+                                    testName = getNextTest(testsIterator)
                                 }
-
-                                testName = getNextTest(iterator)
                             }
-                        }
 
-                        parallel testsExecutors
+                            parallel testsExecutors
+                        }
                     }
                 }
 
