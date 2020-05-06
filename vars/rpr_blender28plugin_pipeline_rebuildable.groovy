@@ -329,28 +329,74 @@ def executeDeploy(Map options, Map testsBuildsIds) {
 
         List lostArchive = []
 
+        def previousBuildId = -1
+        if (options['buildMode'] == 'Rebuild_Report') {
+            // search id of previous build with the same global id for use its results as part of new report
+            List builds = Jenkins.instance.getItem(env.JOB_NAME).getBuilds()
+            for (build in builds) {
+                String[] nameParts = build.getDisplayName().split('-')
+                if (options.buildId == nameParts[nameParts.length - 1]) {
+                    previousBuildId = build.getNumber()
+                    break
+                }
+            }
+            // if id of previous build with the same global id not found
+            if (previousBuildId != -1) {
+                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'radeonprorender', usernameVariable: 'USER', passwordVariable: 'PASSWORD']]) {
+                    bat """
+                        curl -o "${options.reportName}.zip" -u %USER%:%PASSWORD% "https://rpr.cis.luxoft.com/job/${env.JOB_NAME}/${previousBuildId}/${options.reportName}/*zip*/${options.reportName}"
+                    """
+                }
+                unzip(zipFile: "${options.reportName}.zip", dir: "summaryTestResults")
+            }
+        }
+
         dir("summaryTestResults") {
             testsBuildsIds.each { key, value ->
                 if (value == -1) {
                     //tests build terminated with 'FAILURE' or 'ABORTED' status
                     lostArchive.add("'${key}'")
                 } else if (value != 0) {
-                    dir("${key}") {
-                        String artifactName = "testResult-${key}.zip"
+                    String artifactName = "testResult-${key}.zip"
+                    try {
+                        println("Copy artifact with name ${artifactName}")
+                        copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: false, projectName: "${options.testsJobName}", selector: specific("${value}"))
+                        unzip(zipFile: "${artifactName}", dir: "${key}")
+                        bat """
+                        del /f ${artifactName}
+                        """
                         try {
-                            println("Copy artifact with name ${artifactName}")
-                            copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: false, projectName: "${options.testsJobName}", selector: specific("${value}"))
-                            unzip(zipFile: "${artifactName}", dir: "${key}.zip")
                             // delete test build whose results were successfully received
                             jenkins.model.Jenkins.instance.getItem(options.testsJobName).getBuild("${value}").delete()
-                        } catch(e) {
-                            echo "[ERROR] Failed to copy test results for ${artifactName}"
-                            lostArchive.add("'${key}'")
+                        } catch (e) {
+                            echo "[ERROR] Failed to delete test build with id ${value}"
                             println(e.toString());
                             println(e.getMessage());
                         }
+                    } catch(e) {
+                        echo "[ERROR] Failed to copy test results for ${artifactName} from test build"
+                        lostArchive.add("'${key}'")
+                        println(e.toString());
+                        println(e.getMessage());
+                    }
+                } else {
+                    try {
+                        bat """
+                        xcopy ${options.reportName}\\${key} ${key}
+                        """
+                    } catch (e) {
+                        echo "[ERROR] Failed to copy test results for ${artifactName} from existing report"
+                        lostArchive.add("'${key}'")
+                        println(e.toString());
+                        println(e.getMessage());
                     }
                 }
+            }
+
+            if (options['buildMode'] == 'Rebuild_Report' && previousBuildId != -1) {
+                bat """
+                rd /s /q ${options.reportName}
+                """
             }
         }
 

@@ -92,7 +92,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                         int maxParallel
                         String labels = buildCaseLabels(asicName, osName, options)
                         if (options.additionalSettings.contains('Use_Maximum_Nodes')) {
-                            maxParallel = jenkins.model.Jenkins.instance.getLabel(labels).getTotalExecutors()
+                            maxParallel = Jenkins.instance.getLabel(labels).getTotalExecutors()
                         } else {
                             maxParallel = 1
                         }
@@ -309,8 +309,6 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                         String formattedTestName = sprintf("%-50s", "${element.key}")
                         if (element.value != 0) {
                             println("[INFO]  ${formattedTestName}: found build with number #${element.value}")
-                        } else {
-                            println("[ERROR] ${formattedTestName}: build not found")
                         }
                     }
                 }
