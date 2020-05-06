@@ -4,7 +4,7 @@ import groovy.json.JsonBuilder
 import jenkins.model.Jenkins
 
 
-def getTestsName(String asicName, String osName, String testName) {
+def getTestsName(String asicName, String osName, String testName="") {
     if (testName) {
         return "${asicName}-${osName}-${testName}"
     } else {
@@ -65,37 +65,37 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                 gpuNames.split(',').each() {
                     String asicName = it
 
-                    options.testsList.each() { testName ->
-                        String currentTestsName = getTestsName(asicName, osName, testName)
-
-                        testTasks[currentTestsName] = {
-                            def testBuild
-                            try {
-                                println("Run ${currentTestsName}")
-                                testBuild = build(
-                                    job: options.testsJobName,
-                                    parameters: [
-                                        [$class: 'StringParameterValue', name: 'PipelineBranch', value: options.pipelinesBranch],
-                                        [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
-                                        [$class: 'StringParameterValue', name: 'AsicName', value: asicName],
-                                        [$class: 'StringParameterValue', name: 'OsName', value: osName],
-                                        [$class: 'StringParameterValue', name: 'TestName', value: testName],
-                                        [$class: 'StringParameterValue', name: 'BuildId', value: options.buildId],
-                                        [$class: 'StringParameterValue', name: 'Options', value: jsonOptions]
-                                    ],
-                                    quietPeriod: 0
-                                )
-                                currentTestsBuildsIds[currentTestsName] = testBuild.number
-                            } catch (e) {
-                                failedJobsCount++
-                                // -1 means that tests build failed and deploy build don't need to check its artifacts
-                                currentTestsBuildsIds[currentTestsName] = -1
-                                println "[ERROR] ${currentTestsName} finished not successful"
-                            } finally {
-                                jobsCount++
-                            }
+                    //separate each platform-gpu case
+                    String testsPackName = getTestsName(asicName, osName)
+                    testTasks[testsPackName] = {
+                        options.testsList.each() { testName ->
+                            String currentTestsName = getTestsName(asicName, osName, testName)
+                                def testBuild
+                                try {
+                                    println("Run ${currentTestsName}")
+                                    testBuild = build(
+                                        job: options.testsJobName,
+                                        parameters: [
+                                            [$class: 'StringParameterValue', name: 'PipelineBranch', value: options.pipelinesBranch],
+                                            [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
+                                            [$class: 'StringParameterValue', name: 'AsicName', value: asicName],
+                                            [$class: 'StringParameterValue', name: 'OsName', value: osName],
+                                            [$class: 'StringParameterValue', name: 'TestName', value: testName],
+                                            [$class: 'StringParameterValue', name: 'BuildId', value: options.buildId],
+                                            [$class: 'StringParameterValue', name: 'Options', value: jsonOptions]
+                                        ],
+                                        quietPeriod: 0
+                                    )
+                                    currentTestsBuildsIds[currentTestsName] = testBuild.number
+                                } catch (e) {
+                                    failedJobsCount++
+                                    // -1 means that tests build failed and deploy build don't need to check its artifacts
+                                    currentTestsBuildsIds[currentTestsName] = -1
+                                    println "[ERROR] ${currentTestsName} finished not successful"
+                                } finally {
+                                    jobsCount++
+                                }
                         }
-
                     }
                 }
 
