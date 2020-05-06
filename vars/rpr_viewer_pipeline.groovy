@@ -1,3 +1,7 @@
+import UniverseClient
+import groovy.transform.Field
+
+@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com")
 
 def getViewerTool(String osName, Map options)
 {
@@ -95,15 +99,21 @@ def executeGenTestRefCommand(String osName, Map options)
     }
 }
 
-def executeTestCommand(String osName, Map options)
+def executeTestCommand(String osName, String asicName, Map options)
 {
+    build_id = "none"
+    job_id = "none"
+    if (options.sendToRBS){
+        build_id = universeClient.build["id"]
+        job_id = universeClient.build["job_id"]
+    }
     switch(osName)
     {
     case 'Windows':
         dir('scripts')
         {
             bat """
-            run.bat ${options.testsPackage} \"${options.tests}\">> ../${options.stageName}.log  2>&1
+            run.bat ${options.testsPackage} \"${options.tests}\" ${build_id} ${job_id} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${options.stageName}.log  2>&1
             """
         }
         break;
@@ -127,6 +137,9 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
+    if (options.sendToRBS){
+        universeClient.stage("Tests-${osName}-${asicName}", "begin")
+    }
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
@@ -136,9 +149,6 @@ def executeTests(String osName, String asicName, Map options)
             try {
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rprviewer.git')
-                if (options.sendToRBS) {
-                    options.rbs_prod.setTester(options)
-                }
                 getViewerTool(osName, options)
             } catch(e) {
                 println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
@@ -157,7 +167,7 @@ def executeTests(String osName, String asicName, Map options)
         outputEnvironmentInfo(osName)
 
         if(options['updateRefs']) {
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         } else {
@@ -181,7 +191,7 @@ def executeTests(String osName, String asicName, Map options)
             {
                 println("Baseline doesn't exist.")
             }
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
         }
     } catch (e) {
         if (options.currentTry < options.nodeReallocateTries) {
@@ -208,6 +218,11 @@ def executeTests(String osName, String asicName, Map options)
                     {
                         options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
                         currentBuild.result = "FAILED"
+                    }
+
+                    if (options.sendToRBS)
+                    {
+                        universeClient.stage("Tests-${osName}-${asicName}", "end")
                     }
 
                     echo "Stashing test results to : ${options.testResultsName}"
@@ -299,6 +314,10 @@ def executeBuildLinux(Map options)
 
 def executeBuild(String osName, Map options)
 {
+    if (options.sendToRBS){
+        universeClient.stage("Build-" + osName , "begin")
+    }
+
     try {
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
         outputEnvironmentInfo(osName)
@@ -321,6 +340,9 @@ def executeBuild(String osName, Map options)
     }
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+    }
+    if (options.sendToRBS){
+        universeClient.stage("Build-" + osName, "end")
     }
 }
 
@@ -364,6 +386,50 @@ def executePreBuild(Map options)
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '50']]]);
+    }
+
+    if (options.sendToRBS)
+    {
+        try
+        {
+            def tests = []
+            options.groupsRBS = []
+            if(options.testsPackage != "none")
+            {
+                dir('jobs_test_rprviewer')
+                {
+                    checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rprviewer.git')
+                    // options.splitTestsExecution = false
+                    String tempTests = readFile("jobs/${options.testsPackage}")
+                    tempTests.split("\n").each {
+                        // TODO: fix: duck tape - error with line ending
+                        tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
+                    }
+
+                    options.groupsRBS = tests
+                }
+            }
+            else {
+                options.tests.split(" ").each()
+                {
+                    tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
+                }
+                options.groupsRBS = tests
+            }
+            // Universe : auth because now we in node
+            // If use httpRequest in master slave will catch 408 error
+            universeClient.tokenSetup()
+
+            println("Test groups:")
+            println(options.groupsRBS)
+
+            // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+            universeClient.createBuild(options.universePlatforms, options.groupsRBS)
+        }
+        catch (e)
+        {
+            println(e.toString())
+        }
     }
 }
 
@@ -477,6 +543,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
                          reportFiles: 'summary_report.html, performance_report.html, compare_report.html',
                          reportName: 'Test Report',
                          reportTitles: 'Summary Report, Performance Report, Compare Report'])
+
+            if (options.sendToRBS) {
+                try {
+                    String status = currentBuild.result ?: 'SUCCESSFUL'
+                    universeClient.changeStatus(status)
+                }
+                catch (e){
+                    println(e.getMessage())
+                }
+            }
         }
     }
     catch(e)
@@ -491,11 +567,19 @@ def call(String projectBranch = "",
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String testsPackage = "",
-         String tests = "") {
+         String tests = ""
+         Boolean sendToRBS = true) {
 
     String PRJ_ROOT='rpr-core'
     String PRJ_NAME='RadeonProViewer'
     String projectRepo='git@github.com:Radeon-Pro/RadeonProViewer.git'
+
+    def universePlatforms = convertPlatforms(platforms);
+
+    println platforms
+    println tests
+    println testsPackage
+    println universePlatforms
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                            [projectBranch:projectBranch,
@@ -512,5 +596,7 @@ def call(String projectBranch = "",
                             DEPLOY_FOLDER:"RprViewer",
                             testsPackage:testsPackage,
                             TEST_TIMEOUT:180,
-                            tests:tests])
+                            tests:tests,
+                            sendToRBS:sendToRBS,
+                            universePlatforms: universePlatforms])
 }
