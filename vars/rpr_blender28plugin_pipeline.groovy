@@ -609,17 +609,19 @@ def executePreBuild(Map options)
         }
         options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
     }
+
     if(env.CHANGE_URL)
     {
         //TODO: fix sha for PR
         //options.comitSHA = bat ( script: "git log --format=%%H HEAD~1 -1", returnStdout: true ).split('\r\n')[2].trim()
         options.AUTHOR_NAME = env.CHANGE_AUTHOR_DISPLAY_NAME
         if (env.CHANGE_TARGET != 'master') {
-            options['executeBuild'] = false
-            options['executeTests'] = false
+            options['executeBuild'] = true
+            options['executeTests'] = true
         }
         options.commitMessage = env.CHANGE_TITLE
     }
+    
     // if manual job
     if(options['forceBuild'])
     {
