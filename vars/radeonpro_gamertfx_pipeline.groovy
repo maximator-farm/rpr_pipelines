@@ -33,7 +33,6 @@ def executeTests(String osName, String asicName, Map options)
     catch (e) {
         println(e.toString());
         println(e.getMessage());
-        currentBuild.result = "FAILED"
         throw e
     }
     finally {
