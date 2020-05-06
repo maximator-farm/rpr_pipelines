@@ -103,7 +103,7 @@ def executeTestCommand(String osName, Map options)
         dir('scripts')
         {
             bat """
-            run.bat ${options.testsPackage} \"${options.tests}\">> ../${options.stageName}.log  2>&1
+            run.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
             """
         }
         break;
@@ -117,8 +117,7 @@ def executeTestCommand(String osName, Map options)
         {
             withEnv(["LD_LIBRARY_PATH=../RprViewer/engines/hybrid:\$LD_LIBRARY_PATH"]) {
                 sh """
-                chmod +x run.sh
-                ./run.sh ${options.testsPackage} \"${options.tests}\">> ../${options.stageName}.log  2>&1
+                ./run.sh ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
                 """
             }
         }
@@ -214,7 +213,7 @@ def executeTests(String osName, String asicName, Map options)
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
                     // reallocate node if there are still attempts
-                    if (sessionReport.summary.total == sessionReport.summary.error) {
+                    if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
                         if (options.currentTry < options.nodeReallocateTries) {
                             throw new Exception("All tests crashed")
                         } 
@@ -343,7 +342,9 @@ def executePreBuild(Map options)
     options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
     if (env.CHANGE_URL) {
-        options.testsPackage = "PR"
+        echo "branch was detected as Pull Request"
+        options['isPR'] = true
+        options.testsPackage = "PR" 
     }
     else if(env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         options.testsPackage = "master"
