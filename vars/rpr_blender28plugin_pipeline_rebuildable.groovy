@@ -341,6 +341,8 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                             println("Copy artifact with name ${artifactName}")
                             copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: false, projectName: "${options.testsJobName}", selector: specific("${value}"))
                             unzip(zipFile: "${artifactName}", dir: "${key}.zip")
+                            // delete test build whose results were successfully received
+                            jenkins.model.Jenkins.instance.getItem(options.testsJobName).getBuild("${value}").delete()
                         } catch(e) {
                             echo "[ERROR] Failed to copy test results for ${artifactName}"
                             lostArchive.add("'${key}'")
