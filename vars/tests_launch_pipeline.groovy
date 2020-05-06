@@ -6,9 +6,8 @@ def call(def executeTests, Map options) {
         timestamps {
             println("Scheduling ${options.osName}:${options.asicName} ${options.testName}")
 
-            def testerTag = options.TESTER_TAG ? "${options.TESTER_TAG} && Tester" : "Tester"
             // reallocate node for each test
-            def nodeLabels = "${options.osName} && ${testerTag} && OpenCL && gpu${options.asicName}"
+            def nodeLabels = "${options.osName} && gpu${options.asicName} && ${options.COMMON_LABELS}"
             def nodesList = nodesByLabel label: nodeLabels, offline: false
             println "Found the following PCs for the task: ${nodesList}"
             def nodesCount = nodesList.size()

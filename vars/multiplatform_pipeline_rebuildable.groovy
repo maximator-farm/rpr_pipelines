@@ -2,6 +2,8 @@ import java.text.SimpleDateFormat;
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import groovy.json.JsonBuilder
 import jenkins.model.Jenkins
+import groovy.transform.Synchronized
+import java.util.Iterator
 
 
 def getTestsName(String asicName, String osName, String testName="") {
@@ -11,6 +13,24 @@ def getTestsName(String asicName, String osName, String testName="") {
         return "${asicName}-${osName}"
     }
 
+}
+
+
+@Synchronized
+def getNextTest(Iterator iterator) {
+    if (iterator.hasNext()) {
+        return iterator.next()
+    } else {
+        return null
+    }
+}
+
+def buildCaseLabels(String asicName, String osName, Map options) {
+    if (options.COMMON_LABELS) {
+        return "${osName} && gpu${asicName} && ${options.COMMON_LABELS}"
+    } else {
+        return "${osName} && gpu${asicName}"
+    }
 }
 
 
@@ -68,34 +88,53 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                     //separate each platform-gpu case
                     String testsPackName = getTestsName(asicName, osName)
                     testTasks[testsPackName] = {
-                        options.testsList.each() { testName ->
-                            String currentTestsName = getTestsName(asicName, osName, testName)
-                                def testBuild
-                                try {
-                                    println("Run ${currentTestsName}")
-                                    testBuild = build(
-                                        job: options.testsJobName,
-                                        parameters: [
-                                            [$class: 'StringParameterValue', name: 'PipelineBranch', value: options.pipelinesBranch],
-                                            [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
-                                            [$class: 'StringParameterValue', name: 'AsicName', value: asicName],
-                                            [$class: 'StringParameterValue', name: 'OsName', value: osName],
-                                            [$class: 'StringParameterValue', name: 'TestName', value: testName],
-                                            [$class: 'StringParameterValue', name: 'BuildId', value: options.buildId],
-                                            [$class: 'StringParameterValue', name: 'Options', value: jsonOptions]
-                                        ],
-                                        quietPeriod: 0
-                                    )
-                                    currentTestsBuildsIds[currentTestsName] = testBuild.number
-                                } catch (e) {
-                                    failedJobsCount++
-                                    // -1 means that tests build failed and deploy build don't need to check its artifacts
-                                    currentTestsBuildsIds[currentTestsName] = -1
-                                    println "[ERROR] ${currentTestsName} finished not successful"
-                                } finally {
-                                    jobsCount++
-                                }
+                        int maxParallel
+                        String labels = buildCaseLabels(asicName, osName, options)
+                        if (options.additionalSettings.contains('Use_Maximum_Nodes')) {
+                            maxParallel = jenkins.model.Jenkins.instance.getLabel(labels).getTotalExecutors()
+                        } else {
+                            maxParallel = 1
                         }
+                        Iterator testsIterator = options.testsList.iterator()
+                        for (int i = 0; i < maxParallel; i++) {
+                            // run cases of one platform parallel without creation of all test builds at the same time
+                            def testsExecutors = [:]
+                            testsExecutors["Executor-${i}"] = {
+                                String testName = getNextTest(iterator)
+                                while (testName != null) {
+                                    String currentTestsName = getTestsName(asicName, osName, testName)
+                                    def testBuild
+                                    try {
+                                        println("Run ${currentTestsName}")
+                                        testBuild = build(
+                                            job: options.testsJobName,
+                                            parameters: [
+                                                [$class: 'StringParameterValue', name: 'PipelineBranch', value: options.pipelinesBranch],
+                                                [$class: 'StringParameterValue', name: 'TestsBranch', value: options.testsBranch],
+                                                [$class: 'StringParameterValue', name: 'AsicName', value: asicName],
+                                                [$class: 'StringParameterValue', name: 'OsName', value: osName],
+                                                [$class: 'StringParameterValue', name: 'TestName', value: testName],
+                                                [$class: 'StringParameterValue', name: 'BuildId', value: options.buildId],
+                                                [$class: 'StringParameterValue', name: 'Options', value: jsonOptions]
+                                            ],
+                                            quietPeriod: 0
+                                        )
+                                        currentTestsBuildsIds[currentTestsName] = testBuild.number
+                                    } catch (e) {
+                                        failedJobsCount++
+                                        // -1 means that tests build failed and deploy build don't need to check its artifacts
+                                        currentTestsBuildsIds[currentTestsName] = -1
+                                        println "[ERROR] ${currentTestsName} finished not successful"
+                                    } finally {
+                                        jobsCount++
+                                    }
+                                }
+
+                                testName = getNextTest(iterator)
+                            }
+                        }
+
+                        parallel testsExecutors
                     }
                 }
 
@@ -194,6 +233,8 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                 }
 
                 def tasks = [:]
+
+                options.TESTER_TAG = options.TESTER_TAG ? "${options.TESTER_TAG} && Tester" : "Tester"
 
                 platforms.split(';').each() {
                     List tokens = it.tokenize(':')

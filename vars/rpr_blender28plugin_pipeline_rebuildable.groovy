@@ -512,6 +512,10 @@ def call(String pipelinesBranch = "",
         String ASSETS_NAME="RadeonProRenderBlender2.8Plugin"
         String PRJ_ROOT="rpr-plugins"
 
+        //String with labels which are common for all nodes of that job 
+        String TESTER_TAG = "Blender2.8"
+        String COMMON_LABELS = "${TESTER_TAG} && OpenCL"
+
         gpusCount = 0
         platforms.split(';').each() { platform ->
             List tokens = platform.tokenize(':')
@@ -548,7 +552,7 @@ def call(String pipelinesBranch = "",
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:90,
                                 DEPLOY_TIMEOUT:150,
-                                TESTER_TAG:"Blender2.8",
+                                COMMON_LABELS:COMMON_LABELS,
                                 BUILDER_TAG:"BuildBlender2.8",
                                 resX: resX,
                                 resY: resY,
