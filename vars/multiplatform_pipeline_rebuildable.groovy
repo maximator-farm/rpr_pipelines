@@ -71,8 +71,6 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                 options.CBR = 'SKIPPED'
                 echo "[INFO] Build SKIPPED"
             }
-            options.masterJobName = env.JOB_NAME
-            options.masterBuildNumber = env.BUILD_NUMBER
 
             Map currentTestsBuildsIds = [:]
             String launchTestsStageName = "Launch&Wait-Tests-${osName}"
@@ -236,6 +234,8 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
 
                 def tasks = [:]
 
+                options.masterJobName = env.JOB_NAME
+                options.masterBuildNumber = env.BUILD_NUMBER
                 options.TESTER_TAG = options.TESTER_TAG ? "${options.TESTER_TAG} && Tester" : "Tester"
 
                 platforms.split(';').each() {
@@ -291,7 +291,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                             }
                         }
                         // if global id isn't equal or found build didn't finish successfully - skip this build
-                        if (currentBuildId != options.buildId || build.getResult() != "SUCCESS") {
+                        if (currentBuildId != options.buildId || build.getResult().toString() != "SUCCESS") {
                             continue
                         }
                         if (testsBuildsIds.containsKey(currentTestName)) {

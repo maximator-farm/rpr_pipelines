@@ -329,25 +329,31 @@ def executeDeploy(Map options, Map testsBuildsIds) {
 
         List lostArchive = []
 
-        def previousBuildId = -1
+        Integer previousBuildId = -1
         if (options['buildMode'] == 'Rebuild_Report') {
             // search id of previous build with the same global id for use its results as part of new report
             List builds = Jenkins.instance.getItem(env.JOB_NAME).getBuilds()
             for (build in builds) {
                 String[] nameParts = build.getDisplayName().split('-')
-                if (options.buildId == nameParts[nameParts.length - 1]) {
+                if (options.buildId == nameParts[nameParts.length - 1] && "${build.getNumber()}" != env.BUILD_NUMBER) {
                     previousBuildId = build.getNumber()
+                    println("[INFO] Found master build with build id #${previousBuildId}")
                     break
                 }
             }
+            // it's necessary to avoid NotSerializableException (builds is a RunList object which isn't serializable)
+            builds = null
             // if id of previous build with the same global id not found
             if (previousBuildId != -1) {
-                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsUser', usernameVariable: 'USER', passwordVariable: 'PASSWORD']]) {
+                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsUser', usernameVariable: 'USER', passwordVariable: 'PASSWORD']]) {
                     bat """
                         curl -o "${options.reportName}.zip" -u %USER%:%PASSWORD% "https://rpr.cis.luxoft.com/job/${env.JOB_NAME}/${previousBuildId}/${options.reportName}/*zip*/${options.reportName}"
                     """
                 }
                 unzip(zipFile: "${options.reportName}.zip", dir: "summaryTestResults")
+                bat """
+                del /f ${options.reportName}.zip
+                """
             }
         }
 
@@ -374,7 +380,7 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                             println(e.getMessage());
                         }
                     } catch(e) {
-                        echo "[ERROR] Failed to copy test results for ${artifactName} from test build"
+                        echo "[ERROR] Failed to copy test results for ${key} from test build"
                         lostArchive.add("'${key}'")
                         println(e.toString());
                         println(e.getMessage());
@@ -382,10 +388,10 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                 } else {
                     try {
                         bat """
-                        xcopy ${options.reportName}\\${key} ${key}
+                        xcopy /e ${options.reportName}\\${key} ${key}\\
                         """
                     } catch (e) {
-                        echo "[ERROR] Failed to copy test results for ${artifactName} from existing report"
+                        echo "[ERROR] Failed to copy test results for ${key} from existing report"
                         lostArchive.add("'${key}'")
                         println(e.toString());
                         println(e.getMessage());
@@ -475,6 +481,11 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                      // TODO: custom reportName (issues with escaping)
                      reportName: 'Test Report',
                      reportTitles: 'Summary Report, Performance Report, Compare Report'])
+
+        if (options['buildMode'] == 'Rebuild_Report' && previousBuildId != -1) {
+            // delete previous master build whose report was successfully received
+            jenkins.model.Jenkins.instance.getItem(env.JOB_NAME).getBuild("${previousBuildId}").delete()
+        }
 
         println "BUILD RESULT: ${currentBuild.result}"
         println "BUILD CURRENT RESULT: ${currentBuild.currentResult}"
