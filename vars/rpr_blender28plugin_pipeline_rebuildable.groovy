@@ -342,7 +342,7 @@ def executeDeploy(Map options, Map testsBuildsIds) {
             }
             // if id of previous build with the same global id not found
             if (previousBuildId != -1) {
-                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'radeonprorender', usernameVariable: 'USER', passwordVariable: 'PASSWORD']]) {
+                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsUser', usernameVariable: 'USER', passwordVariable: 'PASSWORD']]) {
                     bat """
                         curl -o "${options.reportName}.zip" -u %USER%:%PASSWORD% "https://rpr.cis.luxoft.com/job/${env.JOB_NAME}/${previousBuildId}/${options.reportName}/*zip*/${options.reportName}"
                     """

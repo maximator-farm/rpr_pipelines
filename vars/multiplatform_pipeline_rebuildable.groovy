@@ -290,12 +290,12 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                                 currentBuildId = nameParts[i]
                             }
                         }
-                        // if global id isn't equal skip this build
-                        if (currentBuildId != options.buildId) {
+                        // if global id isn't equal or found build didn't finish successfully - skip this build
+                        if (currentBuildId != options.buildId || build.getResult() != "SUCCESS") {
                             continue
                         }
                         if (testsBuildsIds.containsKey(currentTestName)) {
-                            // save build id if it's the first id with this name older builds will be ignored
+                            // save build id if it's the first id with this name (older builds will be ignored)
                             if (testsBuildsIds[currentTestName] == 0) {
                                 testsBuildsIds[currentTestName] = build.getNumber()
                                 if (--buildsLeft == 0) {
