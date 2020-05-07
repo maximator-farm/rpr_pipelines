@@ -293,7 +293,7 @@ def executeBuild(String osName, Map options) {
     try {
 
         cleanWS(osName)
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/TAN.git', true)
+        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:imatyushin/TAN.git', true)
         
         switch(osName)
         {
@@ -331,7 +331,7 @@ def executePreBuild(Map options) {
         }
     }
 
-    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/TAN.git', true)
+    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:imatyushin/TAN.git', true)
 
     AUTHOR_NAME = bat (
         script: "git show -s --format=%%an HEAD ",
