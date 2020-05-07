@@ -117,13 +117,9 @@ def executeTestCommand(String osName, Map options)
         {
             withEnv(["LD_LIBRARY_PATH=../RprViewer/engines/hybrid:\$LD_LIBRARY_PATH"]) {
                 sh """
-<<<<<<< HEAD
-                ./run.sh ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
-=======
                 chmod +x ../RprViewer/RadeonProViewer
                 chmod +x run.sh
                 ./run.sh ${options.testsPackage} \"${options.tests}\">> ../${options.stageName}.log  2>&1
->>>>>>> 0489dac21cbdaaf12e7b4cb8781b45437edb0a9f
                 """
             }
         }
