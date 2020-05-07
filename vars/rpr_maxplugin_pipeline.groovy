@@ -119,9 +119,9 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        dir("${CIS_TOOLS}/../TestResources/rpr_max")
+        dir("${CIS_TOOLS}/../TestResources/rpr_max_autotests")
         {
-            checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_max.git", true, false, true, 'radeonprorender-gitlab', true)
+            checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_max_autotests.git", true, false, true, 'radeonprorender-gitlab', true)
         }
 
         // temp 
