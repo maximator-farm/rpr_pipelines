@@ -393,8 +393,6 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                     } catch (e) {
                         echo "[ERROR] Failed to copy test results for ${key} from existing report"
                         lostArchive.add("'${key}'")
-                        println(e.toString());
-                        println(e.getMessage());
                     }
                 }
             }
