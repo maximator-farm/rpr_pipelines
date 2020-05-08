@@ -195,6 +195,11 @@ def executePreBuild(Map options)
         println("[CIS:GENREF] has been founded in comment")
     }
 
+    if (env.CHANGE_URL) {
+        echo "branch was detected as Pull Request"
+        options['isPR'] = true
+    }
+
     options.commitMessage = []
     commitMessage = commitMessage.split('\r\n')
     commitMessage[2..commitMessage.size()-1].collect(options.commitMessage) { it.trim() }

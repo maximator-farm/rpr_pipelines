@@ -307,7 +307,7 @@ def executeTests(String osName, String asicName, Map options)
                         stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
                         // deinstalling broken addon & reallocate node if there are still attempts
-                        if (sessionReport.summary.total == sessionReport.summary.error) {
+                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
                             installBlenderAddon(osName, "2.82", options, false, true)
                             if (options.currentTry < options.nodeReallocateTries) {
                                 throw new Exception("All tests crashed")
@@ -593,6 +593,7 @@ def executePreBuild(Map options)
                 if (env.CHANGE_URL)
                 {
                     echo "branch was detected as Pull Request"
+                    options['isPR'] = true
                     options['executeBuild'] = true
                     options['executeTests'] = true
                     options.testsPackage = "regression.json"
@@ -609,17 +610,19 @@ def executePreBuild(Map options)
         }
         options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
     }
+
     if(env.CHANGE_URL)
     {
         //TODO: fix sha for PR
         //options.comitSHA = bat ( script: "git log --format=%%H HEAD~1 -1", returnStdout: true ).split('\r\n')[2].trim()
         options.AUTHOR_NAME = env.CHANGE_AUTHOR_DISPLAY_NAME
         if (env.CHANGE_TARGET != 'master') {
-            options['executeBuild'] = false
-            options['executeTests'] = false
+            options['executeBuild'] = true
+            options['executeTests'] = true
         }
         options.commitMessage = env.CHANGE_TITLE
     }
+    
     // if manual job
     if(options['forceBuild'])
     {

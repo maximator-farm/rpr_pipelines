@@ -57,6 +57,18 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             println "Exception cause: ${e.getCause()}"
                                             println "Exception stack trace: ${e.getStackTrace()}"
 
+                                            // Abort from user request
+                                            if (e.getCauses().any { it instanceof org.jenkinsci.plugins.workflow.support.steps.input.Rejection }) {
+                                                println "[INFO] This build was aborted due to user input."
+                                                i = options.nodeReallocateTries + 1
+                                            }
+
+                                            // Abort PRs
+                                            if (options.containsKey("isPR") &&  options.isPR == true) {
+                                                println "[INFO] This build was aborted due to new PR was appeared."
+                                                i = options.nodeReallocateTries + 1
+                                            }
+
                                             // change PC after first failed tries and don't change in the last try
                                             if (i < nodesCount - 1 && nodesCount != 1) {
                                                 println "[INFO] Updating label after failure task. Adding !${env.NODE_NAME} to labels list."
