@@ -88,13 +88,14 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                     String testsPackName = getTestsName(asicName, osName)
                     testTasks[testsPackName] = {
                         int maxParallel
-                        String labels = buildCaseLabels(asicName, osName, options)
                         if (options.additionalSettings.contains('Use_Maximum_Nodes')) {
-                            maxParallel = Jenkins.instance.getLabel(labels).getTotalExecutors()
+                            String labels = buildCaseLabels(asicName, osName, options)
+                            def nodesList = nodesByLabel(label: labels, offline: false)
+                            maxParallel = nodesList.size()
+                            println("[INFO] For case ${asicName}-${osName} found ${maxParallel} suitable nodes")
                         } else {
                             maxParallel = 1
                         }
-                        println("For case ${asicName}-${osName} found ${maxParallel} suitable nodes")
                         Iterator testsIterator = options.testsList.iterator()
                         for (int i = 0; i < maxParallel; i++) {
                             // run cases of one platform parallel without creation of all test builds at the same time
