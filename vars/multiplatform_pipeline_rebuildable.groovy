@@ -100,7 +100,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                         // run cases of one platform parallel without creation of all test builds at the same time
                         def testsExecutors = [:]
                         for (int i = 0; i < maxParallel; i++) {
-                            testsExecutors["Executor-${i}"] = {
+                            testsExecutors["Executor-${asicName}-${osName}-${i}"] = {
                                 String testName = getNextTest(testsIterator)
                                 while (testName != null) {
                                     String currentTestsName = getTestsName(asicName, osName, testName)
