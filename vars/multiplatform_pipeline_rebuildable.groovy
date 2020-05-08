@@ -247,15 +247,20 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                         gpuNames = tokens.get(1)
                     }
 
-                    if(options['buildMode'] == 'Rebuild_Report' && gpuNames) {
+                    if((options['buildMode'] == 'Rebuild_Report' || options['buildMode'] == 'Delete_Tests') && gpuNames) {
                         gpuNames.split(',').each() {
                             // if not split - testsList doesn't exists
                             options.testsList = options.testsList ?: ['']
                             options.testsList.each() { testName ->
                                 String asicName = it
                                 String testsName = getTestsName(asicName, osName, testName)
-                                // 0 means that id of tests build isn't specified
-                                testsBuildsIds[testsName] = 0
+                                if (options['buildMode'] == 'Rebuild_Report') {
+                                    // 0 means that id of tests build isn't specified
+                                    testsBuildsIds[testsName] = 0
+                                } else {
+                                    // create empty list for ids of test builds which will be deleted
+                                    testsBuildsIds[testsName] = []
+                                }
                             }
                         }
                     }
@@ -271,8 +276,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                 println(e.toString());
                 println(e.getMessage());
             } finally {
-                if (options['buildMode'] == 'Rebuild_Report') {
-                    // search ids of tests builds before rebuild report
+                if (options['buildMode'] == 'Rebuild_Report' || options['buildMode'] == 'Delete_Tests') {
                     buildsLeft = testsBuildsIds.size()
                     List builds = Jenkins.instance.getItem(options.testsJobName).getBuilds()
                     for (build in builds) {
@@ -291,41 +295,78 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                                 currentBuildId = nameParts[i]
                             }
                         }
-                        // if global id isn't equal or found build didn't finish successfully - skip this build
-                        if (currentBuildId != options.buildId || build.getResult().toString() != "SUCCESS") {
+
+                        // if global id isn't equal - skip this build
+                        if (currentBuildId != options.buildId) {
                             continue
                         }
-                        if (testsBuildsIds.containsKey(currentTestName)) {
-                            // save build id if it's the first id with this name (older builds will be ignored)
-                            if (testsBuildsIds[currentTestName] == 0) {
-                                testsBuildsIds[currentTestName] = build.getNumber()
-                                if (--buildsLeft == 0) {
-                                    break
+
+                        if (options['buildMode'] == 'Rebuild_Report') {
+                            // if found build didn't finish successfully - skip this build
+                            if (build.getResult().toString() != "SUCCESS") {
+                                continue
+                            }
+                            if (testsBuildsIds.containsKey(currentTestName)) {
+                                // save build id if it's the first id with this name (older builds will be ignored)
+                                if (testsBuildsIds[currentTestName] == 0) {
+                                    testsBuildsIds[currentTestName] = build.getNumber()
+                                    if (--buildsLeft == 0) {
+                                        break
+                                    }
                                 }
+                            }
+                        } else {
+                            if (!testsBuildsIds.containsKey(currentTestName)) {
+                                testsBuildsIds[currentTestName] = []
+                            }
+                            testsBuildsIds[currentTestName].add(build.getNumber())
+                        }
+                    }
+
+                    if (options['buildMode'] == 'Rebuild_Report') {
+                        println("Found ${testsBuildsIds.size() - buildsLeft} of ${testsBuildsIds.size()} jobs. Details:")
+                        for (element in testsBuildsIds) {
+                            String formattedTestName = sprintf("%-50s", "${element.key}")
+                            if (element.value != 0) {
+                                println("[INFO]  ${formattedTestName}: found build with number #${element.value}")
                             }
                         }
                     }
-                    println("Found ${testsBuildsIds.size() - buildsLeft} of ${testsBuildsIds.size()} jobs. Details:")
-                    for (element in testsBuildsIds) {
-                        String formattedTestName = sprintf("%-50s", "${element.key}")
-                        if (element.value != 0) {
-                            println("[INFO]  ${formattedTestName}: found build with number #${element.value}")
+ 
+                }
+
+                if (options['buildMode'] == 'Delete_Tests') {
+                    println("[INFO] Started to delete test builds. Details:")
+                    testsBuildsIds.each { key, value ->
+                        if (value.size() != 0) {
+                            value.each { id ->
+                                try {
+                                    Jenkins.instance.getItem(options.testsJobName).getBuild("${id}").delete()
+                                    println("[INFO] Test build with name '${key}' and id #${id} was deleted")
+                                } catch (e) {
+                                    println("[ERROR] Failed to delete test build with name '${key}' and id #${id}")
+                                    println(e.toString());
+                                    println(e.getMessage());
+                                }
+                            }
+                        } else {
+                            println("[INFO] Test builds with name '${key}' not found")
                         }
                     }
                 }
 
-                node("Windows && ReportBuilder") {
-                    stage("Deploy") {
-                        timeout(time: "${options.DEPLOY_TIMEOUT}", unit: 'MINUTES') {
-                            ws("WS/${options.PRJ_NAME}_Deploy") {
-                                try {
-                                    if(executeDeploy && options['executeDeploy']) {
+                if(executeDeploy && options['executeDeploy'])  {
+                    node("Windows && ReportBuilder") {
+                        stage("Deploy") {
+                            timeout(time: "${options.DEPLOY_TIMEOUT}", unit: 'MINUTES') {
+                                ws("WS/${options.PRJ_NAME}_Deploy") {
+                                    try {
                                         executeDeploy(options, testsBuildsIds)
+                                    } catch (e) {
+                                        println(e.toString());
+                                        println(e.getMessage());
+                                        throw e
                                     }
-                                } catch (e) {
-                                    println(e.toString());
-                                    println(e.getMessage());
-                                    throw e
                                 }
                             }
                         }

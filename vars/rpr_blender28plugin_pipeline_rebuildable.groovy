@@ -297,6 +297,12 @@ def executePreBuild(Map options) {
         options['executeTests'] = true
         options['executeDeploy'] = false
     }
+    // if only delete tests
+    if(options['buildMode'] == 'Delete_Tests') {
+        options['executeBuild'] = false
+        options['executeTests'] = false
+        options['executeDeploy'] = false
+    }
 
     currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
     if(!env.CHANGE_URL) {
@@ -375,7 +381,7 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                             // delete test build whose results were successfully received
                             jenkins.model.Jenkins.instance.getItem(options.testsJobName).getBuild("${value}").delete()
                         } catch (e) {
-                            echo "[ERROR] Failed to delete test build with id ${value}"
+                            echo "[ERROR] Failed to delete test build with id #${value}"
                             println(e.toString());
                             println(e.getMessage());
                         }
