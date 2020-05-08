@@ -266,7 +266,7 @@ def executeTests(String osName, String asicName, Map options)
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
                     // deinstalling broken addon & reallocate node if there are still attempts
-                    if (sessionReport.summary.total == sessionReport.summary.error) {
+                    if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
                         installMSIPlugin(osName, "Maya", options, false, true)
                         if (options.currentTry < options.nodeReallocateTries) {
                             throw new Exception("All tests crashed")
@@ -496,6 +496,7 @@ def executePreBuild(Map options)
                 if (env.CHANGE_URL)
                 {
                     echo "branch was detected as Pull Request"
+                    options['isPR'] = true
                     options['executeBuild'] = true
                     options['executeTests'] = true
                     options.testsPackage = "regression.json"

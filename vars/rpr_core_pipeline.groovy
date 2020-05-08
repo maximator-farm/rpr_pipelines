@@ -254,7 +254,7 @@ def executeTests(String osName, String asicName, Map options)
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
                     // reallocate node if there are still attempts
-                    if (sessionReport.summary.total == sessionReport.summary.error) {
+                    if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
                         if (options.currentTry < options.nodeReallocateTries) {
                             throw new Exception("All tests crashed")
                         } 
@@ -362,8 +362,11 @@ def executePreBuild(Map options)
 
     options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
-    if(!env.CHANGE_URL)
-    {
+    if (env.CHANGE_URL) {
+        echo "branch was detected as Pull Request"
+        options['isPR'] = true
+        options.testsPackage = "PR" 
+    } else {
         currentBuild.description += "<b>Commit author:</b> ${options.AUTHOR_NAME}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     }

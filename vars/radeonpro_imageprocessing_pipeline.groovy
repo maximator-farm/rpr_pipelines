@@ -228,6 +228,11 @@ def executePreBuild(Map options)
     echo "Commit message: ${commitMessage}"
     options.commitMessage = commitMessage
 
+    if (env.CHANGE_URL) {
+        echo "branch was detected as Pull Request"
+        options['isPR'] = true
+    }
+
     if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
