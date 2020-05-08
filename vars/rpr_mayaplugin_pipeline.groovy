@@ -133,7 +133,7 @@ def executeTestCommand(String osName, Map options)
             dir('scripts')
             {
                 bat """
-                    run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} >> ../${options.stageName}.log  2>&1
+                    run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} >> ../${options.stageName}.log  2>&1
                 """
             }
             break;
@@ -141,7 +141,7 @@ def executeTestCommand(String osName, Map options)
             dir('scripts')
             {
                 sh """
-                    ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} >> ../${options.stageName}.log 2>&1
+                    ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} >> ../${options.stageName}.log 2>&1
                 """
             }
             break;
@@ -779,13 +779,15 @@ def call(String projectBranch = "",
         String iter = '50',
         String theshold = '0.05',
         String customBuildLinkWindows = "",
-        String customBuildLinkOSX = "")
+        String customBuildLinkOSX = "",
+        String engine = "1.0")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
     SPU = (SPU == 'Default') ? '25' : SPU
     iter = (iter == 'Default') ? '50' : iter
     theshold = (theshold == 'Default') ? '0.05' : theshold
+    boolean tahoe2 = engine == '2.0 (Northstar)'
     try
     {
         Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX
@@ -871,7 +873,8 @@ def call(String projectBranch = "",
                                 iter: iter,
                                 theshold: theshold,
                                 customBuildLinkWindows: customBuildLinkWindows,
-                                customBuildLinkOSX: customBuildLinkOSX
+                                customBuildLinkOSX: customBuildLinkOSX,
+                                engine: tahoe2
                                 ])
     }
     catch(e) {
