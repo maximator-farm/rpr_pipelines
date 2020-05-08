@@ -277,8 +277,18 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                 println(e.getMessage());
             } finally {
                 if (options['buildMode'] == 'Rebuild_Report' || options['buildMode'] == 'Delete_Tests') {
-                    buildsLeft = testsBuildsIds.size()
                     List builds = Jenkins.instance.getItem(options.testsJobName).getBuilds()
+
+                    buildsLeft = testsBuildsIds.size()
+
+                    // statuses which will be deleted in 'Delete tests' case
+                    List deletingStatuses = []
+                    if (options['buildMode'] == 'Delete_Tests') {
+                        options['additionalSettings'].each { status ->
+                            deletingStatuses.add(status.replace('Delete_', ''))
+                        }
+                    }
+
                     for (build in builds) {
                         String[] nameParts = build.getDisplayName().split('-')
                         String currentTestName = ""
@@ -316,10 +326,11 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                                 }
                             }
                         } else {
-                            if (!testsBuildsIds.containsKey(currentTestName)) {
-                                testsBuildsIds[currentTestName] = []
+                            if (testsBuildsIds.containsKey(currentTestName)) {
+                                if (deletingStatuses.contains(build.getResult().toString())) {
+                                    testsBuildsIds[currentTestName].add(build.getNumber())
+                                }
                             }
-                            testsBuildsIds[currentTestName].add(build.getNumber())
                         }
                     }
 
