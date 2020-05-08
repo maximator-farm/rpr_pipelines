@@ -97,9 +97,9 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                             maxParallel = 1
                         }
                         Iterator testsIterator = options.testsList.iterator()
+                        // run cases of one platform parallel without creation of all test builds at the same time
+                        def testsExecutors = [:]
                         for (int i = 0; i < maxParallel; i++) {
-                            // run cases of one platform parallel without creation of all test builds at the same time
-                            def testsExecutors = [:]
                             testsExecutors["Executor-${i}"] = {
                                 String testName = getNextTest(testsIterator)
                                 while (testName != null) {
@@ -133,9 +133,9 @@ def executePlatform(String osName, String gpuNames, def executeBuild, Map option
                                     testName = getNextTest(testsIterator)
                                 }
                             }
-
-                            parallel testsExecutors
                         }
+
+                        parallel testsExecutors
                     }
                 }
 
