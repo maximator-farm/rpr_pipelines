@@ -787,7 +787,7 @@ def call(String projectBranch = "",
     SPU = (SPU == 'Default') ? '25' : SPU
     iter = (iter == 'Default') ? '50' : iter
     theshold = (theshold == 'Default') ? '0.05' : theshold
-    boolean tahoe2 = engine == '2.0 (Northstar)'
+    engine = (engine == '2.0 (Northstar)') ? '2' : '1'
     try
     {
         Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX
@@ -874,7 +874,7 @@ def call(String projectBranch = "",
                                 theshold: theshold,
                                 customBuildLinkWindows: customBuildLinkWindows,
                                 customBuildLinkOSX: customBuildLinkOSX,
-                                engine: tahoe2
+                                engine: engine
                                 ])
     }
     catch(e) {
