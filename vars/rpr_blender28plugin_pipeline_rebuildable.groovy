@@ -286,8 +286,8 @@ def executePreBuild(Map options) {
         options['executeBuild'] = true
         options['executeTests'] = true
     }
-    // if rebuild report
-    if(options['buildMode'] == 'Rebuild_Report') {
+    // if rebuild or build report
+    if(options['buildMode'] == 'Rebuild_Report' || options['buildMode'] == 'Build_Report') {
         options['executeBuild'] = false
         options['executeTests'] = false
     }
@@ -378,8 +378,10 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                         del /f ${artifactName}
                         """
                         try {
-                            // delete test build whose results were successfully received
-                            jenkins.model.Jenkins.instance.getItem(options.testsJobName).getBuild("${value}").delete()
+                            if (options['buildMode'] != 'Build_Report') {
+                                // delete test build whose results were successfully received
+                                jenkins.model.Jenkins.instance.getItem(options.testsJobName).getBuild("${value}").delete()
+                            }
                         } catch (e) {
                             echo "[ERROR] Failed to delete test build with id #${value}"
                             println(e.toString());
@@ -392,13 +394,15 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                         println(e.getMessage());
                     }
                 } else {
-                    try {
-                        bat """
-                        xcopy /e ${options.reportName}\\${key} ${key}\\
-                        """
-                    } catch (e) {
-                        echo "[ERROR] Failed to copy test results for ${key} from existing report"
-                        lostArchive.add("'${key}'")
+                    if (options['buildMode'] == 'Rebuild_Report') {
+                        try {
+                            bat """
+                            xcopy /e ${options.reportName}\\${key} ${key}\\
+                            """
+                        } catch (e) {
+                            echo "[ERROR] Failed to copy test results for ${key} from existing report"
+                            lostArchive.add("'${key}'")
+                        }
                     }
                 }
             }

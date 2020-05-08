@@ -247,14 +247,14 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                         gpuNames = tokens.get(1)
                     }
 
-                    if((options['buildMode'] == 'Rebuild_Report' || options['buildMode'] == 'Delete_Tests') && gpuNames) {
+                    if((options['buildMode'] == 'Rebuild_Report' || options['buildMode'] == 'Build_Report' || options['buildMode'] == 'Delete_Tests') && gpuNames) {
                         gpuNames.split(',').each() {
                             // if not split - testsList doesn't exists
                             options.testsList = options.testsList ?: ['']
                             options.testsList.each() { testName ->
                                 String asicName = it
                                 String testsName = getTestsName(asicName, osName, testName)
-                                if (options['buildMode'] == 'Rebuild_Report') {
+                                if (options['buildMode'] == 'Rebuild_Report' || options['buildMode'] == 'Build_Report') {
                                     // 0 means that id of tests build isn't specified
                                     testsBuildsIds[testsName] = 0
                                 } else {
@@ -276,7 +276,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                 println(e.toString());
                 println(e.getMessage());
             } finally {
-                if (options['buildMode'] == 'Rebuild_Report' || options['buildMode'] == 'Delete_Tests') {
+                if (options['buildMode'] == 'Rebuild_Report' || options['buildMode'] == 'Build_Report' || options['buildMode'] == 'Delete_Tests') {
                     List builds = Jenkins.instance.getItem(options.testsJobName).getBuilds()
 
                     buildsLeft = testsBuildsIds.size()
@@ -311,17 +311,28 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                             continue
                         }
 
-                        if (options['buildMode'] == 'Rebuild_Report') {
-                            // if found build didn't finish successfully - skip this build
-                            if (build.getResult().toString() != "SUCCESS") {
-                                continue
-                            }
+                        if (options['buildMode'] == 'Rebuild_Report' || options['buildMode'] == 'Build_Report') {
                             if (testsBuildsIds.containsKey(currentTestName)) {
                                 // save build id if it's the first id with this name (older builds will be ignored)
                                 if (testsBuildsIds[currentTestName] == 0) {
-                                    testsBuildsIds[currentTestName] = build.getNumber()
-                                    if (--buildsLeft == 0) {
-                                        break
+                                    if (build.getResult().toString() != "SUCCESS") {
+                                        if (options['buildMode'] == 'Rebuild_Report') {
+                                            continue
+                                        } else {
+                                            if (build.getResult() != null) {
+                                                testsBuildsIds[currentTestName] = -1
+                                            } else {
+                                                testsBuildsIds[currentTestName] = 0
+                                            }
+                                            if (--buildsLeft == 0) {
+                                                break
+                                            }
+                                        }
+                                    } else {
+                                        testsBuildsIds[currentTestName] = build.getNumber()
+                                        if (--buildsLeft == 0) {
+                                            break
+                                        }
                                     }
                                 }
                             }
@@ -334,7 +345,7 @@ def call(def platforms, def executePreBuild, def executeBuild, def executeDeploy
                         }
                     }
 
-                    if (options['buildMode'] == 'Rebuild_Report') {
+                    if (options['buildMode'] == 'Rebuild_Report' || options['buildMode'] == 'Build_Report') {
                         println("Found ${testsBuildsIds.size() - buildsLeft} of ${testsBuildsIds.size()} jobs. Details:")
                         for (element in testsBuildsIds) {
                             String formattedTestName = sprintf("%-50s", "${element.key}")
