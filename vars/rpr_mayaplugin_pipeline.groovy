@@ -150,7 +150,7 @@ def executeTestCommand(String osName, String asicName, Map options)
             dir('scripts')
             {
                 sh """
-                    ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} >> ../${options.stageName}.log 2>&1
+                    ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${build_id} ${job_id} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${options.stageName}.log 2>&1
                 """
             }
             break;
