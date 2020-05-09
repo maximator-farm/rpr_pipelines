@@ -125,4 +125,35 @@ class UniverseClient {
         }
         retryWrapper(request)
     }
+
+    def changeStatus(status) {
+        def request = {
+            def mapStatuses = [
+                "FAILURE": "error",
+                "FAILED": "error",
+                "UNSTABLE": "failed",
+                "ABORTED": "aborted",
+                "SUCCESS": "passed",
+                "SUCCESSFUL": "passed"
+            ]
+
+            def buildBody = [
+                'status': mapStatuses[status]
+            ]
+
+            def res = this.context.httpRequest(
+                consoleLogResponseBody: true,
+                contentType: 'APPLICATION_JSON',
+                customHeaders: [
+                    [name: 'Authorization', value: "Token ${this.token}"]
+                ],
+                httpMode: 'PUT',
+                requestBody: JsonOutput.toJson(buildBody),
+                ignoreSslErrors: true,
+                url: "${this.url}/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
+                validResponseCodes: '200'
+            )
+        }
+        retryWrapper(request)
+    }
 }
