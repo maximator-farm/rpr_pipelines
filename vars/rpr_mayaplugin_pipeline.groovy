@@ -1,8 +1,3 @@
-import RBSProduction
-import RBSDevelopment
-import hudson.plugins.git.GitException
-import java.nio.channels.ClosedChannelException
-import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 import groovy.transform.Field
 import UniverseClient
 @Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com/")
@@ -155,7 +150,6 @@ def executeTestCommand(String osName, String asicName, Map options)
             dir('scripts')
             {
                 sh """
-                    ./universe.sh ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url}
                     ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} >> ../${options.stageName}.log 2>&1
                 """
             }
@@ -270,11 +264,6 @@ def executeTests(String osName, String asicName, Map options)
                         currentBuild.result = "FAILED"
                     }
 
-                    // deinstalling broken addon
-                    if (sessionReport.summary.total == sessionReport.summary.error) {
-                        installMSIPlugin(osName, "Maya", options, false, true)
-                    }
-
                     if (options.sendToRBS)
                     {
                         universeClient.stage("Tests-${osName}-${asicName}", "end")
@@ -282,6 +271,14 @@ def executeTests(String osName, String asicName, Map options)
 
                     echo "Stashing test results to : ${options.testResultsName}"
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+
+                    // deinstalling broken addon & reallocate node if there are still attempts
+                    if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        installMSIPlugin(osName, "Maya", options, false, true)
+                        if (options.currentTry < options.nodeReallocateTries) {
+                            throw new Exception("All tests crashed")
+                        }
+                    }
 
                 }
             }
@@ -504,6 +501,7 @@ def executePreBuild(Map options)
                 if (env.CHANGE_URL)
                 {
                     echo "branch was detected as Pull Request"
+                    options['isPR'] = true
                     options['executeBuild'] = true
                     options['executeTests'] = true
                     options.testsPackage = "regression.json"

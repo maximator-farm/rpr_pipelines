@@ -166,7 +166,6 @@ def executeTests(String osName, String asicName, Map options)
             sendFiles('./ReferenceImages/*.*', "${options.JOB_PATH}/RprTest/${asicName}-${osName}/ReferenceImages")
             sendFiles('./OutputImages/*.*', "${options.JOB_PATH}/RprTest/${asicName}-${osName}/OutputImages")
         }
-        currentBuild.result = "FAILED"
         throw e
     }
     finally {

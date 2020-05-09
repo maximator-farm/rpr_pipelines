@@ -13,7 +13,7 @@ def executeTestCommand(String osName)
         dir("unittest")
         {
             bat "mkdir testSave"
-            bat "..\\bin\\Release\\UnitTest.exe -t .\\testSave -r .\\referenceImages --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ..\\${STAGE_NAME}.log  2>&1"
+            bat "..\\bin\\Release\\UnitTest.exe -t .\\testSave -r .\\referenceImages --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ..\\${STAGE_NAME}.log  2>&1"
         }
         break;
     case 'OSX':
@@ -28,7 +28,7 @@ def executeTestCommand(String osName)
         dir("unittest")
         {
             sh "mkdir testSave"
-            sh "../bin/Release/UnitTest  -t ./testSave -r ./referenceImages --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            sh "../bin/Release/UnitTest  -t ./testSave -r ./referenceImages --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
         }
         break;
     default:
@@ -43,7 +43,7 @@ def executeTestCommand(String osName)
         dir("unittest")
         {
             sh "mkdir testSave"
-            sh "../bin/Release/UnitTest  -t ./testSave -r ./referenceImages --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            sh "../bin/Release/UnitTest  -t ./testSave -r ./referenceImages --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
         }
     }
 }
@@ -63,7 +63,6 @@ def executeTests(String osName, String asicName, Map options)
     {
         println(e.toString());
         println(e.getMessage());
-        currentBuild.result = "FAILED"
         throw e
     }
     finally {
@@ -228,6 +227,11 @@ def executePreBuild(Map options)
     commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true ).split('\r\n')[2].trim()
     echo "Commit message: ${commitMessage}"
     options.commitMessage = commitMessage
+
+    if (env.CHANGE_URL) {
+        echo "branch was detected as Pull Request"
+        options['isPR'] = true
+    }
 
     if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
