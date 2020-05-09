@@ -135,13 +135,19 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
+    build_id = "none"
+    job_id = "none"
+    if (options.sendToRBS){
+        build_id = universeClient.build["id"]
+        job_id = universeClient.build["job_id"]
+    }
     switch(osName)
     {
         case 'Windows':
             dir('scripts')
             {
                 bat """
-                    run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion}  ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${options.stageName}.log  2>&1
+                    run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion}  ${build_id} ${job_id} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${options.stageName}.log  2>&1
                 """
             }
             break;
@@ -161,7 +167,9 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    universeClient.stage("Tests-${osName}-${asicName}", "begin")
+    if (options.sendToRBS){
+        universeClient.stage("Tests-${osName}-${asicName}", "begin")
+    }
 
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
@@ -374,7 +382,9 @@ def executeBuildOSX(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    universeClient.stage("Build-" + osName , "begin")
+    if (options.sendToRBS){
+        universeClient.stage("Build-" + osName , "begin")
+    }
     // cleanWS(osName)
     try {
         dir('RadeonProRenderMayaPlugin')
@@ -402,8 +412,9 @@ def executeBuild(String osName, Map options)
     finally {
         archiveArtifacts "*.log"
     }
-
-    universeClient.stage("Build-" + osName, "end")
+    if (options.sendToRBS){
+        universeClient.stage("Build-" + osName, "end")
+    }
 }
 
 def executePreBuild(Map options)
@@ -723,6 +734,15 @@ def executeDeploy(Map options, List platformList, List testResultList)
                          reportName: 'Test Report',
                          reportTitles: 'Summary Report, Performance Report, Compare Report'])
 
+            if (options.sendToRBS) {
+                try {
+                    String status = currentBuild.result ?: 'SUCCESSFUL'
+                    universeClient.changeStatus(status)
+                }
+                catch (e){
+                    println(e.getMessage())
+                }
+            }
         }
     }
     catch (e) {
@@ -870,6 +890,9 @@ def call(String projectBranch = "",
     }
     catch(e) {
         currentBuild.result = "FAILED"
+        if (options.sendToRBS){
+            universeClient.changeStatus(currentBuild.result)
+        }
         println(e.toString());
         println(e.getMessage());
         throw e
