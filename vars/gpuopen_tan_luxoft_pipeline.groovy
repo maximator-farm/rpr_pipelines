@@ -122,6 +122,8 @@ def executeBuildWindows(Map options) {
                                     """
                                     zip archive: true, dir: 'bin', glob: '', zipFile: "Windows_${build_name}.zip"
                                 } catch (e) {
+                                    println(e.toString());
+                                    println(e.getMessage());
                                     currentBuild.result = "FAILED"
                                     println "[ERROR] Failed to build TAN on Windows"
                                 }
@@ -204,6 +206,8 @@ def executeBuildOSX(Map options) {
                                 """
                                 zip archive: true, dir: 'bin', glob: '', zipFile: "OSX_${build_name}.zip"
                             } catch (e) {
+                                println(e.toString());
+                                println(e.getMessage());
                                 currentBuild.result = "FAILED"
                                 println "[ERROR] Failed to build TAN on OSX"
                             } 
