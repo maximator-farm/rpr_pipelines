@@ -398,6 +398,7 @@ def executePreBuild(Map options)
                 if (env.CHANGE_URL)
                 {
                     echo "branch was detected as Pull Request"
+                    options['isPR'] = true
                     options['executeBuild'] = true
                     options['executeTests'] = true
                     options.testsPackage = "PR"

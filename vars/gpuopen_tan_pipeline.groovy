@@ -116,11 +116,11 @@ def executeBuildOSX(Map options) {
 
                     if (tool == "cmake") {
                         sh """
-                            cmake .. -DCMAKE_PREFIX_PATH="${options.cmake}" -DOpenCL_INCLUDE_DIR="${options.opencl_headers}" -DPortAudio_DIR="${options.portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1 -DRTQ_ENABLED=1 >> ../../../../${STAGE_NAME}.${tool}.log 2>&1
+                            cmake .. -DCMAKE_PREFIX_PATH="${options.cmake}" -DOpenCL_INCLUDE_DIR="${options.opencl_headers}" -DPortAudio_DIR="${options.portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1 -DRTQ_ENABLED=0 >> ../../../../${STAGE_NAME}.${tool}.log 2>&1
                         """
                     } else if (tool == "xcode") {
                         sh """
-                            cmake -G "Xcode" .. -DCMAKE_PREFIX_PATH="${options.cmake}" -DOpenCL_INCLUDE_DIR="${options.opencl_headers}" -DPortAudio_DIR="${options.portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1 -DRTQ_ENABLED=1 >> ../../../../${STAGE_NAME}.${tool}.log 2>&1
+                            cmake -G "Xcode" .. --config Release -DCMAKE_PREFIX_PATH="${options.cmake}" -DOpenCL_INCLUDE_DIR="${options.opencl_headers}" -DPortAudio_DIR="${options.portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1 -DRTQ_ENABLED=0 >> ../../../../${STAGE_NAME}.${tool}.log 2>&1
                         """
                     }
                     
@@ -295,6 +295,7 @@ def executePreBuild(Map options) {
             if (env.CHANGE_URL)
             {
                 echo "branch was detected as Pull Request"
+                options['isPR'] = true
                 options['executeBuild'] = true
                 options['executeTests'] = true
                 options.testsPackage = "smoke"
