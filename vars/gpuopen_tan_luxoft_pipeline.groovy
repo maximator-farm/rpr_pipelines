@@ -1,3 +1,4 @@
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 def executeTests(String osName, String asicName, Map options) {
     
@@ -14,50 +15,41 @@ def executeBuildWindows(Map options) {
         xcopy C:\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 /s/y/i
     """
 
-    buildConfiguration = buildConfiguration.split(',')
-    ipp = ipp.split(',')
-    omp = omp.split(',')
-    winTool = winTool.split(',')
-    winVisualStudioVersion = winVisualStudioVersion.split(',')
-    winRTQ = winRTQ.split(',')
-    osxTool = osxTool.split(',')
-
-    options.buildConfiguration.each() { build_conf ->
-        options.ipp.each() { cur_ipp ->
-            options.omp.each() { cur_omp ->
-                options.winTool.each() { tool ->
+    options.buildConfiguration.each() { win_build_conf ->
+        options.ipp.each() { win_cur_ipp ->
+            options.omp.each() { win_cur_omp ->
+                options.winTool.each() { win_tool ->
                     options.winVisualStudioVersion.each() { vs_ver ->
-                        options.winRTQ.each() { cur_rtq ->
+                        options.winRTQ.each() { win_cur_rtq ->
         
-                            build_conf = build_conf.capitalize()
+                            win_build_conf = win_build_conf.capitalize()
 
-                            println "Current build configuration: ${build_conf}."
-                            println "Current ipp: ${cur_ipp}."
-                            println "Current omp: ${cur_omp}."
-                            println "Current tool: ${tool}."
+                            println "Current build configuration: ${win_build_conf}."
+                            println "Current ipp: ${win_cur_ipp}."
+                            println "Current omp: ${win_cur_omp}."
+                            println "Current tool: ${win_tool}."
                             println "Current VS version: ${vs_ver}."
-                            println "Current rtq: ${cur_rtq}."
+                            println "Current rtq: ${win_cur_rtq}."
 
-                            build_name = "${build_conf}_vs${vs_ver}_${tool}_ipp=${cur_ipp}_omp=${cur_omp}_rtq=${cur_rtq}"
+                            win_build_name = "${win_build_conf}_vs${vs_ver}_${win_tool}_ipp-${win_cur_ipp}_omp-${win_cur_omp}_rtq-${win_cur_rtq}"
 
-                            if (cur_omp == "on"){
+                            if (win_cur_omp == "on"){
                                 println "add omp installation"
                             } else {
                                 println "nothing to do"
                                 // _DUSE_OMP=0
                             }
 
-                            if (cur_ipp == "ipp"){
+                            if (win_cur_ipp == "on"){
                                 println "add ipp flag"
-                                cur_ipp = "-DIPP_DIR="
                             } else {
-                                println "add fftw"
+                                println "nothing to do"
                             }
 
-                            if (cur_rtq == "on"){
-                                cur_rtq = 1
+                            if (win_cur_rtq == "on"){
+                                win_cur_rtq = 1
                             } else {
-                                cur_rtq = 0
+                                win_cur_rtq = 0
                             }
 
                             switch(vs_ver) {
@@ -83,44 +75,48 @@ def executeBuildWindows(Map options) {
                                     """
                                 }
                                 
-                                options.openCL_dir = "..\\..\\..\\..\\thirdparty\\OpenCL-Headers"
-                                options.portaudio_dir = "..\\..\\..\\..\\..\\thirdparty\\portaudio"
+                                options.win_openCL_dir = "..\\..\\..\\..\\thirdparty\\OpenCL-Headers"
+                                options.win_portaudio_dir = "..\\..\\..\\..\\..\\thirdparty\\portaudio"
 
                                 try {
                                     dir ("vs${vs_ver}") {
                                         bat """
                                             SET CMAKE_PREFIX_PATH=..\\..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\lib\\cmake\\Qt5Widgets
-                                            cmake .. -G "${options.visualStudio}" -A x64 -DOpenCL_INCLUDE_DIR="${options.openCL_dir}" -DPortAudio_DIR="${options.portaudio_dir}" -DDEFINE_AMD_OPENCL_EXTENSION=1 -DRTQ_ENABLED=${rtq} >> ..\\..\\..\\..\\${STAGE_NAME}.vs${vs_ver}.${build_conf}.${tool}.log 2>&1
+                                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} -DOpenCL_INCLUDE_DIR="${options.win_openCL_dir}" -DPortAudio_DIR="${options.win_portaudio_dir}" -DDEFINE_AMD_OPENCL_EXTENSION=1 -DRTQ_ENABLED=${win_cur_rtq} >> ..\\..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
                                         """
                                     }
               
-                                    if (tool == "msbuild") {
+                                    if (win_tool == "msbuild") {
                                         dir ("vs${vs_ver}") {
                                             bat """
                                                 set msbuild="${options.msBuildPath}"
-                                                %msbuild% TAN.sln /target:build /maxcpucount /property:Configuration=${build_conf};Platform=x64 >> ..\\..\\..\\..\\${STAGE_NAME}.${build_name}.log 2>&1
+                                                %msbuild% TAN.sln /target:build /maxcpucount /property:Configuration=${win_build_conf};Platform=x64 >> ..\\..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
                                             """
                                         }
-                                    } else if (tool == "cmake") {
+                                    } else if (win_tool == "cmake") {
                                         bat """
-                                            cmake --build vs${vs_ver} --config ${build_conf} >> ..\\..\\..\\${STAGE_NAME}.${build_name}.log 2>&1
+                                            cmake --build vs${vs_ver} --config ${win_build_conf} >> ..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
                                         """
                                     }
                                     
                                     bat """
                                         mkdir bin
-                                        copy vs${vs_ver}\\cmake-TAN-bin\\${build_conf}\\TrueAudioNext.dll bin
-                                        copy vs${vs_ver}\\cmake-TrueAudioVR-bin\\${build_conf}\\TrueAudioVR.dll bin
-                                        copy vs${vs_ver}\\cmake-GPUUtilities-bin\\${build_conf}\\GPUUtilities.dll bin
+                                        copy vs${vs_ver}\\cmake-TAN-bin\\${win_build_conf}\\TrueAudioNext.dll bin
+                                        copy vs${vs_ver}\\cmake-TrueAudioVR-bin\\${win_build_conf}\\TrueAudioVR.dll bin
+                                        copy vs${vs_ver}\\cmake-GPUUtilities-bin\\${win_build_conf}\\GPUUtilities.dll bin
                                         copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Core*.dll bin
                                         copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Widgets*.dll bin
                                         copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Gui*.dll bin
                                         copy ..\\..\\..\\thirdparty\\portaudio\\build\\msvc\\x64\\Debug\\portaudio_x64.dll bin
-                                        copy vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${build_conf}\\TALibDopplerTest.exe bin
-                                        copy vs${vs_ver}\\cmake-TALibTestConvolution-bin\\${build_conf}\\TALibTestConvolution.exe bin
-                                        copy vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${build_conf}\\RoomAcousticsQT.exe bin
+                                        copy vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${win_build_conf}\\TALibDopplerTest.exe bin
+                                        copy vs${vs_ver}\\cmake-TALibTestConvolution-bin\\${win_build_conf}\\TALibTestConvolution.exe bin
+                                        copy vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${win_build_conf}\\RoomAcousticsQT.exe bin
                                     """
-                                    zip archive: true, dir: 'bin', glob: '', zipFile: "Windows_${build_name}.zip"
+                                    zip archive: true, dir: 'bin', glob: '', zipFile: "Windows_${win_build_name}.zip"
+
+                                } catch (FlowInterruptedException error) {
+                                    println "[INFO] Job was aborted during build stage"
+                                    throw error
                                 } catch (e) {
                                     println(e.toString());
                                     println(e.getMessage());
@@ -142,30 +138,28 @@ def executeBuildOSX(Map options) {
     receiveFiles("gpuopen/portaudio/*", './thirdparty/portaudio')
     receiveFiles("gpuopen/fftw-3.3.5/*", './tan/tanlibrary/src/fftw-3.3.5')
 
-    options.buildConfiguration.each() { build_conf ->
-        options.ipp.each() { cur_ipp ->
-            options.omp.each() { cur_omp ->
-                options.osxTool.each() { tool ->
+    options.buildConfiguration.each() { osx_build_conf ->
+        options.ipp.each() { osx_cur_ipp ->
+            options.omp.each() { osx_cur_omp ->
+                options.osxTool.each() { osx_tool ->
 
-                    build_conf = build_conf.capitalize()
+                    osx_build_conf = osx_build_conf.capitalize()
 
-                    println "Current build configuration: ${build_conf}."
-                    println "Current ipp: ${cur_ipp}."
-                    println "Current omp: ${cur_omp}."
-                    println "Current tool: ${tool}."
+                    println "Current build configuration: ${osx_build_conf}."
+                    println "Current ipp: ${osx_cur_ipp}."
+                    println "Current omp: ${osx_cur_omp}."
+                    println "Current tool: ${osx_tool}."
 
-                    build_name = "${build_conf}_${tool}_ipp=${cur_ipp}_omp=${cur_omp}"
+                    osx_build_name = "${osx_build_conf}_${osx_tool}_ipp-${osx_cur_ipp}_omp-${osx_cur_omp}"
 
-                    if (cur_omp == "on"){
+                    if (osx_cur_omp == "on"){
                         println "add omp installation"
                     } else {
                         println "nothing to do"
-                        // _DUSE_OMP=0
                     }
 
-                    if (cur_ipp == "ipp"){
+                    if (osx_cur_ipp == "ipp"){
                         println "add ipp flag"
-                        cur_ipp = "-DIPP_DIR="
                     } else {
                         println "add fftw"
                     }
@@ -177,22 +171,22 @@ def executeBuildOSX(Map options) {
                         """
                         dir("macos") {
                             try {
-                                options.cmake = "/usr/local/Cellar/qt/5.13.1"
-                                options.opencl_headers = "../../../../thirdparty/OpenCL-Headers"
-                                options.portaudio = "../../../../../thirdparty/portaudio"
+                                options.osx_cmake = "/usr/local/Cellar/qt/5.13.1"
+                                options.osx_opencl_headers = "../../../../thirdparty/OpenCL-Headers"
+                                options.osx_portaudio = "../../../../../thirdparty/portaudio"
 
-                                if (tool == "cmake") {
+                                if (osx_tool == "cmake") {
                                     sh """
-                                        cmake .. --config ${build_conf} -DCMAKE_PREFIX_PATH="${options.cmake}" -DOpenCL_INCLUDE_DIR="${options.opencl_headers}" -DPortAudio_DIR="${options.portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1 >> ../../../../${STAGE_NAME}.${build_name}.log 2>&1
+                                        cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} -DCMAKE_PREFIX_PATH="${options.osx_cmake}" -DOpenCL_INCLUDE_DIR="${options.osx_opencl_headers}" -DPortAudio_DIR="${options.osx_portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                                     """
-                                } else if (tool == "xcode") {
+                                } else if (osx_tool == "xcode") {
                                     sh """
-                                        cmake -G "Xcode" .. -DCMAKE_PREFIX_PATH="${options.cmake}" -DOpenCL_INCLUDE_DIR="${options.opencl_headers}" -DPortAudio_DIR="${options.portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1  >> ../../../../${STAGE_NAME}.${build_name}.log 2>&1
+                                        cmake -G "Xcode" .. -DCMAKE_PREFIX_PATH="${options.osx_cmake}" -DOpenCL_INCLUDE_DIR="${options.osx_opencl_headers}" -DPortAudio_DIR="${options.osx_portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1  >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                                     """
                                 }
                                 
                                 sh """
-                                    make VERBOSE=1 >> ../../../../${STAGE_NAME}.${build_name}.log 2>&1
+                                    make VERBOSE=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                                 """
 
                                 sh """
@@ -204,7 +198,11 @@ def executeBuildOSX(Map options) {
                                     cp cmake-TALibTestConvolution-bin/TALibTestConvolution bin
                                     cp cmake-RoomAcousticQT-bin/RoomAcousticsQT bin
                                 """
-                                zip archive: true, dir: 'bin', glob: '', zipFile: "OSX_${build_name}.zip"
+                                zip archive: true, dir: 'bin', glob: '', zipFile: "OSX_${osx_build_name}.zip"
+
+                            } catch (FlowInterruptedException error) {
+                                println "[INFO] Job was aborted during build stage"
+                                throw error
                             } catch (e) {
                                 println(e.toString());
                                 println(e.getMessage());
@@ -225,28 +223,27 @@ def executeBuildLinux(String osName, Map options) {
     receiveFiles("gpuopen/portaudio/*", './thirdparty/portaudio')
     receiveFiles("gpuopen/fftw-3.3.5/*", './tan/tanlibrary/src/fftw-3.3.5')
 
-    options.buildConfiguration.each() { build_conf ->
-        options.ipp.each() { cur_ipp ->
-            options.omp.each() { cur_omp ->
+    options.buildConfiguration.each() { ub18_build_conf ->
+        options.ipp.each() { ub18_cur_ipp ->
+            options.omp.each() { ub18_cur_omp ->
 
-                build_conf = build_conf.capitalize()
+                ub18_build_conf = ub18_build_conf.capitalize()
 
-                println "Current build configuration: ${build_conf}."
-                println "Current ipp: ${cur_ipp}."
-                println "Current omp: ${cur_omp}."
+                println "Current build configuration: ${ub18_build_conf}."
+                println "Current ipp: ${ub18_cur_ipp}."
+                println "Current omp: ${ub18_cur_omp}."
 
-                build_name = "${build_conf}_ipp=${cur_ipp}_omp=${cur_omp}"
+                ub18_build_name = "${ub18_build_conf}_ipp-${ub18_cur_ipp}_omp-${ub18_cur_omp}"
 
-                if (cur_omp == "on"){
+                if (ub18_cur_omp == "on"){
                     println "add omp installation"
                 } else {
                     println "nothing to do"
                     // _DUSE_OMP=0
                 }
 
-                if (cur_ipp == "ipp"){
+                if (ub18_cur_ipp == "ipp"){
                     println "add ipp flag"
-                    cur_ipp = "-DIPP_DIR="
                 } else {
                     println "add fftw"
                 }
@@ -258,17 +255,17 @@ def executeBuildLinux(String osName, Map options) {
                     """
                     dir ("linux") {
                         try {
-                            options.cmake = "/usr/bin/gcc"
-                            options.opencl_headers = "../../../../thirdparty/OpenCL-Headers"
-                            options.opencl_lib = "/usr/lib/x86_64-linux-gnu/libOpenCL.so"
-                            options.portaudio = "../../../../../thirdparty/portaudio"
+                            options.ub18_cmake = "/usr/bin/gcc"
+                            options.ub18_opencl_headers = "../../../../thirdparty/OpenCL-Headers"
+                            options.ub18_opencl_lib = "/usr/lib/x86_64-linux-gnu/libOpenCL.so"
+                            options.ub18_portaudio = "../../../../../thirdparty/portaudio"
 
                             sh """
-                                cmake .. -DCMAKE_PREFIX_PATH="${options.cmake}" -DOpenCL_INCLUDE_DIR="${options.opencl_headers}" -DOpenCL_LIBRARY="${options.opencl_lib}" -DPortAudio_DIR="${options.portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1 >> ../../../../${STAGE_NAME}.${build_name}.log 2>&1
+                                cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH="${options.ub18_cmake}" -DOpenCL_INCLUDE_DIR="${options.ub18_opencl_headers}" -DOpenCL_LIBRARY="${options.ub18_opencl_lib}" -DPortAudio_DIR="${options.ub18_portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1 >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
                             """
 
                             sh """
-                                make VERBOSE=1 >> ../../../../${STAGE_NAME}.log 2>&1
+                                make VERBOSE=1 >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
                             """
 
                             sh """
@@ -280,7 +277,11 @@ def executeBuildLinux(String osName, Map options) {
                                 cp cmake-TALibTestConvolution-bin/TALibTestConvolution bin
                                 cp cmake-RoomAcousticQT-bin/RoomAcousticsQT bin
                             """
-                            zip archive: true, dir: 'bin', glob: '', zipFile: "Ubuntu18_${build_name}.zip"
+                            zip archive: true, dir: 'bin', glob: '', zipFile: "Ubuntu18_${ub18_build_name}.zip"
+
+                        } catch (FlowInterruptedException error) {
+                            println "[INFO] Job was aborted during build stage"
+                            throw error
                         } catch (e) {
                             println(e.getMessage())
                             currentBuild.result = "FAILED"
@@ -355,25 +356,26 @@ def executePreBuild(Map options) {
 
     if(options['incrementVersion'])
     {
-        if("${BRANCH_NAME}" == "master" && "${AUTHOR_NAME}" != "radeonprorender")
+        if(!env.CHANGE_URL && "${AUTHOR_NAME}" != "radeonprorender")
         {
             options.testsPackage = "smoke"
             echo "[INFO] Incrementing version of change made by ${AUTHOR_NAME}."
-            String currentversion=version_read("${env.WORKSPACE}\\version.h", '#define TRUE_AUDIO_NEXT_VERSION')
-            echo "[INFO] Current version: ${currentversion}"
+            String currentversion=version_read("${env.WORKSPACE}\\tan\\tanlibrary\\include\\TrueAudioNext.h", '#define TAN_VERSION_BUILD')
+            echo "[INFO] Current build version: ${currentversion}"
 
-            new_version=version_inc(currentversion, 3)
-            echo "[INFO] New version: ${new_version}"
+            new_version=version_inc(currentversion, 1)
+            echo "[INFO] New build version: ${new_version}"
 
-            version_write("${env.WORKSPACE}\\version.h", '#define TRUE_AUDIO_NEXT_VERSION', new_version)
+            version_write("${env.WORKSPACE}\\tan\\tanlibrary\\include\\TrueAudioNext.h", '#define TAN_VERSION_BUILD', new_version)
 
-            String updatedversion=version_read("${env.WORKSPACE}\\version.h", '#define TRUE_AUDIO_NEXT_VERSION')
-            echo "[INFO] Updated version: ${updatedversion}"
+            String updatedversion=version_read("${env.WORKSPACE}\\tan\\tanlibrary\\include\\TrueAudioNext.h", '#define TAN_VERSION_BUILD')
+            echo "[INFO] Updated build version: ${updatedversion}"
 
             bat """
-                git add version.h
-                git commit -m "buildmaster: version update to ${updatedversion}"
-                git push origin HEAD:master
+                git checkout ${env.BRANCH_NAME}
+                git add tan\\tanlibrary\\include\\TrueAudioNext.h
+                git commit -m "buildmaster: automatic build version update to ${updatedversion}"
+                git push origin ${env.BRANCH_NAME}
             """
 
             //get commit's sha which have to be build
@@ -383,50 +385,35 @@ def executePreBuild(Map options) {
             
         } else {
 
+            // build any branch
+            echo "rebuild ${env.BRANCH_NAME}"
+            options['executeBuild'] = true
+            options['executeTests'] = true
             options.testsPackage = "smoke"
-            if(commitMessage.contains("CIS:BUILD"))
-            {
-                options['executeBuild'] = true
-            }
-
-            if(commitMessage.contains("CIS:TESTS"))
-            {
-                options['executeBuild'] = true
-                options['executeTests'] = true
-            }
 
             if (env.CHANGE_URL)
             {
                 echo "branch was detected as Pull Request"
                 options['isPR'] = true
-                options['executeBuild'] = true
-                options['executeTests'] = true
-                options.testsPackage = "smoke"
+                options.testsPackage = "PR"
             }
 
-            if("${BRANCH_NAME}" == "master")
+            if("${env.BRANCH_NAME}" == "master")
             {
                echo "rebuild master"
-               options['executeBuild'] = true
-               options['executeTests'] = true
-               options.testsPackage = "smoke"
+               options.testsPackage = "master"
             }
         }
     }
 
     try {
-        options.pluginVersion = version_read("${env.WORKSPACE}\\version.h", '#define TRUE_AUDIO_NEXT_VERSION')
+        def major = version_read("${env.WORKSPACE}\\tan\\tanlibrary\\include\\TrueAudioNext.h", '#define TAN_VERSION_MAJOR')
+        def minor = version_read("${env.WORKSPACE}\\tan\\tanlibrary\\include\\TrueAudioNext.h", '#define TAN_VERSION_MINOR')
+        def release = version_read("${env.WORKSPACE}\\tan\\tanlibrary\\include\\TrueAudioNext.h", '#define TAN_VERSION_RELEASE')
+        def build = version_read("${env.WORKSPACE}\\tan\\tanlibrary\\include\\TrueAudioNext.h", '#define TAN_VERSION_BUILD')
+        options.pluginVersion = "${major}.${minor}.${release}.${build}"
     } catch (e) {
         println "[WARNING] Can't detect TAN version"
-    }
-    
-    if (env.CHANGE_URL) {
-        options.AUTHOR_NAME = env.CHANGE_AUTHOR_DISPLAY_NAME
-        if (env.CHANGE_TARGET != 'master') {
-            options['executeBuild'] = false
-            options['executeTests'] = false
-        }
-        options.commitMessage = env.CHANGE_TITLE
     }
 
     // if manual job
@@ -463,11 +450,11 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 
 def call(String projectBranch = "",
-    String testsBranch = "",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100;OSX:AMD_RXVEGA',
+    String testsBranch = "master",
+    String platforms = 'Windows;OSX;Ubuntu18',
     String buildConfiguration = "release",
-    String ipp = "ipp,fftw",
-    String omp = "on,off",
+    String ipp = "off",
+    String omp = "off",
     String winTool = "msbuild",
     String winVisualStudioVersion = "2017,2019",
     String winRTQ = "on,off",
