@@ -298,6 +298,31 @@ def executeBuild(String osName, Map options) {
 
 def executePreBuild(Map options) {
 
+    // manual job
+    if (options.forceBuild) {
+        options.executeBuild = true
+        options.executeTests = true
+    // auto job
+    } else {
+        options.executeBuild = true
+        options.executeTests = true
+        options.projectBranch = env.BRANCH_NAME
+        if (env.CHANGE_URL)
+        {
+            println "[INFO] Branch was detected as Pull Request"
+            options.isPR = true
+            options.testsPackage = "PR"
+        }
+        else if("${env.BRANCH_NAME}" == "master")
+        {
+           println "[INFO] master branch was detected"
+           options.testsPackage = "master"
+        } else {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.testsPackage = "smoke"
+        }
+    }
+
     if(!env.CHANGE_URL){
 
         currentBuild.description = ""
@@ -309,7 +334,7 @@ def executePreBuild(Map options) {
             }
         }
 
-        checkOutBranchOrScm(env.BRANCH_NAME, 'git@github.com:imatyushin/TAN.git', true)
+        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:imatyushin/TAN.git', true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
@@ -365,30 +390,6 @@ def executePreBuild(Map options) {
                 options.testsPackage = "smoke"
                 
             } 
-        }
-    }
-
-    // manual job
-    if (options['forceBuild']) {
-        options['executeBuild'] = true
-        options['executeTests'] = true
-    // auto job
-    } else {
-        options['executeBuild'] = true
-        options['executeTests'] = true
-        if (env.CHANGE_URL)
-        {
-            println "[INFO] Branch was detected as Pull Request"
-            options.isPR = true
-            options.testsPackage = "PR"
-        }
-        else if("${env.BRANCH_NAME}" == "master")
-        {
-           println "[INFO] master branch was detected"
-           options.testsPackage = "master"
-        } else {
-            println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options.testsPackage = "smoke"
         }
     }
 
