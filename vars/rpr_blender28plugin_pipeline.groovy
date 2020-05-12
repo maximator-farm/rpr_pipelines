@@ -166,13 +166,19 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
+    build_id = "none"
+    job_id = "none"
+    if (options.sendToRBS){
+        build_id = universeClient.build["id"]
+        job_id = universeClient.build["job_id"]
+    }
     switch(osName)
     {
     case 'Windows':
         dir('scripts')
         {
             bat """
-            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS} >> ..\\${options.stageName}.log  2>&1
+            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${build_id} ${job_id} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS} >> ..\\${options.stageName}.log  2>&1
             """
         }
         break;
@@ -181,8 +187,7 @@ def executeTestCommand(String osName, String asicName, Map options)
         dir("scripts")
         {
             sh """
-            ./universe.sh ${universeClient.build["id"]} ${universeClient.build["job_id"]} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url}
-            ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ../${options.stageName}.log 2>&1
+            ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${build_id} ${job_id} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${options.stageName}.log 2>&1
             """
         }
     }
@@ -191,7 +196,9 @@ def executeTestCommand(String osName, String asicName, Map options)
 def executeTests(String osName, String asicName, Map options)
 {
     // TODO: improve envs, now working on Windows testers only
-    universeClient.stage("Tests-${osName}-${asicName}", "begin")
+    if (options.sendToRBS){
+        universeClient.stage("Tests-${osName}-${asicName}", "begin")
+    }
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
@@ -455,8 +462,9 @@ def executeBuildLinux(String osName, Map options)
 
 def executeBuild(String osName, Map options)
 {
-    universeClient.stage("Build-" + osName , "begin")
-
+    if (options.sendToRBS){
+        universeClient.stage("Build-" + osName , "begin")
+    }
     try {
         dir('RadeonProRenderBlenderAddon')
         {
@@ -501,8 +509,9 @@ def executeBuild(String osName, Map options)
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
-
-    universeClient.stage("Build-" + osName, "end")
+    if (options.sendToRBS){
+        universeClient.stage("Build-" + osName, "end")
+    }
 }
 
 def executePreBuild(Map options)
@@ -1012,7 +1021,9 @@ def call(String projectBranch = "",
     catch(e)
     {
         currentBuild.result = "FAILED"
-        universeClient.changeStatus(currentBuild.result)
+        if (options.sendToRBS){
+            universeClient.changeStatus(currentBuild.result)
+        }
         failureMessage = "INIT FAILED"
         failureError = e.getMessage()
         println(e.toString());
