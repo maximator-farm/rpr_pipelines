@@ -348,7 +348,7 @@ def executePreBuild(Map options) {
             options.tanVersion = "0"
         }
 
-        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
         currentBuild.description += "<b>Version:</b> ${options.tanVersion}<br/>"
         currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
