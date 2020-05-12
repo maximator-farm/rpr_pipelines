@@ -1,4 +1,4 @@
-def call(String osName, String tool, Map options)
+def call(String osName, String tool, Map options, String credentialsId = 'builsRPRCredentials')
 {
     String customBuildLink = ""
     String extentsion = ""
@@ -24,9 +24,9 @@ def call(String osName, String tool, Map options)
 
     print "[INFO] Used specified pre built plugin for ${tool}."
 
-    if (customBuildLink.startsWith("https://builds.rpr")) 
+    if (customBuildLink.startsWith("https://builds.rpr") || credentialsId != 'builsRPRCredentials') 
     {
-        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'builsRPRCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
             if (osName == "Windows") {
                 bat """
                     curl -L -o RadeonProRender${tool}_${osName}.${extentsion} -u %USERNAME%:%PASSWORD% "${customBuildLink}"

@@ -51,7 +51,7 @@ def executeRender(osName, gpuName, Map options) {
 
 			                clearBinariesWin()
 
-		                    downloadPlugin('Windows', toolName, installationOptions)
+		                    downloadPlugin('Windows', toolName, installationOptions, 'renderServiceCredentials')
 		                    win_addon_name = installationOptions.pluginWinSha
 
 							switch(toolName) {
