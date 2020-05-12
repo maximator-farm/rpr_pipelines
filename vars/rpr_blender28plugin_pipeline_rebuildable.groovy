@@ -1,3 +1,20 @@
+def getWindowsPluginName(Map options, Boolean isBuild) {
+    String branch_postfix = ""
+    if(env.BRANCH_NAME && BRANCH_NAME != "master") {
+        branch_postfix = BRANCH_NAME.replace('/', '-')
+    }
+    if(env.Branch && Branch != "master") {
+        branch_postfix = Branch.replace('/', '-')
+    }
+    if(branch_postfix && isBuild) {
+        bat """
+            rename RadeonProRender*zip *.(${branch_postfix}).zip
+        """
+    }
+
+    return branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_Windows.(${branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_Windows.zip"
+}
+
 def executeBuildWindows(Map options) {
     dir('RadeonProRenderBlenderAddon\\BlenderPkg') {
         bat """
@@ -8,27 +25,31 @@ def executeBuildWindows(Map options) {
             bat """
                 rename rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_Windows.zip
             """
-
-            String branch_postfix = ""
-            if(env.BRANCH_NAME && BRANCH_NAME != "master") {
-                branch_postfix = BRANCH_NAME.replace('/', '-')
-            }
-            if(env.Branch && Branch != "master") {
-                branch_postfix = Branch.replace('/', '-')
-            }
-            if(branch_postfix) {
-                bat """
-                    rename RadeonProRender*zip *.(${branch_postfix}).zip
-                """
-            }
             
+            String BUILD_NAME = getWindowsPluginName(options, true)
             archiveArtifacts "RadeonProRender*.zip"
-            String BUILD_NAME = branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_Windows.(${branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_Windows.zip"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             options['WindowsPluginName'] = BUILD_NAME
         }      
     }
+}
+
+def getOSXPluginName(Map options, Boolean isBuild) {
+    String branch_postfix = ""
+    if(env.BRANCH_NAME && BRANCH_NAME != "master") {
+        branch_postfix = BRANCH_NAME.replace('/', '-')
+    }
+    if(env.Branch && Branch != "master") {
+        branch_postfix = Branch.replace('/', '-')
+    }
+    if(branch_postfix && isBuild) {
+        sh """
+            for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${branch_postfix})\${i#\$name}"; done
+        """
+    }
+
+    return branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_OSX.(${branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_OSX.zip"
 }
 
 def executeBuildOSX(Map options) {
@@ -42,26 +63,30 @@ def executeBuildOSX(Map options) {
                 mv rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_OSX.zip
             """
 
-            String branch_postfix = ""
-            if(env.BRANCH_NAME && BRANCH_NAME != "master") {
-                branch_postfix = BRANCH_NAME.replace('/', '-')
-            }
-            if(env.Branch && Branch != "master") {
-                branch_postfix = Branch.replace('/', '-')
-            }
-            if(branch_postfix) {
-                sh """
-                    for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${branch_postfix})\${i#\$name}"; done
-                """
-            }
-
+            String BUILD_NAME = getOSXPluginName(options, true)
             archiveArtifacts "RadeonProRender*.zip"
-            String BUILD_NAME = branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_OSX.(${branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_OSX.zip"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
             
             options['OSXPluginName'] = BUILD_NAME
         }
     }
+}
+
+def getLinuxPluginName(Map options, Boolean isBuild) {
+    String branch_postfix = ""
+    if(env.BRANCH_NAME && BRANCH_NAME != "master") {
+        branch_postfix = BRANCH_NAME.replace('/', '-')
+    }
+    if(env.Branch && Branch != "master") {
+        branch_postfix = Branch.replace('/', '-')
+    }
+    if(branch_postfix && isBuild) {
+        sh """
+            for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${branch_postfix})\${i#\$name}"; done
+        """
+    }
+
+    return branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.(${branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.zip"
 }
 
 def executeBuildLinux(String osName, Map options) {
@@ -76,21 +101,8 @@ def executeBuildLinux(String osName, Map options) {
                 mv rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_${osName}.zip
             """
 
-            String branch_postfix = ""
-            if(env.BRANCH_NAME && BRANCH_NAME != "master") {
-                branch_postfix = BRANCH_NAME.replace('/', '-')
-            }
-            if(env.Branch && Branch != "master") {
-                branch_postfix = Branch.replace('/', '-')
-            }
-            if(branch_postfix) {
-                sh """
-                    for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${branch_postfix})\${i#\$name}"; done
-                """
-            }
-
+            String BUILD_NAME = getLinuxPluginName(options, true)
             archiveArtifacts "RadeonProRender*.zip"
-            String BUILD_NAME = branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.(${branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.zip"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             options['LinuxPluginName'] = BUILD_NAME
@@ -368,6 +380,34 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                     del /f *.json
                     rd /s /q report_resources
                     """
+                }
+
+                // copy plugin for Windows from previous build
+                try {
+                    String BUILD_NAME = getWindowsPluginName(options, false)
+                    copyArtifacts(filter: "${BUILD_NAME}", fingerprintArtifacts: false, projectName: "${env.JOB_NAME}", selector: specific("${previousBuildId}"))
+                    archiveArtifacts BUILD_NAME
+                    rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                } catch (e) {
+                    println("[INFO] Failed to copy Windows plugin artifact. Be sure that it isn't exist.")
+                }
+                // copy plugin for OSX from previous build
+                try {
+                    String BUILD_NAME = getOSXPluginName(options, false)
+                    copyArtifacts(filter: "${BUILD_NAME}", fingerprintArtifacts: false, projectName: "${env.JOB_NAME}", selector: specific("${previousBuildId}"))
+                    archiveArtifacts BUILD_NAME
+                    rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                } catch (e) {
+                    println("[INFO] Failed to copy OSX plugin artifact. Be sure that it isn't exist.")
+                }
+                // copy plugin for Linux from previous build
+                try {
+                    String BUILD_NAME = getLinuxPluginName(options, false)
+                    copyArtifacts(filter: "${BUILD_NAME}", fingerprintArtifacts: false, projectName: "${env.JOB_NAME}", selector: specific("${previousBuildId}"))
+                    archiveArtifacts BUILD_NAME
+                    rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                } catch (e) {
+                    println("[INFO] Failed to copy Linux plugin artifact. Be sure that it isn't exist.")
                 }
             }
         }
