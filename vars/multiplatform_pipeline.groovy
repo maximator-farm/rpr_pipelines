@@ -58,7 +58,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             println "Exception stack trace: ${e.getStackTrace()}"
 
                                             // Abort from user request
-                                            if (e.getCauses().any { it instanceof org.jenkinsci.plugins.workflow.support.steps.input.Rejection }) {
+                                            if (e.getCause().any { it instanceof org.jenkinsci.plugins.workflow.support.steps.input.Rejection }) {
                                                 println "[INFO] This build was aborted due to user input."
                                                 i = options.nodeReallocateTries + 1
                                             }
