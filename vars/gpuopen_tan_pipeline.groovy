@@ -334,7 +334,7 @@ def executePreBuild(Map options) {
             }
         }
 
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/TAN.git', true)
+        checkOutBranchOrScm(env.BRANCH_NAME, 'git@github.com:GPUOpen-LibrariesAndSDKs/TAN.git', true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
@@ -384,11 +384,7 @@ def executePreBuild(Map options) {
                 //"""
 
                 //get commit's sha which have to be build
-                options.projectBranch = bat (script: "git log --format=%%H -1", returnStdout: true).split('\r\n')[2].trim()
-                options.executeBuild = true
-                options.executeTests = true
-                options.testsPackage = "smoke"
-                
+                options.projectBranch = bat (script: "git log --format=%%H -1", returnStdout: true).split('\r\n')[2].trim() 
             } 
         }
     }
