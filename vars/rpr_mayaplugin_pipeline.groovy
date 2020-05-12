@@ -1,4 +1,7 @@
-import RBSProduction
+import groovy.transform.Field
+import UniverseClient
+@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com/")
+
 
 def getMayaPluginInstaller(String osName, Map options)
 {
@@ -125,15 +128,21 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
     }
 }
 
-def executeTestCommand(String osName, Map options)
+def executeTestCommand(String osName, String asicName, Map options)
 {
+    build_id = "none"
+    job_id = "none"
+    if (options.sendToRBS){
+        build_id = universeClient.build["id"]
+        job_id = universeClient.build["job_id"]
+    }
     switch(osName)
     {
         case 'Windows':
             dir('scripts')
             {
                 bat """
-                    run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} >> ../${options.stageName}.log  2>&1
+                    run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion}  ${build_id} ${job_id} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${options.stageName}.log  2>&1
                 """
             }
             break;
@@ -141,7 +150,7 @@ def executeTestCommand(String osName, Map options)
             dir('scripts')
             {
                 sh """
-                    ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} >> ../${options.stageName}.log 2>&1
+                    ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${build_id} ${job_id} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${options.stageName}.log 2>&1
                 """
             }
             break;
@@ -152,6 +161,10 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
+    if (options.sendToRBS){
+        universeClient.stage("Tests-${osName}-${asicName}", "begin")
+    }
+
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
     
@@ -159,14 +172,8 @@ def executeTests(String osName, String asicName, Map options)
 
         timeout(time: "5", unit: 'MINUTES') {
             try {
-
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
-
-                // setTester in rbs
-                if (options.sendToRBS) {
-                    options.rbs_prod.setTester(options)
-                }
             } catch(e) {
                 println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
                 println(e.toString())
@@ -212,7 +219,7 @@ def executeTests(String osName, String asicName, Map options)
 
         if(options['updateRefs'])
         {
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         }
@@ -229,7 +236,7 @@ def executeTests(String osName, String asicName, Map options)
                 println("[WARNING] Baseline doesn't exist.")
             }
 
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
         }
     } catch (e) {
         if (options.currentTry < options.nodeReallocateTries) {
@@ -259,7 +266,7 @@ def executeTests(String osName, String asicName, Map options)
 
                     if (options.sendToRBS)
                     {
-                        options.rbs_prod.sendSuiteResult(sessionReport, options)
+                        universeClient.stage("Tests-${osName}-${asicName}", "end")
                     }
 
                     echo "Stashing test results to : ${options.testResultsName}"
@@ -372,6 +379,9 @@ def executeBuildOSX(Map options)
 
 def executeBuild(String osName, Map options)
 {
+    if (options.sendToRBS){
+        universeClient.stage("Build-" + osName , "begin")
+    }
     // cleanWS(osName)
     try {
         dir('RadeonProRenderMayaPlugin')
@@ -394,18 +404,13 @@ def executeBuild(String osName, Map options)
         }
     } catch (e) {
         currentBuild.result = "FAILED"
-        if (options.sendToRBS)
-        {
-            try {
-                options.rbs_prod.setFailureStatus()
-            } catch (err) {
-                println(err)
-            }
-        }
         throw e
     }
     finally {
         archiveArtifacts "*.log"
+    }
+    if (options.sendToRBS){
+        universeClient.stage("Build-" + osName, "end")
     }
 }
 
@@ -594,7 +599,8 @@ def executePreBuild(Map options)
     {
         try
         {
-            options.rbs_prod.startBuild(options)
+            universeClient.tokenSetup()
+            universeClient.createBuild(options.universePlatforms, options.groupsRBS)
         }
         catch (e)
         {
@@ -729,7 +735,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             if (options.sendToRBS) {
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
-                    options.rbs_prod.finishBuild(options, status)
+                    universeClient.changeStatus(status)
                 }
                 catch (e){
                     println(e.getMessage())
@@ -838,7 +844,13 @@ def call(String projectBranch = "",
             }
         }
 
-        rbs_prod = new RBSProduction(this, "Maya", env.JOB_NAME, env)
+         def universePlatforms = convertPlatforms(platforms);
+
+        println platforms
+        println tests
+        println testsPackage
+        println splitTestsExecution
+        println universePlatforms
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
@@ -864,7 +876,7 @@ def call(String projectBranch = "",
                                 TEST_TIMEOUT:120,
                                 DEPLOY_TIMEOUT:120,
                                 TESTER_TAG:'Maya',
-                                rbs_prod: rbs_prod,
+                                universePlatforms: universePlatforms,
                                 resX: resX,
                                 resY: resY,
                                 SPU: SPU,
@@ -876,6 +888,9 @@ def call(String projectBranch = "",
     }
     catch(e) {
         currentBuild.result = "FAILED"
+        if (options.sendToRBS){
+            universeClient.changeStatus(currentBuild.result)
+        }
         println(e.toString());
         println(e.getMessage());
         throw e
