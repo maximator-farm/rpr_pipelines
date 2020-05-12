@@ -38,28 +38,38 @@ def executeRender(osName, gpuName, Map options) {
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 								print(python3("render_service_scripts\\send_render_status.py --django_ip \"${options.django_url}/\" --tool \"${tool}\" --status \"Installing plugin\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
 							}
-							def plugin_file_name = "RadeonProRender" + tool + ".msi"
-							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								bat """
-									curl -o "${plugin_file_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.PluginLink}"
-								"""
-							}
 
 							// get tool name without plugin name
 							String toolName = tool.split(' ')[0].trim()
-							def pluginSha = sha1 plugin_file_name
 							Map installationOptions = [
 								'isPreBuilt': true,
 								'stageName': 'RenderServiceRender',
-								'pluginWinSha': pluginSha
+								'customBuildLinkWindows': options["PluginLink"]
 							]
+
 							Boolean installationStatus = null
+
+			                clearBinariesWin()
+
+		                    downloadPlugin('Windows', toolName, installationOptions)
+		                    win_addon_name = installationOptions.pluginWinSha
+
 							switch(toolName) {
 								case 'Blender':
+					                bat """
+					                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+					                    move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.zip"
+					                """
+
 									installationStatus = installBlenderAddon('Windows', version, installationOptions)
 									break;
 
 								default:
+					                bat """
+					                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+					                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.msi"
+					                """
+
 									installationStatus = installMSIPlugin('Windows', toolName, installationOptions)
 									break;
 							}
