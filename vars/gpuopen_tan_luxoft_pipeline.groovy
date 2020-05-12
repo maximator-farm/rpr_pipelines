@@ -300,6 +300,7 @@ def executePreBuild(Map options) {
 
     // manual job
     if (options.forceBuild) {
+        env.BRANCH_NAME = options['projectBranch']
         options.executeBuild = true
         options.executeTests = true
     // auto job
@@ -324,15 +325,6 @@ def executePreBuild(Map options) {
 
     if(!env.CHANGE_URL){
 
-        currentBuild.description = ""
-        ['projectBranch'].each
-        {
-            if(options[it] != 'master' && options[it] != "")
-            {
-                currentBuild.description += "<b>${it}:</b> ${options[it]}<br/>"
-            }
-        }
-
         checkOutBranchOrScm(env.BRANCH_NAME, 'git@github.com:imatyushin/TAN.git', true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -356,6 +348,7 @@ def executePreBuild(Map options) {
             options.tanVersion = "0"
         }
 
+        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
         currentBuild.description += "<b>Version:</b> ${options.tanVersion}<br/>"
         currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -414,8 +407,8 @@ def call(String projectBranch = "",
     String buildConfiguration = "release",
     String ipp = "off",
     String winTool = "msbuild",
-    String winVisualStudioVersion = "2017,2019",
-    String winRTQ = "on,off",
+    String winVisualStudioVersion = "2017",
+    String winRTQ = "on",
     String osxTool = "cmake",
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
