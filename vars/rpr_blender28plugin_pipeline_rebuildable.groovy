@@ -356,10 +356,19 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                         curl -o "${options.reportName}.zip" -u %USER%:%PASSWORD% "https://rpr.cis.luxoft.com/job/${env.JOB_NAME}/${previousBuildId}/${options.reportName}/*zip*/${options.reportName}"
                     """
                 }
-                unzip(zipFile: "${options.reportName}.zip", dir: "summaryTestResults")
+                unzip(zipFile: "${options.reportName}.zip", dir: ".")
                 bat """
+                rename ${options.reportName} summaryTestResults
                 del /f ${options.reportName}.zip
                 """
+
+                dir("summaryTestResults") {
+                    bat """
+                    del /f *.html
+                    del /f *.json
+                    rd /s /q report_resources
+                    """
+                }
             }
         }
 
@@ -373,8 +382,15 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                     try {
                         println("Copy artifact with name ${artifactName}")
                         copyArtifacts(filter: "${artifactName}", fingerprintArtifacts: false, projectName: "${options.testsJobName}", selector: specific("${value}"))
-                        unzip(zipFile: "${artifactName}", dir: "${key}")
+                        unzip(zipFile: "${artifactName}", dir: "${key}-temp")
+                        try {
+                            bat """
+                            rd /s /q ${key}
+                            """
+                        } catch(e) {
+                        }
                         bat """
+                        rename ${key}-temp ${key}
                         del /f ${artifactName}
                         """
                         try {
@@ -395,22 +411,12 @@ def executeDeploy(Map options, Map testsBuildsIds) {
                     }
                 } else {
                     if (options['buildMode'] == 'Rebuild_Report') {
-                        try {
-                            bat """
-                            xcopy /e ${options.reportName}\\${key} ${key}\\
-                            """
-                        } catch (e) {
+                        if (!fileExists(key)) {
                             echo "[ERROR] Failed to copy test results for ${key} from existing report"
                             lostArchive.add("'${key}'")
                         }
                     }
                 }
-            }
-
-            if (options['buildMode'] == 'Rebuild_Report' && previousBuildId != -1) {
-                bat """
-                rd /s /q ${options.reportName}
-                """
             }
         }
 
