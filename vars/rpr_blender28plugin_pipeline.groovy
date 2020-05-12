@@ -159,7 +159,7 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
                 bat "build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}.cb.log  2>&1"
                 break;
             default:
-                sh "./build_rpr_cache.sh ${toolVersion} >> ../${log_name}.cb.log 2>&1"        
+                sh "./build_rpr_cache.sh ${toolVersion} >> ../${log_name}.cb.log 2>&1"
         }
     }
 }
@@ -235,7 +235,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
                     }
                 }
-                
+
             } catch(e) {
                 println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
                 println(e.toString())
@@ -273,7 +273,7 @@ def executeTests(String osName, String asicName, Map options)
     } catch (e) {
         if (options.currentTry < options.nodeReallocateTries) {
             stashResults = false
-        } 
+        }
         println(e.toString())
         println(e.getMessage())
         options.failureMessage = "Failed during testing: ${asicName}-${osName}"
@@ -285,7 +285,7 @@ def executeTests(String osName, String asicName, Map options)
             dir('Work')
                 {
                     if (fileExists("Results/Blender28/session_report.json")) {
-                        
+
                         def sessionReport = null
                         sessionReport = readJSON file: 'Results/Blender28/session_report.json'
 
@@ -330,7 +330,7 @@ def executeBuildWindows(Map options)
         """
 
         dir('.build')
-        { 
+        {
             bat """
                 rename rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_Windows.zip
             """
@@ -350,7 +350,7 @@ def executeBuildWindows(Map options)
                     rename RadeonProRender*zip *.(${branch_postfix}).zip
                 """
             }
-            
+
             archiveArtifacts "RadeonProRender*.zip"
             String BUILD_NAME = branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_Windows.(${branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_Windows.zip"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
@@ -360,7 +360,7 @@ def executeBuildWindows(Map options)
             """
 
             stash includes: "RadeonProRenderBlender_Windows.zip", name: "appWindows"
-        }      
+        }
     }
 }
 
@@ -373,7 +373,7 @@ def executeBuildOSX(Map options)
         """
 
         dir('.build')
-        { 
+        {
             sh """
                 mv rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_OSX.zip
             """
@@ -397,7 +397,7 @@ def executeBuildOSX(Map options)
             archiveArtifacts "RadeonProRender*.zip"
             String BUILD_NAME = branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_OSX.(${branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_OSX.zip"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
-            
+
             sh """
                 mv RadeonProRender*zip RadeonProRenderBlender_OSX.zip
             """
@@ -449,7 +449,7 @@ def executeBuildLinux(String osName, Map options)
             stash includes: "RadeonProRenderBlender_${osName}.zip", name: "app${osName}"
 
         }
-        
+
     }
 }
 
@@ -462,7 +462,7 @@ def executeBuild(String osName, Map options)
         {
             checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderBlenderAddon.git')
         }
-        
+
         switch(osName)
         {
             case 'Windows':
@@ -655,7 +655,7 @@ def executePreBuild(Map options)
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     }
 
-    
+
     def tests = []
     options.groupsRBS = []
     if(options.testsPackage != "none")
@@ -870,8 +870,8 @@ def appendPlatform(String filteredPlatforms, String platform) {
     if (filteredPlatforms)
     {
         filteredPlatforms +=  ";" + platform
-    } 
-    else 
+    }
+    else
     {
         filteredPlatforms += platform
     }
