@@ -19,7 +19,7 @@ def executeRender(osName, gpuName, Map options) {
 					'''
 					// Download render service scripts
 					try {
-					        print("Downloading scripts and install requirements")
+					    print("Downloading scripts and install requirements")
 						checkOutBranchOrScm(options['scripts_branch'], 'git@github.com:luxteam/render_service_scripts.git')
 						dir(".\\install"){
 						    bat '''
@@ -45,10 +45,27 @@ def executeRender(osName, gpuName, Map options) {
 								"""
 							}
 
+							// get tool name without plugin name
+							String toolName = tool.split(' ')[0].trim()
 							def pluginSha = sha1 plugin_file_name
-							Map installation_options = ['pluginWinSha':pluginSha]
-							installationStatus = installRPRPlugin('Windows', installation_options, tool, 'Render')
-							print "[INFO] Install function return ${installationStatus}"
+							Map installationOptions = [
+								'isPreBuilt': true,
+								'stageName': 'RenderServiceRender',
+								'pluginWinSha': pluginSha
+							]
+							Boolean installationStatus = null
+							switch(toolName) {
+								case 'Blender':
+									installationStatus = installBlenderAddon('Windows', version, installationOptions)
+									break;
+
+								default:
+									installationStatus = installMSIPlugin('Windows', toolName, installationOptions)
+									break;
+							}
+							if (installationStatus != null) {
+								print "[INFO] Install function return ${installationStatus}"
+							}
 						} catch(e) {
 							currentBuild.result = 'FAILURE'
 							print e
