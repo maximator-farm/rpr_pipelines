@@ -396,7 +396,11 @@ def executePreBuild(Map options) {
     } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25']]]);
+    } else if (env.CHANGE_URL ) {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
     } else {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
