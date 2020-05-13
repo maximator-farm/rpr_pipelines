@@ -6,16 +6,18 @@ import groovy.json.JsonSlurperClassic;
 class UniverseClient {
     def context;
     def url;
+    def product;
     def token;
     def build;
     def env;
     def is_url;
 
-    UniverseClient(context, url, env, is_url) {
+    UniverseClient(context, url, env, is_url, product) {
         this.url = url;
         this.context = context;
         this.env = env;
         this.is_url = is_url;
+        this.product = product;
     }
 
     def retryWrapper(func) {
@@ -68,7 +70,7 @@ class UniverseClient {
                 httpMode: 'POST',
                 requestBody: JsonOutput.toJson(buildBody),
                 ignoreSslErrors: true,
-                url: "${this.url}/api/build?jobName=${env.JOB_NAME}",
+                url: "${this.url}/api/build?jobName=${this.product}",
                 validResponseCodes: '200'
             )
             
