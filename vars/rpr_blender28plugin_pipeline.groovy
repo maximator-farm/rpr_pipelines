@@ -9,22 +9,22 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             if (options['isPreBuilt']) {
                 if (options.pluginWinSha) {
-                    addon_name = options.pluginWinSha
+                    win_addon_name = options.pluginWinSha
                 } else {
-                    addon_name = "unknown"
+                    win_addon_name = "unknown"
                 }
             } else {
-                addon_name = "${options.commitSHA}_Windows"
+                win_addon_name = "${options.commitSHA}_Windows"
             }
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip")) {
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${win_addon_name}.zip")) {
 
                 clearBinariesWin()
 
                 if (options['isPreBuilt']) {
                     println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
                     downloadPlugin(osName, "Blender", options)
-                    addon_name = options.pluginWinSha
+                    win_addon_name = options.pluginWinSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "appWindows"
@@ -32,11 +32,11 @@ def getBlenderAddonInstaller(String osName, Map options)
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${addon_name}.zip"
+                    move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.zip"
                 """
 
             } else {
-                println "[INFO] The plugin ${addon_name}.zip exists in the storage."
+                println "[INFO] The plugin ${win_addon_name}.zip exists in the storage."
             }
 
             break;
@@ -45,22 +45,22 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             if (options['isPreBuilt']) {
                 if (options.pluginOSXSha) {
-                    addon_name = options.pluginOSXSha
+                    osx_addon_name = options.pluginOSXSha
                 } else {
-                    addon_name = "unknown"
+                    osx_addon_name = "unknown"
                 }
             } else {
-                addon_name = "${options.commitSHA}_OSX"
+                osx_addon_name = "${options.commitSHA}_OSX"
             }
 
-            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"))
+            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${osx_addon_name}.zip"))
             {
                 clearBinariesUnix()
 
                 if (options['isPreBuilt']) {
                     println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
                     downloadPlugin(osName, "Blender", options)
-                    addon_name = options.pluginOSXSha
+                    osx_addon_name = options.pluginOSXSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "appOSX"
@@ -68,11 +68,11 @@ def getBlenderAddonInstaller(String osName, Map options)
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"
+                    mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${osx_addon_name}.zip"
                 """
 
             } else {
-                println "[INFO] The plugin ${addon_name}.zip exists in the storage."
+                println "[INFO] The plugin ${osx_addon_name}.zip exists in the storage."
             }
 
             break;
@@ -81,22 +81,22 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             if (options['isPreBuilt']) {
                 if (options.pluginUbuntuSha) {
-                    addon_name = options.pluginUbuntuSha
+                    ubuntu_addon_name = options.pluginUbuntuSha
                 } else {
-                    addon_name = "unknown"
+                    ubuntu_addon_name = "unknown"
                 }
             } else {
-                addon_name = "${options.commitSHA}_${osName}"
+                ubuntu_addon_name = "${options.commitSHA}_${osName}"
             }
 
-            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"))
+            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${ubuntu_addon_name}.zip"))
             {
                 clearBinariesUnix()
 
                 if (options['isPreBuilt']) {
                     println "[INFO] The prebuilt plugin does not exist in the storage. Downloading and copying..."
                     downloadPlugin(osName, "Blender", options)
-                    addon_name = options.pluginUbuntuSha
+                    ubuntu_addon_name = options.pluginUbuntuSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "app${osName}"
@@ -104,11 +104,11 @@ def getBlenderAddonInstaller(String osName, Map options)
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                     mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"
+                     mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${ubuntu_addon_name}.zip"
                 """
 
             } else {
-                println "[INFO] The plugin ${addon_name}.zip exists in the storage."
+                println "[INFO] The plugin ${ubuntu_addon_name}.zip exists in the storage."
             }
     }
 

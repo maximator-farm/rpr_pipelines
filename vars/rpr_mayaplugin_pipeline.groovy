@@ -8,22 +8,22 @@ def getMayaPluginInstaller(String osName, Map options)
 
             if (options['isPreBuilt']) {
                 if (options.pluginWinSha) {
-                    addon_name = options.pluginWinSha
+                    win_addon_name = options.pluginWinSha
                 } else {
-                    addon_name = "unknown"
+                    win_addon_name = "unknown"
                 }
             } else {
-                addon_name = options.productCode
+                win_addon_name = options.productCode
             }
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.msi")) {
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${win_addon_name}.msi")) {
 
                 clearBinariesWin()
 
                 if (options['isPreBuilt']) {
                     println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
                     downloadPlugin(osName, "Maya", options)
-                    addon_name = options.pluginWinSha
+                    win_addon_name = options.pluginWinSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "appWindows"
@@ -31,11 +31,11 @@ def getMayaPluginInstaller(String osName, Map options)
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${addon_name}.msi"
+                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.msi"
                 """
 
             } else {
-                println "[INFO] The plugin ${addon_name}.msi exists in the storage."
+                println "[INFO] The plugin ${win_addon_name}.msi exists in the storage."
             }
 
             break;
@@ -53,7 +53,7 @@ def getMayaPluginInstaller(String osName, Map options)
                 if (options['isPreBuilt']) {
                     println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
                     downloadPlugin(osName, "Maya", options)
-                    addon_name = options.pluginOSXSha
+                    osx_addon_name = options.pluginOSXSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "appOSX"
