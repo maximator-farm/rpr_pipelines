@@ -1,7 +1,7 @@
 import UniverseClient
 import groovy.transform.Field
 
-@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD Radeon™ ProRender for Blender")
+@Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD Radeon™%20ProRender%20for%20Blender")
 
 
 def getBlenderAddonInstaller(String osName, Map options)
