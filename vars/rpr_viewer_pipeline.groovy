@@ -261,7 +261,7 @@ def executeBuildWindows(Map options)
         xcopy build\\viewer\\engines ${options.DEPLOY_FOLDER}\\engines /s/i/y
     """
 
-    def controlFiles = ['config.json', 'UIConfig.json', 'sky.hdr', 'RadeonProViewer.exe', 'rpml/lib/RadeonML-DirectML.dll']
+    def controlFiles = ['config.json', 'UIConfig.json', 'sky.hdr', 'RadeonProViewer.exe', 'rml/lib/RadeonML-DirectML.dll']
         controlFiles.each() {
         if (!fileExists("${options.DEPLOY_FOLDER}/${it}")) {
             error "Not found ${it}"
