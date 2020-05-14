@@ -238,8 +238,12 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
+        if (option.engine == 'FULL2'){
+            String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}-NorthStar"
+        }
+        else{
+            String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
+        }
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
