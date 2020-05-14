@@ -1,31 +1,74 @@
- def executeGenTestRefCommand(String osName, Map options)
+def executeUnitTestsCommand(String osName, Map options)
 {
-}
-
-def executeTestCommand(String osName, Map options)
-{
-    dir('build-direct/Release') {
-        switch(osName) {
-            case 'Windows':
-                bat """
-                tests-MIOpen.exe --gtest_output=xml:..\\..\\${STAGE_NAME}.gtest.xml >> ..\\..\\${STAGE_NAME}.log 2>&1
-                """
-                break;
-            case 'OSX':
-                sh """
-                echo "skip"
-                """
-                break;
-            default:
-                sh """
-                chmod +x tests-MIOpen
+    switch (osName) {
+        case 'Windows':
+            bat """
+                tests.exe --gtest_output=xml:${STAGE_NAME}.gtest.xml >> ${STAGE_NAME}.UnitTests.log 2>&1
+            """
+            break;
+        case 'OSX':
+            sh """
+                chmod +x tests
                 export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
-                ./tests-MIOpen --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ../../${STAGE_NAME}.log 2>&1
-                """
-        }
+                ./tests --gtest_output=xml:${STAGE_NAME}.gtest.xml >> ${STAGE_NAME}.UnitTests.log 2>&1
+            """
+            break;
+        default:
+            sh """
+                chmod +x tests
+                export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
+                ./tests --gtest_output=xml:${STAGE_NAME}.gtest.xml >> ${STAGE_NAME}.UnitTests.log 2>&1
+            """
     }
 }
 
+def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
+    ws("WS/${options.PRJ_NAME}-TestAssets") {
+        checkOutBranchOrScm(options['assetsBranch'], "https://gitlab.cts.luxoft.com/rml/models.git", true, false, true, "radeonprorender-gitlab", true)
+        unstash "app${osName}"
+    }
+    ws("WS/${options.PRJ_NAME}-FT") {
+        checkOutBranchOrScm(options['testsBranch'], "https://gitlab.cts.luxoft.com/rml/ft_engine.git", true, false, true, "radeonprorender-gitlab", false)
+        try {
+            outputEnvironmentInfo(osName, "${STAGE_NAME}.ft")
+            switch (osName) {
+                case 'Windows':
+                    withEnv(["PATH=C:\\Python38;C:\\Python38\\Scripts;${PATH}"]) {
+                        bat """
+                        pip install -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
+                        python -V >> ${STAGE_NAME}.ft.log 2>&1
+                        python run_tests.py -t tests -e ../${options.PRJ_NAME}-TestAssets/test_app.exe -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                        rename ft-executor.log ${STAGE_NAME}.engine.log
+                        """
+                    }
+                    break
+                default:
+                    sh """
+                        export LD_LIBRARY_PATH=\$PWD/../${options.PRJ_NAME}-TestAssets:\$LD_LIBRARY_PATH
+                        pip3.8 install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1                        
+                        python3.8 -V >> ${STAGE_NAME}.ft.log 2>&1
+                        env >> ${STAGE_NAME}.ft.log 2>&1
+                        python3.8 run_tests.py -t tests -e ../${options.PRJ_NAME}-TestAssets/test_app -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                        mv ft-executor.log ${STAGE_NAME}.engine.log
+                    """
+            }
+        }
+        catch(e) {
+            println(e.toString())
+            throw e
+        }
+        finally {
+            archiveArtifacts "*.log"
+            publishHTML([allowMissing: true,
+                         alwaysLinkToLastBuild: true,
+                         keepAll: true,
+                         reportDir: 'results',
+                         reportFiles: 'report.html',
+                         reportName: "FT ${osName}-${asicName}",
+                         reportTitles: "FT ${osName}-${asicName}"])
+        }
+    }
+}
 
 def executeTests(String osName, String asicName, Map options)
 {
@@ -33,13 +76,10 @@ def executeTests(String osName, String asicName, Map options)
     String error_message = ""
 
     try {
-        String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
-
-        outputEnvironmentInfo(osName)
+        outputEnvironmentInfo(osName, "${STAGE_NAME}.UnitTests")
         unstash "app${osName}"
 
-        executeTestCommand(osName, options)
+        executeUnitTestsCommand(osName, options)
     }
     catch (e) {
         println(e.toString());
@@ -54,11 +94,39 @@ def executeTests(String osName, String asicName, Map options)
 
         if (env.CHANGE_ID) {
             String context = "[${options.PRJ_NAME}] [TEST] ${osName}-${asicName}"
-            String description = error_message ? "Testing finished with error message: ${error_message}" : "Testing finished"
+            String description = error_message ? "Testing finished on UT with error message: ${error_message}" : "UT Testing finished"
             String status = error_message ? "failure" : "success"
-            String url = "${env.BUILD_URL}/artifact/${STAGE_NAME}.log"
+            String url = "${env.BUILD_URL}/artifact/${STAGE_NAME}.UnitTests.log"
             pullRequest.createStatus(status, context, description, url)
             options['commitContexts'].remove(context)
+        }
+    }
+
+    cleanWS(osName)
+
+    if(options.executeFT) {
+        try {
+            outputEnvironmentInfo(osName, "${STAGE_NAME}.ft")
+            executeFunctionalTestsCommand(osName, asicName, options)
+        }
+        catch (e) {
+            println(e.toString());
+            println(e.getMessage());
+            error_message = e.getMessage()
+            currentBuild.result = "FAILED"
+            throw e
+        }
+        finally {
+            archiveArtifacts "*.log"
+
+            if (env.CHANGE_ID) {
+                String context = "[${options.PRJ_NAME}] [TEST] ${osName}-${asicName}"
+                String description = error_message ? "Testing finished on FT with error message: ${error_message}" : "UT and FT Testing finished"
+                String status = error_message ? "failure" : "success"
+                String url = "${env.BUILD_URL}/artifact/${STAGE_NAME}.ft.log"
+                pullRequest.createStatus(status, context, description, url)
+                options['commitContexts'].remove(context)
+            }
         }
     }
 }
@@ -67,207 +135,83 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     bat """
-    mkdir build-direct
-    cd build-direct
-    cmake -G "Visual Studio 15 2017 Win64" ${options.cmakeKeys(env.WORKSPACE)} .. >> ..\\${STAGE_NAME}.Release.log 2>&1
-    set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-    %msbuild% RadeonML.sln -property:Configuration=Release >> ..\\${STAGE_NAME}.Release.log 2>&1
-    xcopy ..\\third_party\\miopen\\MIOpen.dll .\\Release\\MIOpen.dll*
+        xcopy ..\\RML_MIOpen third_party\\miopen /s/y/i
+        xcopy ..\\RML_tensorflow_cc third_party\\tensorflow_cc /s/y/i
     """
 
-    if (env.TAG_NAME) {
-        dir("rml-deploy") {
-            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
-            bat """
-                MD "miopen\\${CIS_OS}"
-                xcopy ..\\build-direct\\Release "miopen\\${CIS_OS}" /s/y/i
-                git config --local user.name "radeonbuildmaster"
-                git config --local user.email "radeonprorender.buildmaster@gmail.com"
-                git add --all
-                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
-                git push origin HEAD:master
-            """
-        }
-    }
-
-    bat """
-    mkdir build-direct-debug
-    cd build-direct-debug
-    cmake -G "Visual Studio 15 2017 Win64" ${options.cmakeKeys(env.WORKSPACE)} -DRML_LOG_LEVEL=Debug .. >> ..\\${STAGE_NAME}.Debug.log 2>&1
-    set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-    %msbuild% RadeonML.sln -property:Configuration=Debug >> ..\\${STAGE_NAME}.Debug.log 2>&1
-    """
-    bat """
-    mkdir build-direct
-    cd build-direct
-    cmake ${options['cmakeKeys']} .. >> ..\\${STAGE_NAME}.Release.log 2>&1
-    set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-    %msbuild% RadeonML.sln -property:Configuration=Release >> ..\\${STAGE_NAME}.Release.log 2>&1
-    """
-
-    if (env.TAG_NAME) {
-        dir("rml-deploy") {
-            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
-            bat """
-                MD directml\\${CIS_OS}
-                xcopy ..\\build-direct\\Release "directml\\${CIS_OS}" /s/y/i
-                git config --local user.name "radeonbuildmaster"
-                git config --local user.email "radeonprorender.buildmaster@gmail.com"
-                git add --all
-                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
-                git push origin HEAD:master
-            """
-        }
-    }
-
-    bat """
-    mkdir build-direct-debug
-    cd build-direct-debug
-    cmake ${options['cmakeKeys']} -DRML_LOG_LEVEL=Debug .. >> ..\\${STAGE_NAME}.Debug.log 2>&1
-    set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-    %msbuild% RadeonML.sln -property:Configuration=Debug >> ..\\${STAGE_NAME}.Debug.log 2>&1
-    """
+    cmakeKeysWin ='-G "Visual Studio 15 2017 Win64" -DRML_DIRECTML=ON -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
 
     bat """
         mkdir build
         cd build
-        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\..\\${STAGE_NAME}.log 2>&1
-        cmake -G "Visual Studio 15 2017 Win64" ${options['cmakeKeys']} -DRML_TENSORFLOW_DIR=${WORKSPACE}\\tensorflow_cc .. >> ..\\..\\${STAGE_NAME}.log 2>&1
-        MSBuild.exe RadeonML.sln -property:Configuration=Release >> ..\\..\\${STAGE_NAME}.log 2>&1
-        """
+        cmake ${cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow_cc -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}.log 2>&1
+        set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
+        %msbuild% RadeonML.sln -property:Configuration=Release >> ..\\${STAGE_NAME}.log 2>&1
 
-    if (env.TAG_NAME) {
-        dir("rml-deploy") {
-            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
-            bat """
-                    MD tf_cpu\\${CIS_OS}
-                    xcopy ..\\build\\Release tf_cpu\\${CIS_OS} /s/y/i
-                    git config --local user.name "radeonbuildmaster"
-                    git config --local user.email "radeonprorender.buildmaster@gmail.com"
-                    git add --all
-                    git commit -m "${CIS_OS} release v${env.TAG_NAME}"
-                    git push origin HEAD:master
-                """
-        }
-    }
+        xcopy ..\\third_party\\miopen\\MIOpen.dll .\\Release\\MIOpen.dll*
+        xcopy ..\\third_party\\tensorflow_cc\\windows\\* .\\Release
+        mkdir .\\Release\\rml
+        mkdir .\\Release\\rml\\rml
+        mkdir .\\Release\\rml\\rml_internal
+        xcopy ..\\rml\\include\\rml\\*.h* .\\Release\\rml\\rml
+        xcopy ..\\rml\\include\\rml_internal\\*.h* .\\Release\\rml\\rml_internal
+    """
+    zip archive: true, dir: 'build/Release', glob: 'RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe', zipFile: "${CIS_OS}_Release.zip"
 }
 
 def executeBuildOSX(Map options)
 {
+    cmakeKeysOSX = '-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON'
     sh """
-    mkdir build
-    cd build
-    cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.Release.log 2>&1
-    make -j >> ../${STAGE_NAME}.Release.log 2>&1
+        mkdir build
+        cd build
+        cmake ${cmakeKeysOSX} .. >> ../${STAGE_NAME}.log 2>&1
+        make -j >> ../${STAGE_NAME}.log 2>&1
+        
+        mv bin Release
+        mkdir ./Release/rml
+        mkdir ./Release/rml/rml
+        mkdir ./Release/rml/rml_internal
+        cp ../rml/include/rml/*.h* ./Release/rml/rml
+        cp ../rml/include/rml_internal/*.h* ./Release/rml/rml_internal
 
-    tar cf ${CIS_OS}_Release.tar bin
+        tar cf ${CIS_OS}_Release.tar Release
     """
 
-    if (env.TAG_NAME) {
-        dir("rml-deploy") {
-            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
-            sh """
-                mkdir -p mps/${CIS_OS}
-                cp -r ../build/bin/* ./mps/${CIS_OS}
-                git config --local user.name "radeonbuildmaster"
-                git config --local user.email "radeonprorender.buildmaster@gmail.com"
-                git add --all
-                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
-                git push origin HEAD:master
-            """
-        }
-    }
+    archiveArtifacts "build/${CIS_OS}_Release.tar"
+    zip archive: true, dir: 'build/Release', glob: 'libRadeonML*.dylib, test*', zipFile: "${CIS_OS}_Release.zip"
 }
 
 def executeBuildLinux(Map options)
 {
     sh """
-    mkdir build-direct
-    cd build-direct
-    cmake ${options.cmakeKeys(env.WORKSPACE)} .. >> ../${STAGE_NAME}.Release.log 2>&1
-    make -j >> ../${STAGE_NAME}.Release.log 2>&1
-    mv bin Release
-    cp ../third_party/miopen/libMIOpen.so* ./Release
-    
-    tar cf ${CIS_OS}_Release.tar Release
+        cp -r ../RML_MIOpen/* ./third_party/miopen
+        cp -r ../RML_tensorflow_cc/ ./third_party/tensorflow_cc
     """
-
-    archiveArtifacts "build-direct/${CIS_OS}_Release.tar"
-
-    if (env.TAG_NAME) {
-        dir("rml-deploy") {
-            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
-            sh """
-                mkdir -p miopen/${CIS_OS}
-                cp -r ../build-direct/Release/* ./miopen/${CIS_OS}
-                git config --local user.name "radeonbuildmaster"
-                git config --local user.email "radeonprorender.buildmaster@gmail.com"
-                git add --all
-                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
-                git push origin HEAD:master
-            """
-        }
-    }
-
-    sh """
-    mkdir build-direct-debug
-    cd build-direct-debug
-    cmake ${options.cmakeKeys(env.WORKSPACE)} -DRML_LOG_LEVEL=Debug .. >> ../${STAGE_NAME}.Debug.log 2>&1
-    make -j >> ../${STAGE_NAME}.Debug.log 2>&1
-    mv bin Debug
-    """
+    cmakeKeysLinux = [
+            'Ubuntu18': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=ON -DRML_MPS=OFF',
+            'CentOS7_6': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
+    ]
 
     sh """
         mkdir build
         cd build
-        cmake ${options['cmakeKeys']} -DRML_TENSORFLOW_DIR=${WORKSPACE}/tensorflow_cc .. >> ../../${STAGE_NAME}.log 2>&1
-        make -j >> ../../${STAGE_NAME}.log 2>&1
-        make
+        cmake ${cmakeKeysLinux[CIS_OS]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow_cc -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}.log 2>&1
+        make -j >> ../${STAGE_NAME}.log 2>&1
         mv bin Release
+        cp ../third_party/miopen/libMIOpen.so* ./Release
+        cp ../third_party/tensorflow_cc/linux/* ./Release
+        
+        mkdir ./Release/rml
+        mkdir ./Release/rml/rml
+        mkdir ./Release/rml/rml_internal
+        cp ../rml/include/rml/*.h* ./Release/rml/rml
+        cp ../rml/include/rml_internal/*.h* ./Release/rml/rml_internal
         
         tar cf ${CIS_OS}_Release.tar Release
-        """
-    archiveArtifacts "build/${CIS_OS}_Release.tar"
-
-    if (env.TAG_NAME) {
-        dir("rml-deploy") {
-            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
-            sh """
-                    mkdir -p tf_cpu/${CIS_OS}
-                    cp -r ../build/Release/* ./tf_cpu/${CIS_OS}
-                    git config --local user.name "radeonbuildmaster"
-                    git config --local user.email "radeonprorender.buildmaster@gmail.com"
-                    git add --all
-                    git commit -m "${CIS_OS} release v${env.TAG_NAME}"
-                    git push origin HEAD:master
-                """
-        }
-    }
-
-    sh """
-    mkdir build
-    cd build
-    cmake ${options['cmakeKeys']} -DRML_TENSORFLOW_DIR=${WORKSPACE}/tensorflow_cc .. >> ../../${STAGE_NAME}.log 2>&1
-    make -j >> ../../${STAGE_NAME}.log 2>&1
-    make
-    mv bin Release
-    
-    tar cf ${CIS_OS}_Release.tar Release
     """
-    if (env.TAG_NAME) {
-        dir("rml-deploy") {
-            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
-            sh """
-                mkdir -p tf_cuda/${CIS_OS}
-                cp -r ../build/Release/* ./tf_cuda/${CIS_OS}
-                git config --local user.name "radeonbuildmaster"
-                git config --local user.email "radeonprorender.buildmaster@gmail.com"
-                git add --all
-                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
-                git push origin HEAD:master
-            """
-        }
-    }
+    zip archive: true, dir: 'build/Release', glob: 'libRadeonML*.so, libMIOpen*.so, libtensorflow*.so, test*', zipFile: "${CIS_OS}_Release.zip"
+    archiveArtifacts "build/${CIS_OS}_Release.tar"
 }
 
 def executePreBuild(Map options)
@@ -277,7 +221,7 @@ def executePreBuild(Map options)
     AUTHOR_NAME = bat (
             script: "git show -s --format=%%an HEAD ",
             returnStdout: true
-            ).split('\r\n')[2].trim()
+    ).split('\r\n')[2].trim()
 
     echo "The last commit was written by ${AUTHOR_NAME}."
     options.AUTHOR_NAME = AUTHOR_NAME
@@ -291,24 +235,24 @@ def executePreBuild(Map options)
     if(env.CHANGE_ID) {
 
         options['platforms'].split(';').each()
-        { platform ->
-            List tokens = platform.tokenize(':')
-            String osName = tokens.get(0)
-            // Statuses for builds
-            String context = "[${options.PRJ_NAME}] [BUILD] ${osName}"
-            commitContexts << context
-            pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
-            if (tokens.size() > 1) {
-                gpuNames = tokens.get(1)
-                gpuNames.split(',').each()
-                { gpuName ->
-                    // Statuses for tests
-                    context = "[${options.PRJ_NAME}] [TEST] ${osName}-${gpuName}"
+                { platform ->
+                    List tokens = platform.tokenize(':')
+                    String osName = tokens.get(0)
+                    // Statuses for builds
+                    String context = "[${options.PRJ_NAME}] [BUILD] ${osName}"
                     commitContexts << context
                     pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
+                    if (tokens.size() > 1) {
+                        gpuNames = tokens.get(1)
+                        gpuNames.split(',').each()
+                                { gpuName ->
+                                    // Statuses for tests
+                                    context = "[${options.PRJ_NAME}] [TEST] ${osName}-${gpuName}"
+                                    commitContexts << context
+                                    pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
+                                }
+                    }
                 }
-            }
-        }
         options['commitContexts'] = commitContexts
     }
 }
@@ -321,9 +265,11 @@ def executeBuild(String osName, Map options)
     try
     {
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
-        receiveFiles("bin_storage/MIOpen/*", './third_party/miopen')
-        outputEnvironmentInfo(osName, "${STAGE_NAME}.Release")
-        outputEnvironmentInfo(osName, "${STAGE_NAME}.Debug")
+
+        receiveFiles("rpr-ml/MIOpen/*", "../RML_MIOpen")
+        receiveFiles("rpr-ml/tensorflow_cc/*", "../RML_tensorflow_cc")
+
+        outputEnvironmentInfo(osName)
 
         withEnv(["CIS_OS=${osName}"]) {
             switch (osName) {
@@ -338,7 +284,9 @@ def executeBuild(String osName, Map options)
             }
         }
 
-        stash includes: 'build-direct/Release/**/*', name: "app${osName}"
+        dir('build/Release') {
+            stash includes: '*', name: "app${osName}"
+        }
     }
     catch (e)
     {
@@ -356,8 +304,6 @@ def executeBuild(String osName, Map options)
         }
 
         archiveArtifacts "*.log"
-        zip archive: true, dir: 'build-direct/Release', glob: '', zipFile: "${osName}_Release.zip"
-        zip archive: true, dir: 'build-direct-debug/Debug', glob: '', zipFile: "${osName}_Debug.zip"
     }
 }
 
@@ -373,30 +319,30 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
+         String testsBranch = "master",
+         String assestsBranch = "master",
          String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080;Ubuntu18:AMD_RadeonVII,NVIDIA_GTX980;CentOS7_6',
-         String PRJ_ROOT='rpr-ml',
-         String PRJ_NAME='MIOpen',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
-         Boolean updateRefs = false,
          Boolean enableNotifications = true,
-         def cmakeKeys = { cdws -> "-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DMIOpen_INCLUDE_DIR=${cdws}/third_party/miopen -DMIOpen_LIBRARY_DIR=${cdws}/third_party/miopen"})
+         Boolean executeFT = false)
 {
-
+    String PRJ_ROOT='rpr-ml'
+    String PRJ_NAME='RadeonML_com'
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
-                           [platforms:platforms,
-                            projectBranch:projectBranch,
-                            updateRefs:updateRefs,
-                            enableNotifications:enableNotifications,
-                            PRJ_NAME:PRJ_NAME,
-                            PRJ_ROOT:PRJ_ROOT,
-                            projectRepo:projectRepo,
-                            BUILDER_TAG:'BuilderML',
-                            executeBuild:true,
-                            executeTests:true,
-                            cmakeKeys:cmakeKeys,
-                            slackChannel:"${SLACK_ML_CHANNEL}",
-                            slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
-                            slackTocken:"slack-ml-channel"])
-
+            [platforms:platforms,
+             projectBranch:projectBranch,
+             testsBranch:testsBranch,
+             assetsBranch:assestsBranch,
+             enableNotifications:enableNotifications,
+             PRJ_NAME:PRJ_NAME,
+             PRJ_ROOT:PRJ_ROOT,
+             projectRepo:projectRepo,
+             BUILDER_TAG:'BuilderML',
+             executeBuild:true,
+             executeTests:true,
+             executeFT:executeFT,
+             slackChannel:"${SLACK_ML_CHANNEL}",
+             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
+             slackTocken:"slack-ml-channel"])
 }
