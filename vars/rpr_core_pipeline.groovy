@@ -1,45 +1,4 @@
-import RBSDevelopment
 import RBSProduction
-import hudson.plugins.git.GitException
-import java.nio.channels.ClosedChannelException
-import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
-
-
-def executeGenTestRefCommand(String osName, Map options)
-{
-    executeTestCommand(osName, options)
-
-    try
-    {
-        //for update existing manifest file
-        receiveFiles("${options.REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
-    }
-    catch(e)
-    {
-        println("baseline_manifest.json not found")
-    }
-
-    dir('scripts')
-    {
-        switch(osName)
-        {
-            case 'Windows':
-                bat """
-                make_results_baseline.bat
-                """
-                break;
-            case 'OSX':
-                sh """
-                ./make_results_baseline.sh
-                """
-                break;
-            default:
-                sh """
-                ./make_results_baseline.sh
-                """
-        }
-    }
-}
 
 def getCoreSDK(String osName, Map options)
 {
@@ -123,6 +82,39 @@ def getCoreSDK(String osName, Map options)
     }
 }
 
+def executeGenTestRefCommand(String osName, Map options)
+{
+    try
+    {
+        //for update existing manifest file
+        receiveFiles("${options.REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
+    }
+    catch(e)
+    {
+        println("baseline_manifest.json not found")
+    }
+
+    dir('scripts')
+    {
+        switch(osName)
+        {
+            case 'Windows':
+                bat """
+                make_results_baseline.bat
+                """
+                break;
+            case 'OSX':
+                sh """
+                ./make_results_baseline.sh
+                """
+                break;
+            default:
+                sh """
+                ./make_results_baseline.sh
+                """
+        }
+    }
+}
 
 def executeTestCommand(String osName, Map options)
 {
@@ -159,19 +151,27 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    cleanWS(osName)
+    // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
+    Boolean stashResults = true
+
     try {
 
-        checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
-
-        if (options.sendToRBS) {
-            options.rbs_prod.setTester(options)
-            options.rbs_dev.setTester(options)
+        timeout(time: "10", unit: 'MINUTES') {
+            try {
+                cleanWS(osName)
+                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
+                if (options.sendToRBS) {
+                    options.rbs_prod.setTester(options)
+                }
+                getCoreSDK(osName, options)
+            } catch(e) {
+                println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
+                println(e.toString())
+                throw e
+            }
         }
 
         downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/", 'CoreAssets')
-
-        getCoreSDK(osName, options)
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
         String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
@@ -182,6 +182,7 @@ def executeTests(String osName, String asicName, Map options)
 
         if(options['updateRefs'])
         {
+            executeTestCommand(osName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         }
@@ -189,8 +190,9 @@ def executeTests(String osName, String asicName, Map options)
         {
             // Update ref images from one card to others 
             // TODO: Fix hardcode naming
+            executeTestCommand(osName, options)
             executeGenTestRefCommand(osName, options)
-            ['AMD_RXVEGA', 'AMD_WX9100', 'AMD_WX7100'].each
+            ['AMD_RXVEGA', 'AMD_WX9100', 'AMD_WX7100', 'AMD_RadeonVII', 'NVIDIA_GF1080TI', 'NVIDIA_RTX2080'].each
             {
                 sendFiles('./Work/Baseline/', "${options.REF_PATH}/${it}-Windows")
             }
@@ -207,30 +209,54 @@ def executeTests(String osName, String asicName, Map options)
             executeTestCommand(osName, options)
         }
     } catch (e) {
-        println(e.toString());
-        println(e.getMessage());
+        if (options.currentTry < options.nodeReallocateTries) {
+            stashResults = false
+        } 
+        println(e.toString())
+        println(e.getMessage())
+        options.failureMessage = "Failed during testing: ${asicName}-${osName}"
+        options.failureError = e.getMessage()
         throw e
     }
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-        echo "Stashing test results to : ${options.testResultsName}"
-        dir('Work')
-        {
-            def sessionReport = null
-            stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
-            if (fileExists("Results/Core/session_report.json")) {
-                sessionReport = readJSON file: 'Results/Core/session_report.json'
-                // if none launched tests - mark build failed
-                if (sessionReport.summary.total == 0)
-                {
-                    options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
-                    currentBuild.result = "FAILED"
-                }
-            
-                if (options.sendToRBS)
-                {
-                    options.rbs_prod.sendSuiteResult(sessionReport, options)
-                    options.rbs_dev.sendSuiteResult(sessionReport, options)
+        if (stashResults) {
+            dir('Work')
+            {
+                if (fileExists("Results/Core/session_report.json")) {
+
+                    def sessionReport = null
+                    sessionReport = readJSON file: 'Results/Core/session_report.json'
+
+                    // if none launched tests - mark build failed
+                    if (sessionReport.summary.total == 0)
+                    {
+                        options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
+                        currentBuild.result = "FAILED"
+                    }
+
+                    if (options.sendToRBS)
+                    {
+                        options.rbs_prod.sendSuiteResult(sessionReport, options)
+                    }
+
+                    echo "Stashing test results to : ${options.testResultsName}"
+                    stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+
+                    // reallocate node if there are still attempts
+                    if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        if (options.currentTry < options.nodeReallocateTries) {
+                            if (osName == "Ubuntu18") {
+                                sh """
+                                    echo "Restarting Unix Machine...."
+                                    hostname
+                                    (sleep 3; sudo shutdown -r now) &
+                                """
+                                sleep(60)
+                            }
+                            throw new Exception("All tests crashed")
+                        } 
+                    }
                 }
             }
         }
@@ -297,7 +323,6 @@ def executeBuild(String osName, Map options)
         {
             try {
                 options.rbs_prod.setFailureStatus()
-                options.rbs_dev.setFailureStatus()
             } catch (err) {
                 println(err)
             }
@@ -336,8 +361,11 @@ def executePreBuild(Map options)
 
     options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
-    if(!env.CHANGE_URL)
-    {
+    if (env.CHANGE_URL) {
+        echo "branch was detected as Pull Request"
+        options['isPR'] = true
+        options.testsPackage = "PR" 
+    } else {
         currentBuild.description += "<b>Commit author:</b> ${options.AUTHOR_NAME}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     }
@@ -378,7 +406,6 @@ def executePreBuild(Map options)
                 }
             }
             options.rbs_prod.startBuild(options)
-            options.rbs_dev.startBuild(options)
         }
         catch (e)
         {
@@ -474,7 +501,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
                     options.rbs_prod.finishBuild(options, status)
-                    options.rbs_dev.finishBuild(options, status)
                 }
                 catch (e){
                     println(e.getMessage())
@@ -527,7 +553,6 @@ def call(String projectBranch = "",
         }
 
         rbs_prod = new RBSProduction(this, "Core", env.JOB_NAME, env)
-        rbs_dev = new RBSDevelopment(this, "Core", env.JOB_NAME, env)
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
@@ -551,7 +576,6 @@ def call(String projectBranch = "",
                                 iterations:iterations,
                                 sendToRBS:sendToRBS,
                                 rbs_prod: rbs_prod,
-                                rbs_dev: rbs_dev
                                 ])
     }
     catch(e) {

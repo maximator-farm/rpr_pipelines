@@ -1,9 +1,4 @@
 import RBSProduction
-import RBSDevelopment
-import hudson.plugins.git.GitException
-import java.nio.channels.ClosedChannelException
-import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
-
 
 def getMaxPluginInstaller(String osName, Map options)
 {
@@ -13,22 +8,22 @@ def getMaxPluginInstaller(String osName, Map options)
 
             if (options['isPreBuilt']) {
                 if (options.pluginWinSha) {
-                    addon_name = options.pluginWinSha
+                    win_addon_name = options.pluginWinSha
                 } else {
-                    addon_name = "unknown"
+                    win_addon_name = "unknown"
                 }
             } else {
-                addon_name = options.productCode
+                win_addon_name = options.productCode
             }
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.msi")) {
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${win_addon_name}.msi")) {
 
                 clearBinariesWin()
 
                 if (options['isPreBuilt']) {
                     println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
                     downloadPlugin(osName, "Max", options)
-                    addon_name = options.pluginWinSha
+                    win_addon_name = options.pluginWinSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "appWindows"
@@ -36,11 +31,11 @@ def getMaxPluginInstaller(String osName, Map options)
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${addon_name}.msi"
+                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.msi"
                 """
 
             } else {
-                println "[INFO] The plugin ${addon_name}.msi exists in the storage."
+                println "[INFO] The plugin ${win_addon_name}.msi exists in the storage."
             }
 
             break;
@@ -107,7 +102,6 @@ def executeTests(String osName, String asicName, Map options)
                 // setTester in rbs
                 if (options.sendToRBS) {
                     options.rbs_prod.setTester(options)
-                    options.rbs_dev.setTester(options)
                 }
 
                 println "[INFO] Preparing successfully finished."
@@ -195,19 +189,21 @@ def executeTests(String osName, String asicName, Map options)
                         currentBuild.result = "FAILED"
                     }
 
-                    // deinstalling broken addon
-                    if (sessionReport.summary.total == sessionReport.summary.error) {
-                        installMSIPlugin(osName, "Maya", options, false, true)
-                    }
-
                     if (options.sendToRBS)
                     {
                         options.rbs_prod.sendSuiteResult(sessionReport, options)
-                        options.rbs_dev.sendSuiteResult(sessionReport, options)
                     }
 
                     echo "Stashing test results to : ${options.testResultsName}"
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+
+                    // deinstalling broken addon & reallocate node if there are still attempts
+                    if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        installMSIPlugin(osName, "Max", options, false, true)
+                        if (options.currentTry < options.nodeReallocateTries) {
+                            throw new Exception("All tests crashed")
+                        }
+                    }
                 }
             }
         } else {
@@ -248,17 +244,19 @@ def executeBuildWindows(Map options)
             rename  RadeonProRender*.msi RadeonProRenderMax.msi
         """
 
-        bat """
-            echo import msilib >> getMsiProductCode.py
-            echo db = msilib.OpenDatabase(r'RadeonProRenderMax.msi', msilib.MSIDBOPEN_READONLY) >> getMsiProductCode.py
-            echo view = db.OpenView("SELECT Value FROM Property WHERE Property='ProductCode'") >> getMsiProductCode.py
-            echo view.Execute(None) >> getMsiProductCode.py
-            echo print(view.Fetch().GetString(1)) >> getMsiProductCode.py
-        """
+        //bat """
+        //    echo import msilib >> getMsiProductCode.py
+        //    echo db = msilib.OpenDatabase(r'RadeonProRenderMax.msi', msilib.MSIDBOPEN_READONLY) >> getMsiProductCode.py
+        //   echo view = db.OpenView("SELECT Value FROM Property WHERE Property='ProductCode'") >> getMsiProductCode.py
+        //    echo view.Execute(None) >> getMsiProductCode.py
+        //    echo print(view.Fetch().GetString(1)) >> getMsiProductCode.py
+        //"""
 
-        options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
+        //options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
+        options.productCode = sha1 "RadeonProRenderMax.msi"
 
-        println "[INFO] Built MSI product code: ${options.productCode}"
+        //println "[INFO] Built MSI product code: ${options.productCode}"
+        println "[INFO] Built sha1 code: ${options.productCode}"
 
         stash includes: 'RadeonProRenderMax.msi', name: 'appWindows'
     }
@@ -292,7 +290,6 @@ def executeBuild(String osName, Map options)
         if (options.sendToRBS)
         {
             try {
-                options.rbs_dev.setFailureStatus()
                 options.rbs_prod.setFailureStatus()
             } catch (err) {
                 println(err)
@@ -389,6 +386,7 @@ def executePreBuild(Map options)
                 if (env.CHANGE_URL)
                 {
                     echo "branch was detected as Pull Request"
+                    options['isPR'] = true
                     options['executeBuild'] = true
                     options['executeTests'] = true
                     options.testsPackage = "regression.json"
@@ -490,7 +488,6 @@ def executePreBuild(Map options)
         try
         {
             options.rbs_prod.startBuild(options)
-            options.rbs_dev.startBuild(options)
         }
         catch (e)
         {
@@ -623,7 +620,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
             if (options.sendToRBS) {
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
-                    options.rbs_dev.finishBuild(options, status)
                     options.rbs_prod.finishBuild(options, status)
                 } catch (e) {
                     println(e.getMessage())
@@ -726,7 +722,6 @@ def call(String projectBranch = "",
         }
 
         rbs_prod = new RBSProduction(this, "Max", env.JOB_NAME, env)
-        rbs_dev = new RBSDevelopment(this, "Max", env.JOB_NAME, env)
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
@@ -752,7 +747,6 @@ def call(String projectBranch = "",
                                 TEST_TIMEOUT:180,
                                 TESTER_TAG:'Max',
                                 rbs_prod: rbs_prod,
-                                rbs_dev: rbs_dev,
                                 resX: resX,
                                 resY: resY,
                                 SPU: SPU,

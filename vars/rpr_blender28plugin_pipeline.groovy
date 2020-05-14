@@ -1,9 +1,4 @@
 import RBSProduction
-import RBSDevelopment
-import hudson.plugins.git.GitException
-import java.nio.channels.ClosedChannelException
-import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
-
 
 def getBlenderAddonInstaller(String osName, Map options)
 {
@@ -14,22 +9,22 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             if (options['isPreBuilt']) {
                 if (options.pluginWinSha) {
-                    addon_name = options.pluginWinSha
+                    win_addon_name = options.pluginWinSha
                 } else {
-                    addon_name = "unknown"
+                    win_addon_name = "unknown"
                 }
             } else {
-                addon_name = "${options.commitSHA}_Windows"
+                win_addon_name = "${options.commitSHA}_Windows"
             }
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip")) {
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${win_addon_name}.zip")) {
 
                 clearBinariesWin()
 
                 if (options['isPreBuilt']) {
                     println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
                     downloadPlugin(osName, "Blender", options)
-                    addon_name = options.pluginWinSha
+                    win_addon_name = options.pluginWinSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "appWindows"
@@ -37,11 +32,11 @@ def getBlenderAddonInstaller(String osName, Map options)
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${addon_name}.zip"
+                    move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.zip"
                 """
 
             } else {
-                println "[INFO] The plugin ${addon_name}.zip exists in the storage."
+                println "[INFO] The plugin ${win_addon_name}.zip exists in the storage."
             }
 
             break;
@@ -50,22 +45,22 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             if (options['isPreBuilt']) {
                 if (options.pluginOSXSha) {
-                    addon_name = options.pluginOSXSha
+                    osx_addon_name = options.pluginOSXSha
                 } else {
-                    addon_name = "unknown"
+                    osx_addon_name = "unknown"
                 }
             } else {
-                addon_name = "${options.commitSHA}_OSX"
+                osx_addon_name = "${options.commitSHA}_OSX"
             }
 
-            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"))
+            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${osx_addon_name}.zip"))
             {
                 clearBinariesUnix()
 
                 if (options['isPreBuilt']) {
                     println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
                     downloadPlugin(osName, "Blender", options)
-                    addon_name = options.pluginOSXSha
+                    osx_addon_name = options.pluginOSXSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "appOSX"
@@ -73,11 +68,11 @@ def getBlenderAddonInstaller(String osName, Map options)
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"
+                    mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${osx_addon_name}.zip"
                 """
 
             } else {
-                println "[INFO] The plugin ${addon_name}.zip exists in the storage."
+                println "[INFO] The plugin ${osx_addon_name}.zip exists in the storage."
             }
 
             break;
@@ -86,22 +81,22 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             if (options['isPreBuilt']) {
                 if (options.pluginUbuntuSha) {
-                    addon_name = options.pluginUbuntuSha
+                    ubuntu_addon_name = options.pluginUbuntuSha
                 } else {
-                    addon_name = "unknown"
+                    ubuntu_addon_name = "unknown"
                 }
             } else {
-                addon_name = "${options.commitSHA}_${osName}"
+                ubuntu_addon_name = "${options.commitSHA}_${osName}"
             }
 
-            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"))
+            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${ubuntu_addon_name}.zip"))
             {
                 clearBinariesUnix()
 
                 if (options['isPreBuilt']) {
                     println "[INFO] The prebuilt plugin does not exist in the storage. Downloading and copying..."
                     downloadPlugin(osName, "Blender", options)
-                    addon_name = options.pluginUbuntuSha
+                    ubuntu_addon_name = options.pluginUbuntuSha
                 } else {
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "app${osName}"
@@ -109,11 +104,11 @@ def getBlenderAddonInstaller(String osName, Map options)
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                     mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"
+                     mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${ubuntu_addon_name}.zip"
                 """
 
             } else {
-                println "[INFO] The plugin ${addon_name}.zip exists in the storage."
+                println "[INFO] The plugin ${ubuntu_addon_name}.zip exists in the storage."
             }
     }
 
@@ -201,7 +196,6 @@ def executeTests(String osName, String asicName, Map options)
                 // setTester in rbs
                 if (options.sendToRBS) {
                     options.rbs_prod.setTester(options)
-                    options.rbs_dev.setTester(options)
                 }
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
 
@@ -233,7 +227,7 @@ def executeTests(String osName, String asicName, Map options)
                         buildRenderCache(osName, "2.82", options.stageName)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
                             println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
-                            throw new Exception("No output image")
+                            throw new Exception("No output image after cache building.")
                         }
                     }
                 }
@@ -294,23 +288,25 @@ def executeTests(String osName, String asicName, Map options)
                         // if none launched tests - mark build failed
                         if (sessionReport.summary.total == 0)
                         {
-                            options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
+                            options.failureMessage = "None test was finished for: ${asicName}-${osName}"
                             currentBuild.result = "FAILED"
                         }
 
-                        // deinstalling broken addon
-                        if (sessionReport.summary.total == sessionReport.summary.error) {
-                            installBlenderAddon(osName, "2.82", options, false, true)
-                        }
-                    
                         if (options.sendToRBS)
                         {
                             options.rbs_prod.sendSuiteResult(sessionReport, options)
-                            options.rbs_dev.sendSuiteResult(sessionReport, options)
                         }
 
                         echo "Stashing test results to : ${options.testResultsName}"
                         stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+
+                        // deinstalling broken addon & reallocate node if there are still attempts
+                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                            installBlenderAddon(osName, "2.82", options, false, true)
+                            if (options.currentTry < options.nodeReallocateTries) {
+                                throw new Exception("All tests crashed")
+                            }
+                        }
                     }
                 }
         } else {
@@ -496,7 +492,6 @@ def executeBuild(String osName, Map options)
         {
             try {
                 options.rbs_prod.setFailureStatus()
-                options.rbs_dev.setFailureStatus()
             } catch (err) {
                 println(err)
             }
@@ -596,6 +591,7 @@ def executePreBuild(Map options)
                 if (env.CHANGE_URL)
                 {
                     echo "branch was detected as Pull Request"
+                    options['isPR'] = true
                     options['executeBuild'] = true
                     options['executeTests'] = true
                     options.testsPackage = "regression.json"
@@ -612,17 +608,19 @@ def executePreBuild(Map options)
         }
         options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
     }
+
     if(env.CHANGE_URL)
     {
         //TODO: fix sha for PR
         //options.comitSHA = bat ( script: "git log --format=%%H HEAD~1 -1", returnStdout: true ).split('\r\n')[2].trim()
         options.AUTHOR_NAME = env.CHANGE_AUTHOR_DISPLAY_NAME
         if (env.CHANGE_TARGET != 'master') {
-            options['executeBuild'] = false
-            options['executeTests'] = false
+            options['executeBuild'] = true
+            options['executeTests'] = true
         }
         options.commitMessage = env.CHANGE_TITLE
     }
+    
     // if manual job
     if(options['forceBuild'])
     {
@@ -707,7 +705,6 @@ def executePreBuild(Map options)
         try
         {
             options.rbs_prod.startBuild(options)
-            options.rbs_dev.startBuild(options)
         }
         catch (e)
         {
@@ -841,7 +838,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
                     options.rbs_prod.finishBuild(options, status)
-                    options.rbs_dev.finishBuild(options, status)
                 }
                 catch (e){
                     println(e.getMessage())
@@ -958,7 +954,6 @@ def call(String projectBranch = "",
         }
 
         rbs_prod = new RBSProduction(this, "Blender28", env.JOB_NAME, env)
-        rbs_dev = new RBSDevelopment(this, "Blender28", env.JOB_NAME, env)
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
@@ -982,7 +977,6 @@ def call(String projectBranch = "",
                                 DEPLOY_TIMEOUT:150,
                                 TESTER_TAG:"Blender2.8",
                                 BUILDER_TAG:"BuildBlender2.8",
-                                rbs_dev: rbs_dev,
                                 rbs_prod: rbs_prod,
                                 resX: resX,
                                 resY: resY,

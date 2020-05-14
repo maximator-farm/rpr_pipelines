@@ -24,7 +24,7 @@ def call(String original_folder, String destination_folder)
                 print('Partial transfer due to vanished source files')
             }
         } catch (FlowInterruptedException error) {
-            println "INFO[job was aborted]"
+            println "[INFO] Job was aborted during downloading assets."
             throw error
         } catch(e){
             println(e.toString());
