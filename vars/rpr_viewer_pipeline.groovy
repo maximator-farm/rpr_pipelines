@@ -2,7 +2,7 @@
 def getViewerTool(String osName, Map options)
 {
     switch(osName)
-    
+    {
         case 'Windows':
 
             if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip")) {
