@@ -2,7 +2,7 @@
 def getViewerTool(String osName, Map options)
 {
     switch(osName)
-    {
+    
         case 'Windows':
 
             if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip")) {
@@ -249,8 +249,8 @@ def executeBuildWindows(Map options)
 
         xcopy shaders ${options.DEPLOY_FOLDER}\\shaders /y/i/s
 
-        mkdir ${options.DEPLOY_FOLDER}\\rpml\\lib
-        xcopy rpml\\lib\\RadeonML-DirectML.dll ${options.DEPLOY_FOLDER}\\rpml\\lib\\RadeonML-DirectML.dll*
+        mkdir ${options.DEPLOY_FOLDER}\\rml\\lib
+        xcopy rml\\lib\\RadeonML-DirectML.dll ${options.DEPLOY_FOLDER}\\rml\\lib\\RadeonML-DirectML.dll*
         xcopy rif\\models ${options.DEPLOY_FOLDER}\\rif\\models /s/i/y
         xcopy rif\\lib ${options.DEPLOY_FOLDER}\\rif\\lib /s/i/y
         del /q ${options.DEPLOY_FOLDER}\\rif\\lib\\*.lib
