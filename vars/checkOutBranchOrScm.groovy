@@ -48,20 +48,6 @@ def executeCheckout(String branchName, String repoName, Boolean disableSubmodule
 
         if (useLFS) checkoutExtensions.add([$class: 'GitLFSPull'])
 
-        def checkoutExtensions = [
-                [$class: 'PruneStaleBranch'],
-                [$class: 'CleanBeforeCheckout'],
-                [$class: 'CleanCheckout'],
-                [$class: 'CheckoutOption', timeout: 30],
-                [$class: 'CloneOption', timeout: 60, noTags: false],
-                [$class: 'AuthorInChangelog'],
-                [$class: 'SubmoduleOption', disableSubmodules: disableSubmodules,
-                 parentCredentials: true, recursiveSubmodules: true,
-                 timeout: 60, reference: '', trackingSubmodules: false]
-        ]
-
-        if (useLFS) checkoutExtensions.add([$class: 'GitLFSPull'])
-
         checkout changelog: changelog, poll: polling,
             scm: [$class: 'GitSCM', branches: [[name: "${branchName}"]], doGenerateSubmoduleConfigurations: false,
                     extensions: checkoutExtensions,
