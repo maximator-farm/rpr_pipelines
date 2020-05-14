@@ -5,45 +5,31 @@ def executeTestCommand(String osName)
     case 'Windows':
         try
         {
-            dir("tools/jenkins")
-            {
-                bat "pretest.bat >> ..\\..\\${STAGE_NAME}.log 2>&1"
-            }
         }catch(e){}
         dir("unittest")
         {
             bat "mkdir testSave"
-            bat "..\\bin\\Release\\UnitTest.exe -t .\\testSave -r .\\referenceImages --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ..\\${STAGE_NAME}.log  2>&1"
+            bat "..\\bin\\UnitTest.exe -t .\\testSave -r .\\referenceImages --models ..\\models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ..\\${STAGE_NAME}.log  2>&1"
         }
         break;
     case 'OSX':
         try
         {
-            dir("tools/jenkins")
-            {
-                sh """chmod +x pretest.sh
-                    ./pretest.sh >> ..\\..\\${STAGE_NAME}.log 2>&1"""
-            }
         }catch(e){}
         dir("unittest")
         {
             sh "mkdir testSave"
-            sh "../bin/Release/UnitTest  -t ./testSave -r ./referenceImages --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            sh "../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
         }
         break;
     default:
         try
         {
-            dir("tools/jenkins")
-            {
-                sh """chmod +x pretest.sh
-                    ./pretest.sh >> ..\\..\\${STAGE_NAME}.log 2>&1"""
-            }
         }catch(e){}
         dir("unittest")
         {
             sh "mkdir testSave"
-            sh "../bin/Release/UnitTest  -t ./testSave -r ./referenceImages --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            sh "../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
         }
     }
 }
@@ -94,28 +80,31 @@ def executeBuildWindows(String cmakeKeys)
     samplesName = samplesName.replaceAll('[^a-zA-Z0-9-_.]+','')
 
     bat """
-    cmake -G "Visual Studio 15 2017 Win64" ${cmakeKeys} . >> ${STAGE_NAME}.log 2>&1
-    cmake --build . --config Release --target install >> ${STAGE_NAME}.log 2>&1
-    cmake --build . --config Debug --target install >> ${STAGE_NAME}.log 2>&1
+    set msbuild="C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe" >> ..\\${STAGE_NAME}.log 2>&1
+    mkdir build-${packageName}-rel
+    cd build-${packageName}-rel
+    cmake .. -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${packageName}-rel >> ..\\${STAGE_NAME}.log 2>&1
+    %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.log 2>&1
+    cd ..
+    mkdir build-${packageName}-dbg
+    cd build-${packageName}-dbg
+    cmake .. -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${packageName}-dbg >> ..\\${STAGE_NAME}.log 2>&1
+    %msbuild% INSTALL.vcxproj -property:Configuration=Debug >> ..\\${STAGE_NAME}.log 2>&1
+    cd ..
     """
 
+    dir("${packageName}-rel") {
+        stash includes: "bin/*", name: "app${osName}"
+    }
+
     bat """
-    mkdir ${packageName}-dbg
-    xcopy include ${packageName}-dbg\\include /y/i
-    xcopy README.md ${packageName}-dbg\\README.md*
-
-    xcopy ${packageName}-dbg ${packageName}-rel /s/y/i
-
-    xcopy bin\\debug ${packageName}-dbg\\bin /s/y/i
-    xcopy bin\\release ${packageName}-rel\\bin /s/y/i
+    xcopy README.md ${packageName}-rel\\README.md
+    xcopy README.md ${packageName}-dbg\\README.md
 
     cd ${packageName}-rel
     del /S UnitTest*
-    del /S/Q bin\\models
-
     cd ..\\${packageName}-dbg
     del /S UnitTest*
-    del /S/Q bin\\models
     """
 
     dir("${packageName}-rel/bin") {
@@ -129,15 +118,15 @@ def executeBuildWindows(String cmakeKeys)
     }
 
     bat """
-    mkdir RIF_Debug
     mkdir RIF_Release
+    mkdir RIF_Debug
     mkdir RIF_Samples
     mkdir RIF_Models
 
-    move ${packageName}-dbg RIF_Debug
-    move ${packageName}-rel RIF_Release
+    xcopy ${packageName}-rel RIF_Release\\${packageName}-rel
+    xcopy ${packageName}-dbg RIF_Debug\\${packageName}-dbg
     xcopy samples RIF_Samples\\samples /s/y/i
-    xcopy models RIF_MODELS\\models /s/y/i
+    xcopy models RIF_Models\\models /s/y/i
     """
 
     zip archive: true, dir: 'RIF_Debug', glob: '', zipFile: "${packageName}-dbg.zip"
@@ -167,35 +156,33 @@ def executeBuildUnix(String cmakeKeys, String osName, String premakeDir, String 
     String SRC_BUILD = compilerName == "clang-5.0" ? "RadeonImageFilters" : "all"
     sh """
     ${EXPORT_CXX}
-    cmake ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release . >> ${STAGE_NAME}.log 2>&1
-    make ${SRC_BUILD} >> ${STAGE_NAME}.log 2>&1
-    make install >> ${STAGE_NAME}.log 2>&1
-    cmake ${cmakeKeys} -DCMAKE_BUILD_TYPE=Debug . >> ${STAGE_NAME}.log 2>&1
-    make ${SRC_BUILD} >> ${STAGE_NAME}.log 2>&1
-    make install >> ${STAGE_NAME}.log 2>&1
+    mkdir build-${packageName}-rel
+    cd build-${packageName}-rel
+    cmake .. ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${packageName}-rel >> ../${STAGE_NAME}.log 2>&1
+    make ${SRC_BUILD} >> ../${STAGE_NAME}.log 2>&1
+    make install >> ../${STAGE_NAME}.log 2>&1
+    cd ..
+    mkdir build-${packageName}-dbg
+    cd build-${packageName}-dbg
+    cmake .. ${cmakeKeys} -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=../${packageName}-dbg >> ../${STAGE_NAME}.log 2>&1
+    make ${SRC_BUILD} >> ../${STAGE_NAME}.log 2>&1
+    make install >> ../${STAGE_NAME}.log 2>&1
+    cd ..
     """
 
+    dir("${packageName}-rel") {
+        stash includes: "bin/*", name: "app${osName}"
+    }
+
     sh """
-    mkdir ${packageName}-dbg
-    cp ${copyKeys} include ${packageName}-dbg
+    cp README.md ${packageName}-rel
     cp README.md ${packageName}-dbg
-
-    cp ${copyKeys} ${packageName}-dbg ${packageName}-rel
-
-    mkdir ${packageName}-dbg/bin
-    cp ${copyKeys} bin/Debug/* ${packageName}-dbg/bin
-
-    mkdir ${packageName}-rel/bin
-    cp ${copyKeys} bin/Release/* ${packageName}-rel/bin
     """
 
     if (compilerName != "clang-5.0") {
         sh """
         rm ${packageName}-rel/bin/UnitTest*
-        rm -fdr ${packageName}-rel/bin/models
-
         rm ${packageName}-dbg/bin/UnitTest*
-        rm -fdr ${packageName}-dbg/bin/models
         """
     }
 
@@ -273,8 +260,6 @@ def executeBuild(String osName, Map options)
         default:
             error('Unsupported OS');
         }
-
-        stash includes: 'bin/**/*', name: "app${osName}"
     }
     catch (e) {
         currentBuild.result = "FAILED"
