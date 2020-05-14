@@ -203,7 +203,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        if (option.engine == '2'){
+        if (options.engine == '2'){
             String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}-NorthStar"
         }
         else{
