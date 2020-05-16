@@ -91,8 +91,7 @@ def executeBuildWindows(Map options) {
                                 }
                                 
                                 bat """
-                                    mkdir bin
-                                    mkdir platforms
+                                    mkdir bin\\platforms
                                     copy vs${vs_ver}\\cmake-TAN-bin\\${win_build_conf}\\TrueAudioNext.dll bin
                                     copy vs${vs_ver}\\cmake-TrueAudioVR-bin\\${win_build_conf}\\TrueAudioVR.dll bin
                                     copy vs${vs_ver}\\cmake-GPUUtilities-bin\\${win_build_conf}\\GPUUtilities.dll bin
