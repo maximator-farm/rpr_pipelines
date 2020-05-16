@@ -92,13 +92,16 @@ def executeBuildWindows(Map options) {
                                 
                                 bat """
                                     mkdir bin
+                                    mkdir platforms
                                     copy vs${vs_ver}\\cmake-TAN-bin\\${win_build_conf}\\TrueAudioNext.dll bin
                                     copy vs${vs_ver}\\cmake-TrueAudioVR-bin\\${win_build_conf}\\TrueAudioVR.dll bin
                                     copy vs${vs_ver}\\cmake-GPUUtilities-bin\\${win_build_conf}\\GPUUtilities.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Core*.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Widgets*.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Gui*.dll bin
-                                    copy ..\\..\\..\\thirdparty\\portaudio\\build\\msvc\\x64\\Debug\\portaudio_x64.dll bin
+                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Core.dll bin
+                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Widgets.dll bin
+                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Gui.dll bin
+                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Gui.dll bin
+                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\plugins\\platforms\\qwindows.dll bin\\platforms
+                                    copy ..\\..\\..\\thirdparty\\portaudio\\build\\msvc\\x64\\${win_build_conf}\\portaudio_x64.dll bin
                                     copy vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${win_build_conf}\\TALibDopplerTest.exe bin
                                     copy vs${vs_ver}\\cmake-TALibTestConvolution-bin\\${win_build_conf}\\TALibTestConvolution.exe bin
                                     copy vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${win_build_conf}\\RoomAcousticsQT.exe bin
