@@ -249,8 +249,8 @@ def executeBuildWindows(Map options)
 
         xcopy shaders ${options.DEPLOY_FOLDER}\\shaders /y/i/s
 
-        mkdir ${options.DEPLOY_FOLDER}\\rpml\\lib
-        xcopy rpml\\lib\\RadeonML-DirectML.dll ${options.DEPLOY_FOLDER}\\rpml\\lib\\RadeonML-DirectML.dll*
+        mkdir ${options.DEPLOY_FOLDER}\\rml\\lib
+        xcopy rml\\lib\\RadeonML-DirectML.dll ${options.DEPLOY_FOLDER}\\rml\\lib\\RadeonML-DirectML.dll*
         xcopy rif\\models ${options.DEPLOY_FOLDER}\\rif\\models /s/i/y
         xcopy rif\\lib ${options.DEPLOY_FOLDER}\\rif\\lib /s/i/y
         del /q ${options.DEPLOY_FOLDER}\\rif\\lib\\*.lib
@@ -261,7 +261,7 @@ def executeBuildWindows(Map options)
         xcopy build\\viewer\\engines ${options.DEPLOY_FOLDER}\\engines /s/i/y
     """
 
-    def controlFiles = ['config.json', 'UIConfig.json', 'sky.hdr', 'RadeonProViewer.exe', 'rpml/lib/RadeonML-DirectML.dll']
+    def controlFiles = ['config.json', 'UIConfig.json', 'sky.hdr', 'RadeonProViewer.exe', 'rml/lib/RadeonML-DirectML.dll']
         controlFiles.each() {
         if (!fileExists("${options.DEPLOY_FOLDER}/${it}")) {
             error "Not found ${it}"

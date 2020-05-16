@@ -292,24 +292,15 @@ def executeBuildWindows(Map options)
             build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
 
-        String branch_postfix = ""
-        if(env.BRANCH_NAME && BRANCH_NAME != "master")
-        {
-            branch_postfix = BRANCH_NAME.replace('/', '-').trim()
-        }
-        if(env.Branch && Branch != "master")
-        {
-            branch_postfix = Branch.replace('/', '-').trim()
-        }
-        if(branch_postfix)
+        if(options.branch_postfix)
         {
             bat """
-                rename RadeonProRender*msi *.(${branch_postfix}).msi
+                rename RadeonProRender*msi *.(${options.branch_postfix}).msi
             """
         }
 
         archiveArtifacts "RadeonProRender*.msi"
-        String BUILD_NAME = branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${branch_postfix}).msi" : "RadeonProRenderMaya_${options.pluginVersion}.msi"
+        String BUILD_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).msi" : "RadeonProRenderMaya_${options.pluginVersion}.msi"
         rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
         bat """
@@ -342,24 +333,15 @@ def executeBuildOSX(Map options)
 
         dir('.installer_build')
         {
-            String branch_postfix = ""
-            if(env.BRANCH_NAME && BRANCH_NAME != "master")
-            {
-                branch_postfix = BRANCH_NAME.replace('/', '-').trim()
-            }
-            if(env.Branch && Branch != "master")
-            {
-                branch_postfix = Branch.replace('/', '-').trim()
-            }
-            if(branch_postfix)
+            if(options.branch_postfix)
             {
                 sh"""
-                    for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${branch_postfix})\${i#\$name}"; done
+                    for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${options.branch_postfix})\${i#\$name}"; done
                 """
             }
 
             archiveArtifacts "RadeonProRender*.dmg"
-            String BUILD_NAME = branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${branch_postfix}).dmg" : "RadeonProRenderMaya_${options.pluginVersion}.dmg"
+            String BUILD_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).dmg" : "RadeonProRenderMaya_${options.pluginVersion}.dmg"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             sh "cp RadeonProRender*.dmg RadeonProRenderMaya.dmg"
@@ -375,11 +357,22 @@ def executeBuildOSX(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    // cleanWS(osName)
+    cleanWS(osName)
+
     try {
         dir('RadeonProRenderMayaPlugin')
         {
-            checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderMayaPlugin.git')
+            checkOutBranchOrScm(options.projectBranch, options.projectRepo)
+        }
+
+        options.branch_postfix = ""
+        if(env.BRANCH_NAME && env.BRANCH_NAME == "master")
+        {
+            options.branch_postfix = "release"
+        }
+        if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
+        {
+            options.branch_postfix = env.BRANCH_NAME.replace('/', '-')
         }
 
         outputEnvironmentInfo(osName)
@@ -417,136 +410,119 @@ def executePreBuild(Map options)
     if (options['isPreBuilt'])
     {
         //plugin is pre built
-        return;
+        options['executeBuild'] = false
+        options['executeTests'] = true
+        return
     }
-    cleanWS()
-    currentBuild.description = ""
-    ['projectBranch'].each
-    {
-        if(options[it] != 'master' && options[it] != "")
-        {
-            currentBuild.description += "<b>${it}:</b> ${options[it]}<br/>"
+
+    // manual job
+    if (options.forceBuild) {
+        options.executeBuild = true
+        options.executeTests = true
+    // auto job
+    } else {
+        if (env.CHANGE_URL) {
+            println "[INFO] Branch was detected as Pull Request"
+            options.isPR = true
+            options.executeBuild = true
+            options.executeTests = true
+            options.testsPackage = "regression.json"
+        } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
+           println "[INFO] ${env.BRANCH_NAME} branch was detected"
+           options.executeBuild = true
+           options.executeTests = true
+           options.testsPackage = "regression.json"
+        } else {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.testsPackage = "smoke"
         }
     }
-
-    //properties([])
-
+    
     dir('RadeonProRenderMayaPlugin')
     {
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderMayaPlugin.git', true)
+        checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
 
-        AUTHOR_NAME = bat (
-                script: "git show -s --format=%%an HEAD ",
-                returnStdout: true
-                ).split('\r\n')[2].trim()
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        options.commitShortSHA = options.commitSHA[0..6]
 
-        echo "The last commit was written by ${AUTHOR_NAME}."
-        options.AUTHOR_NAME = AUTHOR_NAME
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${options.commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
+        println "Commit shortSHA: ${options.commitShortSHA}"
 
-        commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true )
-        echo "Commit message: ${commitMessage}"
-        options.commitMessage = commitMessage.split('\r\n')[2].trim()
+        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
 
-        options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        if (options.projectBranch){
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+        } else {
+            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+        }
+        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-        if(options['incrementVersion'])
-        {
-            if("${BRANCH_NAME}" == "master" && "${AUTHOR_NAME}" != "radeonprorender")
-            {
+        if (options['incrementVersion']) {
+            if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
                 options.testsPackage = "regression.json"
-                echo "Incrementing version of change made by ${AUTHOR_NAME}."
-                //String currentversion=version_read('FireRender.Maya.Src/common.h', '#define PLUGIN_VERSION')
-                String currentversion=version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
-                echo "currentversion ${currentversion}"
 
-                new_version=version_inc(currentversion, 3)
-                echo "new_version ${new_version}"
+                println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+
+                def current_version = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
+                println "[INFO] Current build version: ${current_version}"
+
+                def new_version = version_inc(current_version, 3)
+                println "[INFO] New build version: ${new_version}"
 
                 version_write("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION', new_version)
-
-                String updatedversion=version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
-                echo "updatedversion ${updatedversion}"
+                def updated_version = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
+                println "[INFO] Updated build version: ${updated_version}"
 
                 bat """
-                    git add version.h
-                    git commit -m "buildmaster: version update to ${updatedversion}"
-                    git push origin HEAD:master
-                   """
+                  git add version.h
+                  git commit -m "buildmaster: version update to ${updated_version}"
+                  git push origin HEAD:develop
+                """
 
                 //get commit's sha which have to be build
-                options['projectBranch'] = bat ( script: "git log --format=%%H -1 ",
-                                    returnStdout: true
-                                    ).split('\r\n')[2].trim()
-
-                options['executeBuild'] = true
-                options['executeTests'] = true
+                options.projectBranch = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                println "[INFO] Project branch hash: ${options.projectBranch}"
             }
             else
             {
-                options.testsPackage = "smoke"
-                if(commitMessage.contains("CIS:BUILD"))
+                if(options.commitMessage.contains("CIS:BUILD"))
                 {
                     options['executeBuild'] = true
                 }
 
-                if(commitMessage.contains("CIS:TESTS"))
+                if(options.commitMessage.contains("CIS:TESTS"))
                 {
                     options['executeBuild'] = true
                     options['executeTests'] = true
-                    options.testsPackage = "smoke"
                 }
-
-                if (env.CHANGE_URL)
-                {
-                    echo "branch was detected as Pull Request"
-                    options['isPR'] = true
-                    options['executeBuild'] = true
-                    options['executeTests'] = true
-                    options.testsPackage = "regression.json"
-                }
-
-                if("${BRANCH_NAME}" == "master") {
-                   echo "rebuild master"
-                   options['executeBuild'] = true
-                   options['executeTests'] = true
-                   options.testsPackage = "regression.json"
-                }
-
             }
         }
-        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
-    }
-    if(options['forceBuild'])
-    {
-        options['executeBuild'] = true
-        options['executeTests'] = true
     }
 
-    currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
-    if(!env.CHANGE_URL)
-    {
-        currentBuild.description += "<b>Commit author:</b> ${options.AUTHOR_NAME}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-    }
-
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+    if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25']]]);
-    } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
     } else if (env.JOB_NAME == "RadeonProRenderMayaPlugin-WeeklyFull") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '60']]]);
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     } else {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '50']]]);
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     }
-
     
     def tests = []
     options.groupsRBS = []
@@ -762,7 +738,8 @@ def appendPlatform(String filteredPlatforms, String platform) {
     return filteredPlatforms
 }
 
-def call(String projectBranch = "",
+def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderMayaPlugin.git",
+        String projectBranch = "",
         String testsBranch = "master",
         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;OSX:AMD_RXVEGA',
         Boolean updateRefs = false,
@@ -845,7 +822,8 @@ def call(String projectBranch = "",
         rbs_prod = new RBSProduction(this, "Maya", env.JOB_NAME, env)
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
-                               [projectBranch:projectBranch,
+                               [projectRepo:projectRepo,
+                                projectBranch:projectBranch,
                                 testsBranch:testsBranch,
                                 updateRefs:updateRefs,
                                 enableNotifications:enableNotifications,
