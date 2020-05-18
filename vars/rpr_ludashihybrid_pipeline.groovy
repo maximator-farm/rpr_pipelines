@@ -154,26 +154,10 @@ def executeBuildWindows(Map options)
 
 def executeBuildOSX(Map options)
 {
-    sh """
-    mkdir Build
-    cd Build
-    cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
-    make >> ../${STAGE_NAME}.log 2>&1
-    make package >> ../${STAGE_NAME}.log 2>&1
-    mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
-    """
 }
 
 def executeBuildLinux(Map options)
 {
-    sh """
-    mkdir Build
-    cd Build
-    cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
-    make >> ../${STAGE_NAME}.log 2>&1
-    make package >> ../${STAGE_NAME}.log 2>&1
-    mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
-    """
 }
 
 def executePreBuild(Map options)
@@ -333,11 +317,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RadeonVII;Ubuntu18;CentOS7',
+         String platforms = 'Windows:AMD_RadeonVII',
          String testsQuality = "low,medium,high",
          String PRJ_ROOT='rpr-core',
-         String PRJ_NAME='RadeonProRender-Hybrid',
-         String projectRepo='git@github.com:Radeon-Pro/RPRHybrid.git',
+         String PRJ_NAME='RadeonProRender-LudashiHybrid',
+         String projectRepo='git@github.com/Radeon-Pro/Ludashi-Hybrid',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = "-DCMAKE_BUILD_TYPE=Release -DBAIKAL_ENABLE_RPR=ON -DBAIKAL_NEXT_EMBED_KERNELS=ON") {
