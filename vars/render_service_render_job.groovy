@@ -246,9 +246,9 @@ def main(String PCs, Map options) {
 	    boolean PRODUCTION = true
 
 	    if (PRODUCTION) {
-		options['django_url'] = "https://render.cis.luxoft.com/render/jenkins/"
+		options['django_url'] = "http://172.26.157.251:81/render/jenkins/"
 		options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
-		options['scripts_branch'] = "master"
+		options['scripts_branch'] = "inemankov/refactor_statuses"
 	    } else {
 		options['django_url'] = "https://testrender.cis.luxoft.com/render/jenkins/"
 		options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
@@ -319,6 +319,9 @@ def startRender(osName, deviceName, renderDevice, options) {
 	}
 
 	if (!successfullyDone) {
+		if (nodesCount == 0) {
+			render_service_send_render_results('FAILURE', options.id, options.django_url, 'No machine with specified configuration')
+		}
 		throw new Exception("Job was failed by all used nodes!")
 	}
 }
