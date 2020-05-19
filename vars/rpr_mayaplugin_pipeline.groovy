@@ -404,6 +404,14 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
+    if (options['isPreBuilt'])
+    {
+        //plugin is pre built
+        options['executeBuild'] = false
+        options['executeTests'] = true
+        return
+    }
+
     // manual job
     if (options.forceBuild) {
         options.executeBuild = true
@@ -520,7 +528,7 @@ def executePreBuild(Map options)
     {
         dir('jobs_test_maya')
         {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git', true)
+            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
             // json means custom test suite. Split doesn't supported
             if(options.testsPackage.endsWith('.json'))
             {
@@ -758,7 +766,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     try
     {
         Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX
-        def preBuildStage = isPreBuilt ? null : this.&executePreBuild
 
         if (isPreBuilt)
         {
@@ -810,7 +817,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
         rbs_prod = new RBSProduction(this, "Maya", env.JOB_NAME, env)
 
-        multiplatform_pipeline(platforms, preBuildStage, this.&executeBuild, this.&executeTests, this.&executeDeploy,
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectRepo:projectRepo,
                                 projectBranch:projectBranch,
                                 testsBranch:testsBranch,
