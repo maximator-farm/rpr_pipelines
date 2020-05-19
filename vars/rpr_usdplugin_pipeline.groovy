@@ -80,20 +80,24 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     String CMD_BUILD_USD = """
-    if exist USDgen rmdir /s/q USDgen
-    if exist USDinst rmdir /s/q USDinst
-    python USD\\build_scripts\\build_usd.py -v --build ${WORKSPACE}/USDgen/build --src ${WORKSPACE}/USDgen/src ${WORKSPACE}/USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+        if exist USDgen rmdir /s/q USDgen
+        if exist USDinst rmdir /s/q USDinst
+        python USD\\build_scripts\\build_usd.py -v --build ${WORKSPACE}/USDgen/build --src ${WORKSPACE}/USDgen/src ${WORKSPACE}/USDinst > USD/${STAGE_NAME}_USD.log 2>&1
     """
 
-    String CMAKE_KEYS_USD = """-DGLEW_LOCATION="${WORKSPACE}/USDinst" ^
-    -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/USDinst" ^
-    -DUSD_INCLUDE_DIR="${WORKSPACE}/USDinst/include" -DUSD_LIBRARY_DIR="${WORKSPACE}/USDinst/lib" """
+    String CMAKE_KEYS_USD = """
+        -DGLEW_LOCATION="${WORKSPACE}/USDinst" ^
+        -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/USDinst" ^
+        -DUSD_INCLUDE_DIR="${WORKSPACE}/USDinst/include" ^
+        -DUSD_LIBRARY_DIR="${WORKSPACE}/USDinst/lib" 
+    """
 
     CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
     CMAKE_KEYS_USD = options.enableHoudini ? "" : CMAKE_KEYS_USD
 
     withEnv(["PATH=c:\\python27\\;c:\\python27\\scripts\\;${PATH}", "WORKSPACE=${env.WORKSPACE.toString().replace('\\', '/')}"]) {
         bat """
+
         call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}.log 2>&1
 
         ${CMD_BUILD_USD}
@@ -254,6 +258,9 @@ def executeBuildCentOS(Map options) {
 }
 
 def executeBuild(String osName, Map options) {
+
+    cleanWS()
+    
     try {
         dir('RadeonProRenderUSD') {
             checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git')
