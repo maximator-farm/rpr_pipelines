@@ -1,19 +1,18 @@
 import groovy.json.JsonBuilder
 
 def call(String status, String id, String django_ip, String fail_reason = '') {
-    Map body = [:]
-    body.status = status
-    body.id = id
-    if (fail_reason) {
-    	body.fail_reason = fail_reason
-    }
-
-    String bodyJson = new JsonBuilder(body).toPrettyString()
+	String data = "status=${status}&id=${id}"
+	if (fail_reason) {
+		data = data + "&fail_reason=${fail_reason}"
+	}
 
     httpRequest(
     	url: django_ip,
     	authentication: 'renderServiceCredentials',
-    	requestBody: bodyJson,
-    	httpMode: 'POST'
+    	requestBody: data,
+    	httpMode: 'POST',
+    	customHeaders: [
+    		[name: 'Content-type', value: 'application/x-www-form-urlencoded']
+    	]
     )
 }

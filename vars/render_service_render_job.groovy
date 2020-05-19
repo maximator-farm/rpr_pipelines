@@ -248,7 +248,7 @@ def main(String PCs, Map options) {
 	    if (PRODUCTION) {
 		options['django_url'] = "http://172.26.157.251:81/render/jenkins/"
 		options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
-		options['scripts_branch'] = "inemankov/refactor_statuses"
+		options['scripts_branch'] = "master"
 	    } else {
 		options['django_url'] = "https://testrender.cis.luxoft.com/render/jenkins/"
 		options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
@@ -320,7 +320,12 @@ def startRender(osName, deviceName, renderDevice, options) {
 
 	if (!successfullyDone) {
 		if (nodesCount == 0) {
-			render_service_send_render_results('FAILURE', options.id, options.django_url, 'No machine with specified configuration')
+			// master machine can't access other nodes. Run notification script on other machine
+			node("PreBuild") {
+				stage("Notify") {
+					render_service_send_render_results('Failure to launch', options.id, options.django_url, 'No machine with specified configuration')
+				}
+			}
 		}
 		throw new Exception("Job was failed by all used nodes!")
 	}
