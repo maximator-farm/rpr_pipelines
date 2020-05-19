@@ -355,7 +355,7 @@ def executePreBuild(Map options) {
 
         if(options['incrementVersion'])
         {
-            if("${BRANCH_NAME}" == "master" && "${AUTHOR_NAME}" != "radeonprorender")
+            if(env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender")
             {
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 println "[INFO] Current build version: ${options.pluginVersion}"
