@@ -164,5 +164,5 @@ def call(String projectBranch = "",
                             BUILDER_TAG:'BuilderU',
                             executeBuild:true,
                             executeTests:true,
-                            BUILD_TIMEOUT:300])
+                            BUILD_TIMEOUT:90])
 }

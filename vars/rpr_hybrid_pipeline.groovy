@@ -360,6 +360,6 @@ def call(String projectBranch = "",
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
                             slackTocken:"${SLACK_BAIKAL_TOCKEN}",
-                            TEST_TIMEOUT:40,
+                            TEST_TIMEOUT:30,
                             cmakeKeys:cmakeKeys])
 }

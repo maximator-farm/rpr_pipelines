@@ -417,7 +417,7 @@ def call(String projectBranch = "",
                                 reportName:'Test_20Report',
                                 splitTestsExectuion:splitTestsExectuion,
                                 sendToRBS:sendToRBS,
-                                TEST_TIMEOUT:720,
+                                TEST_TIMEOUT:30,
                                 enableHoudini:enableHoudini,
                                 rebuildUSD:rebuildUSD,
                                 BUILDER_TAG:'Builder6'
