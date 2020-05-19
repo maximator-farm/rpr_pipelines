@@ -146,12 +146,6 @@ def executeBuildOSX(Map options) {
         export PATH=${WORKSPACE}/USDinst/bin:\$PATH
         export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
 
-        pushd RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Mac
-        mkdir rprTools
-        mv *.cpp rprTools
-        mv *.h rprTools
-        popd
-
         mkdir -p RadeonProRenderUSD/build
         pushd RadeonProRenderUSD/build
 
@@ -198,14 +192,6 @@ def executeBuildLinux(Map options) {
         export PATH=${WORKSPACE}/USDinst/bin:\$PATH
         export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
 
-        ln -s ${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/Linux/Ubuntu/lib64/libMIOpen.so.2 ${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/Linux/Ubuntu/lib64/libMIOpen.so
-
-        cd RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Linux-Ubuntu
-        mkdir rprTools
-        mv *.cpp rprTools
-        mv *.h rprTools
-        cd ${WORKSPACE}
-
         mkdir -p RadeonProRenderUSD/build
         cd RadeonProRenderUSD/build
 
@@ -251,14 +237,6 @@ def executeBuildCentOS(Map options) {
 
         export PATH=${WORKSPACE}/USDinst/bin:\$PATH
         export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
-
-        ln -s ${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/CentOS7/lib/libMIOpen.so.2 ${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/CentOS7/lib/libMIOpen.so
-
-        cd RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Linux-CentOS
-        mkdir rprTools
-        mv *.cpp rprTools
-        mv *.h rprTools
-        cd ${WORKSPACE}
 
         mkdir -p RadeonProRenderUSD/build
         cd RadeonProRenderUSD/build
