@@ -253,6 +253,7 @@ def executeTests(String osName, String asicName, Map options)
                                         ps | sort -des cpu | select -f 200 | ft -a >> ${STAGE_NAME}.crash.log
                                         openfiles /query >> ${STAGE_NAME}.crash.log
                                     """
+                                    archiveArtifacts artifacts: "*.crash.log"
                                     break;
                                 case 'OSX':
                                     sh """
@@ -260,12 +261,16 @@ def executeTests(String osName, String asicName, Map options)
                                         top -b | head -n 200 >> ${STAGE_NAME}.crash.log
                                         iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
                                     """
+                                    archiveArtifacts artifacts: "*.crash.log"
                                     break;
                                 default:
                                     sh """
                                         dmesg | tail -n 200 >> ${STAGE_NAME}.crash.log
                                         top -b | head -n 200 >> ${STAGE_NAME}.crash.log
                                         iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
+                                    """
+                                    archiveArtifacts artifacts: "*.crash.log"
+                                    sh """
                                         echo "Restarting Unix Machine...."
                                         hostname
                                         (sleep 3; sudo shutdown -r now) &
@@ -273,7 +278,6 @@ def executeTests(String osName, String asicName, Map options)
                                     sleep(60)
                                     break;
                             }
-                            archiveArtifacts artifacts: "*.crash.log"
                             throw new Exception("All tests crashed")
                         }
                     }
