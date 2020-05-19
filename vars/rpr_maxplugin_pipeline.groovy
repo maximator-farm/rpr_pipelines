@@ -115,9 +115,6 @@ def executeTests(String osName, String asicName, Map options)
 
         downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MaxAssets/", 'MaxAssets')
 
-        // temp 
-        installMSIPlugin(osName, "Max", options, false, true)
-
         if (!options['skipBuild']) {
             try {
                 Boolean newPluginInstalled = false
@@ -232,19 +229,17 @@ def executeBuildWindows(Map options)
             rename  RadeonProRender*.msi RadeonProRenderMax.msi
         """
 
-        //bat """
-        //    echo import msilib >> getMsiProductCode.py
-        //    echo db = msilib.OpenDatabase(r'RadeonProRenderMax.msi', msilib.MSIDBOPEN_READONLY) >> getMsiProductCode.py
-        //   echo view = db.OpenView("SELECT Value FROM Property WHERE Property='ProductCode'") >> getMsiProductCode.py
-        //    echo view.Execute(None) >> getMsiProductCode.py
-        //    echo print(view.Fetch().GetString(1)) >> getMsiProductCode.py
-        //"""
+        bat """
+            echo import msilib >> getMsiProductCode.py
+            echo db = msilib.OpenDatabase(r'RadeonProRenderMax.msi', msilib.MSIDBOPEN_READONLY) >> getMsiProductCode.py
+            echo view = db.OpenView("SELECT Value FROM Property WHERE Property='ProductCode'") >> getMsiProductCode.py
+            echo view.Execute(None) >> getMsiProductCode.py
+            echo print(view.Fetch().GetString(1)) >> getMsiProductCode.py
+        """
 
-        //options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
-        options.productCode = sha1 "RadeonProRenderMax.msi"
+        options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
 
-        //println "[INFO] Built MSI product code: ${options.productCode}"
-        println "[INFO] Built sha1 code: ${options.productCode}"
+        println "[INFO] Built MSI product code: ${options.productCode}"
 
         stash includes: 'RadeonProRenderMax.msi', name: 'appWindows'
     }
