@@ -146,7 +146,7 @@ def executeBuildWindows(Map options)
     bat """
     mkdir Build
     cd Build
-    cmake ${options['cmakeKeys']} -G "Visual Studio 15 2017 Win64" .. >> ..\\${STAGE_NAME}.log 2>&1
+    cmake ${options['cmakeKeys']} -G "Visual Studio 16 2019 Win64" .. >> ..\\${STAGE_NAME}.log 2>&1
     cmake --build . --target PACKAGE --config ${build_type} >> ..\\${STAGE_NAME}.log 2>&1
     rename BaikalNext.zip BaikalNext_${STAGE_NAME}.zip
     """
@@ -326,8 +326,6 @@ def call(String projectBranch = "",
          Boolean enableNotifications = true,
          String cmakeKeys = "-DCMAKE_BUILD_TYPE=Release -DBAIKAL_ENABLE_RPR=ON -DBAIKAL_NEXT_EMBED_KERNELS=ON") {
 
-    platforms = (env.BRANCH_NAME == 'dx12_master' || env.CHANGE_TARGET == 'dx12_master') ? 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI' : platforms
-
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                            [platforms:platforms,
                             projectBranch:projectBranch,
@@ -337,13 +335,13 @@ def call(String projectBranch = "",
                             PRJ_NAME:PRJ_NAME,
                             PRJ_ROOT:PRJ_ROOT,
                             projectRepo:projectRepo,
-                            BUILDER_TAG:'BuilderS',
+                            BUILDER_TAG:'BuilderS && VS2019',
                             TESTER_TAG:'Ludashi',
                             executeBuild:true,
                             executeTests:true,
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
                             slackTocken:"${SLACK_BAIKAL_TOCKEN}",
-                            TEST_TIMEOUT:40,
+                            TEST_TIMEOUT:20,
                             cmakeKeys:cmakeKeys])
 }
