@@ -232,6 +232,14 @@ def executeTests(String osName, String asicName, Map options)
                     // reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
                         if (options.currentTry < options.nodeReallocateTries) {
+                            if (osName == "Ubuntu18") {
+                                sh """
+                                    echo "Restarting Unix Machine...."
+                                    hostname
+                                    (sleep 3; sudo shutdown -r now) &
+                                """
+                                sleep(60)
+                            }
                             throw new Exception("All tests crashed")
                         } 
                     }
@@ -256,8 +264,8 @@ def executeBuildWindows(Map options)
 
         xcopy shaders ${options.DEPLOY_FOLDER}\\shaders /y/i/s
 
-        mkdir ${options.DEPLOY_FOLDER}\\rpml\\lib
-        xcopy rpml\\lib\\RadeonML-DirectML.dll ${options.DEPLOY_FOLDER}\\rpml\\lib\\RadeonML-DirectML.dll*
+        mkdir ${options.DEPLOY_FOLDER}\\rml\\lib
+        xcopy rml\\lib\\RadeonML-DirectML.dll ${options.DEPLOY_FOLDER}\\rml\\lib\\RadeonML-DirectML.dll*
         xcopy rif\\models ${options.DEPLOY_FOLDER}\\rif\\models /s/i/y
         xcopy rif\\lib ${options.DEPLOY_FOLDER}\\rif\\lib /s/i/y
         del /q ${options.DEPLOY_FOLDER}\\rif\\lib\\*.lib
@@ -268,7 +276,7 @@ def executeBuildWindows(Map options)
         xcopy build\\viewer\\engines ${options.DEPLOY_FOLDER}\\engines /s/i/y
     """
 
-    def controlFiles = ['config.json', 'UIConfig.json', 'sky.hdr', 'RadeonProViewer.exe', 'rpml/lib/RadeonML-DirectML.dll']
+    def controlFiles = ['config.json', 'UIConfig.json', 'sky.hdr', 'RadeonProViewer.exe', 'rml/lib/RadeonML-DirectML.dll']
         controlFiles.each() {
         if (!fileExists("${options.DEPLOY_FOLDER}/${it}")) {
             error "Not found ${it}"
@@ -598,7 +606,7 @@ def call(String projectBranch = "",
                             executeTests:true,
                             DEPLOY_FOLDER:"RprViewer",
                             testsPackage:testsPackage,
-                            TEST_TIMEOUT:180,
+                            TEST_TIMEOUT:40,
                             tests:tests,
                             sendToRBS:sendToRBS,
                             universePlatforms: universePlatforms])

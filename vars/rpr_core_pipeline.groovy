@@ -256,6 +256,14 @@ def executeTests(String osName, String asicName, Map options)
                     // reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
                         if (options.currentTry < options.nodeReallocateTries) {
+                            if (osName == "Ubuntu18") {
+                                sh """
+                                    echo "Restarting Unix Machine...."
+                                    hostname
+                                    (sleep 3; sudo shutdown -r now) &
+                                """
+                                sleep(60)
+                            }
                             throw new Exception("All tests crashed")
                         } 
                     }
