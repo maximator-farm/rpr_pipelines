@@ -146,7 +146,7 @@ def executeBuildWindows(Map options)
     bat """
     mkdir Build
     cd Build
-    cmake ${options['cmakeKeys']} -G "Visual Studio 16 2019 Win64" .. >> ..\\${STAGE_NAME}.log 2>&1
+    cmake ${options['cmakeKeys']} -G "Visual Studio 16 2019" -A "x64" .. >> ..\\${STAGE_NAME}.log 2>&1
     cmake --build . --target PACKAGE --config ${build_type} >> ..\\${STAGE_NAME}.log 2>&1
     rename BaikalNext.zip BaikalNext_${STAGE_NAME}.zip
     """
