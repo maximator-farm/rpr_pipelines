@@ -285,15 +285,15 @@ def executePreBuild(Map options)
                 def new_version = version_inc(options.pluginVersion, 3)
                 println "[INFO] New build version: ${new_version}"
                 version_write("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ', new_version)
-                
+
                 options.pluginVersion = version_read("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ')
                 println "[INFO] Updated build version: ${options.pluginVersion}"
 
-                //bat """
-                //  git add version.h
-                //  git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                //  git push origin HEAD:master
-                //"""
+                bat """
+                  git add version.h
+                  git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                  git push origin HEAD:master
+                """
             }
         }
 
