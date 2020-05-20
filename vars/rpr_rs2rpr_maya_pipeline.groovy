@@ -263,10 +263,8 @@ def executePreBuild(Map options)
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-        options.pluginVersion = version_read("convertRS2RPR.py", 'ARNOLD2RPR_CONVERTER_VERSION = ')
-
+    
         println "The last commit was written by ${options.commitAuthor}."
-        println "Current converters version: ${options.pluginVersion}."
         println "Commit message: ${options.commitMessage}"
         println "Commit SHA: ${options.commitSHA}"
 
@@ -275,33 +273,35 @@ def executePreBuild(Map options)
         } else {
             currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
         }
+
+        options.pluginVersion = version_read("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ')
+        
+        if (options['incrementVersion']) {
+            if(env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
+
+                println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                println "[INFO] Current build version: ${options.pluginVersion}"
+
+                def new_version = version_inc(options.pluginVersion, 3)
+                println "[INFO] New build version: ${new_version}"
+                version_write("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ', new_version)
+                
+                options.pluginVersion = version_read("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ')
+                println "[INFO] Updated build version: ${options.pluginVersion}"
+
+                //bat """
+                //  git add version.h
+                //  git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                //  git push origin HEAD:master
+                //"""
+            }
+        }
+
         currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
         currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
         currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-        if (options['incrementVersion']) {
-            if(env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
-
-                println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
-
-                def current_version = version_read("convertRS2RPR.py", 'ARNOLD2RPR_CONVERTER_VERSION = ')
-                println "[INFO] Current build version: ${current_version}"
-
-                def new_version = version_inc(current_version, 3)
-                println "[INFO] New build version: ${new_version}"
-
-                version_write("convertRS2RPR.py", 'ARNOLD2RPR_CONVERTER_VERSION = ', new_version)
-                def updated_version = version_read("convertRS2RPR.py", 'ARNOLD2RPR_CONVERTER_VERSION = ')
-                println "[INFO] Updated build version: ${updated_version}"
-
-                //bat """
-                //  git add version.h
-                //  git commit -m "buildmaster: version update to ${updated_version}"
-                //  git push origin HEAD:master
-                //"""
-            }
-        }
     }
 
     if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
