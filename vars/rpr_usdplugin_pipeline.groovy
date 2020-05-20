@@ -89,7 +89,7 @@ def executeBuildWindows(Map options)
         -DGLEW_LOCATION="${WORKSPACE}/USDinst" ^
         -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/USDinst" ^
         -DUSD_INCLUDE_DIR="${WORKSPACE}/USDinst/include" ^
-        -DUSD_LIBRARY_DIR="${WORKSPACE}/USDinst/lib" 
+        -DUSD_LIBRARY_DIR="${WORKSPACE}/USDinst/lib"
     """
 
     CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
@@ -109,7 +109,7 @@ def executeBuildWindows(Map options)
 
             cmake -G "Visual Studio 15 2017 Win64" ${CMAKE_KEYS_USD} ^
                 -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} ^
-                -DHOUDINI_ROOT="C:/Program Files/Side Effects Software/Houdini 18.0.260" :
+                -DHOUDINI_ROOT="C:/Program Files/Side Effects Software/Houdini 18.0.260" ^
                 -DCMAKE_BUILD_TYPE=Release .. >> ..\\..\\${STAGE_NAME}.log 2>&1
 
             python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
@@ -137,7 +137,7 @@ def executeBuildOSX(Map options) {
     String CMAKE_KEYS_USD = """
         -DGLEW_LOCATION=${WORKSPACE}/USDinst \
         -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
-        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include 
+        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include \
         -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib
     """
 
@@ -184,7 +184,7 @@ def executeBuildLinux(Map options) {
     String CMAKE_KEYS_USD = """
         -DGLEW_LOCATION=${WORKSPACE}/USDinst \
         -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
-        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include 
+        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include \
         -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib
     """
 
@@ -232,7 +232,7 @@ def executeBuildCentOS(Map options) {
     String CMAKE_KEYS_USD = """
         -DGLEW_LOCATION=${WORKSPACE}/USDinst \
         -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
-        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include 
+        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include \
         -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib
     """
 
