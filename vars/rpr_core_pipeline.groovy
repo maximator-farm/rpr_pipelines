@@ -258,8 +258,8 @@ def executeTests(String osName, String asicName, Map options)
                                 case 'OSX':
                                     sh """
                                         log show --no-info --color always --predicate 'eventMessage CONTAINS[c] "radeon" OR eventMessage CONTAINS[c] "gpu" OR eventMessage CONTAINS[c] "amd"' --last 1h >> ${STAGE_NAME}.crash.log
-                                        top -b | head -n 200 >> ${STAGE_NAME}.crash.log
-                                        iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
+                                        top -l 1 | head -n 200 >> ${STAGE_NAME}.crash.log
+                                        sudo iotop | head -n 200 >> ${STAGE_NAME}.crash.log
                                     """
                                     archiveArtifacts artifacts: "*.crash.log"
                                     break;
