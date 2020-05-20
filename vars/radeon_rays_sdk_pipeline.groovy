@@ -146,6 +146,8 @@ def call(String projectBranch = "", String projectURL = 'git@github.com:GPUOpen-
                             executeTests:true,
                             PRJ_NAME:PRJ_NAME,
                             PRJ_ROOT:PRJ_ROOT,
+                            BUILD_TIMEOUT:'10',
+                            TEST_TIMEOUT:'10',
                             BUILDER_TAG:'BuilderS',
                             projectURL:projectURL,
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",

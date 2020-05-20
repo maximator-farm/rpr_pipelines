@@ -1,4 +1,4 @@
-def call(String osName, String tool, Map options, String credentialsId = 'builsRPRCredentials')
+def call(String osName, String tool, Map options, String credentialsId = '')
 {
     String customBuildLink = ""
     String extentsion = ""
@@ -24,9 +24,23 @@ def call(String osName, String tool, Map options, String credentialsId = 'builsR
 
     print "[INFO] Used specified pre built plugin for ${tool}."
 
-    if (customBuildLink.startsWith("https://builds.rpr") || credentialsId != 'builsRPRCredentials') 
+    if (customBuildLink.startsWith("https://builds.rpr"))
     {
-        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'builsRPRCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+            if (osName == "Windows") {
+                bat """
+                    curl -L -o RadeonProRender${tool}_${osName}.${extentsion} -u %USERNAME%:%PASSWORD% "${customBuildLink}"
+                """
+            } else {
+                sh """
+                    curl -L -o RadeonProRender${tool}_${osName}.${extentsion} -u %USERNAME%:%PASSWORD% '"${customBuildLink}"'
+                """
+            }
+        }
+    } 
+    else if (customBuildLink.startsWith("https://rpr.cis")) 
+    {
+        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsUser', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
             if (osName == "Windows") {
                 bat """
                     curl -L -o RadeonProRender${tool}_${osName}.${extentsion} -u %USERNAME%:%PASSWORD% "${customBuildLink}"
@@ -40,14 +54,32 @@ def call(String osName, String tool, Map options, String credentialsId = 'builsR
     }
     else
     {
-        if (osName == "Windows") {
-            bat """
-                curl -L -o RadeonProRender${tool}_${osName}.${extentsion} "${customBuildLink}"
-            """
+        if (credentialsId) {
+            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+                if (osName == "Windows") {
+                    if (credentialsId) {
+                        bat """
+                            curl -L -o RadeonProRender${tool}_${osName}.${extentsion} -u %USERNAME%:%PASSWORD% "${customBuildLink}"
+                        """
+                    } else {
+                        sh """
+                            curl -L -o RadeonProRender${tool}_${osName}.${extentsion} -u %USERNAME%:%PASSWORD% "${customBuildLink}"
+                        """
+                    }
+                }
+            }
         } else {
-            sh """
-                curl -L -o RadeonProRender${tool}_${osName}.${extentsion} '"${customBuildLink}"'
-            """
+            if (osName == "Windows") {
+                if (credentialsId) {
+                    bat """
+                        curl -L -o RadeonProRender${tool}_${osName}.${extentsion} "${customBuildLink}"
+                    """
+                } else {
+                    sh """
+                        curl -L -o RadeonProRender${tool}_${osName}.${extentsion} "${customBuildLink}"
+                    """
+                }
+            }
         }
     }
 

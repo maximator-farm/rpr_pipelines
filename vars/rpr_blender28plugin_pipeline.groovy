@@ -167,7 +167,7 @@ def executeTestCommand(String osName, Map options)
         dir('scripts')
         {
             bat """
-            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ..\\${options.stageName}.log  2>&1
+            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} >> ..\\${options.stageName}.log  2>&1
             """
         }
         break;
@@ -176,7 +176,7 @@ def executeTestCommand(String osName, Map options)
         dir("scripts")
         {
             sh """
-            ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ../${options.stageName}.log 2>&1
+            ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} >> ../${options.stageName}.log 2>&1
             """
         }
     }
@@ -239,7 +239,9 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
+        if (options.engine == 'FULL2'){
+            REF_PATH_PROFILE="${REF_PATH_PROFILE}-NorthStar"
+        }
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
@@ -326,24 +328,15 @@ def executeBuildWindows(Map options)
                 rename rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_Windows.zip
             """
 
-            String branch_postfix = ""
-            if(env.BRANCH_NAME && BRANCH_NAME != "master")
-            {
-                branch_postfix = BRANCH_NAME.replace('/', '-')
-            }
-            if(env.Branch && Branch != "master")
-            {
-                branch_postfix = Branch.replace('/', '-')
-            }
-            if(branch_postfix)
+            if(options.branch_postfix)
             {
                 bat """
-                    rename RadeonProRender*zip *.(${branch_postfix}).zip
+                    rename RadeonProRender*zip *.(${options.branch_postfix}).zip
                 """
             }
             
             archiveArtifacts "RadeonProRender*.zip"
-            String BUILD_NAME = branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_Windows.(${branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_Windows.zip"
+            String BUILD_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_Windows.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_Windows.zip"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             bat """
@@ -369,24 +362,15 @@ def executeBuildOSX(Map options)
                 mv rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_OSX.zip
             """
 
-            String branch_postfix = ""
-            if(env.BRANCH_NAME && BRANCH_NAME != "master")
-            {
-                branch_postfix = BRANCH_NAME.replace('/', '-')
-            }
-            if(env.Branch && Branch != "master")
-            {
-                branch_postfix = Branch.replace('/', '-')
-            }
-            if(branch_postfix)
+            if(options.branch_postfix)
             {
                 sh """
-                    for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${branch_postfix})\${i#\$name}"; done
+                    for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${options.branch_postfix})\${i#\$name}"; done
                 """
             }
 
             archiveArtifacts "RadeonProRender*.zip"
-            String BUILD_NAME = branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_OSX.(${branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_OSX.zip"
+            String BUILD_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_OSX.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_OSX.zip"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
             
             sh """
@@ -413,24 +397,15 @@ def executeBuildLinux(String osName, Map options)
                 mv rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_${osName}.zip
             """
 
-            String branch_postfix = ""
-            if(env.BRANCH_NAME && BRANCH_NAME != "master")
-            {
-                branch_postfix = BRANCH_NAME.replace('/', '-')
-            }
-            if(env.Branch && Branch != "master")
-            {
-                branch_postfix = Branch.replace('/', '-')
-            }
-            if(branch_postfix)
+            if(options.branch_postfix)
             {
                 sh """
-                    for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${branch_postfix})\${i#\$name}"; done
+                    for i in RadeonProRender*; do name="\${i%.*}"; mv "\$i" "\${name}.(${options.branch_postfix})\${i#\$name}"; done
                 """
             }
 
             archiveArtifacts "RadeonProRender*.zip"
-            String BUILD_NAME = branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.(${branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.zip"
+            String BUILD_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.zip"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             sh """
@@ -446,16 +421,29 @@ def executeBuildLinux(String osName, Map options)
 
 def executeBuild(String osName, Map options)
 {
+    cleanWS(osName)
+
     try {
         dir('RadeonProRenderBlenderAddon')
         {
-            checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderBlenderAddon.git')
+            checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
         }
+
+        options.branch_postfix = ""
+        if(env.BRANCH_NAME && env.BRANCH_NAME == "master")
+        {
+            options.branch_postfix = "release"
+        }
+        if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
+        {
+            options.branch_postfix = env.BRANCH_NAME.replace('/', '-')
+        }
+
+        outputEnvironmentInfo(osName)
         
         switch(osName)
         {
             case 'Windows':
-                outputEnvironmentInfo(osName)
                 executeBuildWindows(options);
                 break;
             case 'OSX':
@@ -465,7 +453,6 @@ def executeBuild(String osName, Map options)
                 }
                 withEnv(["PATH=$WORKSPACE:$PATH"])
                 {
-                    outputEnvironmentInfo(osName);
                     executeBuildOSX(options);
                  }
                 break;
@@ -476,7 +463,6 @@ def executeBuild(String osName, Map options)
                 }
                 withEnv(["PATH=$PWD:$PATH"])
                 {
-                    outputEnvironmentInfo(osName);
                     executeBuildLinux(osName, options);
                 }
         }
@@ -507,143 +493,111 @@ def executePreBuild(Map options)
         //plugin is pre built
         options['executeBuild'] = false
         options['executeTests'] = true
-        return;
+        return
     }
 
-    currentBuild.description = ""
-    ['projectBranch'].each
-    {
-        if(options[it] != 'master' && options[it] != "")
-        {
-            currentBuild.description += "<b>${it}:</b> ${options[it]}<br/>"
+    // manual job
+    if (options.forceBuild) {
+        options.executeBuild = true
+        options.executeTests = true
+    // auto job
+    } else {
+        if (env.CHANGE_URL) {
+            println "[INFO] Branch was detected as Pull Request"
+            options.isPR = true
+            options.executeBuild = true
+            options.executeTests = true
+            options.testsPackage = "regression.json"
+        } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
+           println "[INFO] ${env.BRANCH_NAME} branch was detected"
+           options.executeBuild = true
+           options.executeTests = true
+           options.testsPackage = "regression.json"
+        } else {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.testsPackage = "regression.json"
         }
     }
 
     dir('RadeonProRenderBlenderAddon')
     {
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderBlenderAddon.git', true)
+        checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
 
-        AUTHOR_NAME = bat (
-                script: "git show -s --format=%%an HEAD ",
-                returnStdout: true
-                ).split('\r\n')[2].trim()
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        options.commitShortSHA = options.commitSHA[0..6]
 
-        echo "The last commit was written by ${AUTHOR_NAME}."
-        options.AUTHOR_NAME = AUTHOR_NAME
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${options.commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
+        println "Commit shortSHA: ${options.commitShortSHA}"
 
-        commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true )
-        echo "Commit message: ${commitMessage}"
+        if (options.projectBranch){
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+        } else {
+            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+        }
 
-        options.commitMessage = commitMessage.split('\r\n')[2].trim()
-        echo "Opt.: ${options.commitMessage}"
-        options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-        options['commitShortSHA'] = options['commitSHA'][0..6]
+        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
-        if(options['incrementVersion'])
-        {
-            if("${BRANCH_NAME}" == "master" && "${AUTHOR_NAME}" != "radeonprorender")
-            {
-                options.testsPackage = "regression.json"
-                echo "Incrementing version of change made by ${AUTHOR_NAME}."
+        if (options['incrementVersion']) {
+            if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
-                String currentversion=version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ')
-                echo "currentversion ${currentversion}"
+                println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                println "[INFO] Current build version: ${options.pluginVersion}"
 
-                new_version=version_inc(currentversion, 3, ', ')
-                echo "new_version ${new_version}"
-
+                def new_version = version_inc(options.pluginVersion, 3, ', ')
+                println "[INFO] New build version: ${new_version}"
                 version_write("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', new_version, ', ')
 
-                String updatedversion=version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ', "true")
-                echo "updatedversion ${updatedversion}"
+                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ', "true")
+                println "[INFO] Updated build version: ${options.pluginVersion}"
 
                 bat """
                     git add src/rprblender/__init__.py
-                    git commit -m "buildmaster: version update to ${updatedversion}"
-                    git push origin HEAD:master
-                   """
+                    git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                    git push origin HEAD:develop
+                """
 
                 //get commit's sha which have to be build
-                options['projectBranch'] = bat ( script: "git log --format=%%H -1 ",
-                                    returnStdout: true
-                                    ).split('\r\n')[2].trim()
-
-                options['executeBuild'] = true
-                options['executeTests'] = true
+                options.projectBranch = options.commitSHA
+                println "[INFO] Project branch hash: ${options.projectBranch}"
             }
             else
             {
-                options.testsPackage = "smoke"
-                if(commitMessage.contains("CIS:BUILD"))
+                if(options.commitMessage.contains("CIS:BUILD"))
                 {
                     options['executeBuild'] = true
                 }
 
-                if(commitMessage.contains("CIS:TESTS"))
+                if(options.commitMessage.contains("CIS:TESTS"))
                 {
-                    options['executeBuild'] = true
-                    options['executeTests'] = true
-                }
-
-                if (env.CHANGE_URL)
-                {
-                    echo "branch was detected as Pull Request"
-                    options['isPR'] = true
                     options['executeBuild'] = true
                     options['executeTests'] = true
-                    options.testsPackage = "regression.json"
-                }
-
-                if("${BRANCH_NAME}" == "master")
-                {
-                   echo "rebuild master"
-                   options['executeBuild'] = true
-                   options['executeTests'] = true
-                   options.testsPackage = "regression.json"
                 }
             }
         }
-        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
-    }
 
-    if(env.CHANGE_URL)
-    {
-        //TODO: fix sha for PR
-        //options.comitSHA = bat ( script: "git log --format=%%H HEAD~1 -1", returnStdout: true ).split('\r\n')[2].trim()
-        options.AUTHOR_NAME = env.CHANGE_AUTHOR_DISPLAY_NAME
-        if (env.CHANGE_TARGET != 'master') {
-            options['executeBuild'] = true
-            options['executeTests'] = true
-        }
-        options.commitMessage = env.CHANGE_TITLE
-    }
-    
-    // if manual job
-    if(options['forceBuild'])
-    {
-        options['executeBuild'] = true
-        options['executeTests'] = true
-    }
-
-    currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
-    if(!env.CHANGE_URL)
-    {
-        currentBuild.description += "<b>Commit author:</b> ${options.AUTHOR_NAME}<br/>"
+        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+        
     }
 
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+    if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25']]]);
-    } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else if (env.JOB_NAME == "RadeonProRenderBlenderPlugin-WeeklyFull") {
+    } else if (env.JOB_NAME == "RadeonProRenderBlender2.8Plugin-WeeklyFull") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '50']]]);
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     } else {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
@@ -866,7 +820,8 @@ def appendPlatform(String filteredPlatforms, String platform) {
 }
 
 
-def call(String projectBranch = "",
+def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderBlenderAddon.git",
+    String projectBranch = "",
     String testsBranch = "master",
     String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;Ubuntu18:AMD_RadeonVII;OSX:AMD_RXVEGA',
     Boolean updateRefs = false,
@@ -886,13 +841,15 @@ def call(String projectBranch = "",
     String theshold = '0.05',
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
-    String customBuildLinkOSX = "")
+    String customBuildLinkOSX = "",
+    String engine = "1.0")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
     SPU = (SPU == 'Default') ? '25' : SPU
     iter = (iter == 'Default') ? '50' : iter
     theshold = (theshold == 'Default') ? '0.05' : theshold
+    engine = (engine == '2.0 (Northstar)') ? 'FULL2' : 'FULL'
     try
     {
         Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkLinux
@@ -952,7 +909,8 @@ def call(String projectBranch = "",
         rbs_prod = new RBSProduction(this, "Blender28", env.JOB_NAME, env)
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
-                               [projectBranch:projectBranch,
+                               [projectRepo:projectRepo,
+                                projectBranch:projectBranch,
                                 testsBranch:testsBranch,
                                 updateRefs:updateRefs,
                                 enableNotifications:enableNotifications,
@@ -981,7 +939,8 @@ def call(String projectBranch = "",
                                 theshold: theshold,
                                 customBuildLinkWindows: customBuildLinkWindows,
                                 customBuildLinkLinux: customBuildLinkLinux,
-                                customBuildLinkOSX: customBuildLinkOSX
+                                customBuildLinkOSX: customBuildLinkOSX,
+                                engine: engine
                                 ])
     }
     catch(e)
