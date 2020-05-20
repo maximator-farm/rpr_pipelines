@@ -16,7 +16,7 @@ class RBSProduction {
     def instancesConfig = [
             [
                 "url": "https://universeapi.cis.luxoft.com",
-                "credentialId": "f77c6e5e-aa5b-46f0-8604-c052b0b8fcce"
+                "credentialId": 'universeMonitoringSystem'
             ]
     ]
 
