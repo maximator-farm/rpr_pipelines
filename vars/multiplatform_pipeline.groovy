@@ -63,6 +63,10 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                                 i = options.nodeReallocateTries + 1
                                             }
 
+                                            // add info about retry to options
+                                            tests = newOptions['tests']
+                                            options['nodeRetry'][i] = JsonOutput.toJson([nodeName: "${env.NODE_NAME}", tests: "${tests}"])
+
                                             // change PC after first failed tries and don't change in the last try
                                             if (i < nodesCount - 1 && nodesCount != 1) {
                                                 println "[INFO] Updating label after failure task. Adding !${env.NODE_NAME} to labels list."
