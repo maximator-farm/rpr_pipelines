@@ -257,7 +257,7 @@ def executeTests(String osName, String asicName, Map options)
                                     break;
                                 case 'OSX':
                                     sh """
-                                        tail -n 200 /var/log/system.log >> ${STAGE_NAME}.crash.log
+                                        log show --no-info --color always --predicate 'eventMessage CONTAINS[c] "radeon" OR eventMessage CONTAINS[c] "gpu" OR eventMessage CONTAINS[c] "amd"' --last 1h >> ${STAGE_NAME}.crash.log
                                         top -b | head -n 200 >> ${STAGE_NAME}.crash.log
                                         iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
                                     """
