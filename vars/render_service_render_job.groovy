@@ -1,4 +1,4 @@
-def executeRender(osName, gpuName, Map options) {
+def executeRender(osName, gpuName, attemptNum, Map options) {
 	currentBuild.result = 'SUCCESS'
 
 	String tool = options['Tool'].split(':')[0].trim()
@@ -11,6 +11,8 @@ def executeRender(osName, gpuName, Map options) {
 		switch(osName) {
 			case 'Windows':
 				try {
+					// Send attempt number
+					render_service_send_render_attempt(attemptNum, options.id, options.django_url)
 					// Clean up work folder
 					cleanWS(osName)
 					// Download render service scripts
@@ -247,18 +249,21 @@ def startRender(osName, deviceName, renderDevice, options) {
 		echo "Scheduling Render ${osName}:${deviceName}. Attempt #${attemptNum}"
 		testTasks["Render-${osName}-${deviceName}"] = {
 			node(currentLabels) {
-				render_service_send_render_status('Found available PC (attempt #${attemptNum})', options.id, options.django_url)
 				stage("Render") {
 					timeout(time: 65, unit: 'MINUTES') {
 						ws("WS/${options.PRJ_NAME}_Render") {
 							currentNodeName = "${env.NODE_NAME}"
 							try {
-								executeRender(osName, deviceName, options)
+								executeRender(osName, deviceName, attemptNum, options)
 								successfullyDone = true
 							} catch (e) {
 								//Exclude failed node name
 								currentLabels = currentLabels + " && !" + currentNodeName
 						    	println(currentLabels)
+							}
+							if (successfullyDone || (attemptNum == maxAttempts && attemptNum == nodesCount)) {
+								// Process finished - set attempt number as 0
+								render_service_send_render_attempt(0, options.id, options.django_url)
 							}
 						}
 					}
