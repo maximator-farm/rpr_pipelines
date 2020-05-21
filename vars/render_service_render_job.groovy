@@ -188,8 +188,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 					println(e.getStackTrace())
 					print e
 					if (fail_reason != "Expected exception") {
-						String formattedResult = currentBuild.result.toLowerCase().capitalize()
-						render_service_send_render_status(formattedResult, options.id, options.django_url, currentBuild.number, fail_reason)
+						render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, fail_reason)
 					}
 					throw e
 				}
@@ -262,7 +261,7 @@ def startRender(osName, deviceName, renderDevice, options) {
 								currentLabels = currentLabels + " && !" + currentNodeName
 								println(currentLabels)
 							}
-							if (successfullyDone || (attemptNum == maxAttempts && attemptNum == nodesCount)) {
+							if (successfullyDone || attemptNum == maxAttempts || attemptNum == nodesCount) {
 								// Process finished - set attempt number as 0
 								render_service_send_render_attempt(0, options.id, options.django_url)
 							}
