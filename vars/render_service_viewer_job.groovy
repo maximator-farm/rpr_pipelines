@@ -63,7 +63,7 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 
 				render_service_send_render_status("Building RPRViewer Package", options.id, options.django_url)
 				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-					python3("configure_viewer.py --version ${options.viewer_version} --id ${id} --width ${options.width} --height ${options.height} --engine ${options.engine} --iterations ${options.iterations} --scene_name \"${options.scene_name}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% ").split('\r\n')[-1].trim()
+					python3("configure_viewer.py --version ${options.viewer_version} --id ${id} --django_ip \"${options.django_url}/\" --build_number ${currentBuild.number} --width ${options.width} --height ${options.height} --engine ${options.engine} --iterations ${options.iterations} --scene_name \"${options.scene_name}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% ").split('\r\n')[-1].trim()
 					print("Preparing results")
 				}
 				render_service_send_render_status("Completed", options.id, options.django_url)
