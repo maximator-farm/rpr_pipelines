@@ -23,7 +23,6 @@ def executeRender(osName, gpuName, Map options) {
 							'''
 						}
 					} catch(e) {
-						currentBuild.result = 'FAILURE'
 						fail_reason = "Downloading scripts failed"
 						throw e
 					}
@@ -40,7 +39,6 @@ def executeRender(osName, gpuName, Map options) {
 								"""
 							}
 						} catch(e) {
-							currentBuild.result = 'FAILURE'
 							fail_reason = "Plugin downloading failed"
 							throw e
 						}
@@ -53,7 +51,6 @@ def executeRender(osName, gpuName, Map options) {
 							installationStatus = installRPRPlugin('Windows', installation_options, tool, 'Render')
 							print "[INFO] Install function return ${installationStatus}"
 						} catch(e) {
-							currentBuild.result = 'FAILURE'
 							fail_reason = "Plugin installation failed"
 							throw e
 						}
@@ -87,7 +84,6 @@ def executeRender(osName, gpuName, Map options) {
 							"""
 						}
 					} catch(e) {
-						currentBuild.result = 'FAILURE'
 						fail_reason = "Downloading scene failed"
 						throw e
 					}
@@ -168,7 +164,6 @@ def executeRender(osName, gpuName, Map options) {
 
 						}
 					} catch(e) {
-						currentBuild.result = 'FAILURE'
 						// if status == failure then copy full path and send to slack
 						bat """
 							mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
@@ -264,7 +259,6 @@ def startRender(osName, deviceName, renderDevice, options) {
 								//Exclude failed node name
 								currentLabels = currentLabels + " && !" + currentNodeName
 						    	println(currentLabels)
-						    	currentBuild.result = 'SUCCESS'
 							}
 						}
 					}
@@ -289,6 +283,8 @@ def startRender(osName, deviceName, renderDevice, options) {
 			}
 		}
 		throw new Exception("Job was failed by all used nodes!")
+	} else {
+		currentBuild.result = 'SUCCESS'
 	}
 }
 
