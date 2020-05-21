@@ -375,7 +375,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-        String thirdpartyBranch = "master",
         String usdBranch = "master",
         String testsBranch = "master",
         String platforms = 'Windows;Ubuntu18;OSX;CentOS7_6',
@@ -399,7 +398,6 @@ def call(String projectBranch = "",
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null,
                                [projectBranch:projectBranch,
-                                thirdpartyBranch:thirdpartyBranch,
                                 usdBranch:usdBranch,
                                 testsBranch:testsBranch,
                                 updateRefs:updateRefs,
