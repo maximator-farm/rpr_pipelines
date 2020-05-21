@@ -98,8 +98,8 @@ def executeBuildWindows(String cmakeKeys)
     }
 
     bat """
-    xcopy README.md ${packageName}-rel\\README.md
-    xcopy README.md ${packageName}-dbg\\README.md
+    xcopy README.md ${packageName}-rel\\README.md* /y
+    xcopy README.md ${packageName}-dbg\\README.md* /y
 
     cd ${packageName}-rel
     del /S UnitTest*
@@ -123,8 +123,8 @@ def executeBuildWindows(String cmakeKeys)
     mkdir RIF_Samples
     mkdir RIF_Models
 
-    xcopy ${packageName}-rel RIF_Release\\${packageName}-rel
-    xcopy ${packageName}-dbg RIF_Debug\\${packageName}-dbg
+    xcopy ${packageName}-rel RIF_Release\\${packageName}-rel /s/y/i
+    xcopy ${packageName}-dbg RIF_Debug\\${packageName}-dbg /s/y/i
     xcopy samples RIF_Samples\\samples /s/y/i
     xcopy models RIF_Models\\models /s/y/i
     """
@@ -314,6 +314,8 @@ def call(String projectBranch = "",
                             enableNotifications:enableNotifications,
                             BUILDER_TAG:'BuilderS',
                             TESTER_TAG:'RIF',
+                            BUILD_TIMEOUT:'15',
+                            TEST_TIMEOUT:'30',
                             executeBuild:true,
                             executeTests:true,
                             PRJ_NAME:PRJ_NAME,

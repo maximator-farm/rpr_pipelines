@@ -80,237 +80,194 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     String CMD_BUILD_USD = """
-    if exist USDgen rmdir /s/q USDgen
-    if exist USDinst rmdir /s/q USDinst
-    python USD\\build_scripts\\build_usd.py -v --build ${WORKSPACE}/USDgen/build --src ${WORKSPACE}/USDgen/src ${WORKSPACE}/USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+        if exist USDgen rmdir /s/q USDgen
+        if exist USDinst rmdir /s/q USDinst
+        python USD\\build_scripts\\build_usd.py -v --build ${WORKSPACE}/USDgen/build --src ${WORKSPACE}/USDgen/src ${WORKSPACE}/USDinst > USD/${STAGE_NAME}_USD.log 2>&1
     """
 
-    String CMAKE_KEYS_USD = """-DGLEW_LOCATION="${WORKSPACE}/USDinst" ^
-    -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/USDinst" ^
-    -DUSD_INCLUDE_DIR="${WORKSPACE}/USDinst/include" -DUSD_LIBRARY_DIR="${WORKSPACE}/USDinst/lib" """
+    String CMAKE_KEYS_USD = """
+        -DGLEW_LOCATION="${WORKSPACE}/USDinst" ^
+        -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/USDinst" ^
+        -DUSD_INCLUDE_DIR="${WORKSPACE}/USDinst/include" ^
+        -DUSD_LIBRARY_DIR="${WORKSPACE}/USDinst/lib"
+    """
 
     CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
     CMAKE_KEYS_USD = options.enableHoudini ? "" : CMAKE_KEYS_USD
 
     withEnv(["PATH=c:\\python27\\;c:\\python27\\scripts\\;${PATH}", "WORKSPACE=${env.WORKSPACE.toString().replace('\\', '/')}"]) {
         bat """
-        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}.log 2>&1
+            call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}.log 2>&1
 
-        ${CMD_BUILD_USD}
+            ${CMD_BUILD_USD}
 
-        set PATH=${WORKSPACE}\\USDinst\\bin;${WORKSPACE}\\USDinst\\lib;%PATH%
-        set PYTHONPATH=${WORKSPACE}\\USDinst\\lib\\python;%PYTHONPATH%
+            set PATH=${WORKSPACE}\\USDinst\\bin;${WORKSPACE}\\USDinst\\lib;%PATH%
+            set PYTHONPATH=${WORKSPACE}\\USDinst\\lib\\python;%PYTHONPATH%
 
-        pushd RadeonProRenderThirdPartyComponents\\RadeonProRender-SDK\\Win
-        mkdir rprTools
-        move *.cpp rprTools
-        move *.h rprTools
-        popd
+            mkdir RadeonProRenderUSD\\build
+            pushd RadeonProRenderUSD\\build
 
-        mkdir RadeonProRenderUSD\\build
-        pushd RadeonProRenderUSD\\build
+            cmake -G "Visual Studio 15 2017 Win64" ${CMAKE_KEYS_USD} ^
+                -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} ^
+                -DHOUDINI_ROOT="C:/Program Files/Side Effects Software/Houdini 18.0.260" ^
+                -DCMAKE_BUILD_TYPE=Release .. >> ..\\..\\${STAGE_NAME}.log 2>&1
 
-        cmake -G "Visual Studio 15 2017 Win64" ${CMAKE_KEYS_USD} ^
-        -DRPR_LOCATION="${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Win" ^
-        -DRPR_LOCATION_LIB="${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Win/lib" ^
-        -DRPR_LOCATION_INCLUDE="${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Win/inc" ^
-        -DRPR_BIN_LOCATION="${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Win/bin" ^
-        -DRIF_LOCATION="${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing" ^
-        -DRIF_LOCATION_LIB="${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/Windows/lib" ^
-        -DRIF_LOCATION_INCLUDE="${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/Windows/inc" ^
-        -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} ^
-        -DHOUDINI_ROOT="C:/Program Files/Side Effects Software/Houdini 18.0.260" ^
-         .. >> ..\\..\\${STAGE_NAME}.log 2>&1
-
-         python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
-         """
-        // msbuild /t:Build /p:Configuration=Release hdRpr.sln >> ..\\..\\${STAGE_NAME}.log 2>&1
-
+            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
+        """
     }
 }
 
 def executeBuildOSX(Map options) {
+
     String CMD_BUILD_USD = """
-    if [ -d "./USDgen" ]; then
-        rm -fdr ./USDgen
-    fi
+        if [ -d "./USDgen" ]; then
+            rm -fdr ./USDgen
+        fi
 
-    if [ -d "./USDinst" ]; then
-        rm -fdr ./USDinst
-    fi
+        if [ -d "./USDinst" ]; then
+            rm -fdr ./USDinst
+        fi
 
-    mkdir -p USDgen
-    mkdir -p USDinst
+        mkdir -p USDgen
+        mkdir -p USDinst
 
-    python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+        python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
     """
 
-    String CMAKE_KEYS_USD = """-DGLEW_LOCATION=${WORKSPACE}/USDinst \
-    -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
-    -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib"""
+    String CMAKE_KEYS_USD = """
+        -DGLEW_LOCATION=${WORKSPACE}/USDinst \
+        -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
+        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include \
+        -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib
+    """
 
     CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
     CMAKE_KEYS_USD = options.enableHoudini ? "" : CMAKE_KEYS_USD
 
     withEnv(["OS="]) {
         sh """
-        ${CMD_BUILD_USD}
+            ${CMD_BUILD_USD}
 
-        export PATH=${WORKSPACE}/USDinst/bin:\$PATH
-        export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
+            export PATH=${WORKSPACE}/USDinst/bin:\$PATH
+            export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
 
-        pushd RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Mac
-        mkdir rprTools
-        mv *.cpp rprTools
-        mv *.h rprTools
-        popd
+            mkdir -p RadeonProRenderUSD/build
+            pushd RadeonProRenderUSD/build
 
-        mkdir -p RadeonProRenderUSD/build
-        pushd RadeonProRenderUSD/build
+            cmake ${CMAKE_KEYS_USD} \
+                -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} \
+                -DHOUDINI_ROOT=/Applications/Houdini/Current/Frameworks/Houdini.framework/Versions/Current/Resources \
+                -DCMAKE_BUILD_TYPE=Release .. >> ../../${STAGE_NAME}.log 2>&1
 
-        cmake ${CMAKE_KEYS_USD} -DRPR_LOCATION=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Mac \
-        -DRPR_LOCATION_LIB=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Mac/lib \
-        -DRPR_LOCATION_INCLUDE=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Mac/inc \
-        -DRIF_LOCATION=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing \
-        -DRIF_LOCATION_LIB=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/Mac/lib \
-        -DRIF_LOCATION_INCLUDE=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/Mac/inc \
-        -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} \
-        -DHOUDINI_ROOT=/Applications/Houdini/Current/Frameworks/Houdini.framework/Versions/Current/Resources \
-        -DCMAKE_BUILD_TYPE=Release \
-        .. >> ../../${STAGE_NAME}.log 2>&1
-
-        python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
+            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
         """
-        // make >> ../../${STAGE_NAME}.log 2>&1
     }
 }
 
 def executeBuildLinux(Map options) {
+
     String CMD_BUILD_USD = """
-    if [ -d "./USDgen" ]; then
-        rm -fdr ./USDgen
-    fi
+        if [ -d "./USDgen" ]; then
+            rm -fdr ./USDgen
+        fi
 
-    if [ -d "./USDinst" ]; then
-        rm -fdr ./USDinst
-    fi
+        if [ -d "./USDinst" ]; then
+            rm -fdr ./USDinst
+        fi
 
-    mkdir -p USDgen
-    mkdir -p USDinst
+        mkdir -p USDgen
+        mkdir -p USDinst
 
-    python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+        python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
     """
 
-    String CMAKE_KEYS_USD = """-DGLEW_LOCATION=${WORKSPACE}/USDinst \
-    -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
-    -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib"""
+    String CMAKE_KEYS_USD = """
+        -DGLEW_LOCATION=${WORKSPACE}/USDinst \
+        -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
+        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include \
+        -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib
+    """
 
     CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
     CMAKE_KEYS_USD = options.enableHoudini ? "" : CMAKE_KEYS_USD
+
     // set $OS=null because it use in TBB build script
     withEnv(["OS="]) {
-        // TODO: remove ln -s after Thirdparty update
         sh """
-        ${CMD_BUILD_USD}
+            ${CMD_BUILD_USD}
 
-        export PATH=${WORKSPACE}/USDinst/bin:\$PATH
-        export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
+            export PATH=${WORKSPACE}/USDinst/bin:\$PATH
+            export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
 
-        ln -s ${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/Linux/Ubuntu/lib64/libMIOpen.so.2 ${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/Linux/Ubuntu/lib64/libMIOpen.so
+            mkdir -p RadeonProRenderUSD/build
+            cd RadeonProRenderUSD/build
 
-        cd RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Linux-Ubuntu
-        mkdir rprTools
-        mv *.cpp rprTools
-        mv *.h rprTools
-        cd ${WORKSPACE}
+            cmake ${CMAKE_KEYS_USD} \
+                -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} \
+                -DHOUDINI_ROOT=/opt/hfs18.0.260 \
+                -DCMAKE_BUILD_TYPE=Release .. >> ../../${STAGE_NAME}.log 2>&1
 
-        mkdir -p RadeonProRenderUSD/build
-        cd RadeonProRenderUSD/build
-
-        cmake ${CMAKE_KEYS_USD} -DRPR_LOCATION=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Linux-Ubuntu \
-        -DRPR_LOCATION_LIB=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Linux-Ubuntu/lib \
-        -DRPR_LOCATION_INCLUDE=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Linux-Ubuntu/inc \
-        -DRIF_LOCATION=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing \
-        -DRIF_LOCATION_LIB=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/Linux/Ubuntu/lib64 \
-        -DRIF_LOCATION_INCLUDE=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/Linux/Ubuntu/include \
-        -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} \
-        -DHOUDINI_ROOT=/opt/hfs18.0.260 \
-        -DCMAKE_BUILD_TYPE=Release .. >> ../../${STAGE_NAME}.log 2>&1
-
-        python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
+            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
         """
-        // make >> ../../${STAGE_NAME}.log 2>&1
-
     }
 }
 
 def executeBuildCentOS(Map options) {
+
     String CMD_BUILD_USD = """
-    if [ -d "./USDgen" ]; then
-        rm -fdr ./USDgen
-    fi
+        if [ -d "./USDgen" ]; then
+            rm -fdr ./USDgen
+        fi
 
-    if [ -d "./USDinst" ]; then
-        rm -fdr ./USDinst
-    fi
+        if [ -d "./USDinst" ]; then
+            rm -fdr ./USDinst
+        fi
 
-    mkdir -p USDgen
-    mkdir -p USDinst
+        mkdir -p USDgen
+        mkdir -p USDinst
 
-    python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+        python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
     """
 
-    String CMAKE_KEYS_USD = """-DGLEW_LOCATION=${WORKSPACE}/USDinst \
-    -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
-    -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib"""
+    String CMAKE_KEYS_USD = """
+        -DGLEW_LOCATION=${WORKSPACE}/USDinst \
+        -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
+        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include \
+        -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib
+    """
 
     CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
     CMAKE_KEYS_USD = options.enableHoudini ? "" : CMAKE_KEYS_USD
+
     // set $OS=null because it use in TBB build script
     withEnv(["OS="]) {
-        // TODO: remove ln -s after Thirdparty update
+
         sh """
-        ${CMD_BUILD_USD}
+            ${CMD_BUILD_USD}
 
-        export PATH=${WORKSPACE}/USDinst/bin:\$PATH
-        export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
+            export PATH=${WORKSPACE}/USDinst/bin:\$PATH
+            export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
 
-        ln -s ${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/CentOS7/lib/libMIOpen.so.2 ${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/CentOS7/lib/libMIOpen.so
+            mkdir -p RadeonProRenderUSD/build
+            cd RadeonProRenderUSD/build
 
-        cd RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Linux-CentOS
-        mkdir rprTools
-        mv *.cpp rprTools
-        mv *.h rprTools
-        cd ${WORKSPACE}
+            cmake ${CMAKE_KEYS_USD} \
+                -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} \
+                -DHOUDINI_ROOT=/opt/hfs18.0.260 \
+                -DCMAKE_BUILD_TYPE=Release .. >> ../../${STAGE_NAME}.log 2>&1
 
-        mkdir -p RadeonProRenderUSD/build
-        cd RadeonProRenderUSD/build
-
-        cmake ${CMAKE_KEYS_USD} -DRPR_LOCATION=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Linux-CentOS \
-        -DRPR_LOCATION_LIB=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Linux-CentOS/lib \
-        -DRPR_LOCATION_INCLUDE=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProRender-SDK/Linux-CentOS/inc \
-        -DRIF_LOCATION=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing \
-        -DRIF_LOCATION_LIB=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/CentOS7/lib \
-        -DRIF_LOCATION_INCLUDE=${WORKSPACE}/RadeonProRenderThirdPartyComponents/RadeonProImageProcessing/CentOS7/inc \
-        -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} \
-        -DHOUDINI_ROOT=/opt/hfs18.0.260 \
-        -DCMAKE_BUILD_TYPE=Release .. >> ../../${STAGE_NAME}.log 2>&1
-
-        python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
+            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
         """
-        // make >> ../../${STAGE_NAME}.log 2>&1
-
     }
 }
 
 def executeBuild(String osName, Map options) {
+
+    cleanWS()
+
     try {
         dir('RadeonProRenderUSD') {
             checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git')
-        }
-
-        dir('RadeonProRenderThirdPartyComponents') {
-            checkOutBranchOrScm(options['thirdpartyBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderThirdPartyComponents.git')
         }
         if (options.rebuildUSD) {
             dir('USD') {
@@ -364,48 +321,50 @@ def executePreBuild(Map options) {
     {
         checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git')
 
-        AUTHOR_NAME = bat (
-                script: "git show -s --format=%%an HEAD ",
-                returnStdout: true
-                ).split('\r\n')[2].trim()
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
-        echo "The last commit was written by ${AUTHOR_NAME}."
-        options.AUTHOR_NAME = AUTHOR_NAME
+        options.majorVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_MAJOR_VERSION "', '')
+        options.minorVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_MINOR_VERSION "', '')
+        options.patchVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_PATCH_VERSION "', '')
 
-        commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true )
-        echo "Commit message: ${commitMessage}"
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${options.commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
 
-        options.commitMessage = commitMessage.split('\r\n')[2].trim()
-        echo "Opt.: ${options.commitMessage}"
-        options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        if (options.projectBranch){
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+        } else {
+            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+        }
+        currentBuild.description += "<b>Version:</b> ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
 
         if(options['incrementVersion'])
         {
-            if("${BRANCH_NAME}" == "master" && "${AUTHOR_NAME}" != "radeonprorender")
+            if(env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender")
             {
-                echo "Incrementing version of change made by ${AUTHOR_NAME}."
+                println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                println "[INFO] Current build version: ${options.pluginVersion}"
 
-                String majorVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_MAJOR_VERSION "', '')
-                String minorVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_MINOR_VERSION "', '')
-                String currentversion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_PATCH_VERSION "', '')
-                echo "currentversion ${majorVersion}.${minorVersion}.${currentversion}"
-
-                new_version=version_inc(currentversion, 1, ' ')
-                echo "new_version ${majorVersion}.${minorVersion}.${new_version}"
+                new_version = version_inc(options.patchVersion, 1, ' ')
+                println "[INFO] New build version: ${new_version}"
 
                 version_write("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_PATCH_VERSION "', new_version, '')
+                def updated_version = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_PATCH_VERSION "', '')
+                println "[INFO] Updated build version: ${updated_version}"
 
-                String updatedversion=version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_PATCH_VERSION "', '')
-                echo "updatedversion ${majorVersion}.${minorVersion}.${updatedversion}"
-
-                bat """
-                git add cmake/defaults/Version.cmake
-                git commit -m "buildmaster: version update to ${majorVersion}.${minorVersion}.${updatedversion}"
-                git push origin HEAD:master
-                """
+                //bat """
+                //    git add cmake/defaults/Version.cmake
+                //    git commit -m "buildmaster: version update to ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}"
+                //    git push origin HEAD:master
+                //"""
 
                 //get commit's sha which have to be build
                 options['projectBranch'] = bat ( script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                println "[INFO] Project branch hash: ${options.projectBranch}"
             }
         }
     }
@@ -458,7 +417,7 @@ def call(String projectBranch = "",
                                 reportName:'Test_20Report',
                                 splitTestsExectuion:splitTestsExectuion,
                                 sendToRBS:sendToRBS,
-                                TEST_TIMEOUT:720,
+                                TEST_TIMEOUT:30,
                                 enableHoudini:enableHoudini,
                                 rebuildUSD:rebuildUSD,
                                 BUILDER_TAG:'Builder6'
