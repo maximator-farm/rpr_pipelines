@@ -136,18 +136,17 @@ def main(String PCs, Map options) {
 			options['convert_branch'] = "master"
 		}
 
-		def testTasks = [:]
 		List tokens = PCs.tokenize(':')
 		String osName = tokens.get(0)
 		String deviceName = tokens.get(1)
 
 		String renderDevice = ""
-	        if (deviceName == "ANY") {
+        if (deviceName == "ANY") {
 			String tool = options['Tool'].split(':')[0].trim()
 			renderDevice = tool
-	        } else {
+        } else {
 			renderDevice = "gpu${deviceName}"
-    		}
+		}
 	
 		startConvert(osName, deviceName, renderDevice, options)
 	}

@@ -216,7 +216,6 @@ def main(String PCs, Map options) {
 			options['scripts_branch'] = "develop"
 	    }
 
-		def testTasks = [:]
 		List tokens = PCs.tokenize(':')
 		String osName = tokens.get(0)
 		String deviceName = tokens.get(1)
