@@ -169,17 +169,31 @@ def executeRender(osName, gpuName, Map options) {
 						}
 					} catch(e) {
 						currentBuild.result = 'FAILURE'
-						print e
 						// if status == failure then copy full path and send to slack
 						bat """
 							mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
 							copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
 						"""
+						// if exit code is greater than 0 or received any other exception -> script finished with unexpected exception
+						String[] messageParts = e.getMessage().split(" ")
+						Integer exitCode = messageParts[messageParts.length - 1].isInteger() ? messageParts[messageParts.length - 1].toInteger() : null
+						if (exitCode == null || exitCode > 0) {
+							fail_reason = "Unknown" 
+						} else {
+							fail_reason = "Expected exception"
+						}
+						throw e
 					}
 				} catch(e) {
+					println(e.toString())
+					println(e.getMessage())
+					println(e.getStackTrace())
 					print e
-					String formattedResult = currentBuild.result.toLowerCase().capitalize()
-					render_service_send_render_status(formattedResult, options.id, options.django_url, currentBuild.number, fail_reason)
+					if (fail_reason != "Expected exception") {
+						String formattedResult = currentBuild.result.toLowerCase().capitalize()
+						render_service_send_render_status(formattedResult, options.id, options.django_url, currentBuild.number, fail_reason)
+					}
+					throw e
 				}
 				break;
 		}
@@ -238,19 +252,15 @@ def startRender(osName, deviceName, renderDevice, options) {
 		echo "Scheduling Render ${osName}:${deviceName}. Attempt #${attemptNum}"
 		testTasks["Render-${osName}-${deviceName}"] = {
 			node(currentLabels) {
+				render_service_send_render_status('Found available PC (attempt #${attemptNum})', options.id, options.django_url)
 				stage("Render") {
 					timeout(time: 65, unit: 'MINUTES') {
 						ws("WS/${options.PRJ_NAME}_Render") {
-							currentNodeName =  "${env.NODE_NAME}"
+							currentNodeName = "${env.NODE_NAME}"
 							try {
 								executeRender(osName, deviceName, options)
 								successfullyDone = true
 							} catch (e) {
-								println(e.toString());
-								println(e.getMessage());
-								println(e.getStackTrace());
-								print e
-
 								//Exclude failed node name
 								currentLabels = currentLabels + " && !" + currentNodeName
 						    	println(currentLabels)
@@ -271,8 +281,8 @@ def startRender(osName, deviceName, renderDevice, options) {
 
 	if (!successfullyDone) {
 		if (nodesCount == 0) {
-			// master machine can't access other nodes. Run notification script on other machine
-			node("PreBuild") {
+			// master machine can't access necessary nodes. Run notification script on any machine
+			node("RenderService") {
 				stage("Notify") {
 					render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, 'No machine with specified configuration')
 				}
@@ -283,13 +293,8 @@ def startRender(osName, deviceName, renderDevice, options) {
 }
 
 def getNodesCount(labels) {
-	def nodes = jenkins.model.Jenkins.instance.getLabel(labels).getNodes()
-	def nodesCount = 0
-	for (int i = 0; i < nodes.size(); i++) {
-		if (nodes[i].toComputer().isOnline()) {
-			nodesCount++
-		}
-	}
+	def nodes = nodesByLabel label: labels, offline: false
+	def nodesCount = nodes.size()
 
 	return nodesCount
 }
