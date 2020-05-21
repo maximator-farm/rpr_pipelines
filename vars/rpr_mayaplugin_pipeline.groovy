@@ -356,8 +356,6 @@ def executeBuildOSX(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    cleanWS(osName)
-
     try {
         dir('RadeonProRenderMayaPlugin')
         {
