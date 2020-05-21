@@ -110,7 +110,7 @@ def executeBuildWindows(Map options)
             cmake -G "Visual Studio 15 2017 Win64" ${CMAKE_KEYS_USD} ^
                 -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} ^
                 -DHOUDINI_ROOT="C:/Program Files/Side Effects Software/Houdini 18.0.260" ^
-                -DCMAKE_BUILD_TYPE=Release .. >> ..\\..\\${STAGE_NAME}.log 2>&1
+                .. >> ..\\..\\${STAGE_NAME}.log 2>&1
 
             python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
         """
