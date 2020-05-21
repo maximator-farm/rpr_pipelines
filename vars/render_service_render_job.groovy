@@ -89,6 +89,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 						fail_reason = "Downloading scene failed"
 						throw e
 					}
+
 					try {
 						switch(tool) {
 							case 'Blender':
@@ -192,7 +193,6 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 					}
 					throw e
 				}
-				break;
 		}
 	}
 }
@@ -208,13 +208,13 @@ def main(String PCs, Map options) {
 	    boolean PRODUCTION = true
 
 	    if (PRODUCTION) {
-		options['django_url'] = "http://172.26.157.251:81/render/jenkins/"
-		options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
-		options['scripts_branch'] = "master"
+			options['django_url'] = "http://172.26.157.251:81/render/jenkins/"
+			options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
+			options['scripts_branch'] = "master"
 	    } else {
-		options['django_url'] = "https://testrender.cis.luxoft.com/render/jenkins/"
-		options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
-		options['scripts_branch'] = "develop"
+			options['django_url'] = "https://testrender.cis.luxoft.com/render/jenkins/"
+			options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
+			options['scripts_branch'] = "develop"
 	    }
 
 		def testTasks = [:]
@@ -240,6 +240,7 @@ def startRender(osName, deviceName, renderDevice, options) {
 	def nodesCount = getNodesCount(labels)
 	boolean successfullyDone = false
 
+	print("Max attempts: ${options.maxAttempts}")
 	def maxAttempts = "${options.maxAttempts}".toInteger()
 	def testTasks = [:]
 	def currentLabels = labels
@@ -259,7 +260,7 @@ def startRender(osName, deviceName, renderDevice, options) {
 							} catch (e) {
 								//Exclude failed node name
 								currentLabels = currentLabels + " && !" + currentNodeName
-						    	println(currentLabels)
+								println(currentLabels)
 							}
 							if (successfullyDone || (attemptNum == maxAttempts && attemptNum == nodesCount)) {
 								// Process finished - set attempt number as 0
