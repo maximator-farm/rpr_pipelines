@@ -73,9 +73,8 @@ def executeRender(osName, gpuName, Map options) {
 									installationStatus = installMSIPlugin('Windows', toolName, installationOptions)
 									break;
 							}
-							if (installationStatus != null) {
-								print "[INFO] Install function return ${installationStatus}"
-							}
+							
+							print "[INFO] Install function return ${installationStatus}"
 						} catch(e) {
 							currentBuild.result = 'FAILURE'
 							print e
