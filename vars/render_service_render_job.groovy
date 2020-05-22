@@ -1,24 +1,22 @@
-def executeRender(osName, gpuName, Map options) {
-    currentBuild.result = 'SUCCESS'
+def executeRender(osName, gpuName, attemptNum, Map options) {
+	currentBuild.result = 'SUCCESS'
 
-    String tool = options['Tool'].split(':')[0].trim()
-    String version = options['Tool'].split(':')[1].trim()
-   	String scene_name = options['sceneName']
-   	String scene_user = options['sceneUser']
+	String tool = options['Tool'].split(':')[0].trim()
+	String version = options['Tool'].split(':')[1].trim()
+	String scene_name = options['sceneName']
+	String scene_user = options['sceneUser']
 	String fail_reason = "Unknown"
-    
+
 	switch(osName) {
 		case 'Windows':
 			try {
+				// Send attempt number
+				render_service_send_render_attempt(attemptNum, options.id, options.django_url)
 				// Clean up work folder
-				bat '''
-					@echo off
-					del /q *
-					for /d %%x in (*) do @rd /s /q "%%x"
-				'''
+				cleanWS(osName)
 				// Download render service scripts
 				try {
-				        print("Downloading scripts and install requirements")
+					render_service_send_render_status("Downloading scripts and install requirements", options.id, options.django_url)
 					checkOutBranchOrScm(options['scripts_branch'], 'git@github.com:luxteam/render_service_scripts.git')
 					dir(".\\install"){
 					    bat '''
@@ -26,44 +24,61 @@ def executeRender(osName, gpuName, Map options) {
 					    '''
 					}
 				} catch(e) {
-					currentBuild.result = 'FAILURE'
-					print e
 					fail_reason = "Downloading scripts failed"
+					throw e
 				}
 
 				// download and install plugin
 				if (options["PluginLink"]) {
+					// get tool name without plugin name
+					String toolName = tool.split(' ')[0].trim()
+					Map installationOptions = [
+						'isPreBuilt': true,
+						'stageName': 'RenderServiceRender',
+						'customBuildLinkWindows': options["PluginLink"]
+					]
+
 					try {
-<<<<<<< HEAD
-					    print("Downloading scripts and install requirements")
-						checkOutBranchOrScm(options['scripts_branch'], 'git@github.com:luxteam/render_service_scripts.git')
-						dir(".\\install"){
-						    bat '''
-							install_pylibs.bat
-						    '''
-=======
-						withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-							print(python3("render_service_scripts\\send_render_status.py --django_ip \"${options.django_url}/\" --tool \"${tool}\" --status \"Installing plugin\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-						}
-						def plugin_file_name = "RadeonProRender" + tool + ".msi"
-						withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-							bat """
-								curl -o "${plugin_file_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.PluginLink}"
-							"""
->>>>>>> master
+						render_service_send_render_status("Downloading plugin", options.id, options.django_url)
+		                clearBinariesWin()
+
+	                    downloadPlugin('Windows', toolName, installationOptions, 'renderServiceCredentials')
+	                    win_addon_name = installationOptions.pluginWinSha
+					} catch(e) {
+						fail_reason = "Plugin downloading failed"
+						throw e
+					}
+
+					try {
+						render_service_send_render_status("Installing plugin", options.id, options.django_url)
+						Boolean installationStatus = null
+
+						switch(toolName) {
+							case 'Blender':
+				                bat """
+				                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+				                    move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.zip"
+				                """
+
+								installationStatus = installBlenderAddon('Windows', version, installationOptions)
+								break;
+
+							default:
+				                bat """
+				                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+				                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.msi"
+				                """
+
+								installationStatus = installMSIPlugin('Windows', toolName, installationOptions)
+								break;
 						}
 
-						def pluginSha = sha1 plugin_file_name
-						Map installation_options = ['pluginWinSha':pluginSha]
-						installationStatus = installRPRPlugin('Windows', installation_options, tool, 'Render')
 						print "[INFO] Install function return ${installationStatus}"
 					} catch(e) {
-						currentBuild.result = 'FAILURE'
-						print e
 						fail_reason = "Plugin installation failed"
+						throw e
 					}
 				}
-
 
 				// download scene, check if it is already downloaded
 				try {
@@ -71,210 +86,124 @@ def executeRender(osName, gpuName, Map options) {
 				    bat """
 						if not exist "..\\..\\RenderServiceStorage" mkdir "..\\..\\RenderServiceStorage"
 				    """
-				    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-						print(python3("render_service_scripts\\send_render_status.py --django_ip \"${options.django_url}/\" --tool \"${tool}\" --status \"Downloading scene\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-					}
+				    render_service_send_render_status("Downloading scene", options.id, options.django_url)
 					def exists = fileExists "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}"
 					if (exists) {
 						print("Scene is copying from Render Service Storage on this PC")
+
 						bat """
-							copy "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}" "${scene_name}"
-						"""
-					} else {
-						withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-							bat """
-								curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.Scene}"
-							"""
-						}
-						
-						bat """
-						    if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
-							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}"
-							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}"
+							mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
+							copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
 						"""
 					}
+					break;
 				} catch(e) {
-					currentBuild.result = 'FAILURE'
-					print e
 					fail_reason = "Downloading scene failed"
+					throw e
 				}
-				switch(tool) {
-					case 'Blender':
-						// copy necessary scripts for render
-						bat """
-							copy "render_service_scripts\\blender_render.py" "."
-							copy "render_service_scripts\\launch_blender.py" "."
-						"""
-						// Launch render
-						try {
+
+				try {
+					switch(tool) {
+						case 'Blender':
+							// copy necessary scripts for render
+							bat """
+								copy "render_service_scripts\\blender_render.py" "."
+								copy "render_service_scripts\\launch_blender.py" "."
+							"""
+							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 								python3("launch_blender.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --build_number ${currentBuild.number} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --height ${options.Height} --width ${options.Width} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
-							// get tool name without plugin name
-							String toolName = tool.split(' ')[0].trim()
-							Map installationOptions = [
-								'isPreBuilt': true,
-								'stageName': 'RenderServiceRender',
-								'customBuildLinkWindows': options["PluginLink"]
-							]
+							break;
 
-							Boolean installationStatus = null
-
-			                clearBinariesWin()
-
-		                    downloadPlugin('Windows', toolName, installationOptions, 'renderServiceCredentials')
-		                    win_addon_name = installationOptions.pluginWinSha
-
-							switch(toolName) {
-								case 'Blender':
-					                bat """
-					                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-					                    move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.zip"
-					                """
-
-									installationStatus = installBlenderAddon('Windows', version, installationOptions)
-									break;
-
-								default:
-					                bat """
-					                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-					                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.msi"
-					                """
-
-									installationStatus = installMSIPlugin('Windows', toolName, installationOptions)
-									break;
-							}
-							
-							print "[INFO] Install function return ${installationStatus}"
-						} catch(e) {
-							currentBuild.result = 'FAILURE'
-							print e
-							// if status == failure then copy full path and send to slack
+						case 'Max':
+							// copy necessary scripts for render
 							bat """
-								mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
-								copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
+								copy "render_service_scripts\\max_render.ms" "."
+								copy "render_service_scripts\\launch_max.py" "."
 							"""
-						}
-						break;
-
-					case 'Max':
-						// copy necessary scripts for render
-						bat """
-							copy "render_service_scripts\\max_render.ms" "."
-							copy "render_service_scripts\\launch_max.py" "."
-						"""
-						// Launch render
-						try {
+							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 								python3("launch_max.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --build_number ${currentBuild.number} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
-						} catch(e) {
-							currentBuild.result = 'FAILURE'
-							print e
-							// if status == failure then copy full path and send to slack
-							bat """
-								mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
-								copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
-							"""
-						}
-						break;
+							break;
 
-					case 'Maya':
-						// copy necessary scripts for render	
-						bat """
-							copy "render_service_scripts\\maya_render.py" "."
-							copy "render_service_scripts\\maya_batch_render.py" "."
-							copy "render_service_scripts\\launch_maya.py" "."
-						"""
-						// Launch render
-						try {
+						case 'Maya':
+							// copy necessary scripts for render	
+							bat """
+								copy "render_service_scripts\\maya_render.py" "."
+								copy "render_service_scripts\\maya_batch_render.py" "."
+								copy "render_service_scripts\\launch_maya.py" "."
+							"""
+							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 								python3("launch_maya.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --build_number ${currentBuild.number} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --batchRender ${options.batchRender} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
-						} catch(e) {
-							currentBuild.result = 'FAILURE'
-							print e
-							// if status == failure then copy full path and send to slack
-							bat """
-								mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
-								copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
-							"""
-						}
-						break;
+							break;
 
-					case 'Maya (Redshift)':
-						// copy necessary scripts for render	
-						bat """
-							copy "render_service_scripts\\redshift_render.py" "."
-							copy "render_service_scripts\\launch_maya_redshift.py" "."
-						"""
-						// Launch render
-						try {
+						case 'Maya (Redshift)':
+							// copy necessary scripts for render	
+							bat """
+								copy "render_service_scripts\\redshift_render.py" "."
+								copy "render_service_scripts\\launch_maya_redshift.py" "."
+							"""
+							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 								python3("launch_maya_redshift.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --build_number ${currentBuild.number} --scene_name \"${scene_name}\" --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
-						} catch(e) {
-							currentBuild.result = 'FAILURE'
-							print e
-							// if status == failure then copy full path and send to slack
+							break;
+					
+						case 'Maya (Arnold)':
+							// copy necessary scripts for render	
 							bat """
-								mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
-								copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
+								copy "render_service_scripts\\arnold_render.py" "."
+								copy "render_service_scripts\\launch_maya_arnold.py" "."
 							"""
-						}
-						break;
-				
-					case 'Maya (Arnold)':
-						// copy necessary scripts for render	
-						bat """
-							copy "render_service_scripts\\arnold_render.py" "."
-							copy "render_service_scripts\\launch_maya_arnold.py" "."
-						"""
-						// Launch render
-						try {
+							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 								python3("launch_maya_arnold.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --build_number ${currentBuild.number} --scene_name \"${scene_name}\" --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
-						} catch(e) {
-							currentBuild.result = 'FAILURE'
-							print e
-							// if status == failure then copy full path and send to slack
-							bat """
-								mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
-								copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
-							"""
-						}
-						break;
+							break;
 
-					case 'Core':
-						// copy necessary scripts for render	
-						bat """
-							copy ".\\render_service_scripts\\find_scene_core.py" "."
-							copy ".\\render_service_scripts\\launch_core_render.py" "."
-						"""
-						// Launch render
-						try {
+						case 'Core':
+							// copy necessary scripts for render	
+							bat """
+								copy ".\\render_service_scripts\\find_scene_core.py" "."
+								copy ".\\render_service_scripts\\launch_core_render.py" "."
+							"""
+							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 								python3("launch_core_render.py --django_ip \"${options.django_url}/\" --id ${id} --build_number ${currentBuild.number} --pass_limit ${options.Iterations} --width ${options.Width} --height ${options.Height} --sceneName \"${scene_name}\" --startFrame ${options.startFrame} --endFrame ${options.endFrame} --gpu \"${options.GPU}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
-						} catch(e) {
-							print e
-							// if status == failure then copy full path and send to slack
-							bat """
-								mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
-								copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
-							"""
-						}
-						break;
+							break;
 
+					}
+				} catch(e) {
+					// if status == failure then copy full path and send to slack
+					bat """
+						mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
+						copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
+					"""
+					// if exit code is greater than 0 or received any other exception -> script finished with unexpected exception
+					String[] messageParts = e.getMessage().split(" ")
+					Integer exitCode = messageParts[messageParts.length - 1].isInteger() ? messageParts[messageParts.length - 1].toInteger() : null
+					if (exitCode == null || exitCode > 0) {
+						fail_reason = "Unknown" 
+					} else {
+						fail_reason = "Expected exception"
+					}
+					throw e
 				}
 			} catch(e) {
+				println(e.toString())
+				println(e.getMessage())
+				println(e.getStackTrace())
 				print e
-				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-					print(python3("render_service_scripts\\send_render_results.py --django_ip \"${options.django_url}/\" --build_number ${currentBuild.number} --status ${currentBuild.result} --fail_reason \"${fail_reason}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} "))
+				if (fail_reason != "Expected exception") {
+					render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, fail_reason)
 				}
+				throw e
 			}
-			break;
 	}
 }
 
@@ -289,16 +218,15 @@ def main(String PCs, Map options) {
 	    boolean PRODUCTION = true
 
 	    if (PRODUCTION) {
-		options['django_url'] = "https://render.cis.luxoft.com/render/jenkins/"
-		options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
-		options['scripts_branch'] = "master"
+			options['django_url'] = "https://render.cis.luxoft.com/render/jenkins/"
+			options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
+			options['scripts_branch'] = "master"
 	    } else {
-		options['django_url'] = "https://testrender.cis.luxoft.com/render/jenkins/"
-		options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
-		options['scripts_branch'] = "develop"
+			options['django_url'] = "https://testrender.cis.luxoft.com/render/jenkins/"
+			options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
+			options['scripts_branch'] = "develop"
 	    }
 
-		def testTasks = [:]
 		List tokens = PCs.tokenize(':')
 		String osName = tokens.get(0)
 		String deviceName = tokens.get(1)
@@ -321,6 +249,7 @@ def startRender(osName, deviceName, renderDevice, options) {
 	def nodesCount = getNodesCount(labels)
 	boolean successfullyDone = false
 
+	print("Max attempts: ${options.maxAttempts}")
 	def maxAttempts = "${options.maxAttempts}".toInteger()
 	def testTasks = [:]
 	def currentLabels = labels
@@ -333,20 +262,18 @@ def startRender(osName, deviceName, renderDevice, options) {
 				stage("Render") {
 					timeout(time: 65, unit: 'MINUTES') {
 						ws("WS/${options.PRJ_NAME}_Render") {
-							currentNodeName =  "${env.NODE_NAME}"
+							currentNodeName = "${env.NODE_NAME}"
 							try {
-								executeRender(osName, deviceName, options)
+								executeRender(osName, deviceName, attemptNum, options)
 								successfullyDone = true
 							} catch (e) {
-								println(e.toString());
-								println(e.getMessage());
-								println(e.getStackTrace());
-								print e
-
 								//Exclude failed node name
 								currentLabels = currentLabels + " && !" + currentNodeName
-						    	println(currentLabels)
-						    	currentBuild.result = 'SUCCESS'
+								println(currentLabels)
+							}
+							if (successfullyDone || attemptNum == maxAttempts || attemptNum == nodesCount) {
+								// Process finished - set attempt number as 0
+								render_service_send_render_attempt(0, options.id, options.django_url)
 							}
 						}
 					}
@@ -362,18 +289,23 @@ def startRender(osName, deviceName, renderDevice, options) {
 	}
 
 	if (!successfullyDone) {
+		if (nodesCount == 0) {
+			// master machine can't access necessary nodes. Run notification script on any machine
+			node("RenderService") {
+				stage("Notify") {
+					render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, 'No machine with specified configuration')
+				}
+			}
+		}
 		throw new Exception("Job was failed by all used nodes!")
+	} else {
+		currentBuild.result = 'SUCCESS'
 	}
 }
 
 def getNodesCount(labels) {
-	def nodes = jenkins.model.Jenkins.instance.getLabel(labels).getNodes()
-	def nodesCount = 0
-	for (int i = 0; i < nodes.size(); i++) {
-		if (nodes[i].toComputer().isOnline()) {
-			nodesCount++
-		}
-	}
+	def nodes = nodesByLabel label: labels, offline: false
+	def nodesCount = nodes.size()
 
 	return nodesCount
 }
