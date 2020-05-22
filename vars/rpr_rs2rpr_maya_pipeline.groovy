@@ -277,7 +277,7 @@ def executePreBuild(Map options)
         options.pluginVersion = version_read("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ')
         
         if (options['incrementVersion']) {
-            if(env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
+            if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 println "[INFO] Current build version: ${options.pluginVersion}"
@@ -290,9 +290,9 @@ def executePreBuild(Map options)
                 println "[INFO] Updated build version: ${options.pluginVersion}"
 
                 bat """
-                  git add version.h
+                  git add convertRS2RPR.py
                   git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                  git push origin HEAD:master
+                  git push origin HEAD:develop
                 """
             }
         }
