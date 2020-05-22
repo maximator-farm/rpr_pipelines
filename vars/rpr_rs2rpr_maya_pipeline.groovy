@@ -481,7 +481,7 @@ def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_
          String tests = "",
          String toolVersion = "2020",
          Boolean isPreBuilt = true,
-         Boolean forceBuild = true) {
+         Boolean forceBuild = false) {
     try
     {
         String PRJ_NAME="RS2RPRConvertTool-Maya"
