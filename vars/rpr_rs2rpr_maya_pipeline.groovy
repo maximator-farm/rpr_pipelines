@@ -308,6 +308,13 @@ def executePreBuild(Map options)
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
         currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
+        bat """
+            rename convertRS2RPR.py convertRS2RPR_${options.pluginVersion}.py
+        """
+        archiveArtifacts "convertRS2RPR*.py"
+        String BUILD_NAME = "convertRS2RPR_${options.pluginVersion}.py"
+        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[Conversion script: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
     }
 
     if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
