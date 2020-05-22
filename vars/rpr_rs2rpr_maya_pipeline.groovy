@@ -282,10 +282,11 @@ def executePreBuild(Map options)
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 println "[INFO] Current build version: ${options.pluginVersion}"
 
+                def new_version
                 if (env.BRANCH_NAME == "master") {
-                    def new_version = version_inc(options.pluginVersion, 2)
+                    new_version = version_inc(options.pluginVersion, 2)
                 } else {
-                    def new_version = version_inc(options.pluginVersion, 3)
+                    new_version = version_inc(options.pluginVersion, 3)
                 }
                 
                 println "[INFO] New build version: ${new_version}"
