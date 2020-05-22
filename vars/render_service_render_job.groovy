@@ -90,13 +90,22 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 					def exists = fileExists "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}"
 					if (exists) {
 						print("Scene is copying from Render Service Storage on this PC")
-
 						bat """
-							mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
-							copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
+							copy "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}" "${scene_name}"
+						"""
+					} else {
+						withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+							bat """
+								curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.Scene}"
+							"""
+						}
+						
+						bat """
+						    if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
+							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}"
+							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}"
 						"""
 					}
-					break;
 				} catch(e) {
 					fail_reason = "Downloading scene failed"
 					throw e
