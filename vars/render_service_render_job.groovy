@@ -34,6 +34,14 @@ def executeRender(osName, gpuName, Map options) {
 				// download and install plugin
 				if (options["PluginLink"]) {
 					try {
+<<<<<<< HEAD
+					    print("Downloading scripts and install requirements")
+						checkOutBranchOrScm(options['scripts_branch'], 'git@github.com:luxteam/render_service_scripts.git')
+						dir(".\\install"){
+						    bat '''
+							install_pylibs.bat
+						    '''
+=======
 						withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 							print(python3("render_service_scripts\\send_render_status.py --django_ip \"${options.django_url}/\" --tool \"${tool}\" --status \"Installing plugin\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
 						}
@@ -42,6 +50,7 @@ def executeRender(osName, gpuName, Map options) {
 							bat """
 								curl -o "${plugin_file_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.PluginLink}"
 							"""
+>>>>>>> master
 						}
 
 						def pluginSha = sha1 plugin_file_name
@@ -101,6 +110,42 @@ def executeRender(osName, gpuName, Map options) {
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 								python3("launch_blender.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --build_number ${currentBuild.number} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --height ${options.Height} --width ${options.Width} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
+							// get tool name without plugin name
+							String toolName = tool.split(' ')[0].trim()
+							Map installationOptions = [
+								'isPreBuilt': true,
+								'stageName': 'RenderServiceRender',
+								'customBuildLinkWindows': options["PluginLink"]
+							]
+
+							Boolean installationStatus = null
+
+			                clearBinariesWin()
+
+		                    downloadPlugin('Windows', toolName, installationOptions, 'renderServiceCredentials')
+		                    win_addon_name = installationOptions.pluginWinSha
+
+							switch(toolName) {
+								case 'Blender':
+					                bat """
+					                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+					                    move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.zip"
+					                """
+
+									installationStatus = installBlenderAddon('Windows', version, installationOptions)
+									break;
+
+								default:
+					                bat """
+					                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+					                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.msi"
+					                """
+
+									installationStatus = installMSIPlugin('Windows', toolName, installationOptions)
+									break;
+							}
+							
+							print "[INFO] Install function return ${installationStatus}"
 						} catch(e) {
 							currentBuild.result = 'FAILURE'
 							print e
