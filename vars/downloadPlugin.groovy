@@ -1,4 +1,4 @@
-def call(String osName, String tool, Map options)
+def call(String osName, String tool, Map options, String credentialsId = '')
 {
     String customBuildLink = ""
     String extentsion = ""
@@ -54,14 +54,32 @@ def call(String osName, String tool, Map options)
     }
     else
     {
-        if (osName == "Windows") {
-            bat """
-                curl -L -o RadeonProRender${tool}_${osName}.${extentsion} "${customBuildLink}"
-            """
+        if (credentialsId) {
+            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+                if (osName == "Windows") {
+                    if (credentialsId) {
+                        bat """
+                            curl -L -o RadeonProRender${tool}_${osName}.${extentsion} -u %USERNAME%:%PASSWORD% "${customBuildLink}"
+                        """
+                    } else {
+                        sh """
+                            curl -L -o RadeonProRender${tool}_${osName}.${extentsion} -u %USERNAME%:%PASSWORD% "${customBuildLink}"
+                        """
+                    }
+                }
+            }
         } else {
-            sh """
-                curl -L -o RadeonProRender${tool}_${osName}.${extentsion} '"${customBuildLink}"'
-            """
+            if (osName == "Windows") {
+                if (credentialsId) {
+                    bat """
+                        curl -L -o RadeonProRender${tool}_${osName}.${extentsion} "${customBuildLink}"
+                    """
+                } else {
+                    sh """
+                        curl -L -o RadeonProRender${tool}_${osName}.${extentsion} "${customBuildLink}"
+                    """
+                }
+            }
         }
     }
 

@@ -110,7 +110,7 @@ def executeBuildWindows(Map options)
             cmake -G "Visual Studio 15 2017 Win64" ${CMAKE_KEYS_USD} ^
                 -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} ^
                 -DHOUDINI_ROOT="C:/Program Files/Side Effects Software/Houdini 18.0.260" ^
-                -DCMAKE_BUILD_TYPE=Release .. >> ..\\..\\${STAGE_NAME}.log 2>&1
+                .. >> ..\\..\\${STAGE_NAME}.log 2>&1
 
             python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
         """
@@ -375,7 +375,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-        String thirdpartyBranch = "master",
         String usdBranch = "master",
         String testsBranch = "master",
         String platforms = 'Windows;Ubuntu18;OSX;CentOS7_6',
@@ -399,7 +398,6 @@ def call(String projectBranch = "",
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null,
                                [projectBranch:projectBranch,
-                                thirdpartyBranch:thirdpartyBranch,
                                 usdBranch:usdBranch,
                                 testsBranch:testsBranch,
                                 updateRefs:updateRefs,

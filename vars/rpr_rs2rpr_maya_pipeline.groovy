@@ -277,12 +277,18 @@ def executePreBuild(Map options)
         options.pluginVersion = version_read("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ')
         
         if (options['incrementVersion']) {
-            if(env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
+            if((env.BRANCH_NAME == "develop" || env.BRANCH_NAME == "master") && options.commitAuthor != "radeonprorender") {
 
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 println "[INFO] Current build version: ${options.pluginVersion}"
 
-                def new_version = version_inc(options.pluginVersion, 3)
+                def new_version
+                if (env.BRANCH_NAME == "master") {
+                    new_version = version_inc(options.pluginVersion, 2)
+                } else {
+                    new_version = version_inc(options.pluginVersion, 3)
+                }
+                
                 println "[INFO] New build version: ${new_version}"
                 version_write("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ', new_version)
 
@@ -290,9 +296,9 @@ def executePreBuild(Map options)
                 println "[INFO] Updated build version: ${options.pluginVersion}"
 
                 bat """
-                  git add version.h
+                  git add convertRS2RPR.py
                   git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                  git push origin HEAD:master
+                  git push origin HEAD:${env.BRANCH_NAME}
                 """
             }
         }
@@ -301,6 +307,13 @@ def executePreBuild(Map options)
         currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
         currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+        bat """
+            rename convertRS2RPR.py convertRS2RPR_${options.pluginVersion}.py
+        """
+        archiveArtifacts "convertRS2RPR*.py"
+        String BUILD_NAME = "convertRS2RPR_${options.pluginVersion}.py"
+        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[Conversion script: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
     }
 
@@ -333,6 +346,7 @@ def executePreBuild(Map options)
             {
                 options.testsList = ['']
             }
+            println "${options.testsPackage}"
             // options.splitTestsExecution = false
             String tempTests = readFile("jobs/${options.testsPackage}")
             tempTests.split("\n").each {
@@ -461,7 +475,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
     {}
 }
 
-def call(String customBuildLinkWindows = "",
+def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_storage/RadeonProRenderMaya_2.9.10.msi",
          String projectBranch = "",
          String testsBranch = "master",
          String platforms = 'Windows:NVIDIA_GF1080TI',
@@ -474,7 +488,7 @@ def call(String customBuildLinkWindows = "",
          String tests = "",
          String toolVersion = "2020",
          Boolean isPreBuilt = true,
-         Boolean forceBuild = true) {
+         Boolean forceBuild = false) {
     try
     {
         String PRJ_NAME="RS2RPRConvertTool-Maya"
