@@ -522,6 +522,8 @@ def call(String projectBranch = "",
                             executeTests:true,
                             DEPLOY_FOLDER:"RprViewer",
                             testsPackage:testsPackage,
-                            TEST_TIMEOUT:40,
+                            // TODO: rollback after split implementation
+                            //TEST_TIMEOUT:40,
+                            TEST_TIMEOUT:120,
                             tests:tests])
 }

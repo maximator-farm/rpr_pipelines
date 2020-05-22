@@ -248,7 +248,6 @@ def executeBuildWindows(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    cleanWS(osName)
     try {
         dir('RadeonProRenderMaxPlugin')
         {
@@ -370,6 +369,7 @@ def executePreBuild(Map options)
                 """
 
                 //get commit's sha which have to be build
+                options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
                 options.projectBranch = options.commitSHA
                 println "[INFO] Project branch hash: ${options.projectBranch}"
             }

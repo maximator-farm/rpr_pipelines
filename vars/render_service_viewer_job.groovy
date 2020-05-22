@@ -5,70 +5,68 @@ def executeBuildViewer(osName, gpuName, Map options, uniqueID) {
    	String fail_reason = "Unknown"
     echo "${options}"
     
-    timeout(time: 1, unit: 'HOURS') {
-		    try {
-				print("Clean up work folder")
-				cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+	    try {
+			print("Clean up work folder")
+			cleanWs(deleteDirs: true, disableDeferredWipeout: true)
 
-				// Download render service scripts
-				try {
-					print("Downloading scripts and install requirements")
-					checkOutBranchOrScm(options['scripts_branch'], 'git@github.com:luxteam/render_service_scripts.git')
-					dir("install"){
-						bat '''
-						install_pylibs.bat
-						'''
-					}
-				} catch(e) {
-					currentBuild.result = 'FAILURE'
-					print e
-					fail_reason = "Downloading scripts failed"
+			// Download render service scripts
+			try {
+				print("Downloading scripts and install requirements")
+				checkOutBranchOrScm(options['scripts_branch'], 'git@github.com:luxteam/render_service_scripts.git')
+				dir("install"){
+					bat '''
+					install_pylibs.bat
+					'''
 				}
-
-				dir("viewer_dir") {
-					withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-						print(python3("..\\render_service_scripts\\send_viewer_status.py --django_ip \"${options.django_url}/\" --status \"Downloading viewer\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-					}
-					withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
-						bat """
-						curl --retry 3 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "https://rpr.cis.luxoft.com/job/RadeonProViewerAuto/job/master/${options.viewer_version}/artifact/RprViewer_Windows.zip"
-						"""
-					}
-
-					withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-						print(python3("..\\render_service_scripts\\send_viewer_status.py --django_ip \"${options.django_url}/\" --status \"Downloading scene\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-						bat """
-						curl --retry 3 -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.scene_link}"
-						"""
-					}
-				}
-
-				bat """
-				copy "render_service_scripts\\send_viewer_results.py" "."
-				copy "render_service_scripts\\configure_viewer.py" "."
-				"""
-
-				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-					print(python3("render_service_scripts\\send_viewer_status.py --django_ip \"${options.django_url}/\" --status \"Building RPRViewer Package\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-					python3("configure_viewer.py --version ${options.viewer_version} --width ${options.width} --height ${options.height} --engine ${options.engine} --iterations ${options.iterations} --scene_name \"${options.scene_name}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% ").split('\r\n')[-1].trim()
-					echo "Preparing results"
-					print(python3("render_service_scripts\\send_viewer_status.py --django_ip \"${options.django_url}/\" --status \"Completed\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-				}
-			    
-		    }   
-		    catch(e) {
-		    	withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-			    	print(python3("render_service_scripts\\send_viewer_status.py --django_ip \"${options.django_url}/\" --status \"Completed\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-				}
+			} catch(e) {
 				currentBuild.result = 'FAILURE'
 				print e
-				echo "Error while configurating viewer"
-		    } finally {
-		    	withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-			    	print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status ${currentBuild.result} --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-		    	}
-		    }
-	}
+				fail_reason = "Downloading scripts failed"
+			}
+
+			dir("viewer_dir") {
+				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+					print(python3("..\\render_service_scripts\\send_viewer_status.py --django_ip \"${options.django_url}/\" --status \"Downloading viewer\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+				}
+				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+					bat """
+					curl --retry 3 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "https://rpr.cis.luxoft.com/job/RadeonProViewerAuto/job/master/${options.viewer_version}/artifact/RprViewer_Windows.zip"
+					"""
+				}
+
+				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+					print(python3("..\\render_service_scripts\\send_viewer_status.py --django_ip \"${options.django_url}/\" --status \"Downloading scene\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+					bat """
+					curl --retry 3 -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.scene_link}"
+					"""
+				}
+			}
+
+			bat """
+			copy "render_service_scripts\\send_viewer_results.py" "."
+			copy "render_service_scripts\\configure_viewer.py" "."
+			"""
+
+			withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+				print(python3("render_service_scripts\\send_viewer_status.py --django_ip \"${options.django_url}/\" --status \"Building RPRViewer Package\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+				python3("configure_viewer.py --version ${options.viewer_version} --width ${options.width} --height ${options.height} --engine ${options.engine} --iterations ${options.iterations} --scene_name \"${options.scene_name}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ").split('\r\n')[-1].trim()
+				echo "Preparing results"
+				print(python3("render_service_scripts\\send_viewer_status.py --django_ip \"${options.django_url}/\" --status \"Completed\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+			}
+		    
+	    }   
+	    catch(e) {
+	    	withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+		    	print(python3("render_service_scripts\\send_viewer_status.py --django_ip \"${options.django_url}/\" --status \"Completed\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+			}
+			currentBuild.result = 'FAILURE'
+			print e
+			echo "Error while configurating viewer"
+	    } finally {
+	    	withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+		    	print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status ${currentBuild.result} --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+	    	}
+	    }
 }
 
 
@@ -198,7 +196,8 @@ def call(
     String engine = '',
     String iterations = '',
     String scene_name = '',
-    String max_attempts = ''
+    String max_attempts = '',
+    String timeout
     ) {
 	String PRJ_ROOT='RenderServiceViewerJob'
 	String PRJ_NAME='RenderServiceViewerJob'  
@@ -214,7 +213,8 @@ def call(
 	    engine:engine,
 	    iterations:iterations,
 	    scene_name:scene_name,
-	    max_attempts:max_attempts
+	    max_attempts:max_attempts,
+	    timeout:timeout
 	    ])
     }
 

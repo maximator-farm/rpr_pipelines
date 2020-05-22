@@ -90,22 +90,9 @@ def executeBuildWindows(Map options) {
                                     """
                                 }
                                 
-                                bat """
-                                    mkdir bin\\platforms
-                                    copy vs${vs_ver}\\cmake-TAN-bin\\${win_build_conf}\\TrueAudioNext.dll bin
-                                    copy vs${vs_ver}\\cmake-TrueAudioVR-bin\\${win_build_conf}\\TrueAudioVR.dll bin
-                                    copy vs${vs_ver}\\cmake-GPUUtilities-bin\\${win_build_conf}\\GPUUtilities.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Core.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Widgets.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Gui.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Gui.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\plugins\\platforms\\qwindows.dll bin\\platforms
-                                    copy ..\\..\\..\\thirdparty\\portaudio\\build\\msvc\\x64\\${win_build_conf}\\portaudio_x64.dll bin
-                                    copy vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${win_build_conf}\\TALibDopplerTest.exe bin
-                                    copy vs${vs_ver}\\cmake-TALibTestConvolution-bin\\${win_build_conf}\\TALibTestConvolution.exe bin
-                                    copy vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${win_build_conf}\\RoomAcousticsQT.exe bin
-                                """
-                                zip archive: true, dir: 'bin', glob: '', zipFile: "Windows_${win_build_name}.zip"
+                                zip archive: true, dir: 'vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${win_build_conf}', glob: '', zipFile: "Windows_RoomAcousticQT_${win_build_name}.zip"
+                                zip archive: true, dir: 'vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${win_build_conf}', glob: '', zipFile: "Windows_DopplerTest_${win_build_name}.zip"
+                                zip archive: true, dir: 'vs${vs_ver}\\cmake-TALibTestConvolution-bin\\${win_build_conf}', glob: '', zipFile: "Windows_TestConvolution_${win_build_name}.zip"
 
                             } catch (FlowInterruptedException error) {
                                 println "[INFO] Job was aborted during build stage"
@@ -173,16 +160,9 @@ def executeBuildOSX(Map options) {
                                 make VERBOSE=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                             """
 
-                            sh """
-                                mkdir bin
-                                cp cmake-TAN-bin/libTrueAudioNext.dylib bin
-                                cp cmake-TrueAudioVR-bin/libTrueAudioVR.dylib bin
-                                cp cmake-GPUUtilities-bin/libGPUUtilities.dylib bin
-                                cp cmake-TALibDopplerTest-bin/TALibDopplerTest bin
-                                cp cmake-TALibTestConvolution-bin/TALibTestConvolution bin
-                                cp cmake-RoomAcousticQT-bin/RoomAcousticsQT bin
-                            """
-                            zip archive: true, dir: 'bin', glob: '', zipFile: "OSX_${osx_build_name}.zip"
+                            zip archive: true, dir: 'cmake-RoomAcousticQT-bin', glob: '', zipFile: "MacOS_RoomAcousticQT_${win_build_name}.zip"
+                            zip archive: true, dir: 'cmake-TALibDopplerTest-bin', glob: '', zipFile: "MacOS_DopplerTest_${win_build_name}.zip"
+                            zip archive: true, dir: 'cmake-TALibTestConvolution-bin', glob: '', zipFile: "MacOS_TestConvolution_${win_build_name}.zip"
 
                         } catch (FlowInterruptedException error) {
                             println "[INFO] Job was aborted during build stage"
@@ -251,7 +231,10 @@ def executeBuildLinux(String osName, Map options) {
                             cp cmake-TALibTestConvolution-bin/TALibTestConvolution bin
                             cp cmake-RoomAcousticQT-bin/RoomAcousticsQT bin
                         """
-                        zip archive: true, dir: 'bin', glob: '', zipFile: "Ubuntu18_${ub18_build_name}.zip"
+
+                        zip archive: true, dir: 'cmake-RoomAcousticQT-bin', glob: '', zipFile: "Ubuntu18_RoomAcousticQT_${win_build_name}.zip"
+                        zip archive: true, dir: 'cmake-TALibDopplerTest-bin', glob: '', zipFile: "Ubuntu18_DopplerTest_${win_build_name}.zip"
+                        zip archive: true, dir: 'cmake-TALibTestConvolution-bin', glob: '', zipFile: "Ubuntu18_TestConvolution_${win_build_name}.zip"
 
                     } catch (FlowInterruptedException error) {
                         println "[INFO] Job was aborted during build stage"
