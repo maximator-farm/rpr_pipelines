@@ -125,7 +125,7 @@ def main(String PCs, Map options) {
 		boolean PRODUCTION = true
 
 		if (PRODUCTION) {
-			options['django_url'] = "http://172.26.157.251:81/convert/jenkins/"
+			options['django_url'] = "https://render.cis.luxoft.com/convert/jenkins/"
 			options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
 			options['scripts_branch'] = "master"
 			options['convert_branch'] = "master"

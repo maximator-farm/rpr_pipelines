@@ -114,7 +114,7 @@ def main(String platforms, Map options) {
 	    boolean PRODUCTION = true
 
 		if (PRODUCTION) {
-			options['django_url'] = "http://172.26.157.251:81/viewer/jenkins/"
+			options['django_url'] = "https://render.cis.luxoft.com/viewer/jenkins/"
 			options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
 			options['scripts_branch'] = "inemankov/refactor_statuses"
 		} else {
