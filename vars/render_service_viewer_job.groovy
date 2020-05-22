@@ -114,7 +114,7 @@ def main(String platforms, Map options) {
 		if (PRODUCTION) {
 			options['django_url'] = "https://render.cis.luxoft.com/viewer/jenkins/"
 			options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
-			options['scripts_branch'] = "inemankov/refactor_statuses"
+			options['scripts_branch'] = "master"
 		} else {
 			options['django_url'] = "https://testrender.cis.luxoft.com/viewer/jenkins/"
 			options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
@@ -142,8 +142,8 @@ def startRender(osName, deviceName, renderDevice, options) {
 	def nodesCount = getNodesCount(labels)
 	boolean successfullyDone = false
 
-	print("Max attempts: ${options.maxAttempts}")
-	def maxAttempts = "${options.maxAttempts}".toInteger()
+	print("Max attempts: ${options.max_attempts}")
+	def maxAttempts = "${options.max_attempts}".toInteger()
 	def testTasks = [:]
 	def currentLabels = labels
 	for (int attemptNum = 1; attemptNum <= maxAttempts && attemptNum <= nodesCount; attemptNum++) {
