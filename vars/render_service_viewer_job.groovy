@@ -5,100 +5,98 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
    	String fail_reason = "Unknown"
     echo "Options: ${options}"
     
-    timeout(time: 1, unit: 'HOURS') {
-	    try {
-			// Send attempt number
-			render_service_send_render_attempt(attemptNum, options.id, options.django_url)
-			// Clean up work folder
-			cleanWS(osName)
+    try {
+		// Send attempt number
+		render_service_send_render_attempt(attemptNum, options.id, options.django_url)
+		// Clean up work folder
+		cleanWS(osName)
 
-			// Download render service scripts
+		// Download render service scripts
+		try {
+			render_service_send_render_status("Downloading scripts and install requirements", options.id, options.django_url)
+			checkOutBranchOrScm(options['scripts_branch'], 'git@github.com:luxteam/render_service_scripts.git')
+			dir("install"){
+				bat '''
+				install_pylibs.bat
+				'''
+			}
+
+			bat """
+				copy "render_service_scripts\\send_viewer_results.py" "."
+			"""	
+		} catch(e) {
+			fail_reason = "Downloading scripts failed"
+			throw e
+		}
+
+		dir("viewer_dir") {
 			try {
-				render_service_send_render_status("Downloading scripts and install requirements", options.id, options.django_url)
-				checkOutBranchOrScm(options['scripts_branch'], 'git@github.com:luxteam/render_service_scripts.git')
-				dir("install"){
-					bat '''
-					install_pylibs.bat
-					'''
+				render_service_send_render_status("Downloading viewer", options.id, options.django_url)
+				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+					bat """
+						curl --retry 3 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "https://rpr.cis.luxoft.com/job/RadeonProViewerAuto/job/master/${options.viewer_version}/artifact/RprViewer_Windows.zip"
+					"""
 				}
-
-				bat """
-					copy "render_service_scripts\\send_viewer_results.py" "."
-				"""	
 			} catch(e) {
-				fail_reason = "Downloading scripts failed"
+				fail_reason = "Downloading viewer failed"
 				throw e
 			}
 
-			dir("viewer_dir") {
-				try {
-					render_service_send_render_status("Downloading viewer", options.id, options.django_url)
-					withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
-						bat """
-							curl --retry 3 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "https://rpr.cis.luxoft.com/job/RadeonProViewerAuto/job/master/${options.viewer_version}/artifact/RprViewer_Windows.zip"
-						"""
-					}
-				} catch(e) {
-					fail_reason = "Downloading viewer failed"
-					throw e
-				}
-
-				try {
-					render_service_send_render_status("Downloading scene", options.id, options.django_url)
-					withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-						bat """
-							curl --retry 3 -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.scene_link}"
-						"""
-					}
-				} catch(e) {
-					fail_reason = "Downloading scene failed"
-					throw e
-				}
-			}
-
 			try {
-				bat """
-					copy "render_service_scripts\\configure_viewer.py" "."
-				"""		
-
-				render_service_send_render_status("Building RPRViewer Package", options.id, options.django_url)
+				render_service_send_render_status("Downloading scene", options.id, options.django_url)
 				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-					python3("configure_viewer.py --version ${options.viewer_version} --id ${id} --django_ip \"${options.django_url}/\" --build_number ${currentBuild.number} --width ${options.width} --height ${options.height} --engine ${options.engine} --iterations ${options.iterations} --scene_name \"${options.scene_name}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% ").split('\r\n')[-1].trim()
-					print("Preparing results")
+					bat """
+						curl --retry 3 -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.scene_link}"
+					"""
 				}
-				render_service_send_render_status("Completed", options.id, options.django_url)
-
-		    	withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-			    	print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status \"Success\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-		    	}
 			} catch(e) {
-				// if exit code is greater than 0 or received any other exception -> script finished with unexpected exception
-				String[] messageParts = e.getMessage().split(" ")
-				Integer exitCode = messageParts[messageParts.length - 1].isInteger() ? messageParts[messageParts.length - 1].toInteger() : null
-				if (exitCode == null || exitCode > 0) {
-					fail_reason = "Unknown" 
-				} else {
-					fail_reason = "Expected exception"
-				}
+				fail_reason = "Downloading scene failed"
 				throw e
 			}
+		}
 
-	    }   
-	    catch(e) {
-			println(e.toString())
-			println(e.getMessage())
-			println(e.getStackTrace())
-			print e
-			if (fail_reason != "Expected exception") {
-				render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, fail_reason)
-			} else if (isLastAttempt) {
-		    	withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-			    	print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status \"Failure\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-		    	}
+		try {
+			bat """
+				copy "render_service_scripts\\configure_viewer.py" "."
+			"""		
+
+			render_service_send_render_status("Building RPRViewer Package", options.id, options.django_url)
+			withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+				python3("configure_viewer.py --version ${options.viewer_version} --id ${id} --django_ip \"${options.django_url}/\" --build_number ${currentBuild.number} --width ${options.width} --height ${options.height} --engine ${options.engine} --iterations ${options.iterations} --scene_name \"${options.scene_name}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ").split('\r\n')[-1].trim()
+				print("Preparing results")
+			}
+			render_service_send_render_status("Completed", options.id, options.django_url)
+
+	    	withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+		    	print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status \"Success\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+	    	}
+		} catch(e) {
+			// if exit code is greater than 0 or received any other exception -> script finished with unexpected exception
+			String[] messageParts = e.getMessage().split(" ")
+			Integer exitCode = messageParts[messageParts.length - 1].isInteger() ? messageParts[messageParts.length - 1].toInteger() : null
+			if (exitCode == null || exitCode > 0) {
+				fail_reason = "Unknown" 
+			} else {
+				fail_reason = "Expected exception"
 			}
 			throw e
-	    }
-	}
+		}
+
+    }   
+    catch(e) {
+		println(e.toString())
+		println(e.getMessage())
+		println(e.getStackTrace())
+		print e
+		if (fail_reason != "Expected exception") {
+			render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, fail_reason)
+		} else if (isLastAttempt) {
+	    	withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+		    	print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status \"Failure\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+	    	}
+		}
+		throw e
+    }
 }
 
 
@@ -216,7 +214,8 @@ def call(
     String engine = '',
     String iterations = '',
     String scene_name = '',
-    String max_attempts = ''
+    String max_attempts = '',
+    String timeout
     ) {
 	String PRJ_ROOT='RenderServiceViewerJob'
 	String PRJ_NAME='RenderServiceViewerJob'  
@@ -232,7 +231,8 @@ def call(
 	    engine:engine,
 	    iterations:iterations,
 	    scene_name:scene_name,
-	    maxAttempts:max_attempts
+	    max_attempts:max_attempts,
+	    timeout:timeout
 	    ])
     }
 

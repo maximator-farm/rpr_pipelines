@@ -151,10 +151,11 @@ def call(String projectBranch = "", String projectURL = 'git@github.com:Radeon-P
                             executeTests:true,
                             PRJ_NAME:PRJ_NAME,
                             PRJ_ROOT:PRJ_ROOT,
+                            BUILD_TIMEOUT:'10',
+                            TEST_TIMEOUT:'10',
                             BUILDER_TAG:'BuilderS',
                             projectURL:projectURL,
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
-                            slackTocken:"${SLACK_BAIKAL_TOCKEN}",
-                            TEST_TIMEOUT:60])
+                            slackTocken:"${SLACK_BAIKAL_TOCKEN}"])
 }
