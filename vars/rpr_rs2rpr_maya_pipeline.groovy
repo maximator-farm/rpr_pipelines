@@ -339,6 +339,7 @@ def executePreBuild(Map options)
             {
                 options.testsList = ['']
             }
+            println "${options.testsPackage}"
             // options.splitTestsExecution = false
             String tempTests = readFile("jobs/${options.testsPackage}")
             tempTests.split("\n").each {
