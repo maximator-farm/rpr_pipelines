@@ -313,7 +313,7 @@ def executePreBuild(Map options)
         """
         archiveArtifacts "convertRS2RPR*.py"
         String BUILD_NAME = "convertRS2RPR_${options.pluginVersion}.py"
-        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[Conversion script: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
     }
 
