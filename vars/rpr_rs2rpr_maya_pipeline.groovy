@@ -333,7 +333,7 @@ def executePreBuild(Map options)
     println "[INFO] Test package: ${options.testsPackage}"
 
     def tests = []
-    if(options.testsPackage != "none")
+    if(options.testsPackage)
     {
         dir('jobs_test_rs2rpr')
         {
