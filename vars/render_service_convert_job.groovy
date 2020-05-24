@@ -4,7 +4,7 @@ def executeConvert(osName, gpuName, attemptNum, Map options) {
 	String tool = options['Tool'].split(':')[0].trim()
 	String version = options['Tool'].split(':')[1].trim()
 	String scene_name = options['sceneName']
-   	String scene_user = options['sceneUser']
+	String scene_user = options['sceneUser']
 	String fail_reason = "Unknown"
 	
 	switch(osName) {
@@ -33,7 +33,7 @@ def executeConvert(osName, gpuName, attemptNum, Map options) {
 					bat """
 						if not exist "..\\..\\RenderServiceStorage" mkdir "..\\..\\RenderServiceStorage"
 					"""
-				    render_service_send_render_status("Downloading scene", options.id, options.django_url)
+					render_service_send_render_status("Downloading scene", options.id, options.django_url)
 					def exists = fileExists "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}"
 					if (exists) {
 						print("Scene is copying from Render Service Storage on this PC")
@@ -48,7 +48,7 @@ def executeConvert(osName, gpuName, attemptNum, Map options) {
 						}
 
 						bat """
-						    if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
+							if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
 							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}"
 							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}"
 						"""
@@ -109,7 +109,7 @@ def executeConvert(osName, gpuName, attemptNum, Map options) {
 				}
 				throw e
 			}
-    }
+	}
 }
 
 
@@ -140,16 +140,16 @@ def main(String PCs, Map options) {
 		String deviceName = tokens.get(1)
 
 		String renderDevice = ""
-        if (deviceName == "ANY") {
+		if (deviceName == "ANY") {
 			String tool = options['Tool'].split(':')[0].trim()
 			renderDevice = tool
-        } else {
+		} else {
 			renderDevice = "gpu${deviceName}"
 		}
 	
 		startConvert(osName, deviceName, renderDevice, options)
 	}
-    
+	
 }
 
 def startConvert(osName, deviceName, renderDevice, options) {
@@ -190,7 +190,7 @@ def startConvert(osName, deviceName, renderDevice, options) {
 		}
 
 		parallel testTasks	
-	    
+		
 		if (successfullyDone) {
 			break
 		}
@@ -239,6 +239,6 @@ def call(String Tool = '',
 		sceneName:sceneName,
 		sceneUser:sceneUser,
 		maxAttempts:maxAttempts,
-	    timeout:timeout
+		timeout:timeout
 		])
 	}

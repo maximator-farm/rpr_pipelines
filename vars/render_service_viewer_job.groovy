@@ -1,11 +1,11 @@
 def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) {
-    currentBuild.result = 'SUCCESS'
+	currentBuild.result = 'SUCCESS'
    
-   	String scene_name = options['scene_name']
-   	String fail_reason = "Unknown"
-    echo "Options: ${options}"
-    
-    try {
+	String scene_name = options['scene_name']
+	String fail_reason = "Unknown"
+	echo "Options: ${options}"
+	
+	try {
 		// Send attempt number
 		render_service_send_render_attempt(attemptNum, options.id, options.django_url)
 		// Clean up work folder
@@ -67,9 +67,9 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 			}
 			render_service_send_render_status("Completed", options.id, options.django_url)
 
-	    	withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-		    	print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status \"Success\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-	    	}
+			withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+				print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status \"Success\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+			}
 		} catch(e) {
 			// if exit code is greater than 0 or received any other exception -> script finished with unexpected exception
 			String[] messageParts = e.getMessage().split(" ")
@@ -82,8 +82,8 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 			throw e
 		}
 
-    }   
-    catch(e) {
+	}   
+	catch(e) {
 		println(e.toString())
 		println(e.getMessage())
 		println(e.getStackTrace())
@@ -91,12 +91,12 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 		if (fail_reason != "Expected exception") {
 			render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, fail_reason)
 		} else if (isLastAttempt) {
-	    	withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-		    	print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status \"Failure\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
-	    	}
+			withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+				print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status \"Failure\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+			}
 		}
 		throw e
-    }
+	}
 }
 
 
@@ -104,12 +104,12 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 def main(String platforms, Map options) {
 	 
 	timestamps {
-	    String PRJ_PATH="${options.PRJ_ROOT}/${options.PRJ_NAME}"
-	    String JOB_PATH="${PRJ_PATH}/${JOB_NAME}/Build-${BUILD_ID}".replace('%2F', '_')
-	    options['PRJ_PATH']="${PRJ_PATH}"
-	    options['JOB_PATH']="${JOB_PATH}"
+		String PRJ_PATH="${options.PRJ_ROOT}/${options.PRJ_NAME}"
+		String JOB_PATH="${PRJ_PATH}/${JOB_NAME}/Build-${BUILD_ID}".replace('%2F', '_')
+		options['PRJ_PATH']="${PRJ_PATH}"
+		options['JOB_PATH']="${JOB_PATH}"
 
-	    boolean PRODUCTION = true
+		boolean PRODUCTION = true
 
 		if (PRODUCTION) {
 			options['django_url'] = "https://render.cis.luxoft.com/viewer/jenkins/"
@@ -176,7 +176,7 @@ def startRender(osName, deviceName, renderDevice, options) {
 		}
 
 		parallel testTasks	
-	    
+		
 		if (successfullyDone) {
 			break
 		}
@@ -203,36 +203,36 @@ def getNodesCount(labels) {
 
 	return nodesCount
 }
-    
+	
 def call(
-    String scene_link = '',  
-    String platforms = '',
-    String viewer_version = '',
-    String id = '',
-    String width = '',
-    String height = '',
-    String engine = '',
-    String iterations = '',
-    String scene_name = '',
-    String max_attempts = '',
-    String timeout
-    ) {
+	String scene_link = '',  
+	String platforms = '',
+	String viewer_version = '',
+	String id = '',
+	String width = '',
+	String height = '',
+	String engine = '',
+	String iterations = '',
+	String scene_name = '',
+	String max_attempts = '',
+	String timeout
+	) {
 	String PRJ_ROOT='RenderServiceViewerJob'
 	String PRJ_NAME='RenderServiceViewerJob'  
 	main(platforms,[
-	    enableNotifications:false,
-	    PRJ_NAME:PRJ_NAME,
-	    PRJ_ROOT:PRJ_ROOT,
-	    scene_link:scene_link,
-	    viewer_version:viewer_version,
-	    id:id,
-	    width:width,
-	    height:height,
-	    engine:engine,
-	    iterations:iterations,
-	    scene_name:scene_name,
-	    max_attempts:max_attempts,
-	    timeout:timeout
-	    ])
-    }
+		enableNotifications:false,
+		PRJ_NAME:PRJ_NAME,
+		PRJ_ROOT:PRJ_ROOT,
+		scene_link:scene_link,
+		viewer_version:viewer_version,
+		id:id,
+		width:width,
+		height:height,
+		engine:engine,
+		iterations:iterations,
+		scene_name:scene_name,
+		max_attempts:max_attempts,
+		timeout:timeout
+		])
+	}
 

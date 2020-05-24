@@ -19,9 +19,9 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 					render_service_send_render_status("Downloading scripts and install requirements", options.id, options.django_url)
 					checkOutBranchOrScm(options['scripts_branch'], 'git@github.com:luxteam/render_service_scripts.git')
 					dir(".\\install"){
-					    bat '''
+						bat '''
 						install_pylibs.bat
-					    '''
+						'''
 					}
 				} catch(e) {
 					fail_reason = "Downloading scripts failed"
@@ -40,10 +40,10 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 
 					try {
 						render_service_send_render_status("Downloading plugin", options.id, options.django_url)
-		                clearBinariesWin()
+						clearBinariesWin()
 
-	                    downloadPlugin('Windows', toolName, installationOptions, 'renderServiceCredentials')
-	                    win_addon_name = installationOptions.pluginWinSha
+						downloadPlugin('Windows', toolName, installationOptions, 'renderServiceCredentials')
+						win_addon_name = installationOptions.pluginWinSha
 					} catch(e) {
 						fail_reason = "Plugin downloading failed"
 						throw e
@@ -55,19 +55,19 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 
 						switch(toolName) {
 							case 'Blender':
-				                bat """
-				                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-				                    move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.zip"
-				                """
+								bat """
+									IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+									move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.zip"
+								"""
 
 								installationStatus = installBlenderAddon('Windows', version, installationOptions)
 								break;
 
 							default:
-				                bat """
-				                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-				                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.msi"
-				                """
+								bat """
+									IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+									move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.msi"
+								"""
 
 								installationStatus = installMSIPlugin('Windows', toolName, installationOptions)
 								break;
@@ -82,11 +82,11 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 
 				// download scene, check if it is already downloaded
 				try {
-				    // initialize directory RenderServiceStorage
-				    bat """
+					// initialize directory RenderServiceStorage
+					bat """
 						if not exist "..\\..\\RenderServiceStorage" mkdir "..\\..\\RenderServiceStorage"
-				    """
-				    render_service_send_render_status("Downloading scene", options.id, options.django_url)
+					"""
+					render_service_send_render_status("Downloading scene", options.id, options.django_url)
 					def exists = fileExists "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}"
 					if (exists) {
 						print("Scene is copying from Render Service Storage on this PC")
@@ -101,7 +101,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 						}
 						
 						bat """
-						    if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
+							if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
 							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}"
 							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}"
 						"""
@@ -219,38 +219,38 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 def main(String PCs, Map options) {
 
 	timestamps {
-	    String PRJ_PATH="${options.PRJ_ROOT}/${options.PRJ_NAME}"
-	    String JOB_PATH="${PRJ_PATH}/${JOB_NAME}/Build-${BUILD_ID}".replace('%2F', '_')
-	    options['PRJ_PATH']="${PRJ_PATH}"
-	    options['JOB_PATH']="${JOB_PATH}"
+		String PRJ_PATH="${options.PRJ_ROOT}/${options.PRJ_NAME}"
+		String JOB_PATH="${PRJ_PATH}/${JOB_NAME}/Build-${BUILD_ID}".replace('%2F', '_')
+		options['PRJ_PATH']="${PRJ_PATH}"
+		options['JOB_PATH']="${JOB_PATH}"
 
-	    boolean PRODUCTION = true
+		boolean PRODUCTION = true
 
-	    if (PRODUCTION) {
+		if (PRODUCTION) {
 			options['django_url'] = "https://render.cis.luxoft.com/render/jenkins/"
 			options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
 			options['scripts_branch'] = "master"
-	    } else {
+		} else {
 			options['django_url'] = "https://testrender.cis.luxoft.com/render/jenkins/"
 			options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
 			options['scripts_branch'] = "develop"
-	    }
+		}
 
 		List tokens = PCs.tokenize(':')
 		String osName = tokens.get(0)
 		String deviceName = tokens.get(1)
 		
 		String renderDevice = ""
-	    if (deviceName == "ANY") {
+		if (deviceName == "ANY") {
 			String tool = options['Tool'].split(':')[0].replaceAll("\\(Redshift\\)", "").trim()
 			renderDevice = tool
-	    } else {
+		} else {
 			renderDevice = "gpu${deviceName}"
-	    }
+		}
 		
 		startRender(osName, deviceName, renderDevice, options)
 	}    
-    
+	
 }
 
 def startRender(osName, deviceName, renderDevice, options) {
@@ -291,7 +291,7 @@ def startRender(osName, deviceName, renderDevice, options) {
 		}
 
 		parallel testTasks	
-	    
+		
 		if (successfullyDone) {
 			break
 		}
@@ -325,44 +325,44 @@ def parseOptions(String Options) {
 
 	return jsonSlurper.parseText(Options)
 }
-    
+	
 def call(String PCs = '',
-    String id = '',
-    String Tool = '',
-    String Scene = '',  
-    String PluginLink = '',
-    String sceneName = '',
-    String sceneUser = '',
-    String maxAttempts = '',
-    String Options = '',
-    String timeout = ''
-    ) {
+	String id = '',
+	String Tool = '',
+	String Scene = '',  
+	String PluginLink = '',
+	String sceneName = '',
+	String sceneUser = '',
+	String maxAttempts = '',
+	String Options = '',
+	String timeout = ''
+	) {
 	String PRJ_ROOT='RenderServiceRenderJob'
 	String PRJ_NAME='RenderServiceRenderJob' 
 
 	def OptionsMap = parseOptions(Options)
 
 	main(PCs,[
-	    enableNotifications:false,
-	    PRJ_NAME:PRJ_NAME,
-	    PRJ_ROOT:PRJ_ROOT,
-	    id:id,
-	    Tool:Tool,
-	    Scene:Scene,
-	    PluginLink:PluginLink,
-	    sceneName:sceneName,
-	    sceneUser:sceneUser,
-	    maxAttempts:maxAttempts,
-	    Min_Samples:OptionsMap.min_samples,
-	    Max_Samples:OptionsMap.max_samples,
-	    Noise_threshold:OptionsMap.noise_threshold,
-	    startFrame:OptionsMap.start_frame,
-	    endFrame:OptionsMap.end_frame,
-	    Width:OptionsMap.width,
-	    Height:OptionsMap.height,
-	    Iterations:OptionsMap.iterations,
-	    GPU:OptionsMap.gpu,
-	    batchRender:OptionsMap.batch_render,
-	    timeout:timeout
-	    ])
-    }
+		enableNotifications:false,
+		PRJ_NAME:PRJ_NAME,
+		PRJ_ROOT:PRJ_ROOT,
+		id:id,
+		Tool:Tool,
+		Scene:Scene,
+		PluginLink:PluginLink,
+		sceneName:sceneName,
+		sceneUser:sceneUser,
+		maxAttempts:maxAttempts,
+		Min_Samples:OptionsMap.min_samples,
+		Max_Samples:OptionsMap.max_samples,
+		Noise_threshold:OptionsMap.noise_threshold,
+		startFrame:OptionsMap.start_frame,
+		endFrame:OptionsMap.end_frame,
+		Width:OptionsMap.width,
+		Height:OptionsMap.height,
+		Iterations:OptionsMap.iterations,
+		GPU:OptionsMap.gpu,
+		batchRender:OptionsMap.batch_render,
+		timeout:timeout
+		])
+	}
