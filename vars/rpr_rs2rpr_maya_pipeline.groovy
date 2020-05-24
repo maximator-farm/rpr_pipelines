@@ -330,6 +330,8 @@ def executePreBuild(Map options)
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     }
 
+    println "[INFO] Test package: ${options.testsPackage}"
+
     def tests = []
     if(options.testsPackage != "none")
     {
