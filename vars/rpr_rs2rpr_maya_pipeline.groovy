@@ -27,7 +27,6 @@ def getMayaPluginInstaller(String osName, Map options)
         default:
             echo "[WARNING] ${osName} is not supported"
     }
-
 }
 
 def executeGenTestRefCommand(String osName, Map options)
@@ -38,18 +37,11 @@ def executeGenTestRefCommand(String osName, Map options)
         {
             case 'Windows':
                 bat """
-                make_rpr_baseline.bat
-                """
-                break;
-            case 'OSX':
-                sh """
-                ./make_rpr_baseline.sh
+                    make_rpr_baseline.bat
                 """
                 break;
             default:
-                sh """
-                ./make_rpr_baseline.sh
-                """
+                echo "[WARNING] ${osName} is not supported"
         }
     }
 }
@@ -60,7 +52,9 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
     dir("scripts") {
         switch(osName) {
             case 'Windows':
-                bat "build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}.cb.log  2>&1"
+                bat """
+                    build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}.cb.log  2>&1
+                """
                 break;
             default:
                 echo "[WARNING] ${osName} is not supported"
@@ -73,23 +67,16 @@ def executeTestCommand(String osName, Map options)
 {
     switch(osName)
     {
-    case 'Windows':
-        dir('scripts')
-        {
-            bat """
-            render_rpr.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
-            """
-        }
-        break;
-    case 'OSX':
-        sh """
-        echo 'sample image' > ./OutputImages/sample_image.txt
-        """
-        break;
-    default:
-        sh """
-        echo 'sample image' > ./OutputImages/sample_image.txt
-        """
+        case 'Windows':
+            dir('scripts')
+            {
+                bat """
+                    render_rpr.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
+                """
+            }
+            break;
+        default:
+            echo "[WARNING] ${osName} is not supported"
     }
 }
 
@@ -104,12 +91,13 @@ def executeTests(String osName, String asicName, Map options)
 
         timeout(time: "5", unit: 'MINUTES') {
             try {
+                cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rs2rpr.git')
                 dir('jobs/Scripts')
                 {
                     unstash "conversionScript"
                 }
-                } catch(e) {
+            } catch(e) {
                 println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
                 println(e.toString())
                 throw e
@@ -174,13 +162,17 @@ def executeTests(String osName, String asicName, Map options)
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
                 }
-            } catch (e) {}
+            } catch (e) {
+                println("[WARNING] Baseline doesn't exist.")
+            }
             try
             {
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE_OR}/${it}", './Work/Baseline/')
                 }
-            } catch (e) {}
+            } catch (e) {
+                println("[WARNING] Baseline doesn't exist.")
+            }
             executeTestCommand(osName, options)
         }
     } catch (e) {
@@ -222,9 +214,6 @@ def executeTests(String osName, String asicName, Map options)
     }
 }
 
-def executeBuild(String osName, Map options)
-{
-}
 
 def executePreBuild(Map options)
 {
@@ -320,7 +309,7 @@ def executePreBuild(Map options)
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else if (env.JOB_NAME == "Vray2RPRConvertToolManual-Maya-Nightly") {
+    } else if (env.JOB_NAME == "Redshift2RPRConvertToolNightly-Maya") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '15']]]);
@@ -333,7 +322,7 @@ def executePreBuild(Map options)
     println "[INFO] Test package: ${options.testsPackage}"
 
     def tests = []
-    if(options.testsPackage)
+    if(options.testsPackage && options.testsPackage != "none")
     {
         dir('jobs_test_rs2rpr')
         {
@@ -491,7 +480,7 @@ def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_
         String PRJ_NAME="RS2RPRConvertTool-Maya"
         String PRJ_ROOT="rpr-tools"
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
+        multiplatform_pipeline(platforms, this.&executePreBuild, null, this.&executeTests, this.&executeDeploy,
                                [customBuildLinkWindows:customBuildLinkWindows,
                                 projectBranch:projectBranch,
                                 testsBranch:testsBranch,
