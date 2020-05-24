@@ -229,14 +229,14 @@ def executePreBuild(Map options)
             println "[INFO] Branch was detected as Pull Request"
             options.isPR = true
             options.executeTests = true
-            options.tests = "DomeLight"
+            options.testsPackage = "Master"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
             options.executeTests = true
-            options.tests = "DomeLight"
+            options.testsPackage = "PR"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options.tests = "DomeLight"
+            options.testsPackage = "PR"
         }
     }
 
@@ -323,7 +323,7 @@ def executePreBuild(Map options)
     println "[INFO] Test package: ${options.testsPackage}"
 
     def tests = []
-    if(options.testsPackage && options.testsPackage != "none")
+    if(options.testsPackage != "none")
     {
         dir('jobs_test_vr2rpr_maya')
         {
