@@ -4,27 +4,22 @@ def getMayaPluginInstaller(String osName, Map options)
     {
         case 'Windows':
 
-            if (options.pluginWinSha) {
-                addon_name = options.pluginWinSha
-            } else {
-                addon_name = "unknown"
-            }
+            println "PluginSHA: ${options.pluginWinSha}"
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.msi")) {
+            if (!options.pluginWinSha || !fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginWinSha}.msi")) {
 
                 clearBinariesWin()
                 
                 println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
                 downloadPlugin(osName, "Maya", options)
-                addon_name = options.pluginWinSha
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${addon_name}.msi"
+                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.msi"
                 """
 
             } else {
-                println "[INFO] The plugin ${addon_name}.msi exists in the storage."
+                println "[INFO] The plugin ${options.pluginWinSha}.msi exists in the storage."
             }
 
             break;
@@ -243,14 +238,14 @@ def executePreBuild(Map options)
             println "[INFO] Branch was detected as Pull Request"
             options.isPR = true
             options.executeTests = true
-            options.testsPackage = "Complex"
+            options.tests = "IESLight"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
-           println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options.executeTests = true
-           options.testsPackage = "Complex"
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.executeTests = true
+            options.tests = "IESLight"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options.testsPackage = "Complex"
+            options.tests = "IESLight"
         }
     }
 
