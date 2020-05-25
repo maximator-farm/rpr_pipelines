@@ -244,7 +244,7 @@ def executeTests(String osName, String asicName, Map options)
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
                     // reallocate node if there are still attempts
-                    if (true){//sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                    if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
                         if (options.currentTry < options.nodeReallocateTries) {
                             switch(osName){
                                 case 'Windows':
