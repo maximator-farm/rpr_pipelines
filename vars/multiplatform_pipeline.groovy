@@ -4,6 +4,7 @@ import hudson.plugins.git.GitException;
 import java.nio.channels.ClosedChannelException;
 import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
+import groovy.json.*
 
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
