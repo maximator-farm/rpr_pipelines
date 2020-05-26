@@ -214,36 +214,37 @@ def executeTests(String osName, String asicName, Map options)
                     echo "Stashing test results to : ${options.testResultsName}"
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
+                    switch(osName){
+                        case 'Windows':
+                            powershell """
+                                Get-EventLog -LogName * -Newest 200 >> ${STAGE_NAME}.crash.log
+                                ps | sort -des cpu | select -f 200 | ft -a >> ${STAGE_NAME}.crash.log
+                                openfiles /query >> ${STAGE_NAME}.crash.log
+                            """
+                            break;
+                        case 'OSX':
+                            sh """
+                                tail -n 200 /var/log/system.log >> ${STAGE_NAME}.crash.log
+                                top -b | head -n 200 >> ${STAGE_NAME}.crash.log
+                                iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
+                            """
+                            break;
+                        default:
+                            sh """
+                                dmesg | tail -n 200 >> ${STAGE_NAME}.crash.log
+                                top -b | head -n 200 >> ${STAGE_NAME}.crash.log
+                                iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
+                                echo "Restarting Unix Machine...."
+                                hostname
+                                (sleep 3; sudo shutdown -r now) &
+                            """
+                            sleep(60)
+                            break;
+                    }
+
                     // reallocate node if there are still attempts
                     if (true){//sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
                         if (options.currentTry < options.nodeReallocateTries) {
-                            switch(osName){
-                                case 'Windows':
-                                    powershell """
-                                        Get-EventLog -LogName * -Newest 200 >> ${STAGE_NAME}.crash.log
-                                        ps | sort -des cpu | select -f 200 | ft -a >> ${STAGE_NAME}.crash.log
-                                        openfiles /query >> ${STAGE_NAME}.crash.log
-                                    """
-                                    break;
-                                case 'OSX':
-                                    sh """
-                                        tail -n 200 /var/log/system.log >> ${STAGE_NAME}.crash.log
-                                        top -b | head -n 200 >> ${STAGE_NAME}.crash.log
-                                        iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
-                                    """
-                                    break;
-                                default:
-                                    sh """
-                                        dmesg | tail -n 200 >> ${STAGE_NAME}.crash.log
-                                        top -b | head -n 200 >> ${STAGE_NAME}.crash.log
-                                        iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
-                                        echo "Restarting Unix Machine...."
-                                        hostname
-                                        (sleep 3; sudo shutdown -r now) &
-                                    """
-                                    sleep(60)
-                                    break;
-                            }
                             archiveArtifacts artifacts: "*.crash.log"
                             throw new Exception("All tests crashed")
                         }
