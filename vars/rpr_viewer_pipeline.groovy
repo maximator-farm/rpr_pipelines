@@ -525,5 +525,6 @@ def call(String projectBranch = "",
                             // TODO: rollback after split implementation
                             //TEST_TIMEOUT:40,
                             TEST_TIMEOUT:120,
+                            DEPLOY_TIMEOUT:45,
                             tests:tests])
 }
