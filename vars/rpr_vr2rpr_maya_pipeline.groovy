@@ -1,32 +1,25 @@
-
-
 def getMayaPluginInstaller(String osName, Map options)
 {
     switch(osName)
     {
         case 'Windows':
 
-            if (options.pluginWinSha) {
-                addon_name = options.pluginWinSha
-            } else {
-                addon_name = "unknown"
-            }
+            println "PluginSHA: ${options.pluginWinSha}"
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.msi")) {
+            if (!options.pluginWinSha || !fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginWinSha}.msi")) {
 
                 clearBinariesWin()
                 
                 println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
                 downloadPlugin(osName, "Maya", options)
-                addon_name = options.pluginWinSha
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${addon_name}.msi"
+                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.msi"
                 """
 
             } else {
-                println "[INFO] The plugin ${addon_name}.msi exists in the storage."
+                println "[INFO] The plugin ${options.pluginWinSha}.msi exists in the storage."
             }
 
             break;
@@ -34,8 +27,8 @@ def getMayaPluginInstaller(String osName, Map options)
         default:
             echo "[WARNING] ${osName} is not supported"
     }
-
 }
+
 
 def executeGenTestRefCommand(String osName, Map options)
 {
@@ -45,18 +38,11 @@ def executeGenTestRefCommand(String osName, Map options)
         {
             case 'Windows':
                 bat """
-                make_rpr_baseline.bat
-                """
-                break;
-            case 'OSX':
-                sh """
-                ./make_rpr_baseline.sh
+                    make_rpr_baseline.bat
                 """
                 break;
             default:
-                sh """
-                ./make_rpr_baseline.sh
-                """
+                echo "[WARNING] ${osName} is not supported"
         }
     }
 }
@@ -74,6 +60,7 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
         }
     }
 }
+
 
 def executeTestCommand(String osName, Map options)
 {
@@ -106,7 +93,7 @@ def executeTests(String osName, String asicName, Map options)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
                 dir('jobs/Scripts')
                 {
-                    unstash "convertionScript"
+                    unstash "conversionScript"
                 }
             } catch(e) {
                 println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
@@ -155,7 +142,7 @@ def executeTests(String osName, String asicName, Map options)
             dir('scripts')
             {
                 bat """
-                render_or.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
+                    render_or.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
                 """
                 bat "make_original_baseline.bat"
             }
@@ -232,37 +219,115 @@ def executeTests(String osName, String asicName, Map options)
 
 def executePreBuild(Map options)
 {
+    // manual job
+    if (options.forceBuild) {
+        options.executeBuild = true
+        options.executeTests = true
+    // auto job
+    } else {
+        if (env.CHANGE_URL) {
+            println "[INFO] Branch was detected as Pull Request"
+            options.isPR = true
+            options.executeTests = true
+            options.testsPackage = "Master"
+        } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.executeTests = true
+            options.testsPackage = "PR"
+        } else {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.testsPackage = "PR"
+        }
+    }
 
     dir('Vray2RPRConvertTool-Maya')
     {
         checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/Vray2RPRConvertTool-Maya.git')
 
-        stash includes: "convertVR2RPR.py", name: "convertionScript"
+        stash includes: "convertVR2RPR.py", name: "conversionScript"
 
-        AUTHOR_NAME = bat (
-                script: "git show -s --format=%%an HEAD ",
-                returnStdout: true
-                ).split('\r\n')[2].trim()
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${options.commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
 
-        echo "The last commit was written by ${AUTHOR_NAME}."
-        options.AUTHOR_NAME = AUTHOR_NAME
+        if (options.projectBranch){
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+        } else {
+            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+        }
 
-        commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true )
-        echo "Commit message: ${commitMessage}"
+        options.pluginVersion = version_read("convertVR2RPR.py", 'VR2RPR_CONVERTER_VERSION = ')
 
-        options.commitMessage = commitMessage.split('\r\n')[2].trim()
-        echo "Opt.: ${options.commitMessage}"
-        options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        if (options['incrementVersion']) {
+            if((env.BRANCH_NAME == "develop" || env.BRANCH_NAME == "master") && options.commitAuthor != "radeonprorender") {
 
+                println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                println "[INFO] Current build version: ${options.pluginVersion}"
+
+                def new_version
+                if (env.BRANCH_NAME == "master") {
+                    new_version = version_inc(options.pluginVersion, 2)
+                } else {
+                    new_version = version_inc(options.pluginVersion, 3)
+                }
+                
+                println "[INFO] New build version: ${new_version}"
+                version_write("convertVR2RPR.py", 'VR2RPR_CONVERTER_VERSION = ', new_version)
+
+                options.pluginVersion = version_read("convertVR2RPR.py", 'VR2RPR_CONVERTER_VERSION = ')
+                println "[INFO] Updated build version: ${options.pluginVersion}"
+
+                bat """
+                  git add convertVR2RPR.py
+                  git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                  git push origin HEAD:${env.BRANCH_NAME}
+                """
+            }
+        }
+
+        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+        bat """
+            rename convertVR2RPR.py convertVR2RPR_${options.pluginVersion}.py
+        """
+        archiveArtifacts "convertVR2RPR*.py"
+        String BUILD_NAME = "convertVR2RPR${options.pluginVersion}.py"
+        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
     }
 
+    if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
+    } else if (env.JOB_NAME == "Vray2RPRConvertToolNightly-Maya") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '15']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
+    }
+
+    println "[INFO] Test package: ${options.testsPackage}"
 
     def tests = []
     if(options.testsPackage != "none")
     {
         dir('jobs_test_vr2rpr_maya')
         {
-            checkOutBranchOrScm(options['testsBranch'], 'https://github.com/luxteam/jobs_test_vr2rpr_maya.git')
+            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
             // json means custom test suite. Split doesn't supported
             if(options.testsPackage.endsWith('.json'))
             {
@@ -396,38 +461,43 @@ def executeDeploy(Map options, List platformList, List testResultList)
     {}
 }
 
-def call(String customBuildLinkWindows = "",
+def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_storage/RadeonProRenderMaya_2.9.8.msi",
          String projectBranch = "",
          String testsBranch = "master",
          String platforms = 'Windows:NVIDIA_GF1080TI',
          Boolean updateORRefs = false,
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
+         Boolean incrementVersion = true,
+         Boolean skipBuild = true,
          String testsPackage = "",
          String tests = "",
-         String toolVersion = "2020") {
+         String toolVersion = "2020",
+         Boolean isPreBuilt = true,
+         Boolean forceBuild = false){
     try
     {
         String PRJ_NAME="Vray2RPRConvertTool-Maya"
         String PRJ_ROOT="rpr-tools"
 
         multiplatform_pipeline(platforms, this.&executePreBuild, null, this.&executeTests, this.&executeDeploy,
-                                [customBuildLinkWindows:customBuildLinkWindows,
+                               [customBuildLinkWindows:customBuildLinkWindows,
                                 projectBranch:projectBranch,
                                 testsBranch:testsBranch,
                                 updateORRefs:updateORRefs,
                                 updateRefs:updateRefs,
                                 enableNotifications:enableNotifications,
-                                skipBuild:true,
-                                isPreBuilt:true,
-                                executeTests:true,
-                                toolVersion:toolVersion,
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
+                                incrementVersion:incrementVersion,
+                                skipBuild:skipBuild,
                                 testsPackage:testsPackage,
                                 tests:tests,
-                                TESTER_TAG:"VRayMaya",
+                                toolVersion:toolVersion,
+                                isPreBuilt:isPreBuilt,
+                                forceBuild:forceBuild,
                                 reportName:'Test_20Report',
+                                TESTER_TAG:"VRayMaya",
                                 TEST_TIMEOUT:120])
     }
     catch(e) {

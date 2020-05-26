@@ -45,7 +45,7 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
                 default:
                     sh """
                         export LD_LIBRARY_PATH=\$PWD/../${options.PRJ_NAME}-TestAssets:\$LD_LIBRARY_PATH
-                        pip3.8 install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1                        
+                        pip3.8 install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                         python3.8 -V >> ${STAGE_NAME}.ft.log 2>&1
                         env >> ${STAGE_NAME}.ft.log 2>&1
                         python3.8 run_tests.py -t tests -e ../${options.PRJ_NAME}-TestAssets/test_app -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
@@ -167,7 +167,7 @@ def executeBuildOSX(Map options)
         cd build
         cmake ${cmakeKeysOSX} .. >> ../${STAGE_NAME}.log 2>&1
         make -j >> ../${STAGE_NAME}.log 2>&1
-        
+
         mv bin Release
         mkdir ./Release/rml
         mkdir ./Release/rml/rml
@@ -201,13 +201,13 @@ def executeBuildLinux(Map options)
         mv bin Release
         cp ../third_party/miopen/libMIOpen.so* ./Release
         cp ../third_party/tensorflow_cc/linux/* ./Release
-        
+
         mkdir ./Release/rml
         mkdir ./Release/rml/rml
         mkdir ./Release/rml/rml_internal
         cp ../rml/include/rml/*.h* ./Release/rml/rml
         cp ../rml/include/rml_internal/*.h* ./Release/rml/rml_internal
-        
+
         tar cf ${CIS_OS}_Release.tar Release
     """
     zip archive: true, dir: 'build/Release', glob: 'libRadeonML*.so, libMIOpen*.so, libtensorflow*.so, test*', zipFile: "${CIS_OS}_Release.zip"
@@ -321,7 +321,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectBranch = "",
          String testsBranch = "master",
          String assestsBranch = "master",
-         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080;Ubuntu18:AMD_RadeonVII,NVIDIA_GTX980;CentOS7_6',
+         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080;Ubuntu18:AMD_RadeonVII,NVIDIA_GTX980;CentOS7_6;OSX',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
          Boolean enableNotifications = true,
          Boolean executeFT = false)

@@ -121,7 +121,10 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MaxAssets/", 'MaxAssets')
+        dir("${CIS_TOOLS}/../TestResources/rpr_max_autotests")
+        {
+            checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_max_autotests.git", true, false, true, 'radeonprorender-gitlab', true)
+        }
 
         if (!options['skipBuild']) {
             try {
@@ -330,7 +333,7 @@ def executePreBuild(Map options)
            options.testsPackage = "regression.json"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options.testsPackage = "smoke"
+            options.testsPackage = "regression.json"
         }
     }
 
@@ -348,42 +351,36 @@ def executePreBuild(Map options)
         println "Commit SHA: ${options.commitSHA}"
         println "Commit shortSHA: ${options.commitShortSHA}"
 
-        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMaxPlugin\\version.h", '#define VERSION_STR')
-
         if (options.projectBranch){
             currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
         } else {
             currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
         }
-        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
-        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMaxPlugin\\version.h", '#define VERSION_STR')
 
         if (options['incrementVersion']) {
             if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
-                options.testsPackage = "regression.json"
 
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                println "[INFO] Current build version: ${options.pluginVersion}"
 
-                def current_version = version_read("${env.WORKSPACE}\\RadeonProRenderMaxPlugin\\version.h", '#define VERSION_STR')
-                println "[INFO] Current build version: ${current_version}"
-
-                def new_version = version_inc(current_version, 3)
+                def new_version = version_inc(options.pluginVersion, 3)
                 println "[INFO] New build version: ${new_version}"
-
                 version_write("${env.WORKSPACE}\\RadeonProRenderMaxPlugin\\version.h", '#define VERSION_STR', new_version)
-                def updated_version = version_read("${env.WORKSPACE}\\RadeonProRenderMaxPlugin\\version.h", '#define VERSION_STR')
-                println "[INFO] Updated build version: ${updated_version}"
+
+                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMaxPlugin\\version.h", '#define VERSION_STR')
+                println "[INFO] Updated build version: ${options.pluginVersion}"
 
                 bat """
                   git add version.h
-                  git commit -m "buildmaster: version update to ${updated_version}"
+                  git commit -m "buildmaster: version update to ${options.pluginVersion}"
                   git push origin HEAD:develop
                 """
 
                 //get commit's sha which have to be build
-                options.projectBranch = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                options.projectBranch = options.commitSHA
                 println "[INFO] Project branch hash: ${options.projectBranch}"
             }
             else
@@ -400,6 +397,11 @@ def executePreBuild(Map options)
                 }
             }
         }
+
+        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
     }
 
     if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
@@ -659,7 +661,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String SPU = '25',
         String iter = '50',
         String theshold = '0.05',
-        String customBuildLinkWindows = "") 
+        String customBuildLinkWindows = "",
+        String autotest_assets = 'master')
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -750,7 +753,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 SPU: SPU,
                                 iter: iter,
                                 theshold: theshold,
-                                customBuildLinkWindows: customBuildLinkWindows
+                                customBuildLinkWindows: customBuildLinkWindows,
+                                autotest_assets: autotest_assets
                                 ])
         }
         catch (e) {
