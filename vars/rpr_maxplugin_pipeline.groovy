@@ -193,15 +193,15 @@ def executeTests(String osName, String asicName, Map options)
 
                     echo "Stashing test results to : ${options.testResultsName}"
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
-                    powershell """
-                        Get-EventLog -LogName * -Newest 200 >> ${STAGE_NAME}.crash.log
-                        ps | sort -des cpu | select -f 200 | ft -a >> ${STAGE_NAME}.crash.log
-                        openfiles /query >> ${STAGE_NAME}.crash.log
-                    """
-                    archiveArtifacts artifacts: "*.crash.log"
 
                     // deinstalling broken addon & reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        powershell """
+                            Get-EventLog -LogName * -Newest 200 >> ${STAGE_NAME}.crash.log
+                            ps | sort -des cpu | select -f 200 | ft -a >> ${STAGE_NAME}.crash.log
+                            openfiles /query >> ${STAGE_NAME}.crash.log
+                        """
+                        archiveArtifacts artifacts: "*.crash.log"
                         installMSIPlugin(osName, "Max", options, false, true)
                         if (options.currentTry < options.nodeReallocateTries) {
                             throw new Exception("All tests crashed")

@@ -242,41 +242,41 @@ def executeTests(String osName, String asicName, Map options)
 
                     echo "Stashing test results to : ${options.testResultsName}"
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
-                    switch(osName){
-                        case 'Windows':
-                            powershell """
-                                Get-EventLog -LogName * -Newest 200 >> ${STAGE_NAME}.crash.log
-                                ps | sort -des cpu | select -f 200 | ft -a >> ${STAGE_NAME}.crash.log
-                                openfiles /query >> ${STAGE_NAME}.crash.log
-                            """
-                            archiveArtifacts artifacts: "*.crash.log"
-                            break;
-                        case 'OSX':
-                            sh """
-                                log show --no-info --color always --predicate 'eventMessage CONTAINS[c] "radeon" OR eventMessage CONTAINS[c] "gpu" OR eventMessage CONTAINS[c] "amd"' --last 1h >> ${STAGE_NAME}.crash.log
-                                top -l 1 | head -n 200 >> ${STAGE_NAME}.crash.log
-                                sudo iotop | head -n 200 >> ${STAGE_NAME}.crash.log
-                            """
-                            archiveArtifacts artifacts: "*.crash.log"
-                            break;
-                        default:
-                            sh """
-                                dmesg | tail -n 200 >> ${STAGE_NAME}.crash.log
-                                top -b | head -n 200 >> ${STAGE_NAME}.crash.log
-                                iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
-                            """
-                            archiveArtifacts artifacts: "*.crash.log"
-                            sh """
-                                echo "Restarting Unix Machine...."
-                                hostname
-                                (sleep 3; sudo shutdown -r now) &
-                            """
-                            sleep(60)
-                            break;
-                    }
 
                     // reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        switch(osName){
+                            case 'Windows':
+                                powershell """
+                                    Get-EventLog -LogName * -Newest 200 >> ${STAGE_NAME}.crash.log
+                                    ps | sort -des cpu | select -f 200 | ft -a >> ${STAGE_NAME}.crash.log
+                                    openfiles /query >> ${STAGE_NAME}.crash.log
+                                """
+                                archiveArtifacts artifacts: "*.crash.log"
+                                break;
+                            case 'OSX':
+                                sh """
+                                    log show --no-info --color always --predicate 'eventMessage CONTAINS[c] "radeon" OR eventMessage CONTAINS[c] "gpu" OR eventMessage CONTAINS[c] "amd"' --last 1h >> ${STAGE_NAME}.crash.log
+                                    top -l 1 | head -n 200 >> ${STAGE_NAME}.crash.log
+                                    sudo iotop | head -n 200 >> ${STAGE_NAME}.crash.log
+                                """
+                                archiveArtifacts artifacts: "*.crash.log"
+                                break;
+                            default:
+                                sh """
+                                    dmesg | tail -n 200 >> ${STAGE_NAME}.crash.log
+                                    top -b | head -n 200 >> ${STAGE_NAME}.crash.log
+                                    iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
+                                """
+                                archiveArtifacts artifacts: "*.crash.log"
+                                sh """
+                                    echo "Restarting Unix Machine...."
+                                    hostname
+                                    (sleep 3; sudo shutdown -r now) &
+                                """
+                                sleep(60)
+                                break;
+                        }
                         if (options.currentTry < options.nodeReallocateTries) {
                             throw new Exception("All tests crashed")
                         }
