@@ -555,11 +555,12 @@ def executePreBuild(Map options)
             currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
         }
 
-        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ')
+        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
         if (options['incrementVersion']) {
             if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
+                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ')
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 println "[INFO] Current build version: ${options.pluginVersion}"
 
