@@ -68,7 +68,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             String tests = newOptions['tests']
                                             try{
                                                 def nodeRetryList = newOptions['nodeRetry'].clone()
-                                            }catch(Exception e) {
+                                            } catch(Exception excep) {
                                                 def nodeRetryList = []
                                             }
                                             nodeRetryList.add("[\"nodeName\": \"${env.NODE_NAME}\", \"tests\": \"${tests}\", \"gpu\": \"${asicName}\"]")
