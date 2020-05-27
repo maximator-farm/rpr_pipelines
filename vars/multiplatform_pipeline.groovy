@@ -66,11 +66,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                             // add info about retry to options
                                             String tests = newOptions['tests']
-                                            try{
-                                                def nodeRetryList = newOptions['nodeRetry'].clone()
-                                            } catch(Exception excep) {
-                                                def nodeRetryList = []
-                                            }
+                                            def nodeRetryList = newOptions['nodeRetry'].clone()
                                             nodeRetryList.add("[\"nodeName\": \"${env.NODE_NAME}\", \"tests\": \"${tests}\", \"gpu\": \"${asicName}\"]")
                                             newOptions['nodeRetry'] = nodeRetryList
                                             println newOptions['nodeRetry'].toString()
