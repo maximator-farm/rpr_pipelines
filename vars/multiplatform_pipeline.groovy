@@ -44,11 +44,11 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 {
                                     ws("WS/${options.PRJ_NAME}_Test")
                                     {
+                                        options['nodeRetry'] = nodeRetryList
                                         Map newOptions = options.clone()
                                         newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                         newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
                                         newOptions['tests'] = testName ? testName : options.tests
-                                        newOptions['nodeRetry'] = nodeRetryList
                                         try {
                                             if (i == 0) throw new Exception("First try failed for test")
                                             executeTests(osName, asicName, newOptions)
