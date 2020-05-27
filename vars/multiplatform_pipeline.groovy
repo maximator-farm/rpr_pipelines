@@ -4,7 +4,6 @@ import hudson.plugins.git.GitException;
 import java.nio.channels.ClosedChannelException;
 import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
-import groovy.json.*
 
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
@@ -66,7 +65,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                             // add info about retry to options
                                             tests = newOptions['tests']
-                                            newOptions['nodeRetry'][i] = JsonOutput.toJson([nodeName: "${env.NODE_NAME}", tests: "${tests}", gpu: "${asicName}"])
+                                            newOptions['nodeRetry'][i] = "[\"nodeName\": \"${env.NODE_NAME}\", \"tests\": \"${tests}\", \"gpu\": \"${asicName}\"]"
 
                                             // change PC after first failed tries and don't change in the last try
                                             if (i < nodesCount - 1 && nodesCount != 1) {
