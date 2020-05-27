@@ -66,7 +66,8 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                             // add info about retry to options
                                             tests = newOptions['tests']
-                                            options['nodeRetry'][i] = JsonOutput.toJson([nodeName: "${env.NODE_NAME}", tests: "${tests}"])
+                                            println "${env.NODE_NAME}, ${tests}, ${asicName}"
+                                            options['nodeRetry'][i] = JsonOutput.toJson([nodeName: "${env.NODE_NAME}", tests: "${tests}", gpu: "${asicName}"])
 
                                             // change PC after first failed tries and don't change in the last try
                                             if (i < nodesCount - 1 && nodesCount != 1) {
