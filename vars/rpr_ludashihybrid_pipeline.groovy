@@ -318,7 +318,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectBranch = "",
          String platforms = 'Windows:AMD_RadeonVII',
-         String testsQuality = "low,medium,high",
+         String testsQuality = "low,medium",
          String PRJ_ROOT='rpr-core',
          String PRJ_NAME='RadeonProRender-LudashiHybrid',
          String projectRepo='git@github.com/Radeon-Pro/Ludashi-Hybrid',
