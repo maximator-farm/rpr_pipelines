@@ -146,7 +146,7 @@ def executeBuildWindows(Map options)
     bat """
     mkdir Build
     cd Build
-    cmake ${options['cmakeKeys']} -G "Visual Studio 15 2017 Win64" .. >> ..\\${STAGE_NAME}.log 2>&1
+    cmake ${options['cmakeKeys']} -G "Visual Studio 16 2019" -A "x64" .. >> ..\\${STAGE_NAME}.log 2>&1
     cmake --build . --target PACKAGE --config ${build_type} >> ..\\${STAGE_NAME}.log 2>&1
     rename BaikalNext.zip BaikalNext_${STAGE_NAME}.zip
     """
@@ -154,26 +154,10 @@ def executeBuildWindows(Map options)
 
 def executeBuildOSX(Map options)
 {
-    sh """
-    mkdir Build
-    cd Build
-    cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
-    make >> ../${STAGE_NAME}.log 2>&1
-    make package >> ../${STAGE_NAME}.log 2>&1
-    mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
-    """
 }
 
 def executeBuildLinux(Map options)
 {
-    sh """
-    mkdir Build
-    cd Build
-    cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
-    make >> ../${STAGE_NAME}.log 2>&1
-    make package >> ../${STAGE_NAME}.log 2>&1
-    mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
-    """
 }
 
 def executePreBuild(Map options)
@@ -333,16 +317,14 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI;Ubuntu18:AMD_RadeonVII;CentOS7',
+         String platforms = 'Windows:AMD_RadeonVII',
          String testsQuality = "low,medium,high",
          String PRJ_ROOT='rpr-core',
-         String PRJ_NAME='RadeonProRender-Hybrid',
-         String projectRepo='git@github.com:Radeon-Pro/RPRHybrid.git',
+         String PRJ_NAME='RadeonProRender-LudashiHybrid',
+         String projectRepo='git@github.com/Radeon-Pro/Ludashi-Hybrid',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = "-DCMAKE_BUILD_TYPE=Release -DBAIKAL_ENABLE_RPR=ON -DBAIKAL_NEXT_EMBED_KERNELS=ON") {
-
-    platforms = (env.BRANCH_NAME == 'dx12_master' || env.CHANGE_TARGET == 'dx12_master') ? 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI' : platforms
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                            [platforms:platforms,
@@ -353,13 +335,13 @@ def call(String projectBranch = "",
                             PRJ_NAME:PRJ_NAME,
                             PRJ_ROOT:PRJ_ROOT,
                             projectRepo:projectRepo,
-                            BUILDER_TAG:'BuilderS',
-                            TESTER_TAG:'HybridTester',
+                            BUILDER_TAG:'BuilderS && VS2019',
+                            TESTER_TAG:'Ludashi',
                             executeBuild:true,
                             executeTests:true,
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
                             slackTocken:"${SLACK_BAIKAL_TOCKEN}",
-                            TEST_TIMEOUT:30,
+                            TEST_TIMEOUT:20,
                             cmakeKeys:cmakeKeys])
 }

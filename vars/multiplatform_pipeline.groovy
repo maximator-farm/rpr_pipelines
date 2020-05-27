@@ -59,10 +59,10 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             println "Exception stack trace: ${e.getStackTrace()}"
 
                                             // Abort PRs
-                                            if (options.containsKey("isPR") &&  options.isPR == true) {
-                                                println "[INFO] This build was aborted due to new PR was appeared."
-                                                i = options.nodeReallocateTries + 1
-                                            }
+                                            //if (options.containsKey("isPR") &&  options.isPR == true) {
+                                            //    println "[INFO] This build was aborted due to new PR was appeared."
+                                            //    i = options.nodeReallocateTries + 1
+                                            //}
 
                                             // add info about retry to options
                                             tests = newOptions['tests']
@@ -173,10 +173,10 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
             // if timeout doesn't set - use default
             // value in minutes
-            options['PREBUILD_TIMEOUT'] = options['PREBUILD_TIMEOUT'] ?: 60
-            options['BUILD_TIMEOUT'] = options['BUILD_TIMEOUT'] ?: 60
-            options['TEST_TIMEOUT'] = options['TEST_TIMEOUT'] ?: 60
-            options['DEPLOY_TIMEOUT'] = options['DEPLOY_TIMEOUT'] ?: 60
+            options['PREBUILD_TIMEOUT'] = options['PREBUILD_TIMEOUT'] ?: 20
+            options['BUILD_TIMEOUT'] = options['BUILD_TIMEOUT'] ?: 40
+            options['TEST_TIMEOUT'] = options['TEST_TIMEOUT'] ?: 20
+            options['DEPLOY_TIMEOUT'] = options['DEPLOY_TIMEOUT'] ?: 20
 
             options['FAILED_STAGES'] = []
 

@@ -206,7 +206,10 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Blender2.8Assets/", 'Blender2.8Assets')
+        dir("${CIS_TOOLS}/../TestResources/rpr_blender_autotests")
+        {
+            checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_blender_autotests.git", true, false, true, 'radeonprorender-gitlab', true)
+        }
 
         if (!options['skipBuild']) {
 
@@ -421,8 +424,6 @@ def executeBuildLinux(String osName, Map options)
 
 def executeBuild(String osName, Map options)
 {
-    cleanWS(osName)
-
     try {
         dir('RadeonProRenderBlenderAddon')
         {
@@ -515,11 +516,10 @@ def executePreBuild(Map options)
            options.testsPackage = "regression.json"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options.testsPackage = "smoke"
+            options.testsPackage = "regression.json"
         }
     }
 
-        
     dir('RadeonProRenderBlenderAddon')
     {
         checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
@@ -534,42 +534,37 @@ def executePreBuild(Map options)
         println "Commit SHA: ${options.commitSHA}"
         println "Commit shortSHA: ${options.commitShortSHA}"
 
-        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
-
         if (options.projectBranch){
             currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
         } else {
             currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
         }
-        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
-        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
         if (options['incrementVersion']) {
             if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
-                options.testsPackage = "regression.json"
 
+                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ')
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                println "[INFO] Current build version: ${options.pluginVersion}"
 
-                def current_version = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ')
-                println "[INFO] Current build version: ${current_version}"
-
-                def new_version = version_inc(current_version, 3, ', ')
+                def new_version = version_inc(options.pluginVersion, 3, ', ')
                 println "[INFO] New build version: ${new_version}"
-
                 version_write("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', new_version, ', ')
-                def updated_version = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ', "true")
-                println "[INFO] Updated build version: ${updated_version}"
+
+                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ', "true").replace(', ', '.')
+                println "[INFO] Updated build version: ${options.pluginVersion}"
 
                 bat """
                     git add src/rprblender/__init__.py
-                    git commit -m "buildmaster: version update to ${updated_version}"
+                    git commit -m "buildmaster: version update to ${options.pluginVersion}"
                     git push origin HEAD:develop
                 """
 
                 //get commit's sha which have to be build
-                options.projectBranch = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                options.projectBranch = options.commitSHA
                 println "[INFO] Project branch hash: ${options.projectBranch}"
             }
             else
@@ -586,6 +581,11 @@ def executePreBuild(Map options)
                 }
             }
         }
+
+        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
         
     }
 
@@ -845,7 +845,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
     String customBuildLinkOSX = "",
-    String engine = "1.0")
+    String engine = "1.0",
+    String autotest_assets = 'master')
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -943,7 +944,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 customBuildLinkWindows: customBuildLinkWindows,
                                 customBuildLinkLinux: customBuildLinkLinux,
                                 customBuildLinkOSX: customBuildLinkOSX,
-                                engine: engine
+                                engine: engine,
+                                autotest_assets: autotest_assets
                                 ])
     }
     catch(e)

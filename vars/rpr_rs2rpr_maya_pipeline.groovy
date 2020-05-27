@@ -1,67 +1,134 @@
+def getMayaPluginInstaller(String osName, Map options)
+{
+    switch(osName)
+    {
+        case 'Windows':
+
+            println "PluginSHA: ${options.pluginWinSha}"
+
+            if (!options.pluginWinSha || !fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginWinSha}.msi")) {
+
+                clearBinariesWin()
+                
+                println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                downloadPlugin(osName, "Maya", options)
+
+                bat """
+                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.msi"
+                """
+
+            } else {
+                println "[INFO] The plugin ${options.pluginWinSha}.msi exists in the storage."
+            }
+
+            break;
+
+        default:
+            echo "[WARNING] ${osName} is not supported"
+    }
+}
+
 def executeGenTestRefCommand(String osName, Map options)
 {
-    executeTestCommand(osName, options)
-
     dir('scripts')
     {
         switch(osName)
         {
             case 'Windows':
                 bat """
-                make_rpr_baseline.bat
-                """
-                break;
-            case 'OSX':
-                sh """
-                ./make_rpr_baseline.sh
+                    make_rpr_baseline.bat
                 """
                 break;
             default:
-                sh """
-                ./make_rpr_baseline.sh
-                """
+                echo "[WARNING] ${osName} is not supported"
         }
     }
 }
+
+
+def buildRenderCache(String osName, String toolVersion, String log_name)
+{
+    dir("scripts") {
+        switch(osName) {
+            case 'Windows':
+                bat """
+                    build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}.cb.log  2>&1
+                """
+                break;
+            default:
+                echo "[WARNING] ${osName} is not supported"
+        }
+    }
+}
+
 
 def executeTestCommand(String osName, Map options)
 {
     switch(osName)
     {
-    case 'Windows':
-        dir('scripts')
-        {
-            bat """
-            render_rpr.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
-            """
-        }
-        break;
-    case 'OSX':
-        sh """
-        echo 'sample image' > ./OutputImages/sample_image.txt
-        """
-        break;
-    default:
-        sh """
-        echo 'sample image' > ./OutputImages/sample_image.txt
-        """
+        case 'Windows':
+            dir('scripts')
+            {
+                bat """
+                    render_rpr.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
+                """
+            }
+            break;
+        default:
+            echo "[WARNING] ${osName} is not supported"
     }
 }
 
 
 def executeTests(String osName, String asicName, Map options)
 {
+
+    // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
+    Boolean stashResults = true
+
     try {
-        checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rs2rpr.git')
-        dir('jobs/Scripts')
-        {
-            if(fileExists("convertRS2RPR.py")){
-                bat "del convertRS2RPR.py"
+
+        timeout(time: "5", unit: 'MINUTES') {
+            try {
+                cleanWS(osName)
+                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rs2rpr.git')
+                dir('jobs/Scripts')
+                {
+                    unstash "conversionScript"
+                }
+            } catch(e) {
+                println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
+                println(e.toString())
+                throw e
             }
-            unstash "convertionScript"
         }
 
         downloadAssets("/${options.PRJ_PATH}/RedshiftAssets/", 'RedshiftAssets')
+
+        try {
+            Boolean newPluginInstalled = false
+            timeout(time: "15", unit: 'MINUTES') {
+                getMayaPluginInstaller(osName, options)
+                newPluginInstalled = installMSIPlugin(osName, 'Maya', options)
+                println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
+            }
+            if (newPluginInstalled) {
+                timeout(time: "5", unit: 'MINUTES') {
+                    buildRenderCache(osName, options.toolVersion, options.stageName)
+                    if(!fileExists("./Work/Results/rs2rpr/cache_building.jpg")){
+                        println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
+                        throw new Exception("No output image during build cache")
+                    }
+                }
+            }
+        } catch(e) {
+            println(e.toString())
+            println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
+            // deinstalling broken addon
+            installMSIPlugin(osName, "Maya", options, false, true)
+            throw e
+        }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
         String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
@@ -75,145 +142,184 @@ def executeTests(String osName, String asicName, Map options)
         {
             dir('scripts')
             {
-                bat """render_or.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1"""
+                bat """
+                    render_or.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
+                """
                 bat "make_original_baseline.bat"
             }
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE_OR)
         }
-        else if(options['updateRefs'])
+        else if (options['updateRefs'])
         {
-            receiveFiles("bin_storage/RadeonProRenderMaya_2.8.44.msi", "/mnt/c/TestResources/")	
-            options.pluginWinSha = 'c:\\TestResources\\RadeonProRenderMaya_2.8.44'
-            installMSIPlugin(osName, 'Maya', options, false)
-
+            executeTestCommand(osName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         }
         else
         {	
-            receiveFiles("bin_storage/RadeonProRenderMaya_2.8.44.msi", "/mnt/c/TestResources/")	
-            options.pluginWinSha = 'c:\\TestResources\\RadeonProRenderMaya_2.8.44'
-            installMSIPlugin(osName, 'Maya', options, false)
             try
             {
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
                 }
-            } catch (e) {}
+            } catch (e) {
+                println("[WARNING] Baseline doesn't exist.")
+            }
             try
             {
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE_OR}/${it}", './Work/Baseline/')
                 }
-            } catch (e) {}
+            } catch (e) {
+                println("[WARNING] Baseline doesn't exist.")
+            }
             executeTestCommand(osName, options)
         }
-    }
-    catch (e) {
-        println(e.toString());
-        println(e.getMessage());
+    } catch (e) {
+        if (options.currentTry < options.nodeReallocateTries) {
+            stashResults = false
+        } 
+        println(e.toString())
+        println(e.getMessage())
+        options.failureMessage = "Failed during testing: ${asicName}-${osName}"
+        options.failureError = e.getMessage()
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-        echo "Stashing test results to : ${options.testResultsName}"
-        dir('Work')
-        {
-            stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+        if (stashResults) {
+            dir('Work')
+            {
+                if (fileExists("Results/rs2rpr/session_report.json")) {
 
-            def sessionReport = readJSON file: 'Results/rs2rpr/session_report.json'
-            if (sessionReport.summary.total == 0) {
-                options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
-                currentBuild.result = "FAILED"
-            }
-            /*sessionReport.results.each{ testName, testConfigs ->
-                testConfigs.each{ key, value ->
-                    if ( value.render_duration == 0)
+                    def sessionReport = null
+                    sessionReport = readJSON file: 'Results/rs2rpr/session_report.json'
+
+                    // if none launched tests - mark build failed
+                    if (sessionReport.summary.total == 0)
                     {
-                        error "Crashed tests detected"
+                        options.failureMessage = "None test was finished for: ${asicName}-${osName}"
+                        currentBuild.result = "FAILED"
                     }
+
+                    // deinstalling broken addon
+                    if (sessionReport.summary.total == sessionReport.summary.error) {
+                        installMSIPlugin(osName, "Maya", options, false, true)
+                    }
+
+                    echo "Stashing test results to : ${options.testResultsName}"
+                    stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
                 }
-            }*/
+            }
         }
     }
 }
 
-def executeBuildWindows(Map options)
-{
-
-}
-
-def executeBuildOSX(Map options)
-{
-
-}
-
-def executeBuildLinux(Map options)
-{
-
-}
-
-def executeBuild(String osName, Map options)
-{
-    try {
-        // dir('RS2RPRConvertTool')
-        // {
-        //     checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/RS2RPRConvertTool.git')
-        //     stash includes: "convertRS2RPR.mel", name: "convertionScript"
-        // }
-
-        outputEnvironmentInfo(osName)
-
-        switch(osName)
-        {
-        case 'Windows':
-            executeBuildWindows(options);
-            break;
-        case 'OSX':
-            executeBuildOSX(options);
-            break;
-        default:
-            executeBuildLinux(options);
-        }
-
-        //stash includes: 'Bin/**/*', name: "app${osName}"
-    }
-    catch (e) {
-        currentBuild.result = "FAILED"
-        throw e
-    }
-    finally {
-        archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-    }
-}
 
 def executePreBuild(Map options)
 {
-    //properties([])
+    // manual job
+    if (options.forceBuild) {
+        options.executeBuild = true
+        options.executeTests = true
+    // auto job
+    } else {
+        if (env.CHANGE_URL) {
+            println "[INFO] Branch was detected as Pull Request"
+            options.isPR = true
+            options.executeTests = true
+            options.testsPackage = "Master"
+        } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.executeTests = true
+            options.testsPackage = "PR"
+        } else {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.testsPackage = "PR"
+        }
+    }
 
     dir('RS2RPRConvertTool')
     {
         checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/RS2RPRConvertTool.git')
 
-        stash includes: "convertRS2RPR.py", name: "convertionScript"
+        stash includes: "convertRS2RPR.py", name: "conversionScript"
 
-        AUTHOR_NAME = bat (
-                script: "git show -s --format=%%an HEAD ",
-                returnStdout: true
-                ).split('\r\n')[2].trim()
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${options.commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
 
-        echo "The last commit was written by ${AUTHOR_NAME}."
-        options.AUTHOR_NAME = AUTHOR_NAME
+        if (options.projectBranch){
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+        } else {
+            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+        }
 
-        commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true )
-        echo "Commit message: ${commitMessage}"
+        options.pluginVersion = version_read("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ')
+        
+        if (options['incrementVersion']) {
+            if((env.BRANCH_NAME == "develop" || env.BRANCH_NAME == "master") && options.commitAuthor != "radeonprorender") {
 
-        options.commitMessage = commitMessage.split('\r\n')[2].trim()
-        echo "Opt.: ${options.commitMessage}"
-        options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                println "[INFO] Current build version: ${options.pluginVersion}"
+
+                def new_version
+                if (env.BRANCH_NAME == "master") {
+                    new_version = version_inc(options.pluginVersion, 2)
+                } else {
+                    new_version = version_inc(options.pluginVersion, 3)
+                }
+                
+                println "[INFO] New build version: ${new_version}"
+                version_write("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ', new_version)
+
+                options.pluginVersion = version_read("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ')
+                println "[INFO] Updated build version: ${options.pluginVersion}"
+
+                //bat """
+                //  git add convertRS2RPR.py
+                //  git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                //  git push origin HEAD:${env.BRANCH_NAME}
+                //"""
+            }
+        }
+
+        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+        bat """
+            rename convertRS2RPR.py convertRS2RPR_${options.pluginVersion}.py
+        """
+        archiveArtifacts "convertRS2RPR*.py"
+        String BUILD_NAME = "convertRS2RPR_${options.pluginVersion}.py"
+        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
     }
 
+    if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
+    } else if (env.JOB_NAME == "Redshift2RPRConvertToolNightly-Maya") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '15']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
+    }
+
+    println "[INFO] Test package: ${options.testsPackage}"
 
     def tests = []
     if(options.testsPackage != "none")
@@ -226,6 +332,7 @@ def executePreBuild(Map options)
             {
                 options.testsList = ['']
             }
+            println "${options.testsPackage}"
             // options.splitTestsExecution = false
             String tempTests = readFile("jobs/${options.testsPackage}")
             tempTests.split("\n").each {
@@ -354,31 +461,43 @@ def executeDeploy(Map options, List platformList, List testResultList)
     {}
 }
 
-def call(String projectBranch = "",
+def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_storage/RadeonProRenderMaya_2.9.8.msi",
+         String projectBranch = "",
          String testsBranch = "master",
          String platforms = 'Windows:NVIDIA_GF1080TI',
          Boolean updateORRefs = false,
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
+         Boolean incrementVersion = true,
+         Boolean skipBuild = true,
          String testsPackage = "",
-         String tests = "") {
+         String tests = "",
+         String toolVersion = "2020",
+         Boolean isPreBuilt = true,
+         Boolean forceBuild = false) {
     try
     {
         String PRJ_NAME="RS2RPRConvertTool-Maya"
         String PRJ_ROOT="rpr-tools"
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
-                               [projectBranch:projectBranch,
+        multiplatform_pipeline(platforms, this.&executePreBuild, null, this.&executeTests, this.&executeDeploy,
+                               [customBuildLinkWindows:customBuildLinkWindows,
+                                projectBranch:projectBranch,
                                 testsBranch:testsBranch,
                                 updateORRefs:updateORRefs,
                                 updateRefs:updateRefs,
                                 enableNotifications:enableNotifications,
-                                executeTests:true,
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
+                                incrementVersion:incrementVersion,
+                                skipBuild:skipBuild,
                                 testsPackage:testsPackage,
                                 tests:tests,
+                                toolVersion:toolVersion,
+                                isPreBuilt:isPreBuilt,
+                                forceBuild:forceBuild,
                                 reportName:'Test_20Report',
+                                TESTER_TAG:"RedshiftMaya",
                                 TEST_TIMEOUT:120])
     }
     catch(e) {
