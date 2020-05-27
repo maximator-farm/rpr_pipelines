@@ -65,7 +65,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             //}
 
                                             // add info about retry to options
-                                            tests = newOptions['tests']
+                                            String tests = newOptions['tests']
                                             newOptions['nodeRetry'][i] = "[\"nodeName\": \"${env.NODE_NAME}\", \"tests\": \"${tests}\", \"gpu\": \"${asicName}\"]"
 
                                             // change PC after first failed tries and don't change in the last try
