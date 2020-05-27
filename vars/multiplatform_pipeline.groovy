@@ -31,7 +31,9 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                         def nodesCount = nodesList.size()
                         options.nodeReallocateTries = nodesCount + 1
                         boolean successCurrentNode = false
-                        
+
+                        def nodeRetryList = []
+
                         for (int i = 0; i < options.nodeReallocateTries; i++)
                         {
                             node(nodeLabels)
@@ -46,6 +48,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                         newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                         newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
                                         newOptions['tests'] = testName ? testName : options.tests
+                                        newOptions['nodeRetry'] = nodeRetryList
                                         try {
                                             if (i == 0) throw new Exception("First try failed for test")
                                             executeTests(osName, asicName, newOptions)
@@ -66,9 +69,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                             // add info about retry to options
                                             String tests = newOptions['tests']
-                                            def nodeRetryList = newOptions['nodeRetry'].clone()
                                             nodeRetryList.add("[\"nodeName\": \"${env.NODE_NAME}\", \"tests\": \"${tests}\", \"gpu\": \"${asicName}\"]")
-                                            newOptions['nodeRetry'] = nodeRetryList
 
                                             // change PC after first failed tries and don't change in the last try
                                             if (i < nodesCount - 1 && nodesCount != 1) {
