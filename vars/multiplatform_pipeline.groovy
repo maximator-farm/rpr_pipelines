@@ -47,7 +47,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                         newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
                                         newOptions['tests'] = testName ? testName : options.tests
                                         try {
-                                            if (i == 0) throw new Exception("First try failed for tests")
+                                            if (i == 0) throw new Exception("First try failed for test")
                                             executeTests(osName, asicName, newOptions)
                                             i = options.nodeReallocateTries + 1
                                             successCurrentNode = true
@@ -66,7 +66,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                             // add info about retry to options
                                             String tests = newOptions['tests']
-                                            String[] newOptions['nodeRetry'] = []
+                                            def newOptions['nodeRetry'] = []
                                             newOptions['nodeRetry'].add("[\"nodeName\": \"${env.NODE_NAME}\", \"tests\": \"${tests}\", \"gpu\": \"${asicName}\"]")
 
                                             // change PC after first failed tries and don't change in the last try
