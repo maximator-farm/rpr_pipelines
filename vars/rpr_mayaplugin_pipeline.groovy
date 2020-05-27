@@ -769,6 +769,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     iter = (iter == 'Default') ? '50' : iter
     theshold = (theshold == 'Default') ? '0.05' : theshold
     engine = (engine == '2.0 (Northstar)') ? '2' : '1'
+    def nodeRetry = []
     try
     {
         Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX
@@ -857,7 +858,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 customBuildLinkWindows: customBuildLinkWindows,
                                 customBuildLinkOSX: customBuildLinkOSX,
                                 engine: engine,
-                                autotest_assets: autotest_assets
+                                autotest_assets: autotest_assets,
+                                nodeRetry: nodeRetry
                                 ])
     }
     catch(e) {
