@@ -456,7 +456,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options.commitMessage = options.commitMessage.replace("'", "")
                 options.commitMessage = options.commitMessage.replace('"', '')
                 bat """
-                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" ${options.nodeRetry}
+                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"  \"${escapeCharsByUnicode(options.nodeRetry.toString())}\"
                 """
                 bat "get_status.bat ..\\summaryTestResults"
             }
@@ -537,6 +537,7 @@ def call(String projectBranch = "",
         String PRJ_NAME="RadeonProRenderCore"
         String PRJ_ROOT="rpr-core"
 
+        def nodeRetry = []
 
         gpusCount = 0
         platforms.split(';').each()
@@ -576,6 +577,7 @@ def call(String projectBranch = "",
                                 iterations:iterations,
                                 sendToRBS:sendToRBS,
                                 rbs_prod: rbs_prod,
+                                nodeRetry: nodeRetry
                                 ])
     }
     catch(e) {

@@ -718,13 +718,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         if (options['isPreBuilt'])
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.82')}" "PreBuilt" "PreBuilt" "PreBuilt"
+                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.82')}" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(options.nodeRetry.toString())}\"
                             """
                         }
                         else
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.82')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.82')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(options.nodeRetry.toString())}\"
                             """
                         }
                     }
@@ -854,6 +854,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     iter = (iter == 'Default') ? '50' : iter
     theshold = (theshold == 'Default') ? '0.05' : theshold
     engine = (engine == '2.0 (Northstar)') ? 'FULL2' : 'FULL'
+    def nodeRetry = []
     try
     {
         Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkLinux
@@ -945,7 +946,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 customBuildLinkLinux: customBuildLinkLinux,
                                 customBuildLinkOSX: customBuildLinkOSX,
                                 engine: engine,
-                                autotest_assets: autotest_assets
+                                autotest_assets: autotest_assets,
+                                nodeRetry: nodeRetry
                                 ])
     }
     catch(e)

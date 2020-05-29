@@ -428,7 +428,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 {
                     dir("jobs_launcher") {
                         bat """
-                        build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('RprViewer')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                        build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('RprViewer')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(options.nodeRetry.toString())}\"
                         """
                     }
                 }
@@ -504,6 +504,8 @@ def call(String projectBranch = "",
          String testsPackage = "",
          String tests = "") {
 
+    def nodeRetry = []
+
     String PRJ_ROOT='rpr-core'
     String PRJ_NAME='RadeonProViewer'
     String projectRepo='git@github.com:Radeon-Pro/RadeonProViewer.git'
@@ -526,5 +528,6 @@ def call(String projectBranch = "",
                             //TEST_TIMEOUT:40,
                             TEST_TIMEOUT:120,
                             DEPLOY_TIMEOUT:45,
-                            tests:tests])
+                            tests:tests,
+                            nodeRetry: nodeRetry])
 }

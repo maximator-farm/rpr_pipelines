@@ -530,13 +530,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         if (options['isPreBuilt'])
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('3ds Max')}" "PreBuilt" "PreBuilt" "PreBuilt"
+                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('3ds Max')}" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(options.nodeRetry.toString())}\"
                             """
                         }
                         else
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('3ds Max')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('3ds Max')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(options.nodeRetry.toString())}\"
                             """
                         }
                     }
@@ -657,6 +657,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     SPU = (SPU == 'Default') ? '60' : SPU
     iter = (iter == 'Default') ? '120' : iter
     theshold = (theshold == 'Default') ? '0.01' : theshold
+    def nodeRetry = []
     try
     {
         Boolean isPreBuilt = customBuildLinkWindows.length() > 0
@@ -736,7 +737,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 iter: iter,
                                 theshold: theshold,
                                 customBuildLinkWindows: customBuildLinkWindows,
-                                autotest_assets: autotest_assets
+                                autotest_assets: autotest_assets,
+                                nodeRetry: nodeRetry
                                 ])
         }
         catch (e) {
