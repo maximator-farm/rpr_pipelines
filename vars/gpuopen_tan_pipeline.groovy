@@ -90,7 +90,7 @@ def executeTestCommand(String osName, Map options)
             dir('Launcher')
             {
                 bat """
-                    run.bat "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
+                    run.bat FULL >> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break;
@@ -98,7 +98,7 @@ def executeTestCommand(String osName, Map options)
             dir('Launcher')
             {
                 sh """
-                    ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
+                    ./run.sh FULL >> ../${STAGE_NAME}.log 2>&1
                 """
             }
             break;
