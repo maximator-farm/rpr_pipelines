@@ -70,9 +70,9 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             // add info about retry to options
                                             String tests = newOptions['tests']
                                             boolean added = false;
-                                            for (int i = 0; i < nodeRetryList.length(); i++){
-                                                if (nodeRetryList[i]['Testers'].equals(nodesList)){
-                                                    nodeRetryList[i]['Tries'][tests].add([host:env.NODE_NAME, link:'link_to_crash'])
+                                            for (int try_num = 0; try_num < nodeRetryList.length(); try_num++){
+                                                if (nodeRetryList[try_num]['Testers'].equals(nodesList)){
+                                                    nodeRetryList[try_num]['Tries'][tests].add([host:env.NODE_NAME, link:'link_to_crash'])
                                                     added = true
                                                 }
                                             }
