@@ -69,17 +69,17 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                             // add info about retry to options
                                             String tests = newOptions['tests']
-                                            boolean added = false;
-                                            for (int try_num = 0; try_num < nodeRetryList.length; try_num++){
-                                                if (nodeRetryList[try_num]['Testers'].equals(nodesList)){
-                                                    nodeRetryList[try_num]['Tries'][tests].add([host:env.NODE_NAME, link:'link_to_crash'])
-                                                    added = true
-                                                }
-                                            }
-                                            if (!added){
-                                                nodeRetryList.add([Testers: nodesList, Tries: [tests: [host:env.NODE_NAME, link:'link_to_crash']]])
-                                            }
-                                            //nodeRetryList.add("{\"Testers\":${nodesList.toString()}, \"Tries\": {\"${tests}\": [{\"host\": \"${env.NODE_NAME}\", \"link\": \"link_to_crash\"}]}}")
+                                            // boolean added = false;
+                                            // for (int try_num = 0; try_num < nodeRetryList.length; try_num++){
+                                            //     if (nodeRetryList[try_num]['Testers'].equals(nodesList)){
+                                            //         nodeRetryList[try_num]['Tries'][tests].add([host:env.NODE_NAME, link:'link_to_crash'])
+                                            //         added = true
+                                            //     }
+                                            // }
+                                            // if (!added){
+                                            //     nodeRetryList.add([Testers: nodesList, Tries: [tests: [host:env.NODE_NAME, link:'link_to_crash']]])
+                                            // }
+                                            nodeRetryList.add("{\"Testers\":${nodesList.toString()}, \"Tries\": {\"${tests}\": [{\"host\": \"${env.NODE_NAME}\", \"link\": \"link_to_crash\"}]}}")
                                             println nodeRetryList.toString()
 
                                             // change PC after first failed tries and don't change in the last try
