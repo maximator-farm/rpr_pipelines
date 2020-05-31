@@ -324,7 +324,7 @@ def call(String projectBranch = "",
          String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080;Ubuntu18:AMD_RadeonVII,NVIDIA_GTX980;CentOS7_6;OSX',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
          Boolean enableNotifications = true,
-         Boolean executeFT = false)
+         Boolean executeFT = true)
 {
     String PRJ_ROOT='rpr-ml'
     String PRJ_NAME='RadeonML_com'
