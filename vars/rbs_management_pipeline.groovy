@@ -1,9 +1,9 @@
 def main(Map options) {
 	node (options.nodeLabels) {
-		String deploymentFolder = options.RBSServicesRoot + "/" + options.folderName
+		String deploymentFolder = options.folderName
 		dir(deploymentFolder) {
-			checkOutBranchOrScm(options['universeBranch'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git')
-			dir('universe/${options.dockerScriptsDir}') {
+			checkOutBranchOrScm(options['universeBranch'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git', false, false, true, 'radeonprorender-gitlab', false)
+			dir("universe/${options.dockerScriptsDir}") {
 				switch(options['mode']) {
 					case 'Deploy':
 
@@ -51,7 +51,7 @@ def call(
 	String containers = ''
 	) {
 
-	String RBSServicesRoot = "/var/jenkins_home/Server/RPRServers/rbs_auto_deploy"
+	String RBSServicesRoot = "/home/admin/Server/RPRServers/rbs_auto_deploy"
 	String dockerScriptsDir = "docker-management"
 
 	main([
