@@ -174,7 +174,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        dir("${CIS_TOOLS}/../TestResources/rpr_maya_autotests")
+        dir("c:/TestResources/MayaAssets")//dir("${CIS_TOOLS}/../TestResources/rpr_maya_autotests")
         {
             checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_maya_autotests.git", true, false, true, 'radeonprorender-gitlab', true)
         }
