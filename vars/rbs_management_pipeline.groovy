@@ -1,10 +1,42 @@
 def main(Map options) {
 	node (options.nodeLabels) {
 		String deploymentFolder = options.RBSServicesRoot + "/" + options.folderName
-		dir (deploymentFolder) {
-			ssh """
-				pwd;
-			"""
+		dir(deploymentFolder) {
+			checkOutBranchOrScm(options['universeBranch'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git')
+			dir('universe/${options.dockerScriptsDir}') {
+				switch(osName) {
+					case 'Deploy':
+
+						sh """
+							./deploy-all.sh
+						"""
+
+						break;
+
+					case "Update":
+
+						sh """
+							git checkout ${options.universeBranch}
+						"""
+						// TODO add checkout
+						for (container in options.containers) {
+							sh """
+								./redeploy-${container}.sh .${options.dockerComposePostfix}
+							"""
+						}
+
+						break;
+
+					case "Undeploy":
+
+						sh """
+							./undeploy-all.sh
+						"""
+						
+						break;
+
+				}
+			}
 		}
 	}
 }
@@ -14,10 +46,12 @@ def call(
 	String nodeLabels = '',
 	String dockerComposePostfix = '',
 	String folderName = '',
-	String mode = ''
+	String mode = '',
+	String containers = ''
 	) {
 
 	String RBSServicesRoot = "/home/admin/Server/RPRServers/rbs_auto_deploy"
+	String dockerScriptsDir = "docker-management"
 
 	main([
 		universeBranch:universeBranch,
@@ -25,6 +59,8 @@ def call(
 		dockerComposePostfix:dockerComposePostfix,
 		folderName:folderName,
 		mode:mode,
-		RBSServicesRoot:RBSServicesRoot
+		RBSServicesRoot:RBSServicesRoot,
+		dockerScriptsDir:dockerScriptsDir,
+		containers:containers
 		])
 	}
