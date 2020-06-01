@@ -4,7 +4,7 @@ def main(Map options) {
 		dir(deploymentFolder) {
 			checkOutBranchOrScm(options['universeBranch'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git')
 			dir('universe/${options.dockerScriptsDir}') {
-				switch(osName) {
+				switch(options['mode']) {
 					case 'Deploy':
 
 						sh """
@@ -20,8 +20,9 @@ def main(Map options) {
 						"""
 						// TODO add checkout
 						for (container in options.containers) {
+
 							sh """
-								./redeploy-${container}.sh .${options.dockerComposePostfix}
+								./redeploy-${container.toLowerCase()}.sh .${options.dockerComposePostfix}
 							"""
 						}
 
@@ -32,7 +33,7 @@ def main(Map options) {
 						sh """
 							./undeploy-all.sh
 						"""
-						
+
 						break;
 
 				}
@@ -50,7 +51,7 @@ def call(
 	String containers = ''
 	) {
 
-	String RBSServicesRoot = "/home/admin/Server/RPRServers/rbs_auto_deploy"
+	String RBSServicesRoot = "/var/jenkins_home/Server/RPRServers/rbs_auto_deploy"
 	String dockerScriptsDir = "docker-management"
 
 	main([
