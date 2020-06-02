@@ -212,7 +212,7 @@ def executeTests(String osName, String asicName, Map options)
             pathToAssets = 'c:/TestResources/Blender2.8Assets'
             break;
         default:
-            pathToAssets = '${CIS_TOOLS}/../TestResources/Blender2.8Assets'
+            pathToAssets = "${CIS_TOOLS}/../TestResources/Blender2.8Assets"
         }
         dir(pathToAssets)
         {

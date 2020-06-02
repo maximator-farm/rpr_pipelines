@@ -180,7 +180,7 @@ def executeTests(String osName, String asicName, Map options)
             pathToAssets = 'c:/TestResources/MayaAssets'
             break;
         default:
-            pathToAssets = '${CIS_TOOLS}/../TestResources/MayaAssets'
+            pathToAssets = "${CIS_TOOLS}/../TestResources/MayaAssets"
         }
         dir(pathToAssets)
         {
