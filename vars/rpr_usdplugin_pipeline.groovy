@@ -38,10 +38,10 @@ def executeTestCommand(String osName, Map options)
 {
     if (!options['skipBuild'])
     {
-        installPlugin(osName, options)
-        //duct tape for migration to maya2019
+        // installPlugin(osName, options)
         try {
-            buildRenderCache(osName, "${options.stageName}.log")
+            // buildRenderCache(osName, "${options.stageName}.log")
+            println "no tests functions"
         } catch(e) {
             println(e.toString())
             println("ERROR during building render cache")
@@ -67,9 +67,7 @@ def executeTestCommand(String osName, Map options)
         }
         break;
     default:
-        sh """
-        echo 'sample image' > ./OutputImages/sample_image.txt
-        """
+        println "not supported"
     }
 }
 
@@ -204,7 +202,7 @@ def executeBuildLinux(Map options) {
 
             cmake ${CMAKE_KEYS_USD} \
                 -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} \
-                -DHOUDINI_ROOT=/opt/hfs18.0.260 \
+                -DHOUDINI_ROOT=/opt/hfs18.0.460 \
                 -DCMAKE_BUILD_TYPE=Release .. >> ../../${STAGE_NAME}.log 2>&1
 
             python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
@@ -253,7 +251,7 @@ def executeBuildCentOS(Map options) {
 
             cmake ${CMAKE_KEYS_USD} \
                 -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} \
-                -DHOUDINI_ROOT=/opt/hfs18.0.260 \
+                -DHOUDINI_ROOT=/opt/hfs18.0.460 \
                 -DCMAKE_BUILD_TYPE=Release .. >> ../../${STAGE_NAME}.log 2>&1
 
             python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
