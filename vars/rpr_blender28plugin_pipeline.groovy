@@ -206,7 +206,15 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        dir("${CIS_TOOLS}/../TestResources/rpr_blender_autotests")
+        switch(osName)
+        {
+        case 'Windows':
+            pathToAssets = 'c:/TestResources/Blender2.8Assets'
+            break;
+        default:
+            pathToAssets = '${CIS_TOOLS}/../TestResources/Blender2.8Assets'
+        }
+        dir(pathToAssets)
         {
             checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_blender_autotests.git", true, false, true, 'radeonprorender-gitlab', true)
         }
