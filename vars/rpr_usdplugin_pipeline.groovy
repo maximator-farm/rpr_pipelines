@@ -366,7 +366,7 @@ def call(String projectBranch = "",
         String PRJ_NAME="RadeonProRenderUSD"
         String PRJ_ROOT="rpr-plugins"
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null,
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
                                 usdBranch:usdBranch,
                                 testsBranch:testsBranch,
@@ -379,8 +379,6 @@ def call(String projectBranch = "",
                                 renderDevice:renderDevice,
                                 testsPackage:testsPackage,
                                 tests:tests,
-                                executeBuild:true,
-                                executeTests:false,
                                 forceBuild:forceBuild,
                                 reportName:'Test_20Report',
                                 splitTestsExectuion:splitTestsExectuion,
