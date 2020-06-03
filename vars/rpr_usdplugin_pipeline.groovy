@@ -92,14 +92,14 @@ def executeBuildWindows(Map options)
         bat """
             mkdir RadeonProRenderUSD\\build
             set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
-            python ..\\pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD\\build" --cmake_options -G "Visual Studio 15 2017 Win64" >> ..\\..\\${STAGE_NAME}.log 2>&1
+            python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD\\build" >> ..\\..\\${STAGE_NAME}.log 2>&1
         """
 
     } else {
         bat """
             mkdir RadeonProRenderUSD\\build
             set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
-            python ..\\pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD\\build" --cmake_options "-G \"Visual Studio 15 2017 Win64\" -Dpxr_DIR=USDinst" >> ..\\..\\${STAGE_NAME}.log 2>&1
+            python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD\\build" --cmake_options "-Dpxr_DIR=USDinst" >> ..\\..\\${STAGE_NAME}.log 2>&1
         """
     } 
 }
