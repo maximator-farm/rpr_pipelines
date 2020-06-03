@@ -264,6 +264,29 @@ def executeBuild(String osName, Map options) {
 
 def executePreBuild(Map options) {
 
+    // manual job
+    if (options.forceBuild) {
+        options.executeBuild = true
+        options.executeTests = true
+    // auto job
+    } else {
+        if (env.CHANGE_URL) {
+            println "[INFO] Branch was detected as Pull Request"
+            options.isPR = true
+            options.executeBuild = true
+            options.executeTests = true
+            options.testsPackage = "PR"
+        } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
+           println "[INFO] ${env.BRANCH_NAME} branch was detected"
+           options.executeBuild = true
+           options.executeTests = true
+           options.testsPackage = "master"
+        } else {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.testsPackage = "master"
+        }
+    }
+
     dir('RadeonProRenderUSD')
     {
         checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git')
