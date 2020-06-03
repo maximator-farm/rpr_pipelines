@@ -158,7 +158,6 @@ def executeBuildLinux(Map options) {
             mkdir -p USDgen
             mkdir -p USDinst
 
-            export HFS=/opt/hfs18.0.460
             python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
         """
     }
@@ -167,6 +166,7 @@ def executeBuildLinux(Map options) {
         if (options.enableHoudini) {
             sh """
                 mkdir build
+                export HFS=/opt/hfs18.0.460
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
@@ -194,7 +194,6 @@ def executeBuildCentOS(Map options) {
             mkdir -p USDgen
             mkdir -p USDinst
 
-            export HFS=/opt/hfs18.0.460
             python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
         """
     }
@@ -203,6 +202,7 @@ def executeBuildCentOS(Map options) {
         if (options.enableHoudini) {
             sh """
                 mkdir build
+                export HFS=/opt/hfs18.0.460
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
