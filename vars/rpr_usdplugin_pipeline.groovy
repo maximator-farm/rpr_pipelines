@@ -88,20 +88,22 @@ def executeBuildWindows(Map options)
         """
     }
     
-    if (options.enableHoudini) {
-        bat """
-            mkdir RadeonProRenderUSD\\build
-            set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
-            python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD\\build" >> ..\\..\\${STAGE_NAME}.log 2>&1
-        """
+    dir ("RadeonProRenderUSD") {
+        if (options.enableHoudini) {
+            bat """
+                mkdir build
+                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\..\\${STAGE_NAME}.log 2>&1
+            """
 
-    } else {
-        bat """
-            mkdir RadeonProRenderUSD\\build
-            set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
-            python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD\\build" --cmake_options "-Dpxr_DIR=USDinst" >> ..\\..\\${STAGE_NAME}.log 2>&1
-        """
-    } 
+        } else {
+            bat """
+                mkdir build
+                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" --cmake_options "-Dpxr_DIR=USDinst" >> ..\\..\\${STAGE_NAME}.log 2>&1
+            """
+        } 
+    }
 }
 
 
@@ -124,16 +126,18 @@ def executeBuildOSX(Map options) {
         """
     }
 
-    if (options.enableHoudini) {
-        sh """
-            mkdir -p RadeonProRenderUSD/build
-            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" >> ../../${STAGE_NAME}.log 2>&1
-        """
-    } else {
-        sh """
-            mkdir -p RadeonProRenderUSD/build
-            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" --cmake_options "-Dpxr_DIR=USDinst" >> ../../${STAGE_NAME}.log 2>&1
-        """
+    dir ("RadeonProRenderUSD") {
+        if (options.enableHoudini) {
+            sh """
+                mkdir build
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../../${STAGE_NAME}.log 2>&1
+            """
+        } else {
+            sh """
+                mkdir build
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options "-Dpxr_DIR=USDinst" >> ../../${STAGE_NAME}.log 2>&1
+            """
+        }
     }
 }
 
@@ -157,16 +161,18 @@ def executeBuildLinux(Map options) {
         """
     }
 
-    if (options.enableHoudini) {
-        sh """
-            mkdir -p RadeonProRenderUSD/build
-            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" >> ../../${STAGE_NAME}.log 2>&1
-        """
-    } else {
-        sh """
-            mkdir -p RadeonProRenderUSD/build
-            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" --cmake_options "-Dpxr_DIR=USDinst" >> ../../${STAGE_NAME}.log 2>&1
-        """
+    dir ("RadeonProRenderUSD") {
+        if (options.enableHoudini) {
+            sh """
+                mkdir build
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../../${STAGE_NAME}.log 2>&1
+            """
+        } else {
+            sh """
+                mkdir build
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options "-Dpxr_DIR=USDinst" >> ../../${STAGE_NAME}.log 2>&1
+            """
+        }
     }
 }
 
@@ -190,16 +196,18 @@ def executeBuildCentOS(Map options) {
         """
     }
 
-    if (options.enableHoudini) {
-        sh """
-            mkdir -p RadeonProRenderUSD/build
-            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" >> ../../${STAGE_NAME}.log 2>&1
-        """
-    } else {
-        sh """
-            mkdir -p RadeonProRenderUSD/build
-            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" --cmake_options "-Dpxr_DIR=USDinst" >> ../../${STAGE_NAME}.log 2>&1
-        """
+    dir ("RadeonProRenderUSD") {
+        if (options.enableHoudini) {
+            sh """
+                mkdir build
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../../${STAGE_NAME}.log 2>&1
+            """
+        } else {
+            sh """
+                mkdir build
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options "-Dpxr_DIR=USDinst" >> ../../${STAGE_NAME}.log 2>&1
+            """
+        }
     }
 }
 
