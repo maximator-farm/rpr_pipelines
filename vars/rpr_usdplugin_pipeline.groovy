@@ -95,7 +95,6 @@ def executeBuildWindows(Map options)
         set PYTHONPATH=${WORKSPACE}\\USDinst\\lib\\python;%PYTHONPATH%
 
         mkdir RadeonProRenderUSD\\build
-        cd RadeonProRenderUSD\\build
 
         python ..\\pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "RadeonProRenderUSD\\build" --cmake_options "${CMAKE_KEYS_USD}" >> ..\\..\\${STAGE_NAME}.log 2>&1
     """
@@ -130,7 +129,6 @@ def executeBuildOSX(Map options) {
             export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
 
             mkdir -p RadeonProRenderUSD/build
-            cd RadeonProRenderUSD/build
 
             python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "RadeonProRenderUSD/build" --cmake_options "${CMAKE_KEYS_USD}" >> ../../${STAGE_NAME}.log 2>&1
         """
@@ -166,7 +164,6 @@ def executeBuildLinux(Map options) {
             export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
 
             mkdir -p RadeonProRenderUSD/build
-            cd RadeonProRenderUSD/build
 
             python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "RadeonProRenderUSD/build" --cmake_options "${CMAKE_KEYS_USD}" >> ../../${STAGE_NAME}.log 2>&1
         """
@@ -203,7 +200,6 @@ def executeBuildCentOS(Map options) {
             export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
 
             mkdir -p RadeonProRenderUSD/build
-            cd RadeonProRenderUSD/build
 
             python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "RadeonProRenderUSD/build" --cmake_options "${CMAKE_KEYS_USD}" >> ../../${STAGE_NAME}.log 2>&1
         """
