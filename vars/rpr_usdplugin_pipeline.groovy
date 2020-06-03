@@ -84,7 +84,7 @@ def executeBuildWindows(Map options)
     """
 
     CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
-    String CMAKE_KEYS_USD = options.enableHoudini ? "-G Visual Studio 15 2017 Win64" : "-G \"Visual Studio 15 2017 Win64\" -Dpxr_DIR=USDinst"
+    String CMAKE_KEYS_USD = options.enableHoudini ? "-G \"Visual Studio 15 2017 Win64\" " : "-G \"Visual Studio 15 2017 Win64\" -Dpxr_DIR=USDinst"
 
     bat """
         call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}.log 2>&1
