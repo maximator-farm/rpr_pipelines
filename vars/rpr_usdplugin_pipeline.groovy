@@ -71,140 +71,141 @@ def executeTestCommand(String osName, Map options)
     }
 }
 
+
 def executeTests(String osName, String asicName, Map options)
 {
 }
 
+
 def executeBuildWindows(Map options)
 {
-    String CMD_BUILD_USD = """
-        if exist USDgen rmdir /s/q USDgen
-        if exist USDinst rmdir /s/q USDinst
-        C:\\Python27\\python.exe USD\\build_scripts\\build_usd.py -v --build ${WORKSPACE}/USDgen/build --src ${WORKSPACE}/USDgen/src ${WORKSPACE}/USDinst > USD/${STAGE_NAME}_USD.log 2>&1
-    """
-
+    if (options.rebuildUSD){
+        bat """
+            if exist USDgen rmdir /s/q USDgen
+            if exist USDinst rmdir /s/q USDinst
+            call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}_USD.log 2>&1
+            C:\\Python27\\python.exe USD\\build_scripts\\build_usd.py -v --build ${WORKSPACE}/USDgen/build --src ${WORKSPACE}/USDgen/src ${WORKSPACE}/USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+        """
+    }
+    
     CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
     String CMAKE_KEYS_USD = options.enableHoudini ? "--cmake_options '-G \"Visual Studio 15 2017 Win64\"' " : "-G \"Visual Studio 15 2017 Win64\" -Dpxr_DIR=USDinst"
 
-    bat """
-        call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}.log 2>&1
+    if (options.enableHoudini) {
+        bat """
+            mkdir RadeonProRenderUSD\\build
+            set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+            python ..\\pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD\\build" --cmake_options -G "Visual Studio 15 2017 Win64" >> ..\\..\\${STAGE_NAME}.log 2>&1
+        """
 
-        ${CMD_BUILD_USD}
-
-        set PATH=c:\\python35\\;c:\\python35\\scripts\\;${WORKSPACE}\\USDinst\\bin;${WORKSPACE}\\USDinst\\lib;%PATH%
-        set PYTHONPATH=${WORKSPACE}\\USDinst\\lib\\python;%PYTHONPATH%
-
-        mkdir RadeonProRenderUSD\\build
-
-        python ..\\pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i \".\" -o \"RadeonProRenderUSD\\build\" "${CMAKE_KEYS_USD}" >> ..\\..\\${STAGE_NAME}.log 2>&1
-    """
-    
+    } else {
+        bat """
+            mkdir RadeonProRenderUSD\\build
+            set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+            python ..\\pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD\\build" --cmake_options "-G \"Visual Studio 15 2017 Win64\" -Dpxr_DIR=USDinst" >> ..\\..\\${STAGE_NAME}.log 2>&1
+        """
+    } 
 }
+
 
 def executeBuildOSX(Map options) {
 
-    String CMD_BUILD_USD = """
-        if [ -d "./USDgen" ]; then
-            rm -fdr ./USDgen
-        fi
-
-        if [ -d "./USDinst" ]; then
-            rm -fdr ./USDinst
-        fi
-
-        mkdir -p USDgen
-        mkdir -p USDinst
-
-        python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
-    """
-
-    CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
-    String CMAKE_KEYS_USD = options.enableHoudini ? "" : "--cmake_options \"-Dpxr_DIR=USDinst\""
-
-    withEnv(["OS="]) {
+    if (options.rebuildUSD) {
         sh """
-            ${CMD_BUILD_USD}
+            if [ -d "./USDgen" ]; then
+                rm -fdr ./USDgen
+            fi
 
-            export PATH=${WORKSPACE}/USDinst/bin:\$PATH
-            export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
+            if [ -d "./USDinst" ]; then
+                rm -fdr ./USDinst
+            fi
 
+            mkdir -p USDgen
+            mkdir -p USDinst
+
+            python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+        """
+    }
+
+    if (options.enableHoudini) {
+        sh """
             mkdir -p RadeonProRenderUSD/build
-
-            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i \".\" -o \"RadeonProRenderUSD/build\" "${CMAKE_KEYS_USD}" >> ../../${STAGE_NAME}.log 2>&1
+            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" >> ../../${STAGE_NAME}.log 2>&1
+        """
+    } else {
+        sh """
+            mkdir -p RadeonProRenderUSD/build
+            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" --cmake_options "-Dpxr_DIR=USDinst" >> ../../${STAGE_NAME}.log 2>&1
         """
     }
 }
+
 
 def executeBuildLinux(Map options) {
 
-    String CMD_BUILD_USD = """
-        if [ -d "./USDgen" ]; then
-            rm -fdr ./USDgen
-        fi
-
-        if [ -d "./USDinst" ]; then
-            rm -fdr ./USDinst
-        fi
-
-        mkdir -p USDgen
-        mkdir -p USDinst
-
-        python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
-    """
-
-    CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
-    String CMAKE_KEYS_USD = options.enableHoudini ? "" : "--cmake_options \"-Dpxr_DIR=USDinst\""
-
-    // set $OS=null because it use in TBB build script
-    withEnv(["OS="]) {
+    if (options.rebuildUSD) {
         sh """
-            ${CMD_BUILD_USD}
+            if [ -d "./USDgen" ]; then
+                rm -fdr ./USDgen
+            fi
 
-            export PATH=${WORKSPACE}/USDinst/bin:\$PATH
-            export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
+            if [ -d "./USDinst" ]; then
+                rm -fdr ./USDinst
+            fi
 
+            mkdir -p USDgen
+            mkdir -p USDinst
+
+            python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+        """
+    }
+
+    if (options.enableHoudini) {
+        sh """
             mkdir -p RadeonProRenderUSD/build
-
-            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i \".\" -o \"RadeonProRenderUSD/build\" "${CMAKE_KEYS_USD}" >> ../../${STAGE_NAME}.log 2>&1
+            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" >> ../../${STAGE_NAME}.log 2>&1
+        """
+    } else {
+        sh """
+            mkdir -p RadeonProRenderUSD/build
+            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" --cmake_options "-Dpxr_DIR=USDinst" >> ../../${STAGE_NAME}.log 2>&1
         """
     }
 }
+
 
 def executeBuildCentOS(Map options) {
 
-    String CMD_BUILD_USD = """
-        if [ -d "./USDgen" ]; then
-            rm -fdr ./USDgen
-        fi
-
-        if [ -d "./USDinst" ]; then
-            rm -fdr ./USDinst
-        fi
-
-        mkdir -p USDgen
-        mkdir -p USDinst
-
-        python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
-    """
-
-    CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
-    String CMAKE_KEYS_USD = options.enableHoudini ? "" : "--cmake_options \"-Dpxr_DIR=USDinst\""
-
-    // set $OS=null because it use in TBB build script
-    withEnv(["OS="]) {
-
+    if (options.rebuildUSD) {
         sh """
-            ${CMD_BUILD_USD}
+            if [ -d "./USDgen" ]; then
+                rm -fdr ./USDgen
+            fi
 
-            export PATH=${WORKSPACE}/USDinst/bin:\$PATH
-            export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
+            if [ -d "./USDinst" ]; then
+                rm -fdr ./USDinst
+            fi
 
+            mkdir -p USDgen
+            mkdir -p USDinst
+
+            python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+        """
+    }
+
+    if (options.enableHoudini) {
+        sh """
             mkdir -p RadeonProRenderUSD/build
-
-            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i \".\" -o \"RadeonProRenderUSD/build\" "${CMAKE_KEYS_USD}" >> ../../${STAGE_NAME}.log 2>&1
+            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" >> ../../${STAGE_NAME}.log 2>&1
+        """
+    } else {
+        sh """
+            mkdir -p RadeonProRenderUSD/build
+            python3 ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "RadeonProRenderUSD" -o "RadeonProRenderUSD/build" --cmake_options "-Dpxr_DIR=USDinst" >> ../../${STAGE_NAME}.log 2>&1
         """
     }
 }
+
 
 def executeBuild(String osName, Map options) {
 
