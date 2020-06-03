@@ -80,11 +80,11 @@ def executeBuildWindows(Map options)
     String CMD_BUILD_USD = """
         if exist USDgen rmdir /s/q USDgen
         if exist USDinst rmdir /s/q USDinst
-        python USD\\build_scripts\\build_usd.py -v --build ${WORKSPACE}/USDgen/build --src ${WORKSPACE}/USDgen/src ${WORKSPACE}/USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+        C:\\Python27\\python.exe USD\\build_scripts\\build_usd.py -v --build ${WORKSPACE}/USDgen/build --src ${WORKSPACE}/USDgen/src ${WORKSPACE}/USDinst > USD/${STAGE_NAME}_USD.log 2>&1
     """
 
     CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
-    String CMAKE_KEYS_USD = options.enableHoudini ? "-G \"Visual Studio 15 2017 Win64\"" : "-G \"Visual Studio 15 2017 Win64\" -Dpxr_DIR=USDinst"
+    String CMAKE_KEYS_USD = options.enableHoudini ? "-G Visual Studio 15 2017 Win64" : "-G \"Visual Studio 15 2017 Win64\" -Dpxr_DIR=USDinst"
 
     bat """
         call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}.log 2>&1
