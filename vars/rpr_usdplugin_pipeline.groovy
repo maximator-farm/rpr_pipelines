@@ -93,7 +93,7 @@ def executeBuildWindows(Map options)
             bat """
                 mkdir build
                 set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
-                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\..\\${STAGE_NAME}.log 2>&1
+                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
             """
 
         } else {
@@ -130,7 +130,7 @@ def executeBuildOSX(Map options) {
         if (options.enableHoudini) {
             sh """
                 mkdir build
-                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../../${STAGE_NAME}.log 2>&1
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
             sh """
@@ -165,7 +165,7 @@ def executeBuildLinux(Map options) {
         if (options.enableHoudini) {
             sh """
                 mkdir build
-                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../../${STAGE_NAME}.log 2>&1
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
             sh """
@@ -200,7 +200,7 @@ def executeBuildCentOS(Map options) {
         if (options.enableHoudini) {
             sh """
                 mkdir build
-                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../../${STAGE_NAME}.log 2>&1
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
             sh """
