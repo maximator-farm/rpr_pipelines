@@ -243,8 +243,8 @@ def executeTests(String osName, String asicName, Map options)
                                 sleep(60)
                                 break;
                         }
+                        archiveArtifacts artifacts: "*.crash.log"
                         if (options.currentTry < options.nodeReallocateTries) {
-                            archiveArtifacts artifacts: "*.crash.log"
                             throw new Exception("All tests crashed")
                         }
                     }
