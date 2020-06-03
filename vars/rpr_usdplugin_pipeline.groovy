@@ -88,9 +88,6 @@ def executeBuildWindows(Map options)
         """
     }
     
-    CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
-    String CMAKE_KEYS_USD = options.enableHoudini ? "--cmake_options '-G \"Visual Studio 15 2017 Win64\"' " : "-G \"Visual Studio 15 2017 Win64\" -Dpxr_DIR=USDinst"
-
     if (options.enableHoudini) {
         bat """
             mkdir RadeonProRenderUSD\\build
