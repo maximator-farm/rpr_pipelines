@@ -91,14 +91,13 @@ def executeBuildWindows(Map options)
 
         ${CMD_BUILD_USD}
 
-        set PATH=${WORKSPACE}\\USDinst\\bin;${WORKSPACE}\\USDinst\\lib;%PATH%
+        set PATH=c:\\python35\\;c:\\python35\\scripts\\;${WORKSPACE}\\USDinst\\bin;${WORKSPACE}\\USDinst\\lib;%PATH%
         set PYTHONPATH=${WORKSPACE}\\USDinst\\lib\\python;%PYTHONPATH%
 
         mkdir RadeonProRenderUSD\\build
         cd RadeonProRenderUSD\\build
 
-        set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
-        python ..\\pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -b -i "." -o "RadeonProRenderUSD\\build" --cmake_options "${CMAKE_KEYS_USD}" . >> ..\\..\\${STAGE_NAME}.log 2>&1
+        python ..\\pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "RadeonProRenderUSD\\build" --cmake_options "${CMAKE_KEYS_USD}" . >> ..\\..\\${STAGE_NAME}.log 2>&1
     """
     
 }
@@ -133,7 +132,7 @@ def executeBuildOSX(Map options) {
             mkdir -p RadeonProRenderUSD/build
             cd RadeonProRenderUSD/build
 
-            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b -i "." -o "RadeonProRenderUSD/build" --cmake_options "${CMAKE_KEYS_USD}" . >> ../../${STAGE_NAME}.log 2>&1
+            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "RadeonProRenderUSD/build" --cmake_options "${CMAKE_KEYS_USD}" . >> ../../${STAGE_NAME}.log 2>&1
         """
     }
 }
@@ -169,7 +168,7 @@ def executeBuildLinux(Map options) {
             mkdir -p RadeonProRenderUSD/build
             cd RadeonProRenderUSD/build
 
-            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b -i "." -o "RadeonProRenderUSD/build" --cmake_options "${CMAKE_KEYS_USD}" . >> ../../${STAGE_NAME}.log 2>&1
+            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "RadeonProRenderUSD/build" --cmake_options "${CMAKE_KEYS_USD}" . >> ../../${STAGE_NAME}.log 2>&1
         """
     }
 }
@@ -206,7 +205,7 @@ def executeBuildCentOS(Map options) {
             mkdir -p RadeonProRenderUSD/build
             cd RadeonProRenderUSD/build
 
-            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b -i "." -o "RadeonProRenderUSD/build" --cmake_options "${CMAKE_KEYS_USD}" . >> ../../${STAGE_NAME}.log 2>&1
+            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "RadeonProRenderUSD/build" --cmake_options "${CMAKE_KEYS_USD}" . >> ../../${STAGE_NAME}.log 2>&1
         """
     }
 }
