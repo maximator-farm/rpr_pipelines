@@ -76,8 +76,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                                     try{
                                                         retry['Tries'][newOptions['tests']].add([host:env.NODE_NAME, link:'link_to_crash'])
                                                     }catch (err){
-                                                        retry['Tries'][newOptions['tests']] = []
-                                                        retry['Tries'][newOptions['tests']].add([host:env.NODE_NAME, link:'link_to_crash'])
+                                                        retry['Tries'][newOptions['tests']] = [[host:env.NODE_NAME, link:'link_to_crash']]
                                                     }
                                                     added = true
                                                 }
