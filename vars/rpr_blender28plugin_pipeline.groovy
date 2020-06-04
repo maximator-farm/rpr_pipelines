@@ -942,7 +942,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 customBuildLinkLinux: customBuildLinkLinux,
                                 customBuildLinkOSX: customBuildLinkOSX,
                                 engine: engine,
-                                autotest_assets: autotest_assets,
                                 nodeRetry: nodeRetry
                                 ])
     }

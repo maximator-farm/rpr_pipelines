@@ -733,7 +733,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 iter: iter,
                                 theshold: theshold,
                                 customBuildLinkWindows: customBuildLinkWindows,
-                                autotest_assets: autotest_assets,
                                 nodeRetry: nodeRetry
                                 ])
         }
