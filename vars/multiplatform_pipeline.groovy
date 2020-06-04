@@ -79,7 +79,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             if (!added){
                                                 nodeRetryList.add([Testers: nodesList, Tries: [tests: [host:env.NODE_NAME, link:'link_to_crash']]])
                                             }
-                                            println nodeRetryList.toString()
+                                            println nodeRetryList.inspect()
 
                                             // change PC after first failed tries and don't change in the last try
                                             if (i < nodesCount - 1 && nodesCount != 1) {
