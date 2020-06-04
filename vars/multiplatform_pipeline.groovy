@@ -70,18 +70,17 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             //}
 
                                             // add info about retry to options
-                                            String tests = newOptions['tests']
                                             boolean added = false;
                                             nodeRetryList.eachWithIndex{ retry, iter ->
                                                 if (retry['Testers'].equals(nodesList)){
-                                                    retry['Tries'][tests].add([host:env.NODE_NAME, link:'link_to_crash'])
+                                                    def retry['Tries'][newOptions['tests']] = []
+                                                    retry['Tries'][newOptions['tests']].add([host:env.NODE_NAME, link:'link_to_crash'])
                                                     added = true
                                                 }
                                             }
                                             if (!added){
-                                                nodeRetryList.add([Testers: nodesList, Tries: [tests: [host:env.NODE_NAME, link:'link_to_crash']]])
+                                                nodeRetryList.add([Testers: nodesList, Tries: [newOptions['tests']: [host:env.NODE_NAME, link:'link_to_crash']]])
                                             }
-
                                             println nodeRetryList.inspect()
 
                                             // change PC after first failed tries and don't change in the last try
