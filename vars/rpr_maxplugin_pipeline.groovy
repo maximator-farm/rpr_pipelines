@@ -113,10 +113,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        dir("${CIS_TOOLS}/../TestResources/rpr_max_autotests")
-        {
-            checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_max_autotests.git", true, false, true, 'radeonprorender-gitlab', true)
-        }
+        downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MaxAssets/", 'MaxAssets')
 
         if (!options['skipBuild']) {
             try {
@@ -649,8 +646,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String SPU = '25',
         String iter = '50',
         String theshold = '0.05',
-        String customBuildLinkWindows = "",
-        String autotest_assets = 'master') 
+        String customBuildLinkWindows = "") 
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY

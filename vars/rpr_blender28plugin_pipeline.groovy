@@ -206,10 +206,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        dir("${CIS_TOOLS}/../TestResources/rpr_blender_autotests")
-        {
-            checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_blender_autotests.git", true, false, true, 'radeonprorender-gitlab', true)
-        }
+        downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Blender2.8Assets/", 'Blender2.8Assets')
 
         if (!options['skipBuild']) {
 
@@ -845,8 +842,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
     String customBuildLinkOSX = "",
-    String engine = "1.0",
-    String autotest_assets = 'master')
+    String engine = "1.0")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
