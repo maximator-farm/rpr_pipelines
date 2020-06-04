@@ -4,7 +4,7 @@ import hudson.plugins.git.GitException;
 import java.nio.channels.ClosedChannelException;
 import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
-import groovy.json.JsonBuilder
+import groovy.json.JsonOutput;
 
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
@@ -45,7 +45,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 {
                                     ws("WS/${options.PRJ_NAME}_Test")
                                     {
-                                        def retryInfo = new JsonBuilder(nodeRetryList)
+                                        def retryInfo = JsonOutput.toJson(nodeRetryList)
                                         options['nodeRetry'] = escapeCharsByUnicode(retryInfo.toString())
                                         Map newOptions = options.clone()
                                         newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
