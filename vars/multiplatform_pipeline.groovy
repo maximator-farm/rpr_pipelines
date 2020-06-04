@@ -4,6 +4,7 @@ import hudson.plugins.git.GitException;
 import java.nio.channels.ClosedChannelException;
 import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
+import groovy.json.JsonBuilder
 
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
@@ -44,7 +45,8 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 {
                                     ws("WS/${options.PRJ_NAME}_Test")
                                     {
-                                        options['nodeRetry'] = nodeRetryList
+                                        def retryInfo = new JsonBuilder(nodeRetryList)
+                                        options['nodeRetry'] = escapeCharsByUnicode(retryInfo.toString())
                                         Map newOptions = options.clone()
                                         newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                         newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
@@ -79,6 +81,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             if (!added){
                                                 nodeRetryList.add([Testers: nodesList, Tries: [tests: [host:env.NODE_NAME, link:'link_to_crash']]])
                                             }
+
                                             println nodeRetryList.inspect()
 
                                             // change PC after first failed tries and don't change in the last try

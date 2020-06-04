@@ -428,7 +428,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 {
                     dir("jobs_launcher") {
                         bat """
-                        build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('RprViewer')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(options.nodeRetry.inspect())}\"
+                        build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('RprViewer')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${options.nodeRetry}\"
                         """
                     }
                 }
