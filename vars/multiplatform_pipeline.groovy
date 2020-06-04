@@ -72,12 +72,12 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             boolean added = false;
                                             nodeRetryList.eachWithIndex{ retry, iter ->
                                                 if (retry['Testers'].equals(nodesList)){
-                                                    retry['Tries'][tests].add([host:env.NODE_NAME, link:'link_to_crash'].inspect())
+                                                    retry['Tries'][tests].add([host:env.NODE_NAME, link:'link_to_crash'])
                                                     added = true
                                                 }
                                             }
                                             if (!added){
-                                                nodeRetryList.add([Testers: nodesList, Tries: [tests: [host:env.NODE_NAME, link:'link_to_crash']]].inspect())
+                                                nodeRetryList.add([Testers: nodesList, Tries: [tests: [host:env.NODE_NAME, link:'link_to_crash']]])
                                             }
                                             println nodeRetryList.toString()
 
