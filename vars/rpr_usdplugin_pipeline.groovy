@@ -319,7 +319,7 @@ def executePreBuild(Map options) {
 
         if(options['incrementVersion'])
         {
-            if(env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender")
+            if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender")
             {
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 println "[INFO] Current build version: ${options.pluginVersion}"
@@ -331,11 +331,11 @@ def executePreBuild(Map options) {
                 def updated_version = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_PATCH_VERSION "', '')
                 println "[INFO] Updated build version: ${updated_version}"
 
-                //bat """
-                //    git add cmake/defaults/Version.cmake
-                //    git commit -m "buildmaster: version update to ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}"
-                //    git push origin HEAD:master
-                //"""
+                bat """
+                    git add cmake/defaults/Version.cmake
+                    git commit -m "buildmaster: version update to ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}"
+                    git push origin HEAD:develop
+                """
 
                 //get commit's sha which have to be build
                 options['projectBranch'] = bat ( script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
