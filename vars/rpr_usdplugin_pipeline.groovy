@@ -333,7 +333,7 @@ def executePreBuild(Map options) {
 
                 bat """
                     git add cmake/defaults/Version.cmake
-                    git commit -m "buildmaster: version update to ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}"
+                    git commit -m "buildmaster: version update to ${options.majorVersion}.${options.minorVersion}.${updated_version}"
                     git push origin HEAD:develop
                 """
 
