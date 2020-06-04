@@ -82,7 +82,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                                 }
                                             }
                                             if (!added){
-                                                nodeRetryList.add([Testers: nodesList, Tries: [["${newOptions['tests']}": [host:env.NODE_NAME, link:'link_to_crash']]]])
+                                                nodeRetryList.add([Testers: nodesList, Tries: [["${newOptions['tests']}": [[host:env.NODE_NAME, link:'link_to_crash']]]]])
                                             }
                                             println nodeRetryList.inspect()
 
