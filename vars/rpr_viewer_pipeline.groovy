@@ -219,25 +219,25 @@ def executeTests(String osName, String asicName, Map options)
                         switch(osName){
                             case 'Windows':
                                 powershell """
-                                    Get-EventLog -LogName * -Newest 200 >> ${STAGE_NAME}.crash.log
-                                    ps | sort -des cpu | select -f 200 | ft -a >> ${STAGE_NAME}.crash.log
-                                    openfiles /query >> ${STAGE_NAME}.crash.log
+                                    Get-EventLog -LogName * -Newest 200 >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
+                                    ps | sort -des cpu | select -f 200 | ft -a >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
+                                    openfiles /query >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
                                 """
                                 archiveArtifacts artifacts: "*.crash.log"
                                 break;
                             case 'OSX':
                                 sh """
-                                    tail -n 200 /var/log/system.log >> ${STAGE_NAME}.crash.log
-                                    top -b | head -n 200 >> ${STAGE_NAME}.crash.log
-                                    iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
+                                    tail -n 200 /var/log/system.log >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
+                                    top -b | head -n 200 >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
+                                    iotop --only -b | head -n 200 >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
                                 """
                                 archiveArtifacts artifacts: "*.crash.log"
                                 break;
                             default:
                                 sh """
-                                    dmesg | tail -n 200 >> ${STAGE_NAME}.crash.log
-                                    top -b | head -n 200 >> ${STAGE_NAME}.crash.log
-                                    iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
+                                    dmesg | tail -n 200 >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
+                                    top -b | head -n 200 >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
+                                    iotop --only -b | head -n 200 >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
                                 """
                                 archiveArtifacts artifacts: "*.crash.log"
                                 sh """
