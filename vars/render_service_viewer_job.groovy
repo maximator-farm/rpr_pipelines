@@ -1,3 +1,5 @@
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+
 def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) {
 	currentBuild.result = 'SUCCESS'
    
@@ -24,6 +26,8 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 			bat """
 				copy "render_service_scripts\\send_viewer_results.py" "."
 			"""	
+		} catch(FlowInterruptedException e) {
+			throw e
 		} catch(e) {
 			fail_reason = "Downloading scripts failed"
 			throw e
@@ -34,9 +38,11 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 				render_service_send_render_status("Downloading viewer", options.id, options.django_url)
 				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
 					bat """
-						curl --retry 3 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "https://rpr.cis.luxoft.com/job/RadeonProViewerAuto/job/master/${options.viewer_version}/artifact/RprViewer_Windows.zip"
+						curl --retry 3 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "${options.viewer_url}"
 					"""
 				}
+			} catch(FlowInterruptedException e) {
+				throw e
 			} catch(e) {
 				fail_reason = "Downloading viewer failed"
 				throw e
@@ -49,6 +55,8 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 						curl --retry 3 -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.scene_link}"
 					"""
 				}
+			} catch(FlowInterruptedException e) {
+				throw e
 			} catch(e) {
 				fail_reason = "Downloading scene failed"
 				throw e
@@ -62,14 +70,16 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 
 			render_service_send_render_status("Building RPRViewer Package", options.id, options.django_url)
 			withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-				python3("configure_viewer.py --version ${options.viewer_version} --id ${id} --django_ip \"${options.django_url}/\" --build_number ${currentBuild.number} --width ${options.width} --height ${options.height} --engine ${options.engine} --iterations ${options.iterations} --scene_name \"${options.scene_name}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ").split('\r\n')[-1].trim()
+				python3("configure_viewer.py --version ${options.viewer_version} --id ${id} --django_ip \"${options.django_url}/\" --width ${options.width} --height ${options.height} --engine ${options.engine} --iterations ${options.iterations} --scene_name \"${options.scene_name}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ").split('\r\n')[-1].trim()
 				print("Preparing results")
 			}
 			render_service_send_render_status("Completed", options.id, options.django_url)
 
 			withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-				print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status \"Success\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+				print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --status \"Success\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
 			}
+		} catch(FlowInterruptedException e) {
+			throw e
 		} catch(e) {
 			// if exit code is greater than 0 or received any other exception -> script finished with unexpected exception
 			String[] messageParts = e.getMessage().split(" ")
@@ -82,8 +92,9 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 			throw e
 		}
 
-	}   
-	catch(e) {
+	} catch(FlowInterruptedException e) {
+		throw e
+	} catch(e) {
 		println(e.toString())
 		println(e.getMessage())
 		println(e.getStackTrace())
@@ -92,7 +103,7 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 			render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, fail_reason)
 		} else if (isLastAttempt) {
 			withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-				print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --build_number ${currentBuild.number} --status \"Failure\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
+				print(python3("send_viewer_results.py --django_ip \"${options.django_url}\" --status \"Failure\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD%"))
 			}
 		}
 		throw e
@@ -138,6 +149,12 @@ def main(String platforms, Map options) {
 }
 
 def startRender(osName, deviceName, renderDevice, options) {
+	node("RenderService || Windows && Builder") {
+		stage("Send Build Number") {
+			render_service_send_build_number(currentBuild.number, options.id, options.django_url)
+		}
+	}
+
 	def labels = "${osName} && RenderService && ${renderDevice}"
 	def nodesCount = getNodesCount(labels)
 	boolean successfullyDone = false
@@ -160,6 +177,8 @@ def startRender(osName, deviceName, renderDevice, options) {
 								boolean isLastAttempt = attemptNum == maxAttempts || attemptNum == nodesCount
 								executeBuildViewer(osName, deviceName, attemptNum, isLastAttempt, options)
 								successfullyDone = true
+							} catch(FlowInterruptedException e) {
+								throw e
 							} catch (e) {
 								//Exclude failed node name
 								currentLabels = currentLabels + " && !" + currentNodeName
@@ -185,8 +204,8 @@ def startRender(osName, deviceName, renderDevice, options) {
 	if (!successfullyDone) {
 		if (nodesCount == 0) {
 			// master machine can't access necessary nodes. Run notification script on any machine
-			node("RenderService") {
-				stage("Notify") {
+			node("RenderService || Windows && Builder") {
+				stage("Notify about failure") {
 					render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, 'No machine with specified configuration')
 				}
 			}
@@ -207,7 +226,7 @@ def getNodesCount(labels) {
 def call(
 	String scene_link = '',  
 	String platforms = '',
-	String viewer_version = '',
+	String viewer_url = '',
 	String id = '',
 	String width = '',
 	String height = '',
@@ -219,11 +238,16 @@ def call(
 	) {
 	String PRJ_ROOT='RenderServiceViewerJob'
 	String PRJ_NAME='RenderServiceViewerJob'  
+
+	// protocol://domain/job/job_name/job/branch/version/artifacts/actifact_name
+	def viewer_version = viewer_url.split('/')[5]
+
 	main(platforms,[
 		enableNotifications:false,
 		PRJ_NAME:PRJ_NAME,
 		PRJ_ROOT:PRJ_ROOT,
 		scene_link:scene_link,
+		viewer_url:viewer_url,
 		viewer_version:viewer_version,
 		id:id,
 		width:width,
