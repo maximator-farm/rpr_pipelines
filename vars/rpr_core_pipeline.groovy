@@ -245,7 +245,7 @@ def executeTests(String osName, String asicName, Map options)
 
                     // reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
-                        collectCrashInfo(osName, "${STAGE_NAME}.${env.NODE_NAME}")
+                        collectCrashInfo(osName, "${options['tests']}.${env.NODE_NAME}")
                         if (osName == "Ubuntu18"){
                             sh """
                                 echo "Restarting Unix Machine...."

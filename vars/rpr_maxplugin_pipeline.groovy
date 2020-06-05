@@ -193,7 +193,7 @@ def executeTests(String osName, String asicName, Map options)
 
                     // deinstalling broken addon & reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
-                        collectCrashInfo(osName, "${STAGE_NAME}.${env.NODE_NAME}")
+                        collectCrashInfo(osName, "${options['tests']}.${env.NODE_NAME}")
                         installMSIPlugin(osName, "Max", options, false, true)
                         if (options.currentTry < options.nodeReallocateTries) {
                             throw new Exception("All tests crashed")
