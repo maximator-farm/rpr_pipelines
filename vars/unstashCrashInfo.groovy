@@ -11,7 +11,7 @@ def call(nodeRetryList){
             }
         }catch(e)
         {
-            echo "[ERROR] Failed to unstash ${it}"
+            echo "[ERROR] Failed to unstash crash log"
             println(e.toString());
             println(e.getMessage());
         }
