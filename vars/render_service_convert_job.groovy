@@ -62,25 +62,38 @@ def executeConvert(osName, gpuName, attemptNum, Map options) {
 				try {
 					switch(tool) {
 						case 'Maya (Redshift)':
-							// update redshift 
-							bat """
-								if not exist "RS2RPRConvertTool" mkdir "RS2RPRConvertTool"
-							"""
+
 							dir("RS2RPRConvertTool"){
 								checkOutBranchOrScm(options['convert_branch'], 'git@github.com:luxteam/RS2RPRConvertTool.git')
 							}
 							// copy necessary scripts for render
-									bat """
-										copy "render_service_scripts\\launch_maya_redshift_conversion.py" "."
-										copy "render_service_scripts\\conversion_redshift_render.py" "."
-										copy "render_service_scripts\\conversion_rpr_render.py" "."
-									"""
+							bat """
+								copy "render_service_scripts\\launch_maya_redshift_conversion.py" "."
+								copy "render_service_scripts\\conversion_redshift_render.py" "."
+								copy "render_service_scripts\\conversion_rpr_render.py" "."
+							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 								print(python3("launch_maya_redshift_conversion.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --build_number ${currentBuild.number} --scene_name \"${scene_name}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} "))
 							}
 							break;
 				
+						case 'Maya (Vray)':
+
+							dir("Vray2RPRConvertTool"){
+								checkOutBranchOrScm(options['convert_branch'], 'git@github.com:luxteam/Vray2RPRConvertTool-Maya.git')
+							}
+							// copy necessary scripts for render
+							bat """
+								copy "render_service_scripts\\launch_maya_vray_conversion.py" "."
+								copy "render_service_scripts\\conversion_vray_render.py" "."
+								copy "render_service_scripts\\conversion_rpr_render.py" "."
+							"""
+							// Launch render
+							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+								print(python3("launch_maya_vray_conversion.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --build_number ${currentBuild.number} --scene_name \"${scene_name}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} "))
+							}
+							break;
 					}
 				} catch (e) {
 					// if status == failure then copy full path and send to slack
