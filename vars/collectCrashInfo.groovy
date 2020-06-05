@@ -29,4 +29,5 @@ def call(osName, logName){
             break;
     }
     archiveArtifacts artifacts: "*.crash.log"
+    stash includes: "${logName}.crash.log", name: "${logName}"
 }

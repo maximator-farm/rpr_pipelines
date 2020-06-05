@@ -46,8 +46,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 {
                                     ws("WS/${options.PRJ_NAME}_Test")
                                     {
-                                        def retryInfo = JsonOutput.toJson(nodeRetryList)
-                                        options['nodeRetry'] = escapeCharsByUnicode(retryInfo.toString())
+                                        options['nodeRetry'] = nodeRetryList
                                         Map newOptions = options.clone()
                                         newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                         newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
@@ -72,18 +71,18 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                             // add info about retry to options
                                             boolean added = false;
-                                            nodeRetryList.eachWithIndex{ retry, iter ->
+                                            nodeRetryList.each{ retry ->
                                                 if (retry['Testers'].equals(nodesList)){
                                                     try{
-                                                        retry['Tries'][newOptions['tests']].add([host:env.NODE_NAME, link:'link_to_crash', time: LocalDateTime.now().toString()])
+                                                        retry['Tries'][newOptions['tests']].add([host:env.NODE_NAME, link:"${STAGE_NAME}.${env.NODE_NAME}", time: LocalDateTime.now().toString()])
                                                     }catch (err){
-                                                        retry['Tries'][newOptions['tests']] = [[host:env.NODE_NAME, link:'link_to_crash', time: LocalDateTime.now().toString()]]
+                                                        retry['Tries'][newOptions['tests']] = [[host:env.NODE_NAME, link:"${STAGE_NAME}.${env.NODE_NAME}", time: LocalDateTime.now().toString()]]
                                                     }
                                                     added = true
                                                 }
                                             }
                                             if (!added){
-                                                nodeRetryList.add([Testers: nodesList, Tries: [["${newOptions['tests']}": [[host:env.NODE_NAME, link:'link_to_crash', time: LocalDateTime.now().toString()]]]]])
+                                                nodeRetryList.add([Testers: nodesList, Tries: [["${newOptions['tests']}": [[host:env.NODE_NAME, link:"${STAGE_NAME}.${env.NODE_NAME}", time: LocalDateTime.now().toString()]]]]])
                                             }
                                             println nodeRetryList.inspect()
 

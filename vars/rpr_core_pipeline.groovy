@@ -425,6 +425,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             dir("summaryTestResults")
             {
+                unstashCrashInfo(options['nodeRetry'])
                 testResultList.each()
                 {
                     dir("$it".replace("testResult-", ""))
@@ -456,8 +457,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                 options.commitMessage = options.commitMessage.replace("'", "")
                 options.commitMessage = options.commitMessage.replace('"', '')
+
+                def retryInfo = JsonOutput.toJson(options.nodeRetry)
                 bat """
-                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"  \"${options.nodeRetry}\"
+                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"  \"${escapeCharsByUnicode(retryInfo.toString())}\"
                 """
                 bat "get_status.bat ..\\summaryTestResults"
             }
