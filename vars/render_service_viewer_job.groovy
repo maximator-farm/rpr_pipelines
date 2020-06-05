@@ -34,7 +34,7 @@ def executeBuildViewer(osName, gpuName, attemptNum, isLastAttempt, Map options) 
 				render_service_send_render_status("Downloading viewer", options.id, options.django_url)
 				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
 					bat """
-						curl --retry 3 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "https://rpr.cis.luxoft.com/job/RadeonProViewerAuto/job/master/${options.viewer_version}/artifact/RprViewer_Windows.zip"
+						curl --retry 3 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "${options.viewer_url}"
 					"""
 				}
 			} catch(e) {
@@ -207,7 +207,7 @@ def getNodesCount(labels) {
 def call(
 	String scene_link = '',  
 	String platforms = '',
-	String viewer_version = '',
+	String viewer_url = '',
 	String id = '',
 	String width = '',
 	String height = '',
@@ -219,11 +219,16 @@ def call(
 	) {
 	String PRJ_ROOT='RenderServiceViewerJob'
 	String PRJ_NAME='RenderServiceViewerJob'  
+
+	// protocol://domain/job/job_name/job/branch/version/artifacts/actifact_name
+	def viewer_version = viewer_url.split('/')[5]
+
 	main(platforms,[
 		enableNotifications:false,
 		PRJ_NAME:PRJ_NAME,
 		PRJ_ROOT:PRJ_ROOT,
 		scene_link:scene_link,
+		viewer_url:viewer_url,
 		viewer_version:viewer_version,
 		id:id,
 		width:width,
