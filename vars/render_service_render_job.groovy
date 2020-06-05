@@ -1,3 +1,5 @@
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+
 def executeRender(osName, gpuName, attemptNum, Map options) {
 	currentBuild.result = 'SUCCESS'
 
@@ -23,6 +25,8 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 						install_pylibs.bat
 						'''
 					}
+				} catch(FlowInterruptedException e) {
+					throw e
 				} catch(e) {
 					fail_reason = "Downloading scripts failed"
 					throw e
@@ -44,6 +48,8 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 
 						downloadPlugin('Windows', toolName, installationOptions, 'renderServiceCredentials')
 						win_addon_name = installationOptions.pluginWinSha
+					} catch(FlowInterruptedException e) {
+						throw e
 					} catch(e) {
 						fail_reason = "Plugin downloading failed"
 						throw e
@@ -74,6 +80,8 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 						}
 
 						print "[INFO] Install function return ${installationStatus}"
+					} catch(FlowInterruptedException e) {
+						throw e
 					} catch(e) {
 						fail_reason = "Plugin installation failed"
 						throw e
@@ -106,6 +114,8 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}"
 						"""
 					}
+				} catch(FlowInterruptedException e) {
+					throw e
 				} catch(e) {
 					fail_reason = "Downloading scene failed"
 					throw e
@@ -121,7 +131,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_blender.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --build_number ${currentBuild.number} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --height ${options.Height} --width ${options.Width} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_blender.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --height ${options.Height} --width ${options.Width} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
@@ -133,7 +143,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_max.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --build_number ${currentBuild.number} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_max.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
@@ -146,7 +156,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_maya.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --build_number ${currentBuild.number} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --batchRender ${options.batchRender} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_maya.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --batchRender ${options.batchRender} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
@@ -158,7 +168,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_maya_redshift.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --build_number ${currentBuild.number} --scene_name \"${scene_name}\" --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_maya_redshift.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --scene_name \"${scene_name}\" --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 					
@@ -170,7 +180,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_maya_arnold.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --build_number ${currentBuild.number} --scene_name \"${scene_name}\" --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_maya_arnold.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --scene_name \"${scene_name}\" --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
@@ -182,11 +192,13 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_core_render.py --django_ip \"${options.django_url}/\" --id ${id} --build_number ${currentBuild.number} --pass_limit ${options.Iterations} --width ${options.Width} --height ${options.Height} --sceneName \"${scene_name}\" --startFrame ${options.startFrame} --endFrame ${options.endFrame} --gpu \"${options.GPU}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_core_render.py --django_ip \"${options.django_url}/\" --id ${id} --pass_limit ${options.Iterations} --width ${options.Width} --height ${options.Height} --sceneName \"${scene_name}\" --startFrame ${options.startFrame} --endFrame ${options.endFrame} --gpu \"${options.GPU}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
 					}
+				} catch(FlowInterruptedException e) {
+					throw e
 				} catch(e) {
 					// if status == failure then copy full path and send to slack
 					bat """
@@ -203,6 +215,8 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 					}
 					throw e
 				}
+			} catch(FlowInterruptedException e) {
+				throw e
 			} catch(e) {
 				println(e.toString())
 				println(e.getMessage())
@@ -254,6 +268,12 @@ def main(String PCs, Map options) {
 }
 
 def startRender(osName, deviceName, renderDevice, options) {
+	node("RenderService || Windows && Builder") {
+		stage("Send Build Number") {
+			render_service_send_build_number(currentBuild.number, options.id, options.django_url)
+		}
+	}
+
 	def labels = "${osName} && RenderService && ${renderDevice}"
 	def nodesCount = getNodesCount(labels)
 	boolean successfullyDone = false
@@ -275,6 +295,8 @@ def startRender(osName, deviceName, renderDevice, options) {
 							try {
 								executeRender(osName, deviceName, attemptNum, options)
 								successfullyDone = true
+							} catch(FlowInterruptedException e) {
+								throw e
 							} catch (e) {
 								//Exclude failed node name
 								currentLabels = currentLabels + " && !" + currentNodeName
@@ -300,8 +322,8 @@ def startRender(osName, deviceName, renderDevice, options) {
 	if (!successfullyDone) {
 		if (nodesCount == 0) {
 			// master machine can't access necessary nodes. Run notification script on any machine
-			node("RenderService") {
-				stage("Notify") {
+			node("RenderService || Windows && Builder") {
+				stage("Notify about failure") {
 					render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, 'No machine with specified configuration')
 				}
 			}
