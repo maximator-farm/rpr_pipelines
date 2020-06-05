@@ -272,6 +272,8 @@ def executeTests(String osName, String asicName, Map options)
                         switch(osName){
                             case 'Windows':
                                 powershell """
+                                    echo ${env.NODE_NAME} >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
+                                    Get-Date >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
                                     Get-EventLog -LogName * -Newest 200 >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
                                     ps | sort -des cpu | select -f 200 | ft -a >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
                                     openfiles /query >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
@@ -279,6 +281,8 @@ def executeTests(String osName, String asicName, Map options)
                                 break;
                             case 'OSX':
                                 sh """
+                                    echo ${env.NODE_NAME} >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
+                                    date >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
                                     log show --no-info --color always --predicate 'eventMessage CONTAINS[c] "radeon" OR eventMessage CONTAINS[c] "gpu" OR eventMessage CONTAINS[c] "amd"' --last 1h >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
                                     top -l 1 | head -n 200 >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
                                     sudo iotop | head -n 200 >> ${STAGE_NAME}.${env.NODE_NAME}.crash.log
