@@ -5,6 +5,7 @@ import java.nio.channels.ClosedChannelException;
 import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
 import groovy.json.JsonOutput;
+import java.time.*;
 
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
@@ -74,15 +75,15 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             nodeRetryList.eachWithIndex{ retry, iter ->
                                                 if (retry['Testers'].equals(nodesList)){
                                                     try{
-                                                        retry['Tries'][newOptions['tests']].add([host:env.NODE_NAME, link:'link_to_crash'])
+                                                        retry['Tries'][newOptions['tests']].add([host:env.NODE_NAME, link:'link_to_crash', time: LocalDateTime.now().toString()])
                                                     }catch (err){
-                                                        retry['Tries'][newOptions['tests']] = [[host:env.NODE_NAME, link:'link_to_crash']]
+                                                        retry['Tries'][newOptions['tests']] = [[host:env.NODE_NAME, link:'link_to_crash', time: LocalDateTime.now().toString()]]
                                                     }
                                                     added = true
                                                 }
                                             }
                                             if (!added){
-                                                nodeRetryList.add([Testers: nodesList, Tries: [["${newOptions['tests']}": [[host:env.NODE_NAME, link:'link_to_crash']]]]])
+                                                nodeRetryList.add([Testers: nodesList, Tries: [["${newOptions['tests']}": [[host:env.NODE_NAME, link:'link_to_crash', time: LocalDateTime.now().toString()]]]]])
                                             }
                                             println nodeRetryList.inspect()
 
