@@ -253,12 +253,14 @@ def executeTests(String osName, String asicName, Map options)
                                     openfiles /query >> ${STAGE_NAME}.crash.log
                                 """
                                 break;
+                                archiveArtifacts artifacts: "*.crash.log"
                             case 'OSX':
                                 sh """
                                     log show --no-info --color always --predicate 'eventMessage CONTAINS[c] "radeon" OR eventMessage CONTAINS[c] "gpu" OR eventMessage CONTAINS[c] "amd"' --last 1h >> ${STAGE_NAME}.crash.log
                                     top -l 1 | head -n 200 >> ${STAGE_NAME}.crash.log
                                     sudo iotop | head -n 200 >> ${STAGE_NAME}.crash.log
                                 """
+                                archiveArtifacts artifacts: "*.crash.log"
                                 break;
                             default:
                                 sh """
@@ -266,6 +268,7 @@ def executeTests(String osName, String asicName, Map options)
                                     top -b | head -n 200 >> ${STAGE_NAME}.crash.log
                                     iotop --only -b | head -n 200 >> ${STAGE_NAME}.crash.log
                                 """
+                                archiveArtifacts artifacts: "*.crash.log"
                                 sh """
                                     echo "Restarting Unix Machine...."
                                     hostname
@@ -274,7 +277,6 @@ def executeTests(String osName, String asicName, Map options)
                                 sleep(60)
                                 break;
                         }
-                        archiveArtifacts artifacts: "*.crash.log"
                         if (options.currentTry < options.nodeReallocateTries) {
                             throw new Exception("All tests crashed")
                         }
