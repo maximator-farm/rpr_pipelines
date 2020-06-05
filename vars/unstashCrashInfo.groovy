@@ -3,7 +3,7 @@ def call(nodeRetryList){
         try
         {
             gpu['Tries'].each{ group ->
-                group.each{ group, retries ->
+                group.each{ groupKey, retries ->
                     retries.each{ retry ->
                         unstash "${retry['link']}"
                     }
