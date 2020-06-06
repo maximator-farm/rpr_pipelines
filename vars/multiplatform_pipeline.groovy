@@ -4,7 +4,6 @@ import hudson.plugins.git.GitException;
 import java.nio.channels.ClosedChannelException;
 import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
-import groovy.json.JsonOutput;
 import java.time.*;
 
 

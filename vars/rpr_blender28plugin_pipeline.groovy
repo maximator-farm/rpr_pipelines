@@ -1,4 +1,5 @@
-import RBSProduction
+import RBSProduction;
+import groovy.json.JsonOutput;
 
 def getBlenderAddonInstaller(String osName, Map options)
 {

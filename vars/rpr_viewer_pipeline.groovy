@@ -1,3 +1,4 @@
+import groovy.json.JsonOutput;
 
 def getViewerTool(String osName, Map options)
 {
