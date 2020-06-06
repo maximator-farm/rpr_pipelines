@@ -5,7 +5,9 @@ def call(osName, logName){
             powershell """
                 echo ${env.NODE_NAME} >> ${logName}.crash.log
                 Get-Date >> ${logName}.crash.log
-                Get-EventLog -LogName * -Newest 200 >> ${logName}.crash.log
+                Get-EventLog -LogName System -Newest 200 >> ${logName}.crash.log
+                Get-EventLog -LogName Application -Newest 200 >> ${logName}.crash.log
+                Get-EventLog -LogName HardwareEvents -Newest 200 >> ${logName}.crash.log
                 ps | sort -des cpu | select -f 200 | ft -a >> ${logName}.crash.log
                 openfiles /query >> ${logName}.crash.log
             """
