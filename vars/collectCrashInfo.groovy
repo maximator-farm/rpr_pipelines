@@ -1,4 +1,5 @@
 def call(osName, logName){
+    println "Collect crash logs"
     switch(osName){
         case 'Windows':
             powershell """
