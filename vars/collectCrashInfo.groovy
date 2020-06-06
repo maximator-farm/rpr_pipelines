@@ -9,7 +9,6 @@ def call(osName, logName){
                 Get-EventLog -LogName Application -Newest 200 >> ${logName}.crash.log
                 Get-EventLog -LogName HardwareEvents -Newest 200 >> ${logName}.crash.log
                 ps | sort -des cpu | select -f 200 | ft -a >> ${logName}.crash.log
-                openfiles /query >> ${logName}.crash.log
             """
             break;
         case 'OSX':
