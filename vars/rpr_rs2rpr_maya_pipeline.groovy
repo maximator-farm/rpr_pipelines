@@ -459,7 +459,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_storage/RadeonProRenderMaya_2.9.8.msi",
          String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:NVIDIA_GF1080TI',
+         String platforms = 'Windows:NVIDIA_GF2080TI',
          Boolean updateORRefs = false,
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
