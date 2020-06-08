@@ -31,7 +31,7 @@ def getTanTool(String osName, Map options)
 
         case 'OSX':
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip")) {
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.tar.gz")) {
 
                 clearBinariesUnix()
 
@@ -40,23 +40,25 @@ def getTanTool(String osName, Map options)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    cp binMacOS.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
+                    cp binMacOS.tar.gz "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.tar.gz"
                 """ 
 
             } else {
-                println "[INFO] The plugin ${options.pluginOSXSha}.zip exists in the storage."
+                println "[INFO] The plugin ${options.pluginOSXSha}.tar.gz exists in the storage."
                 sh """
-                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip" binMacOS.zip
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.tar.gz" binMacOS.tar.gz
                 """
             }
 
-            unzip zipFile: "binMacOS.zip", dir: "TAN", quiet: true
-
+            sh """
+                tar -zxvf binMacOS.tar.gz
+            """
+            
             break;
 
         default:
             
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz")) {
 
                 clearBinariesUnix()
 
@@ -65,18 +67,20 @@ def getTanTool(String osName, Map options)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    cp binUbuntu18.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                    cp binUbuntu18.tar.gz "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz"
                 """ 
 
             } else {
 
-                println "[INFO] The plugin ${options.pluginUbuntuSha}.zip exists in the storage."
+                println "[INFO] The plugin ${options.pluginUbuntuSha}.tar.gz exists in the storage."
                 sh """
-                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip" binUbuntu18.zip
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz" binUbuntu18.tar.gz
                 """
             }
 
-            unzip zipFile: "binUbuntu18.zip", dir: "TAN", quiet: true
+            sh """
+                tar -zxvf binUbuntu18.tar.gz
+            """
 
             break;
     }
@@ -260,12 +264,6 @@ def executeBuildWindows(Map options) {
                                     xcopy /s/y/i vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${win_build_conf} binWindows\\cmake-TALibDopplerTest-bin
                                     xcopy /s/y/i vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${win_build_conf} binWindows\\cmake-RoomAcousticQT-bin
                                 """
-
-                                // temp solution for testing
-                                bat """
-                                    mkdir binWindows\\cmake-TALibTestConvolution-bin\\platforms
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\plugins\\platforms\\qwindows.dll binWindows\\cmake-TALibTestConvolution-bin\\platforms
-                                """
                                 
                                 zip archive: true, dir: "binWindows", glob: '', zipFile: "Windows_${win_build_name}.zip"
 
@@ -347,14 +345,18 @@ def executeBuildOSX(Map options) {
                                 cp -rf cmake-TALibDopplerTest-bin binMacOS/cmake-TALibDopplerTest-bin
                                 cp -rf cmake-RoomAcousticQT-bin binMacOS/cmake-RoomAcousticQT-bin
                             """
-                            
-                            zip archive: true, dir: "binMacOS", glob: '', zipFile: "MacOS_${osx_build_name}.zip"
 
                             sh """
-                                mv MacOS_${osx_build_name}.zip binMacOS.zip
+                                tar -czvf "MacOS_${osx_build_name}.tar.gz" ./binMacOS
                             """
-                            stash includes: "binMacOS.zip", name: 'TAN_OSX'
-                            options.pluginOSXSha = sha1 "binMacOS.zip"
+                            
+                            archiveArtifacts "MacOS_${osx_build_name}.tar.gz"
+
+                            sh """
+                                mv MacOS_${osx_build_name}.tar.gz binMacOS.tar.gz
+                            """
+                            stash includes: "binMacOS.tar.gz", name: 'TAN_OSX'
+                            options.pluginOSXSha = sha1 "binMacOS.tar.gz"
 
                         } catch (FlowInterruptedException error) {
                             println "[INFO] Job was aborted during build stage"
@@ -420,14 +422,18 @@ def executeBuildLinux(String osName, Map options) {
                             cp -rf cmake-TALibDopplerTest-bin binUbuntu18/cmake-TALibDopplerTest-bin
                             cp -rf cmake-RoomAcousticQT-bin binUbuntu18/cmake-RoomAcousticQT-bin
                         """
-                        
-                        zip archive: true, dir: "binUbuntu18", glob: '', zipFile: "Ubuntu18_${ub18_build_name}.zip"
 
                         sh """
-                            mv Ubuntu18_${ub18_build_name}.zip binUbuntu18.zip
+                            tar -czvf "Ubuntu18_${ub18_build_name}.tar.gz" ./binUbuntu18
                         """
-                        stash includes: "binUbuntu18.zip", name: 'TAN_Ubuntu18'
-                        options.pluginUbuntuSha = sha1 "binUbuntu18.zip"
+                        
+                        archiveArtifacts "Ubuntu18_${ub18_build_name}.tar.gz"
+
+                        sh """
+                            mv Ubuntu18_${ub18_build_name}.tar.gz binUbuntu18.tar.gz
+                        """
+                        stash includes: "binUbuntu18.tar.gz", name: 'TAN_Ubuntu18'
+                        options.pluginUbuntuSha = sha1 "binUbuntu18.tar.gz"
 
                     } catch (FlowInterruptedException error) {
                         println "[INFO] Job was aborted during build stage"
