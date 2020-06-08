@@ -471,7 +471,7 @@ def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_
          Boolean forceBuild = false) {
     try
     {
-        String PRJ_NAME="AI2RPRConvertTool-Maya"
+        String PRJ_NAME="Arnold2RPRConvertTool-Maya"
         String PRJ_ROOT="rpr-tools"
 
         multiplatform_pipeline(platforms, this.&executePreBuild, null, this.&executeTests, this.&executeDeploy,
