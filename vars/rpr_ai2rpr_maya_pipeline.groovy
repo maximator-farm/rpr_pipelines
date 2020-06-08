@@ -237,7 +237,7 @@ def executePreBuild(Map options)
         }
     }
 
-    dir('Vray2RPRConvertTool-Maya')
+    dir('Arnold2RPRConvertTool-Maya')
     {
         checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/Arnold2RPRConvertTool-Maya.git')
 
