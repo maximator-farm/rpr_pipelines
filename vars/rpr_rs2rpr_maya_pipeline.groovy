@@ -304,7 +304,7 @@ def executePreBuild(Map options)
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else if (env.JOB_NAME == "Redshift2RPRConvertToolNightly-Maya") {
+    } else if (env.JOB_NAME == "Redshift2RPRConvertToolWeekly-Maya") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '15']]]);

@@ -305,7 +305,7 @@ def executePreBuild(Map options)
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else if (env.JOB_NAME == "Vray2RPRConvertToolNightly-Maya") {
+    } else if (env.JOB_NAME == "Vray2RPRConvertToolWeekly-Maya") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '15']]]);
