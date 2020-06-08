@@ -287,7 +287,7 @@ def executePreBuild(Map options)
         currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
         bat """
-            rename convertAI2RPR.py convertVR2RPR_${options.pluginVersion}.py
+            rename convertAI2RPR.py convertAI2RPR_${options.pluginVersion}.py
         """
         archiveArtifacts "convertAI2RPR*.py"
         String BUILD_NAME = "convertAI2RPR${options.pluginVersion}.py"
