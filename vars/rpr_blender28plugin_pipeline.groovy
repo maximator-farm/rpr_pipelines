@@ -301,7 +301,7 @@ def executeTests(String osName, String asicName, Map options)
                         stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
                         // deinstalling broken addon & reallocate node if there are still attempts
-                        if (options.throwError){//sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
                             collectCrashInfo(osName, "${options['tests']}.${env.NODE_NAME}")
                             installBlenderAddon(osName, "2.82", options, false, true)
                             if (options.currentTry < options.nodeReallocateTries) {
