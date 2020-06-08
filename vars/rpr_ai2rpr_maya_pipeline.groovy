@@ -257,7 +257,7 @@ def executePreBuild(Map options)
             currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
         }
 
-        options.pluginVersion = version_read("convertAI2RPR.py", 'AI2RPR_CONVERTER_VERSION = ')
+        options.pluginVersion = version_read("convertAI2RPR.py", 'ARNOLD2RPR_CONVERTER_VERSION = ')
 
         if (options['incrementVersion']) {
             if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
@@ -268,9 +268,9 @@ def executePreBuild(Map options)
                 new_version = version_inc(options.pluginVersion, 3)
                 
                 println "[INFO] New build version: ${new_version}"
-                version_write("convertAI2RPR.py", 'AI2RPR_CONVERTER_VERSION = ', new_version)
+                version_write("convertAI2RPR.py", 'ARNOLD2RPR_CONVERTER_VERSION = ', new_version)
 
-                options.pluginVersion = version_read("convertAI2RPR.py", 'AI2RPR_CONVERTER_VERSION = ')
+                options.pluginVersion = version_read("convertAI2RPR.py", 'ARNOLD2RPR_CONVERTER_VERSION = ')
                 println "[INFO] Updated build version: ${options.pluginVersion}"
 
                 bat """
