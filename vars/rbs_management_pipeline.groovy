@@ -1,67 +1,51 @@
 def main(Map options) {
-	node (options.nodeLabels) {
-		String deploymentFolder = options.folderName
-		dir(deploymentFolder) {
-			checkOutBranchOrScm(options['universeBranch'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git', false, false, true, 'radeonprorender-gitlab', false)
-			dir("universe/${options.dockerScriptsDir}") {
-				switch(options['mode']) {
-					case 'Deploy':
+	String[] branchParts = options.universeBranch.split('/')
+	// take last part after slash of branch name as version
+	String version = branchParts[branchParts.length - 1]
+	node('Ubuntu18 && Builder') {
+		sshagent(credentials : ['FrontendMachineCredentials']) {
+			sh "ssh admin@172.30.23.112 ls ${options.RBSServicesRoot}"
+		}
+	}
+/*	dir(options.RBSServicesRoot) {
+		if (fileExists("${version}")) {
+			dir("${version}/universe") {
+				sh """
+					./stop.sh
+					./remove.sh
+				"""
+			}
+		}
 
-						sh """
-							./deploy-all.sh
-						"""
+		dir("${version}") {
+			checkOutBranchOrScm(options['universeVersion'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git', false, false, true, 'radeonprorender-gitlab', false)
 
-						break;
-
-					case "Update":
-
-						sh """
-							git checkout ${options.universeBranch}
-						"""
-						// TODO add checkout
-						for (container in options.containers) {
-
-							sh """
-								./redeploy-${container.toLowerCase()}.sh .${options.dockerComposePostfix}
-							"""
-						}
-
-						break;
-
-					case "Undeploy":
-
-						sh """
-							./undeploy-all.sh
-						"""
-
-						break;
-
+			dir("universe") {
+				if (version == 'master') {
+					sh """
+						./build.sh
+						./up.sh
+					"""
+				} else {
+					sh """
+						./build.sh .dev
+						./up.sh .dev
+					"""
 				}
 			}
 		}
-	}
+	
+	}*/
 }
 
 def call(
-	String universeBranch = '',
-	String nodeLabels = '',
-	String dockerComposePostfix = '',
-	String folderName = '',
-	String mode = '',
-	String containers = ''
+	String universeBranch = ''
 	) {
 
 	String RBSServicesRoot = "/home/admin/Server/RPRServers/rbs_auto_deploy"
-	String dockerScriptsDir = "docker-management"
 
 	main([
-		universeBranch:universeBranch,
-		nodeLabels:nodeLabels,
-		dockerComposePostfix:dockerComposePostfix,
-		folderName:folderName,
-		mode:mode,
-		RBSServicesRoot:RBSServicesRoot,
-		dockerScriptsDir:dockerScriptsDir,
-		containers:containers
+		universeBranch:universeBranch.toLowerCase(),
+		RBSServicesRoot:RBSServicesRoot
 		])
 	}
