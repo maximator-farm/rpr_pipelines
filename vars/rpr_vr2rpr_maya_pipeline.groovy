@@ -497,7 +497,7 @@ def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_
                                 isPreBuilt:isPreBuilt,
                                 forceBuild:forceBuild,
                                 reportName:'Test_20Report',
-                                TESTER_TAG:"VRayMaya",
+                                TESTER_TAG:"VrayMaya",
                                 TEST_TIMEOUT:120])
     }
     catch(e) {
