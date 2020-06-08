@@ -263,17 +263,12 @@ def executePreBuild(Map options)
         options.pluginVersion = version_read("convertVR2RPR.py", 'VR2RPR_CONVERTER_VERSION = ')
 
         if (options['incrementVersion']) {
-            if((env.BRANCH_NAME == "develop" || env.BRANCH_NAME == "master") && options.commitAuthor != "radeonprorender") {
+            if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 println "[INFO] Current build version: ${options.pluginVersion}"
 
-                def new_version
-                if (env.BRANCH_NAME == "master") {
-                    new_version = version_inc(options.pluginVersion, 2)
-                } else {
-                    new_version = version_inc(options.pluginVersion, 3)
-                }
+                new_version = version_inc(options.pluginVersion, 3)
                 
                 println "[INFO] New build version: ${new_version}"
                 version_write("convertVR2RPR.py", 'VR2RPR_CONVERTER_VERSION = ', new_version)
@@ -284,7 +279,7 @@ def executePreBuild(Map options)
                 bat """
                   git add convertVR2RPR.py
                   git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                  git push origin HEAD:${env.BRANCH_NAME}
+                  git push origin HEAD:develop
                 """
             }
         }
