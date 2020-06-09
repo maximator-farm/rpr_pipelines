@@ -12,6 +12,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
     if(gpuNames && options['executeTests'])
     {
         def testTasks = [:]
+        options['nodeRetry'] = = []
         gpuNames.split(',').each()
         {
             String asicName = it
@@ -33,8 +34,6 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                         options.nodeReallocateTries = nodesCount + 1
                         boolean successCurrentNode = false
 
-                        def nodeRetryList = []
-
                         for (int i = 0; i < options.nodeReallocateTries; i++)
                         {
                             node(nodeLabels)
@@ -45,7 +44,6 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 {
                                     ws("WS/${options.PRJ_NAME}_Test")
                                     {
-                                        options['nodeRetry'] = nodeRetryList
                                         Map newOptions = options.clone()
                                         newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                         newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
@@ -74,16 +72,16 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             if (testsOrTestPackage == ''){
                                                 testsOrTestPackage = newOptions['testsPackage']
                                             }
-                                            nodeRetryList.each{ retry ->
+                                            options['nodeRetry'].each{ retry ->
                                                 if (retry['Testers'].equals(nodesList)){
                                                     retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}", time: LocalDateTime.now().toString()])
                                                     added = true
                                                 }
                                             }
                                             if (!added){
-                                                nodeRetryList.add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}", time: LocalDateTime.now().toString()]]]]])
+                                                options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}", time: LocalDateTime.now().toString()]]]]])
                                             }
-                                            println nodeRetryList.inspect()
+                                            println options['nodeRetry'].inspect()
 
                                             // change PC after first failed tries and don't change in the last try
                                             if (i < nodesCount - 1 && nodesCount != 1) {
