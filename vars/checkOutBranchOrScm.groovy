@@ -2,7 +2,9 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import hudson.plugins.git.GitException
 import hudson.AbortException
 
-def call(String branchName, String repoName, Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, String credId='radeonprorender', Boolean useLFS=false) {
+def call(String branchName, String repoName, Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
+    String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false) {
+    
     try {
         executeCheckout(branchName, repoName, disableSubmodules, polling, changelog, credId, useLFS)
     } 
@@ -15,47 +17,50 @@ def call(String branchName, String repoName, Boolean disableSubmodules=false, Bo
     {
         println(e.toString())
         println(e.getMessage())
-
         println "[ERROR] Failed to checkout git on ${env.NODE_NAME}. Cleaning workspace and try again."
-        cleanWS()
-        executeCheckout(branchName, repoName, disableSubmodules, polling, changelog, credId, useLFS)
+        executeCheckout(branchName, repoName, disableSubmodules, polling, changelog, credId, useLFS, true)
     }
 }
 
 
-def executeCheckout(String branchName, String repoName, Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, String credId='radeonprorender', Boolean useLFS=false) {
-    if(branchName != "") {
-        echo "checkout custom branch: ${branchName}; repo: ${repoName}"
-        echo "Submodules processing: ${!disableSubmodules}"
-        echo "Include in polling: ${polling}; Include in changelog: ${changelog}"
+def executeCheckout(String branchName, String repoName, Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
+    String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false) {
 
-        // NOTE: workspace clean could be implemented with [$class: 'WipeWorkspace']
-        // OPTIMIZE: use shallow clone [$class: 'CloneOption', depth: 2, shallow: true]
-        // IDEA: add *deleteUntrackedNestedRepositories: true* for Clean calls to avoid full WS wiping
-        // [$class: 'ScmName', name: 'RML']
+    def repoBranch = branchName ? [[name: branchName]] : scm.branches
 
-        def checkoutExtensions = [
-                [$class: 'PruneStaleBranch'],
-                [$class: 'CleanBeforeCheckout'],
-                [$class: 'CleanCheckout'],
-                [$class: 'CheckoutOption', timeout: 30],
-                [$class: 'CloneOption', timeout: 60, noTags: false],
-                [$class: 'AuthorInChangelog'],
-                [$class: 'SubmoduleOption', disableSubmodules: disableSubmodules,
-                 parentCredentials: true, recursiveSubmodules: true,
-                 timeout: 60, reference: '', trackingSubmodules: false]
-        ]
+    echo "checkout branch: ${repoBranch}; repo: ${repoName}"
+    echo "Submodules processing: ${!disableSubmodules}"
+    echo "Include in polling: ${polling}; Include in changelog: ${changelog}"
 
-        if (useLFS) checkoutExtensions.add([$class: 'GitLFSPull'])
+    def checkoutExtensions = [
+            [$class: 'PruneStaleBranch'],
+            [$class: 'CleanBeforeCheckout'],
+            [$class: 'CleanCheckout', deleteUntrackedNestedRepositories: true],
+            [$class: 'CheckoutOption', timeout: 30],
+            [$class: 'AuthorInChangelog'],
+            [$class: 'SubmoduleOption', disableSubmodules: disableSubmodules,
+             parentCredentials: true, recursiveSubmodules: true, shallow: true, depth: 2,
+             timeout: 60, reference: '', trackingSubmodules: false]
+    ]
+
+    if (useLFS) checkoutExtensions.add([$class: 'GitLFSPull'])
+    if (wipeWorkspace) checkoutExtensions.add([$class: 'WipeWorkspace'])
+
+    // !branchName need for ignore merging testing repos (jobs_test_*) 
+    if (!branchName && env.BRANCH_NAME && env.BRANCH_NAME.startsWith("PR-")) {
+
+        // TODO: adapt scm options for PR
+        checkout scm
+
+    } else {
+        checkoutExtensions.add([$class: 'CloneOption', timeout: 60, shallow: true, depth: 2, noTags: false])
 
         checkout changelog: changelog, poll: polling,
-            scm: [$class: 'GitSCM', branches: [[name: "${branchName}"]], doGenerateSubmoduleConfigurations: false,
+            scm: [$class: 'GitSCM', branches: repoBranch, doGenerateSubmoduleConfigurations: false,
                     extensions: checkoutExtensions,
                     submoduleCfg: [],
                     userRemoteConfigs: [[credentialsId: "${credId}", url: "${repoName}"]]
                 ]
-    } else {
-        echo 'checkout from scm options'
-        checkout scm
     }
+    
 }
