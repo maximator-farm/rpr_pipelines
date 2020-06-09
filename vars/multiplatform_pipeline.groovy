@@ -12,7 +12,6 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
     if(gpuNames && options['executeTests'])
     {
         def testTasks = [:]
-        options['nodeRetry'] = = []
         gpuNames.split(',').each()
         {
             String asicName = it
