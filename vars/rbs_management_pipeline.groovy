@@ -1,5 +1,10 @@
 def main(Map options) {
-	String version = "master"
+	String version
+	if (options.universeBranch == "origin/master") {
+		version = "master"
+	} else {
+		version = "develop"
+	}
 
 	String dockerComposeFile
 	if (version == 'master') {
