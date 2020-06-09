@@ -1,41 +1,46 @@
 def main(Map options) {
-	String[] branchParts = options.universeBranch.split('/')
-	// take last part after slash of branch name as version
-	String version = branchParts[branchParts.length - 1]
-	node('Ubuntu18 && Builder') {
-		sshagent(credentials : ['FrontendMachineCredentials']) {
-			sh "ssh admin@172.30.23.112 ls ${options.RBSServicesRoot}"
-		}
+	String version
+	if (options.universeBranch == "origin/master") {
+		version = "master"
+	} else {
+		version = "develop"
 	}
-/*	dir(options.RBSServicesRoot) {
-		if (fileExists("${version}")) {
-			dir("${version}/universe") {
+
+	String dockerComposeFile
+	if (version == 'master') {
+		dockerComposeFile = "docker-compose.yml"
+	} else {
+		dockerComposeFile = "docker-compose.dev.yml"
+	}
+
+	node('Ubuntu18 && Builder') {
+		try {
+			println("[INFO] Try to stop old RBS compose stack")
+			sshagent(credentials : ['FrontendMachineCredentials']) {
 				sh """
-					./stop.sh
-					./remove.sh
+					ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe/docker-management/stop_pipeline.sh ${options.RBSServicesRoot}/${version}/universe/${dockerComposeFile}
+					ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe/docker-management/remove_pipeline.sh ${options.RBSServicesRoot}/${version}/universe/${dockerComposeFile}
 				"""
 			}
+			println("[INFO] Old RBS compose stack found and stopped")
+		} catch (Exception e) {
+			println("[INFO] Old RBS compose stack doesn't exist")
 		}
 
-		dir("${version}") {
-			checkOutBranchOrScm(options['universeVersion'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git', false, false, true, 'radeonprorender-gitlab', false)
-
-			dir("universe") {
-				if (version == 'master') {
-					sh """
-						./build.sh
-						./up.sh
-					"""
-				} else {
-					sh """
-						./build.sh .dev
-						./up.sh .dev
-					"""
-				}
-			}
+		dir('universe') {
+			checkOutBranchOrScm(options['universeBranch'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git', false, false, true, 'radeonprorender-gitlab', false)
 		}
-	
-	}*/
+
+		sshagent(credentials : ['FrontendMachineCredentials']) {
+			sh """
+				ssh ${options.user}@${options.frontendIp} mkdir -p ${options.RBSServicesRoot}/${version}
+				scp -r ./universe ${options.user}@${options.frontendIp}:${options.RBSServicesRoot}/${version}/universe
+
+				ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe/docker-management/build_pipeline.sh ${options.RBSServicesRoot}/${version}/universe/${dockerComposeFile}
+				ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe/docker-management/up_pipeline.sh ${options.RBSServicesRoot}/${version}/universe/${dockerComposeFile}
+			"""
+		}
+	}
 }
 
 def call(
@@ -43,9 +48,13 @@ def call(
 	) {
 
 	String RBSServicesRoot = "/home/admin/Server/RPRServers/rbs_auto_deploy"
+	String user = "admin"
+	String frontendIp = "172.30.23.112"
 
 	main([
 		universeBranch:universeBranch.toLowerCase(),
-		RBSServicesRoot:RBSServicesRoot
+		RBSServicesRoot:RBSServicesRoot,
+		user:user,
+		frontendIp:frontendIp
 		])
 	}
