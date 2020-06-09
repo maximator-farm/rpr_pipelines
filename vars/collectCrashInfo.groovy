@@ -1,4 +1,9 @@
-def call(osName, logName){
+def call(osName, options){
+    String testsOrTestPackage = options['tests'];
+    if (testsOrTestPackage == ''){
+        testsOrTestPackage = options['testsPackage']
+    }
+    logName = "${testsOrTestPackage}.${env.NODE_NAME}"
     println "Collect crash logs"
     switch(osName){
         case 'Windows':
