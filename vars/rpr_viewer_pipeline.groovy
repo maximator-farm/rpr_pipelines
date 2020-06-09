@@ -115,7 +115,7 @@ def executeTestCommand(String osName, String asicName, Map options)
             dir('scripts')
             {
                 bat """
-                run.bat ${options.testsPackage} \"${options.tests}\" ${build_id} ${job_id} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${STAGE_NAME}.log  2>&1
+                run.bat ${options.testsPackage} \"${options.tests}\" >> ../${STAGE_NAME}.log  2>&1
                 """
             }
             break;
@@ -131,7 +131,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     sh """
                     chmod +x ../RprViewer/RadeonProViewer
                     chmod +x run.sh
-                    ./run.sh ${options.testsPackage} \"${options.tests}\" ${build_id} ${job_id} ${universeClient.url} ${osName}-${asicName} ${universeClient.is_url} ${options.sendToRBS}>> ../${options.stageName}.log  2>&1
+                    ./run.sh ${options.testsPackage} \"${options.tests}\" >> ../${options.stageName}.log  2>&1
                     """
                 }
             }
