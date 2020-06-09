@@ -17,10 +17,13 @@ def main(Map options) {
 		try {
 			println("[INFO] Try to stop old RBS compose stack")
 			sshagent(credentials : ['FrontendMachineCredentials']) {
-				sh """
-					ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe/docker-management/stop_pipeline.sh ${options.RBSServicesRoot}/${version}/universe/${dockerComposeFile}
-					ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe/docker-management/remove_pipeline.sh ${options.RBSServicesRoot}/${version}/universe/${dockerComposeFile}
-				"""
+				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'FrontendMachineCredentials', usernameVariable: 'USER', passwordVariable: 'PASSWORD']]) {
+					sh """
+						ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe/docker-management/stop_pipeline.sh ${options.RBSServicesRoot}/${version}/universe/${dockerComposeFile}
+						ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe/docker-management/remove_pipeline.sh ${options.RBSServicesRoot}/${version}/universe/${dockerComposeFile}
+						ssh ${options.user}@${options.frontendIp} echo ${PASSWORD} | sudo -S rm -rf ${options.RBSServicesRootRelative}/${version}
+					"""
+				}
 			}
 			println("[INFO] Old RBS compose stack found and stopped")
 		} catch (Exception e) {
@@ -48,12 +51,14 @@ def call(
 	) {
 
 	String RBSServicesRoot = "/home/admin/Server/RPRServers/rbs_auto_deploy"
+	String RBSServicesRootRelative = "./Server/RPRServers/rbs_auto_deploy"
 	String user = "admin"
 	String frontendIp = "172.30.23.112"
 
 	main([
 		universeBranch:universeBranch.toLowerCase(),
 		RBSServicesRoot:RBSServicesRoot,
+		RBSServicesRootRelative:RBSServicesRootRelative,
 		user:user,
 		frontendIp:frontendIp
 		])
