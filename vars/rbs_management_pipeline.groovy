@@ -13,7 +13,7 @@ def main(Map options) {
 		dockerComposeFile = "docker-compose.dev.yml"
 	}
 
-	node('Ubuntu18 && Builder') {
+	node('Ubuntu18 && RBSBuilder') {
 		cleanWS("Linux")
 		try {
 			println("[INFO] Try to stop old RBS compose stack")
