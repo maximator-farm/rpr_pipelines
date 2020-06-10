@@ -18,6 +18,7 @@ def call(String branchName, String repoName, Boolean disableSubmodules=false, Bo
         println(e.toString())
         println(e.getMessage())
         println "[ERROR] Failed to checkout git on ${env.NODE_NAME}. Cleaning workspace and try again."
+        cleanWS()
         executeCheckout(branchName, repoName, disableSubmodules, polling, changelog, credId, useLFS, true)
     }
 }
