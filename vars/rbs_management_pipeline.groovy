@@ -7,10 +7,13 @@ def main(Map options) {
 	}
 
 	String dockerComposeFile
+	String versionPostrif
 	if (version == 'master') {
 		dockerComposeFile = "docker-compose.yml"
+		versionPostrif = ""
 	} else {
 		dockerComposeFile = "docker-compose.dev.yml"
+		versionPostrif = "_dev"
 	}
 
 	node('Ubuntu18 && RBSBuilder') {
@@ -20,8 +23,8 @@ def main(Map options) {
 			sshagent(credentials : ['FrontendMachineCredentials']) {
 				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'FrontendMachineCredentials', usernameVariable: 'USER', passwordVariable: 'PASSWORD']]) {
 					sh """
-						ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRootRelative}/${version}/universe/docker-management/stop_pipeline.sh ${options.RBSServicesRootRelative}/${version}/universe/${dockerComposeFile}
-						ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRootRelative}/${version}/universe/docker-management/remove_pipeline.sh ${options.RBSServicesRootRelative}/${version}/universe/${dockerComposeFile}
+						ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRootRelative}/${version}/universe${versionPostrif}/docker-management/stop_pipeline.sh ${options.RBSServicesRootRelative}/${version}/universe${versionPostrif}/${dockerComposeFile}
+						ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRootRelative}/${version}/universe${versionPostrif}/docker-management/remove_pipeline.sh ${options.RBSServicesRootRelative}/${version}/universe${versionPostrif}/${dockerComposeFile}
 						ssh ${options.user}@${options.frontendIp} "echo ${PASSWORD} | sudo -S rm -rf ${options.RBSServicesRootRelative}/${version}"
 					"""
 				}
@@ -31,17 +34,17 @@ def main(Map options) {
 			println("[INFO] Old RBS compose stack doesn't exist")
 		}
 
-		dir('universe') {
+		dir("universe${versionPostrif}") {
 			checkOutBranchOrScm(options['universeBranch'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git', false, false, true, 'radeonprorender-gitlab', false)
 		}
 
 		sshagent(credentials : ['FrontendMachineCredentials']) {
 			sh """
 				ssh ${options.user}@${options.frontendIp} mkdir -p ${options.RBSServicesRoot}/${version}
-				scp -r ./universe ${options.user}@${options.frontendIp}:${options.RBSServicesRoot}/${version}
+				scp -r ./universe${versionPostrif} ${options.user}@${options.frontendIp}:${options.RBSServicesRoot}/${version}
 
-				ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe/docker-management/build_pipeline.sh ${options.RBSServicesRoot}/${version}/universe/${dockerComposeFile}
-				ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe/docker-management/up_pipeline.sh ${options.RBSServicesRoot}/${version}/universe/${dockerComposeFile}
+				ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe${versionPostrif}/docker-management/build_pipeline.sh ${options.RBSServicesRoot}/${version}/universe${versionPostrif}/${dockerComposeFile}
+				ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe${versionPostrif}/docker-management/up_pipeline.sh ${options.RBSServicesRoot}/${version}/universe${versionPostrif}/${dockerComposeFile}
 			"""
 		}
 	}
