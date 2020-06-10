@@ -31,9 +31,9 @@ def main(Map options) {
 		// 	println("[INFO] Old RBS compose stack doesn't exist")
 		// }
 
-		dir('universe') {
-			checkOutBranchOrScm(options['universeBranch'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git', false, false, true, 'radeonprorender-gitlab', false)
-		}
+		// dir('universe') {
+		checkOutBranchOrScm(options['universeBranch'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git', false, false, true, 'radeonprorender-gitlab', false)
+		// }
 
 		sshagent(credentials : ['FrontendMachineCredentials']) {
 			sh """
