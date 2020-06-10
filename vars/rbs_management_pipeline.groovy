@@ -15,21 +15,21 @@ def main(Map options) {
 
 	node('Ubuntu18 && Builder') {
 		cleanWS("Linux")
-		try {
-			println("[INFO] Try to stop old RBS compose stack")
-			sshagent(credentials : ['FrontendMachineCredentials']) {
-				withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'FrontendMachineCredentials', usernameVariable: 'USER', passwordVariable: 'PASSWORD']]) {
-					sh """
-						ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRootRelative}/${version}/universe/docker-management/stop_pipeline.sh ${options.RBSServicesRootRelative}/${version}/universe/${dockerComposeFile}
-						ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRootRelative}/${version}/universe/docker-management/remove_pipeline.sh ${options.RBSServicesRootRelative}/${version}/universe/${dockerComposeFile}
-						ssh ${options.user}@${options.frontendIp} "echo ${PASSWORD} | sudo -S rm -rf ${options.RBSServicesRootRelative}/${version}"
-					"""
-				}
-			}
-			println("[INFO] Old RBS compose stack found and stopped")
-		} catch (Exception e) {
-			println("[INFO] Old RBS compose stack doesn't exist")
-		}
+		// try {
+		// 	println("[INFO] Try to stop old RBS compose stack")
+		// 	sshagent(credentials : ['FrontendMachineCredentials']) {
+		// 		withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'FrontendMachineCredentials', usernameVariable: 'USER', passwordVariable: 'PASSWORD']]) {
+		// 			sh """
+		// 				ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRootRelative}/${version}/universe/docker-management/stop_pipeline.sh ${options.RBSServicesRootRelative}/${version}/universe/${dockerComposeFile}
+		// 				ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRootRelative}/${version}/universe/docker-management/remove_pipeline.sh ${options.RBSServicesRootRelative}/${version}/universe/${dockerComposeFile}
+		// 				ssh ${options.user}@${options.frontendIp} "echo ${PASSWORD} | sudo -S rm -rf ${options.RBSServicesRootRelative}/${version}"
+		// 			"""
+		// 		}
+		// 	}
+		// 	println("[INFO] Old RBS compose stack found and stopped")
+		// } catch (Exception e) {
+		// 	println("[INFO] Old RBS compose stack doesn't exist")
+		// }
 
 		dir('universe') {
 			checkOutBranchOrScm(options['universeBranch'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git', false, false, true, 'radeonprorender-gitlab', false)
