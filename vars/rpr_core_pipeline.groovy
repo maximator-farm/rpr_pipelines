@@ -384,27 +384,45 @@ def executePreBuild(Map options)
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30']]]);
     }
 
+    def tests = []
+    options.groupsRBS = []
+    if(options.testsPackage != "none")
+    {
+        dir('jobs_test_core')
+        {
+            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
+            // json means custom test suite. Split doesn't supported
+            String tempTests = readFile("jobs/${options.testsPackage}")
+            tempTests.split("\n").each {
+                // TODO: fix: duck tape - error with line ending
+                tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
+            }
+            options.tests = tests
+            options.testsPackage = "none"
+            options.groupsRBS = tests
+        }
+    }
+    else {
+        options.tests.split(" ").each()
+        {
+            tests << "${it}"
+        }
+        options.tests = tests
+        options.groupsRBS = tests
+    }
+
+    if(options.splitTestsExecution) {
+        options.testsList = options.tests
+    }
+    else {
+        options.testsList = ['']
+        options.tests = tests.join(" ")
+    }
 
     if (options.sendToRBS)
     {
         try
         {
-            def tests = []
-            if(options.testsPackage != "none")
-            {
-                dir('jobs_test_core')
-                {
-                    checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
-                    // options.splitTestsExecution = false
-                    String tempTests = readFile("jobs/${options.testsPackage}")
-                    tempTests.split("\n").each {
-                        // TODO: fix: duck tape - error with line ending
-                        tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
-                    }
-
-                    options.groupsRBS = tests
-                }
-            }
             options.rbs_prod.startBuild(options)
         }
         catch (e)
@@ -531,7 +549,8 @@ def call(String projectBranch = "",
          String width = "0",
          String height = "0",
          String iterations = "0",
-         Boolean sendToRBS = true) {
+         Boolean sendToRBS = true,
+         Boolean splitTestsExecution = true) {
     try
     {
         String PRJ_NAME="RadeonProRenderCore"
@@ -570,6 +589,7 @@ def call(String projectBranch = "",
                                 executeBuild:true,
                                 executeTests:true,
                                 reportName:'Test_20Report',
+                                splitTestsExecution:splitTestsExecution,
                                 TEST_TIMEOUT:60,
                                 width:width,
                                 gpusCount:gpusCount,
