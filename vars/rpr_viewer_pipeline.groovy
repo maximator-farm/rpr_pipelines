@@ -103,7 +103,7 @@ def executeTestCommand(String osName, Map options)
         dir('scripts')
         {
             bat """
-            run.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
+            run.bat ${options.testsPackage} \"${options.tests}\">> ../${options.stageName}.log  2>&1
             """
         }
         break;
@@ -163,22 +163,13 @@ def executeTests(String osName, String asicName, Map options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         } else {
             try {
-                if(options.testsPackage != "none" && !options.testsPackage.endsWith('.json')) {
-                    def tests = []
-                    String tempTests = readFile("jobs/${options.testsPackage}")
-                    tempTests.split("\n").each {
-                        // TODO: fix: duck tape - error with line ending
-                        tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
-                    }
-                    options.tests = tests.join(" ")
-                    options.testsPackage = "none"
-                }
+                println "[INFO] Downloading reference images for ${options.tests}"
                 receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
                 }
             } 
-            catch (e) 
+            catch (e)
             {
                 println("Baseline doesn't exist.")
             }
@@ -335,21 +326,24 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
-    checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], true)
+    dir("RadeonProViewer")
+    {
+        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], true)
 
-    AUTHOR_NAME = bat (
-            script: "git show -s --format=%%an HEAD ",
-            returnStdout: true
-            ).split('\r\n')[2].trim()
+        AUTHOR_NAME = bat(
+                script: "git show -s --format=%%an HEAD ",
+                returnStdout: true
+        ).split('\r\n')[2].trim()
 
-    echo "The last commit was written by ${AUTHOR_NAME}."
-    options.AUTHOR_NAME = AUTHOR_NAME
+        echo "The last commit was written by ${AUTHOR_NAME}."
+        options.AUTHOR_NAME = AUTHOR_NAME
 
-    commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true ).split('\r\n')[2].trim()
-    echo "Commit message: ${commitMessage}"
-    options.commitMessage = commitMessage
+        commitMessage = bat(script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        echo "Commit message: ${commitMessage}"
+        options.commitMessage = commitMessage
 
-    options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    }
 
     if (env.CHANGE_URL) {
         echo "branch was detected as Pull Request"
@@ -375,6 +369,58 @@ def executePreBuild(Map options)
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '50']]]);
+    }
+
+    // groupsRBS parameter saved for future
+    def tests = []
+    options.groupsRBS = []
+
+    if(options.testsPackage != "none")
+    {
+        dir('jobs_test_rprviewer')
+        {
+            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rprviewer.git')
+            // json means custom test suite. Split doesn't supported
+            if(options.testsPackage.endsWith('.json'))
+            {
+                def testsByJson = readJSON file: "jobs/${options.testsPackage}"
+                testsByJson.each() {
+                    options.groupsRBS << "${it.key}"
+                }
+                options.splitTestsExecution = false
+            }
+            else
+            {
+                String tempTests = readFile("jobs/${options.testsPackage}")
+                tempTests.split("\n").each {
+                    // TODO: fix: duck tape - error with line ending
+                    tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
+                }
+                options.tests = tests
+                options.testsPackage = "none"
+                options.groupsRBS = tests
+            }
+        }
+    }
+    else
+    {
+        options.tests.split(" ").each()
+        {
+            tests << "${it}"
+        }
+        options.tests = tests
+        options.groupsRBS = tests
+    }
+
+    //println(options.groupsRBS)
+
+    if(options.splitTestsExecution)
+    {
+        options.testsList = options.tests
+    }
+    else {
+        options.testsList = ['']
+        options.tests = tests.join(" ")
     }
 }
 
@@ -502,7 +548,8 @@ def call(String projectBranch = "",
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String testsPackage = "",
-         String tests = "") {
+         String tests = "",
+         Boolean splitTestsExecution = true) {
 
     String PRJ_ROOT='rpr-core'
     String PRJ_NAME='RadeonProViewer'
@@ -520,11 +567,10 @@ def call(String projectBranch = "",
                             TESTER_TAG:'RprViewer',
                             executeBuild:true,
                             executeTests:true,
+                            splitTestsExecution:splitTestsExecution,
                             DEPLOY_FOLDER:"RprViewer",
                             testsPackage:testsPackage,
-                            // TODO: rollback after split implementation
-                            //TEST_TIMEOUT:40,
-                            TEST_TIMEOUT:120,
+                            TEST_TIMEOUT:40,
                             DEPLOY_TIMEOUT:45,
                             tests:tests])
 }
