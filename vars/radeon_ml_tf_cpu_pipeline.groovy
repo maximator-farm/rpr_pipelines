@@ -107,6 +107,7 @@ def executeBuildLinux(Map options)
         """
      
         sh """
+        cd build
         make
         mv bin Release
         
