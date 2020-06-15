@@ -1,14 +1,182 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
+def getTanTool(String osName, Map options)
+{
+    switch(osName)
+    {
+        case 'Windows':
+
+            if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip")) {
+
+                clearBinariesWin()
+
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                unstash "TAN_Windows"
+                
+                bat """
+                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                    copy binWindows.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
+                """
+
+            } else {
+                println "[INFO] The plugin ${options.pluginWinSha}.zip exists in the storage."
+                bat """
+                    copy "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip" binWindows.zip
+                """
+            }
+
+            unzip zipFile: "binWindows.zip", dir: "TAN", quiet: true
+
+            break;
+
+        case 'OSX':
+
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.tar.gz")) {
+
+                clearBinariesUnix()
+
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                unstash "TAN_OSX"
+                
+                sh """
+                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                    cp binMacOS.tar.gz "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.tar.gz"
+                """ 
+
+            } else {
+                println "[INFO] The plugin ${options.pluginOSXSha}.tar.gz exists in the storage."
+                sh """
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.tar.gz" binMacOS.tar.gz
+                """
+            }
+
+            sh """
+                tar -zxvf binMacOS.tar.gz
+            """
+            
+            break;
+
+        default:
+            
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz")) {
+
+                clearBinariesUnix()
+
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                unstash "TAN_Ubuntu18"
+                
+                sh """
+                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                    cp binUbuntu18.tar.gz "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz"
+                """ 
+
+            } else {
+
+                println "[INFO] The plugin ${options.pluginUbuntuSha}.tar.gz exists in the storage."
+                sh """
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.tar.gz" binUbuntu18.tar.gz
+                """
+            }
+
+            sh """
+                tar -zxvf binUbuntu18.tar.gz
+            """
+
+            break;
+    }
+}
+
+
+def executeTestCommand(String osName, Map options)
+{
+    switch(osName) {
+        case 'Windows':
+            dir('Launcher')
+            {
+                bat """
+                    run.bat "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
+                """
+            }
+            break;
+        case 'OSX':
+            dir('Launcher')
+            {
+                sh """
+                    ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
+                """
+            }
+            break;
+        default:
+            dir('Launcher')
+            {
+                sh """
+                    ./run.sh "Convolution/test_smoke_convolution.py" >> ../${STAGE_NAME}.log 2>&1
+                """
+            }
+    }
+}
+
+
 def executeTests(String osName, String asicName, Map options) {
     
+    // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
+    Boolean stashResults = true
+
+    try {
+
+        timeout(time: "10", unit: 'MINUTES') {
+            try {
+                cleanWS(osName)
+                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_tan.git')
+                if (options.sendToRBS) {
+                    options.rbs_prod.setTester(options)
+                }
+                getTanTool(osName, options)
+            } catch(e) {
+                println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
+                println(e.toString())
+                throw e
+            }
+        }
+
+        downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/TanAssets/", 'TanAssets')
+
+        String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
+        String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
+
+        options.REF_PATH_PROFILE = REF_PATH_PROFILE
+
+        outputEnvironmentInfo(osName)
+
+        executeTestCommand(osName, options)
+
+    } catch (e) {
+        if (options.currentTry < options.nodeReallocateTries) {
+            stashResults = false
+        } 
+        println(e.toString())
+        println(e.getMessage())
+        options.failureMessage = "Failed during testing: ${asicName}-${osName}"
+        options.failureError = e.getMessage()
+        throw e
+    } finally {
+        archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+        if (stashResults) {
+            dir('allure-results')
+            {       
+                echo "Stashing test results to : ${options.testResultsName}"
+                stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+            }
+        }
+    }
 }
+
 
 def executeBuildWindows(Map options) {
 
-    receiveFiles("gpuopen/OpenCL-Headers/*", './thirdparty/OpenCL-Headers')
-    receiveFiles("gpuopen/portaudio/*", './thirdparty/portaudio')
-    receiveFiles("gpuopen/fftw-3.3.5-dll64/*", './tan/tanlibrary/src/fftw-3.3.5-dll64')
+    receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/OpenCL-Headers/*", './thirdparty/OpenCL-Headers')
+    receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/portaudio/*", './thirdparty/portaudio')
+    receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/fftw-3.3.5-dll64/*", './tan/tanlibrary/src/fftw-3.3.5-dll64')
 
     bat """
         mkdir thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64
@@ -89,23 +257,21 @@ def executeBuildWindows(Map options) {
                                         cmake --build vs${vs_ver} --config ${win_build_conf} >> ..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
                                     """
                                 }
-                                
+
                                 bat """
-                                    mkdir bin\\platforms
-                                    copy vs${vs_ver}\\cmake-TAN-bin\\${win_build_conf}\\TrueAudioNext.dll bin
-                                    copy vs${vs_ver}\\cmake-TrueAudioVR-bin\\${win_build_conf}\\TrueAudioVR.dll bin
-                                    copy vs${vs_ver}\\cmake-GPUUtilities-bin\\${win_build_conf}\\GPUUtilities.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Core.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Widgets.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Gui.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\bin\\Qt5Gui.dll bin
-                                    copy ..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\plugins\\platforms\\qwindows.dll bin\\platforms
-                                    copy ..\\..\\..\\thirdparty\\portaudio\\build\\msvc\\x64\\${win_build_conf}\\portaudio_x64.dll bin
-                                    copy vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${win_build_conf}\\TALibDopplerTest.exe bin
-                                    copy vs${vs_ver}\\cmake-TALibTestConvolution-bin\\${win_build_conf}\\TALibTestConvolution.exe bin
-                                    copy vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${win_build_conf}\\RoomAcousticsQT.exe bin
+                                    mkdir binWindows
+                                    xcopy /s/y/i vs${vs_ver}\\cmake-TALibTestConvolution-bin\\${win_build_conf} binWindows\\cmake-TALibTestConvolution-bin
+                                    xcopy /s/y/i vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${win_build_conf} binWindows\\cmake-TALibDopplerTest-bin
+                                    xcopy /s/y/i vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${win_build_conf} binWindows\\cmake-RoomAcousticQT-bin
                                 """
-                                zip archive: true, dir: 'bin', glob: '', zipFile: "Windows_${win_build_name}.zip"
+                                
+                                zip archive: true, dir: "binWindows", glob: '', zipFile: "Windows_${win_build_name}.zip"
+
+                                bat """
+                                    rename Windows_${win_build_name}.zip binWindows.zip
+                                """
+                                stash includes: "binWindows.zip", name: 'TAN_Windows'
+                                options.pluginWinSha = sha1 "binWindows.zip"
 
                             } catch (FlowInterruptedException error) {
                                 println "[INFO] Job was aborted during build stage"
@@ -126,9 +292,9 @@ def executeBuildWindows(Map options) {
 
 def executeBuildOSX(Map options) {
 
-    receiveFiles("gpuopen/OpenCL-Headers/*", './thirdparty/OpenCL-Headers')
-    receiveFiles("gpuopen/portaudio/*", './thirdparty/portaudio')
-    receiveFiles("gpuopen/fftw-3.3.5/*", './tan/tanlibrary/src/fftw-3.3.5')
+    receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/OpenCL-Headers/*", './thirdparty/OpenCL-Headers')
+    receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/portaudio/*", './thirdparty/portaudio')
+    receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/fftw-3.3.5/*", './tan/tanlibrary/src/fftw-3.3.5')
 
     options.buildConfiguration.each() { osx_build_conf ->
         options.ipp.each() { osx_cur_ipp ->
@@ -174,15 +340,23 @@ def executeBuildOSX(Map options) {
                             """
 
                             sh """
-                                mkdir bin
-                                cp cmake-TAN-bin/libTrueAudioNext.dylib bin
-                                cp cmake-TrueAudioVR-bin/libTrueAudioVR.dylib bin
-                                cp cmake-GPUUtilities-bin/libGPUUtilities.dylib bin
-                                cp cmake-TALibDopplerTest-bin/TALibDopplerTest bin
-                                cp cmake-TALibTestConvolution-bin/TALibTestConvolution bin
-                                cp cmake-RoomAcousticQT-bin/RoomAcousticsQT bin
+                                mkdir binMacOS
+                                cp -rf cmake-TALibTestConvolution-bin binMacOS/cmake-TALibTestConvolution-bin
+                                cp -rf cmake-TALibDopplerTest-bin binMacOS/cmake-TALibDopplerTest-bin
+                                cp -rf cmake-RoomAcousticQT-bin binMacOS/cmake-RoomAcousticQT-bin
                             """
-                            zip archive: true, dir: 'bin', glob: '', zipFile: "OSX_${osx_build_name}.zip"
+
+                            sh """
+                                tar -czvf "MacOS_${osx_build_name}.tar.gz" ./binMacOS
+                            """
+                            
+                            archiveArtifacts "MacOS_${osx_build_name}.tar.gz"
+
+                            sh """
+                                mv MacOS_${osx_build_name}.tar.gz binMacOS.tar.gz
+                            """
+                            stash includes: "binMacOS.tar.gz", name: 'TAN_OSX'
+                            options.pluginOSXSha = sha1 "binMacOS.tar.gz"
 
                         } catch (FlowInterruptedException error) {
                             println "[INFO] Job was aborted during build stage"
@@ -202,9 +376,9 @@ def executeBuildOSX(Map options) {
 
 def executeBuildLinux(String osName, Map options) {
 
-    receiveFiles("gpuopen/OpenCL-Headers/*", './thirdparty/OpenCL-Headers')
-    receiveFiles("gpuopen/portaudio/*", './thirdparty/portaudio')
-    receiveFiles("gpuopen/fftw-3.3.5/*", './tan/tanlibrary/src/fftw-3.3.5')
+    receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/OpenCL-Headers/*", './thirdparty/OpenCL-Headers')
+    receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/portaudio/*", './thirdparty/portaudio')
+    receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/fftw-3.3.5/*", './tan/tanlibrary/src/fftw-3.3.5')
 
     options.buildConfiguration.each() { ub18_build_conf ->
         options.ipp.each() { ub18_cur_ipp ->
@@ -243,15 +417,23 @@ def executeBuildLinux(String osName, Map options) {
                         """
 
                         sh """
-                            mkdir bin
-                            cp cmake-TAN-bin/libTrueAudioNext.so bin
-                            cp cmake-TrueAudioVR-bin/libTrueAudioVR.so bin
-                            cp cmake-GPUUtilities-bin/libGPUUtilities.so bin
-                            cp cmake-TALibDopplerTest-bin/TALibDopplerTest bin
-                            cp cmake-TALibTestConvolution-bin/TALibTestConvolution bin
-                            cp cmake-RoomAcousticQT-bin/RoomAcousticsQT bin
+                            mkdir binUbuntu18
+                            cp -rf cmake-TALibTestConvolution-bin binUbuntu18/cmake-TALibTestConvolution-bin
+                            cp -rf cmake-TALibDopplerTest-bin binUbuntu18/cmake-TALibDopplerTest-bin
+                            cp -rf cmake-RoomAcousticQT-bin binUbuntu18/cmake-RoomAcousticQT-bin
                         """
-                        zip archive: true, dir: 'bin', glob: '', zipFile: "Ubuntu18_${ub18_build_name}.zip"
+
+                        sh """
+                            tar -czvf "Ubuntu18_${ub18_build_name}.tar.gz" ./binUbuntu18
+                        """
+                        
+                        archiveArtifacts "Ubuntu18_${ub18_build_name}.tar.gz"
+
+                        sh """
+                            mv Ubuntu18_${ub18_build_name}.tar.gz binUbuntu18.tar.gz
+                        """
+                        stash includes: "binUbuntu18.tar.gz", name: 'TAN_Ubuntu18'
+                        options.pluginUbuntuSha = sha1 "binUbuntu18.tar.gz"
 
                     } catch (FlowInterruptedException error) {
                         println "[INFO] Job was aborted during build stage"
@@ -266,6 +448,7 @@ def executeBuildLinux(String osName, Map options) {
         }
     }
 }
+
 
 def executeBuild(String osName, Map options) {
     try {
@@ -332,12 +515,10 @@ def executePreBuild(Map options) {
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
         options.commitSHA = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-        options.commitShortSHA = options.commitSHA[0..6]
 
         println "The last commit was written by ${options.commitAuthor}."
         println "Commit message: ${options.commitMessage}"
         println "Commit SHA: ${options.commitSHA}"
-        println "Commit shortSHA: ${options.commitShortSHA}"
 
         try {
             def major = version_read("${env.WORKSPACE}\\tan\\tanlibrary\\include\\TrueAudioNext.h", '#define TAN_VERSION_MAJOR')
@@ -354,7 +535,7 @@ def executePreBuild(Map options) {
         currentBuild.description += "<b>Version:</b> ${options.tanVersion}<br/>"
         currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-        currentBuild.description += "<b>Commit SHA:</b> ${options.commitShortSHA}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
         
         if (options.incrementVersion) {
             if ("${options.commitAuthor}" != "radeonprorender") {
@@ -403,7 +584,58 @@ def executePreBuild(Map options) {
 }
 
 def executeDeploy(Map options, List platformList, List testResultList) {
-    //TODO add deploy logic
+    try {
+        if(options['executeTests'] && testResultList)
+        {
+            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_tan.git')
+
+            receiveFiles("bin_storage/allure/*", "allure")
+    
+            dir("allure-results")
+            {
+                testResultList.each()
+                {
+                    try {
+                        unstash "$it"
+                    } catch(e) {
+                        echo "[ERROR] Failed to unstash ${it}"
+                        println(e.toString());
+                        println(e.getMessage());
+                    }
+                }
+            }
+
+            String branchName = env.BRANCH_NAME ?: options.projectBranch
+            try {
+                dir("Launcher") {
+                    bat """
+                        generate_report.bat 
+                    """
+                }
+            } catch(e) {
+                println "[ERROR] Failed during build report stage on ${env.NODE_NAME} node"
+                println(e.toString())
+                println(e.getMessage())
+            }
+
+            allure([
+                includeProperties: false,
+                jdk: '',
+                properties: [[key: 'allure.issues.tracker.pattern', value: 'http://tracker.company.com/%s']],
+                reportBuildPolicy: 'ALWAYS',
+                results: [[path: 'target/allure-results']]
+            ])
+
+            println "BUILD RESULT: ${currentBuild.result}"
+            println "BUILD CURRENT RESULT: ${currentBuild.currentResult}"
+        }
+    }
+    catch(e)
+    {
+        println(e.toString());
+        println(e.getMessage());
+        throw e
+    }
 }
 
 
@@ -419,12 +651,10 @@ def call(String projectBranch = "",
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
     Boolean forceBuild = false,
-    Boolean skipBuild = false,
-    String testsPackage = "",
     String tests = "") {
     try {
-        String PRJ_NAME="TAN_Dev"
-        String PRJ_ROOT="GPUOpen"
+        String PRJ_NAME="TAN"
+        String PRJ_ROOT="gpuopen"
 
         gpusCount = 0
         platforms.split(';').each()
@@ -460,7 +690,6 @@ def call(String projectBranch = "",
                                 enableNotifications:enableNotifications,
                                 incrementVersion:incrementVersion,
                                 forceBuild:forceBuild,
-                                skipBuild:skipBuild,
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 buildConfiguration:buildConfiguration,
@@ -469,7 +698,6 @@ def call(String projectBranch = "",
                                 winVisualStudioVersion:winVisualStudioVersion,
                                 winRTQ:winRTQ,
                                 osxTool:osxTool,
-                                testsPackage:testsPackage,
                                 tests:tests,
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:90,

@@ -115,19 +115,17 @@ def executeTests(String osName, String asicName, Map options)
 
         downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MaxAssets/", 'MaxAssets')
 
-        if (!options['skipBuild']) {
-            try {
-                Boolean newPluginInstalled = false
-                timeout(time: "15", unit: 'MINUTES') {
-                    getMaxPluginInstaller(osName, options)
-                    newPluginInstalled = installMSIPlugin(osName, 'Max', options)
-                    println "[INFO] Install function return ${newPluginInstalled}"
-                }
-            } catch(e) {
-                println(e.toString())
-                println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
-                throw e
+        try {
+            Boolean newPluginInstalled = false
+            timeout(time: "15", unit: 'MINUTES') {
+                getMaxPluginInstaller(osName, options)
+                newPluginInstalled = installMSIPlugin(osName, 'Max', options)
+                println "[INFO] Install function return ${newPluginInstalled}"
             }
+        } catch(e) {
+            println(e.toString())
+            println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
+            throw e
         }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
@@ -248,7 +246,6 @@ def executeBuildWindows(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    cleanWS(osName)
     try {
         dir('RadeonProRenderMaxPlugin')
         {
@@ -263,6 +260,10 @@ def executeBuild(String osName, Map options)
         if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
         {
             options.branch_postfix = env.BRANCH_NAME.replace('/', '-')
+        }
+        if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop")
+        {
+            options.branch_postfix = options.projectBranch.replace('/', '-')
         }
 
         outputEnvironmentInfo(osName)
@@ -370,6 +371,7 @@ def executePreBuild(Map options)
                 """
 
                 //get commit's sha which have to be build
+                options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
                 options.projectBranch = options.commitSHA
                 println "[INFO] Project branch hash: ${options.projectBranch}"
             }
@@ -633,11 +635,10 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         Boolean updateRefs = false,
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,
-        Boolean skipBuild = false,
         String renderDevice = "2",
         String testsPackage = "",
         String tests = "",
-        String toolVersion = "2020",
+        String toolVersion = "2021",
         Boolean forceBuild = false,
         Boolean splitTestsExecution = true,
         Boolean sendToRBS = true,
@@ -710,7 +711,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 incrementVersion:incrementVersion,
-                                skipBuild:skipBuild,
                                 renderDevice:renderDevice,
                                 testsPackage:testsPackage,
                                 tests:tests,

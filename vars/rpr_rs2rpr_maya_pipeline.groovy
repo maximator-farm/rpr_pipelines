@@ -4,27 +4,22 @@ def getMayaPluginInstaller(String osName, Map options)
     {
         case 'Windows':
 
-            if (options.pluginWinSha) {
-                addon_name = options.pluginWinSha
-            } else {
-                addon_name = "unknown"
-            }
+            println "PluginSHA: ${options.pluginWinSha}"
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${addon_name}.msi")) {
+            if (!options.pluginWinSha || !fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginWinSha}.msi")) {
 
                 clearBinariesWin()
                 
                 println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
                 downloadPlugin(osName, "Maya", options)
-                addon_name = options.pluginWinSha
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${addon_name}.msi"
+                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.msi"
                 """
 
             } else {
-                println "[INFO] The plugin ${addon_name}.msi exists in the storage."
+                println "[INFO] The plugin ${options.pluginWinSha}.msi exists in the storage."
             }
 
             break;
@@ -32,7 +27,6 @@ def getMayaPluginInstaller(String osName, Map options)
         default:
             echo "[WARNING] ${osName} is not supported"
     }
-
 }
 
 def executeGenTestRefCommand(String osName, Map options)
@@ -43,18 +37,11 @@ def executeGenTestRefCommand(String osName, Map options)
         {
             case 'Windows':
                 bat """
-                make_rpr_baseline.bat
-                """
-                break;
-            case 'OSX':
-                sh """
-                ./make_rpr_baseline.sh
+                    make_rpr_baseline.bat
                 """
                 break;
             default:
-                sh """
-                ./make_rpr_baseline.sh
-                """
+                echo "[WARNING] ${osName} is not supported"
         }
     }
 }
@@ -65,7 +52,9 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
     dir("scripts") {
         switch(osName) {
             case 'Windows':
-                bat "build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}.cb.log  2>&1"
+                bat """
+                    build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}.cb.log  2>&1
+                """
                 break;
             default:
                 echo "[WARNING] ${osName} is not supported"
@@ -78,23 +67,16 @@ def executeTestCommand(String osName, Map options)
 {
     switch(osName)
     {
-    case 'Windows':
-        dir('scripts')
-        {
-            bat """
-            render_rpr.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
-            """
-        }
-        break;
-    case 'OSX':
-        sh """
-        echo 'sample image' > ./OutputImages/sample_image.txt
-        """
-        break;
-    default:
-        sh """
-        echo 'sample image' > ./OutputImages/sample_image.txt
-        """
+        case 'Windows':
+            dir('scripts')
+            {
+                bat """
+                    render_rpr.bat ${options.testsPackage} \"${options.tests}\">> ../${STAGE_NAME}.log  2>&1
+                """
+            }
+            break;
+        default:
+            echo "[WARNING] ${osName} is not supported"
     }
 }
 
@@ -109,12 +91,13 @@ def executeTests(String osName, String asicName, Map options)
 
         timeout(time: "5", unit: 'MINUTES') {
             try {
+                cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rs2rpr.git')
                 dir('jobs/Scripts')
                 {
                     unstash "conversionScript"
                 }
-                } catch(e) {
+            } catch(e) {
                 println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
                 println(e.toString())
                 throw e
@@ -179,13 +162,17 @@ def executeTests(String osName, String asicName, Map options)
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
                 }
-            } catch (e) {}
+            } catch (e) {
+                println("[WARNING] Baseline doesn't exist.")
+            }
             try
             {
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE_OR}/${it}", './Work/Baseline/')
                 }
-            } catch (e) {}
+            } catch (e) {
+                println("[WARNING] Baseline doesn't exist.")
+            }
             executeTestCommand(osName, options)
         }
     } catch (e) {
@@ -227,15 +214,13 @@ def executeTests(String osName, String asicName, Map options)
     }
 }
 
-def executeBuild(String osName, Map options)
-{
-}
 
 def executePreBuild(Map options)
 {
+    options.executeBuild = false
+
     // manual job
     if (options.forceBuild) {
-        options.executeBuild = true
         options.executeTests = true
     // auto job
     } else {
@@ -243,14 +228,14 @@ def executePreBuild(Map options)
             println "[INFO] Branch was detected as Pull Request"
             options.isPR = true
             options.executeTests = true
-            options.testsPackage = "Complex"
+            options.testsPackage = "Master"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
-           println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options.executeTests = true
-           options.testsPackage = "Complex"
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.executeTests = true
+            options.testsPackage = "PR"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options.testsPackage = "Complex"
+            options.testsPackage = "PR"
         }
     }
 
@@ -277,12 +262,13 @@ def executePreBuild(Map options)
         options.pluginVersion = version_read("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ')
         
         if (options['incrementVersion']) {
-            if(env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
+            if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 println "[INFO] Current build version: ${options.pluginVersion}"
 
-                def new_version = version_inc(options.pluginVersion, 3)
+                new_version = version_inc(options.pluginVersion, 3)
+                
                 println "[INFO] New build version: ${new_version}"
                 version_write("convertRS2RPR.py", 'RS2RPR_CONVERTER_VERSION = ', new_version)
 
@@ -290,9 +276,9 @@ def executePreBuild(Map options)
                 println "[INFO] Updated build version: ${options.pluginVersion}"
 
                 bat """
-                  git add version.h
+                  git add convertRS2RPR.py
                   git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                  git push origin HEAD:master
+                  git push origin HEAD:develop
                 """
             }
         }
@@ -301,6 +287,13 @@ def executePreBuild(Map options)
         currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
         currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+        bat """
+            rename convertRS2RPR.py convertRS2RPR_${options.pluginVersion}.py
+        """
+        archiveArtifacts "convertRS2RPR*.py"
+        String BUILD_NAME = "convertRS2RPR_${options.pluginVersion}.py"
+        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
     }
 
@@ -312,7 +305,7 @@ def executePreBuild(Map options)
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else if (env.JOB_NAME == "Vray2RPRConvertToolManual-Maya-Nightly") {
+    } else if (env.JOB_NAME == "Redshift2RPRConvertToolWeekly-Maya") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '15']]]);
@@ -321,6 +314,8 @@ def executePreBuild(Map options)
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     }
+
+    println "[INFO] Test package: ${options.testsPackage}"
 
     def tests = []
     if(options.testsPackage != "none")
@@ -333,6 +328,7 @@ def executePreBuild(Map options)
             {
                 options.testsList = ['']
             }
+            println "${options.testsPackage}"
             // options.splitTestsExecution = false
             String tempTests = readFile("jobs/${options.testsPackage}")
             tempTests.split("\n").each {
@@ -461,26 +457,25 @@ def executeDeploy(Map options, List platformList, List testResultList)
     {}
 }
 
-def call(String customBuildLinkWindows = "",
+def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_storage/RadeonProRenderMaya_2.9.8.msi",
          String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:NVIDIA_GF1080TI',
+         String platforms = 'Windows:NVIDIA_RTX2080TI',
          Boolean updateORRefs = false,
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          Boolean incrementVersion = true,
-         Boolean skipBuild = true,
          String testsPackage = "",
          String tests = "",
          String toolVersion = "2020",
          Boolean isPreBuilt = true,
-         Boolean forceBuild = true) {
+         Boolean forceBuild = false) {
     try
     {
         String PRJ_NAME="RS2RPRConvertTool-Maya"
         String PRJ_ROOT="rpr-tools"
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
+        multiplatform_pipeline(platforms, this.&executePreBuild, null, this.&executeTests, this.&executeDeploy,
                                [customBuildLinkWindows:customBuildLinkWindows,
                                 projectBranch:projectBranch,
                                 testsBranch:testsBranch,
@@ -490,7 +485,6 @@ def call(String customBuildLinkWindows = "",
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 incrementVersion:incrementVersion,
-                                skipBuild:skipBuild,
                                 testsPackage:testsPackage,
                                 tests:tests,
                                 toolVersion:toolVersion,

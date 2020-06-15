@@ -36,16 +36,14 @@ def executeGenTestRefCommand(String osName, Map options)
 
 def executeTestCommand(String osName, Map options)
 {
-    if (!options['skipBuild'])
-    {
-        installPlugin(osName, options)
-        //duct tape for migration to maya2019
-        try {
-            buildRenderCache(osName, "${options.stageName}.log")
-        } catch(e) {
-            println(e.toString())
-            println("ERROR during building render cache")
-        }
+    
+    // installPlugin(osName, options)
+    try {
+        // buildRenderCache(osName, "${options.stageName}.log")
+        println "no tests functions"
+    } catch(e) {
+        println(e.toString())
+        println("ERROR during building render cache")
     }
 
     switch(osName)
@@ -53,217 +51,171 @@ def executeTestCommand(String osName, Map options)
     case 'Windows':
         dir('scripts')
         {
-            bat """
-            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\">> ../${options.stageName}.log  2>&1
-            """
+            //bat """
+            //run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\">> ../${options.stageName}.log  2>&1
+            //"""
+            println "no tests functions"
         }
         break;
     case 'OSX':
         dir('scripts')
         {
-            sh """
-            ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" >> ../${options.stageName}.log 2>&1
-            """
+            //sh """
+            //./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" >> ../${options.stageName}.log 2>&1
+            //"""
+            println "no tests functions"
         }
         break;
     default:
-        sh """
-        echo 'sample image' > ./OutputImages/sample_image.txt
-        """
+        println "no tests functions"
     }
 }
+
 
 def executeTests(String osName, String asicName, Map options)
 {
 }
 
+
 def executeBuildWindows(Map options)
 {
-    String CMD_BUILD_USD = """
-        if exist USDgen rmdir /s/q USDgen
-        if exist USDinst rmdir /s/q USDinst
-        python USD\\build_scripts\\build_usd.py -v --build ${WORKSPACE}/USDgen/build --src ${WORKSPACE}/USDgen/src ${WORKSPACE}/USDinst > USD/${STAGE_NAME}_USD.log 2>&1
-    """
-
-    String CMAKE_KEYS_USD = """
-        -DGLEW_LOCATION="${WORKSPACE}/USDinst" ^
-        -DCMAKE_INSTALL_PREFIX="${WORKSPACE}/USDinst" ^
-        -DUSD_INCLUDE_DIR="${WORKSPACE}/USDinst/include" ^
-        -DUSD_LIBRARY_DIR="${WORKSPACE}/USDinst/lib"
-    """
-
-    CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
-    CMAKE_KEYS_USD = options.enableHoudini ? "" : CMAKE_KEYS_USD
-
-    withEnv(["PATH=c:\\python27\\;c:\\python27\\scripts\\;${PATH}", "WORKSPACE=${env.WORKSPACE.toString().replace('\\', '/')}"]) {
+    if (options.rebuildUSD){
         bat """
-            call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}.log 2>&1
-
-            ${CMD_BUILD_USD}
-
-            set PATH=${WORKSPACE}\\USDinst\\bin;${WORKSPACE}\\USDinst\\lib;%PATH%
-            set PYTHONPATH=${WORKSPACE}\\USDinst\\lib\\python;%PYTHONPATH%
-
-            mkdir RadeonProRenderUSD\\build
-            pushd RadeonProRenderUSD\\build
-
-            cmake -G "Visual Studio 15 2017 Win64" ${CMAKE_KEYS_USD} ^
-                -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} ^
-                -DHOUDINI_ROOT="C:/Program Files/Side Effects Software/Houdini 18.0.260" ^
-                -DCMAKE_BUILD_TYPE=Release .. >> ..\\..\\${STAGE_NAME}.log 2>&1
-
-            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
+            if exist USDgen rmdir /s/q USDgen
+            if exist USDinst rmdir /s/q USDinst
+            call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}_USD.log 2>&1
+            C:\\Python27\\python.exe USD\\build_scripts\\build_usd.py -v --build ${WORKSPACE}/USDgen/build --src ${WORKSPACE}/USDgen/src ${WORKSPACE}/USDinst > USD/${STAGE_NAME}_USD.log 2>&1
         """
     }
+    
+    dir ("RadeonProRenderUSD") {
+        if (options.enableHoudini) {
+            bat """
+                mkdir build
+                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
+            """
+
+        } else {
+            bat """
+                mkdir build
+                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" --cmake_options "-Dpxr_DIR=USDinst" >> ..\\${STAGE_NAME}.log 2>&1
+            """
+        } 
+    }
 }
+
 
 def executeBuildOSX(Map options) {
 
-    String CMD_BUILD_USD = """
-        if [ -d "./USDgen" ]; then
-            rm -fdr ./USDgen
-        fi
-
-        if [ -d "./USDinst" ]; then
-            rm -fdr ./USDinst
-        fi
-
-        mkdir -p USDgen
-        mkdir -p USDinst
-
-        python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
-    """
-
-    String CMAKE_KEYS_USD = """
-        -DGLEW_LOCATION=${WORKSPACE}/USDinst \
-        -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
-        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include \
-        -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib
-    """
-
-    CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
-    CMAKE_KEYS_USD = options.enableHoudini ? "" : CMAKE_KEYS_USD
-
-    withEnv(["OS="]) {
+    if (options.rebuildUSD) {
         sh """
-            ${CMD_BUILD_USD}
+            if [ -d "./USDgen" ]; then
+                rm -fdr ./USDgen
+            fi
 
-            export PATH=${WORKSPACE}/USDinst/bin:\$PATH
-            export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
+            if [ -d "./USDinst" ]; then
+                rm -fdr ./USDinst
+            fi
 
-            mkdir -p RadeonProRenderUSD/build
-            pushd RadeonProRenderUSD/build
+            mkdir -p USDgen
+            mkdir -p USDinst
 
-            cmake ${CMAKE_KEYS_USD} \
-                -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} \
-                -DHOUDINI_ROOT=/Applications/Houdini/Current/Frameworks/Houdini.framework/Versions/Current/Resources \
-                -DCMAKE_BUILD_TYPE=Release .. >> ../../${STAGE_NAME}.log 2>&1
-
-            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
+            python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
         """
     }
+
+    dir ("RadeonProRenderUSD") {
+        if (options.enableHoudini) {
+            sh """
+                mkdir build
+                export HFS=/Applications/Houdini/Current/Frameworks/Houdini.framework/Versions/Current/Resources
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
+            """
+        } else {
+            sh """
+                mkdir build
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options "-Dpxr_DIR=USDinst" >> ../${STAGE_NAME}.log 2>&1
+            """
+        }
+    }
 }
+
 
 def executeBuildLinux(Map options) {
 
-    String CMD_BUILD_USD = """
-        if [ -d "./USDgen" ]; then
-            rm -fdr ./USDgen
-        fi
-
-        if [ -d "./USDinst" ]; then
-            rm -fdr ./USDinst
-        fi
-
-        mkdir -p USDgen
-        mkdir -p USDinst
-
-        python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
-    """
-
-    String CMAKE_KEYS_USD = """
-        -DGLEW_LOCATION=${WORKSPACE}/USDinst \
-        -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
-        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include \
-        -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib
-    """
-
-    CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
-    CMAKE_KEYS_USD = options.enableHoudini ? "" : CMAKE_KEYS_USD
-
-    // set $OS=null because it use in TBB build script
-    withEnv(["OS="]) {
+    if (options.rebuildUSD) {
         sh """
-            ${CMD_BUILD_USD}
+            if [ -d "./USDgen" ]; then
+                rm -fdr ./USDgen
+            fi
 
-            export PATH=${WORKSPACE}/USDinst/bin:\$PATH
-            export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
+            if [ -d "./USDinst" ]; then
+                rm -fdr ./USDinst
+            fi
 
-            mkdir -p RadeonProRenderUSD/build
-            cd RadeonProRenderUSD/build
+            mkdir -p USDgen
+            mkdir -p USDinst
 
-            cmake ${CMAKE_KEYS_USD} \
-                -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} \
-                -DHOUDINI_ROOT=/opt/hfs18.0.260 \
-                -DCMAKE_BUILD_TYPE=Release .. >> ../../${STAGE_NAME}.log 2>&1
-
-            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
+            python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
         """
     }
+
+    dir ("RadeonProRenderUSD") {
+        if (options.enableHoudini) {
+            sh """
+                mkdir build
+                export HFS=/opt/hfs18.0.460
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
+            """
+        } else {
+            sh """
+                mkdir build
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options "-Dpxr_DIR=USDinst" >> ../${STAGE_NAME}.log 2>&1
+            """
+        }
+    }
 }
+
 
 def executeBuildCentOS(Map options) {
 
-    String CMD_BUILD_USD = """
-        if [ -d "./USDgen" ]; then
-            rm -fdr ./USDgen
-        fi
-
-        if [ -d "./USDinst" ]; then
-            rm -fdr ./USDinst
-        fi
-
-        mkdir -p USDgen
-        mkdir -p USDinst
-
-        python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
-    """
-
-    String CMAKE_KEYS_USD = """
-        -DGLEW_LOCATION=${WORKSPACE}/USDinst \
-        -DCMAKE_INSTALL_PREFIX=${WORKSPACE}/USDinst \
-        -DUSD_INCLUDE_DIR=${WORKSPACE}/USDinst/include \
-        -DUSD_LIBRARY_DIR=${WORKSPACE}/USDinst/lib
-    """
-
-    CMD_BUILD_USD = options.rebuildUSD ? CMD_BUILD_USD : "echo \"Skip USD build\""
-    CMAKE_KEYS_USD = options.enableHoudini ? "" : CMAKE_KEYS_USD
-
-    // set $OS=null because it use in TBB build script
-    withEnv(["OS="]) {
-
+    if (options.rebuildUSD) {
         sh """
-            ${CMD_BUILD_USD}
+            if [ -d "./USDgen" ]; then
+                rm -fdr ./USDgen
+            fi
 
-            export PATH=${WORKSPACE}/USDinst/bin:\$PATH
-            export PYTHONPATH=${WORKSPACE}/USDinst/lib/python:\$PYTHONPATH
+            if [ -d "./USDinst" ]; then
+                rm -fdr ./USDinst
+            fi
 
-            mkdir -p RadeonProRenderUSD/build
-            cd RadeonProRenderUSD/build
+            mkdir -p USDgen
+            mkdir -p USDinst
 
-            cmake ${CMAKE_KEYS_USD} \
-                -DRPR_BUILD_AS_HOUDINI_PLUGIN=${options.enableHoudini.toString().toUpperCase()} \
-                -DHOUDINI_ROOT=/opt/hfs18.0.260 \
-                -DCMAKE_BUILD_TYPE=Release .. >> ../../${STAGE_NAME}.log 2>&1
-
-            python ../pxr/imaging/plugin/hdRpr/package/generatePackage.py -b . >> ../../${STAGE_NAME}.log 2>&1
+            python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
         """
+    }
+
+    dir ("RadeonProRenderUSD") {
+        if (options.enableHoudini) {
+            sh """
+                mkdir build
+                export HFS=/opt/hfs18.0.460
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
+            """
+        } else {
+            sh """
+                mkdir build
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options "-Dpxr_DIR=USDinst" >> ../${STAGE_NAME}.log 2>&1
+            """
+        }
     }
 }
 
-def executeBuild(String osName, Map options) {
 
-    cleanWS()
+def executeBuild(String osName, Map options) {
 
     try {
         dir('RadeonProRenderUSD') {
@@ -317,6 +269,29 @@ def executeBuild(String osName, Map options) {
 
 def executePreBuild(Map options) {
 
+    // manual job
+    if (options.forceBuild) {
+        options.executeBuild = true
+        options.executeTests = true
+    // auto job
+    } else {
+        if (env.CHANGE_URL) {
+            println "[INFO] Branch was detected as Pull Request"
+            options.isPR = true
+            options.executeBuild = true
+            options.executeTests = true
+            options.testsPackage = "PR"
+        } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
+           println "[INFO] ${env.BRANCH_NAME} branch was detected"
+           options.executeBuild = true
+           options.executeTests = true
+           options.testsPackage = "master"
+        } else {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.testsPackage = "master"
+        }
+    }
+
     dir('RadeonProRenderUSD')
     {
         checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git')
@@ -344,7 +319,7 @@ def executePreBuild(Map options) {
 
         if(options['incrementVersion'])
         {
-            if(env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender")
+            if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender")
             {
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 println "[INFO] Current build version: ${options.pluginVersion}"
@@ -356,11 +331,11 @@ def executePreBuild(Map options) {
                 def updated_version = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_PATCH_VERSION "', '')
                 println "[INFO] Updated build version: ${updated_version}"
 
-                //bat """
-                //    git add cmake/defaults/Version.cmake
-                //    git commit -m "buildmaster: version update to ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}"
-                //    git push origin HEAD:master
-                //"""
+                bat """
+                    git add cmake/defaults/Version.cmake
+                    git commit -m "buildmaster: version update to ${options.majorVersion}.${options.minorVersion}.${updated_version}"
+                    git push origin HEAD:develop
+                """
 
                 //get commit's sha which have to be build
                 options['projectBranch'] = bat ( script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
@@ -375,20 +350,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-        String thirdpartyBranch = "master",
         String usdBranch = "master",
         String testsBranch = "master",
         String platforms = 'Windows;Ubuntu18;OSX;CentOS7_6',
         Boolean updateRefs = false,
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,
-        Boolean skipBuild = false,
-        String renderDevice = "gpu",
         String testsPackage = "",
         String tests = "",
         Boolean forceBuild = false,
         Boolean splitTestsExectuion = false,
-        Boolean sendToRBS = false,
         Boolean enableHoudini = true,
         Boolean rebuildUSD = false)
 {
@@ -397,9 +368,8 @@ def call(String projectBranch = "",
         String PRJ_NAME="RadeonProRenderUSD"
         String PRJ_ROOT="rpr-plugins"
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null,
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
-                                thirdpartyBranch:thirdpartyBranch,
                                 usdBranch:usdBranch,
                                 testsBranch:testsBranch,
                                 updateRefs:updateRefs,
@@ -407,16 +377,11 @@ def call(String projectBranch = "",
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 incrementVersion:incrementVersion,
-                                skipBuild:skipBuild,
-                                renderDevice:renderDevice,
                                 testsPackage:testsPackage,
                                 tests:tests,
-                                executeBuild:true,
-                                executeTests:false,
                                 forceBuild:forceBuild,
                                 reportName:'Test_20Report',
                                 splitTestsExectuion:splitTestsExectuion,
-                                sendToRBS:sendToRBS,
                                 TEST_TIMEOUT:30,
                                 enableHoudini:enableHoudini,
                                 rebuildUSD:rebuildUSD,

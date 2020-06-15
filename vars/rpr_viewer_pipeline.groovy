@@ -516,7 +516,7 @@ def call(String projectBranch = "",
                             PRJ_NAME:PRJ_NAME,
                             PRJ_ROOT:PRJ_ROOT,
                             projectRepo:projectRepo,
-                            BUILDER_TAG:'BuilderS',
+                            BUILDER_TAG:'BuilderViewer',
                             TESTER_TAG:'RprViewer',
                             executeBuild:true,
                             executeTests:true,
@@ -525,5 +525,6 @@ def call(String projectBranch = "",
                             // TODO: rollback after split implementation
                             //TEST_TIMEOUT:40,
                             TEST_TIMEOUT:120,
+                            DEPLOY_TIMEOUT:45,
                             tests:tests])
 }
