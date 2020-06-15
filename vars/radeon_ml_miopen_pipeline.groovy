@@ -83,6 +83,8 @@ def executeBuildWindows(Map options)
             checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
             bat """
                 MD "miopen\\${CIS_OS}"
+                RMDIR /S/Q "miopen\\${CIS_OS}"
+                MD "miopen\\${CIS_OS}"
                 xcopy ..\\build-direct\\Release "miopen\\${CIS_OS}" /s/y/i
                 git config --local user.name "radeonbuildmaster"
                 git config --local user.email "radeonprorender.buildmaster@gmail.com"
@@ -129,6 +131,8 @@ def executeBuildLinux(Map options)
         dir("rml-deploy") {
             checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
             sh """
+                mkdir -p miopen/${CIS_OS}
+                rm -fdr miopen/${CIS_OS}
                 mkdir -p miopen/${CIS_OS}
                 cp -r ../build-direct/Release/* ./miopen/${CIS_OS}
                 git config --local user.name "radeonbuildmaster"

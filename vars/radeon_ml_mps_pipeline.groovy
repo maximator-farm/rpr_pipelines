@@ -84,6 +84,8 @@ def executeBuildOSX(Map options)
             checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
             sh """
                 mkdir -p mps/${CIS_OS}
+                rm -fdr mps/${CIS_OS}
+                mkdir -p mps/${CIS_OS}
                 cp -r ../build/bin/* ./mps/${CIS_OS}
                 git config --local user.name "radeonbuildmaster"
                 git config --local user.email "radeonprorender.buildmaster@gmail.com"
