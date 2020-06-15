@@ -71,6 +71,10 @@ def executeBuildWindows(Map options)
     cmake -G "Visual Studio 15 2017 Win64" ${options.cmakeKeys(env.WORKSPACE)} .. >> ..\\${STAGE_NAME}.Release.log 2>&1
     set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
     %msbuild% RadeonML.sln -property:Configuration=Release >> ..\\${STAGE_NAME}.Release.log 2>&1
+    """
+
+    bat """
+    cd build-direct
     xcopy ..\\third_party\\miopen\\MIOpen.dll .\\Release\\MIOpen.dll*
     """
 
@@ -79,11 +83,13 @@ def executeBuildWindows(Map options)
             checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
             bat """
                 MD "miopen\\${CIS_OS}"
+                RMDIR /S/Q "miopen\\${CIS_OS}"
+                MD "miopen\\${CIS_OS}"
                 xcopy ..\\build-direct\\Release "miopen\\${CIS_OS}" /s/y/i
                 git config --local user.name "radeonbuildmaster"
                 git config --local user.email "radeonprorender.buildmaster@gmail.com"
                 git add --all
-                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
+                git commit -m "${CIS_OS} release ${env.TAG_NAME}"
                 git push origin HEAD:master
             """
         }
@@ -109,6 +115,10 @@ def executeBuildLinux(Map options)
     cd build-direct
     cmake ${options.cmakeKeys(env.WORKSPACE)} .. >> ../${STAGE_NAME}.Release.log 2>&1
     make -j >> ../${STAGE_NAME}.Release.log 2>&1
+    """
+ 
+    sh """
+    cd build-direct
     mv bin Release
     cp ../third_party/miopen/libMIOpen.so* ./Release
     
@@ -122,11 +132,13 @@ def executeBuildLinux(Map options)
             checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
             sh """
                 mkdir -p miopen/${CIS_OS}
+                rm -fdr miopen/${CIS_OS}
+                mkdir -p miopen/${CIS_OS}
                 cp -r ../build-direct/Release/* ./miopen/${CIS_OS}
                 git config --local user.name "radeonbuildmaster"
                 git config --local user.email "radeonprorender.buildmaster@gmail.com"
                 git add --all
-                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
+                git commit -m "${CIS_OS} release ${env.TAG_NAME}"
                 git push origin HEAD:master
             """
         }
@@ -137,6 +149,10 @@ def executeBuildLinux(Map options)
     cd build-direct-debug
     cmake ${options.cmakeKeys(env.WORKSPACE)} -DRML_LOG_LEVEL=Debug .. >> ../${STAGE_NAME}.Debug.log 2>&1
     make -j >> ../${STAGE_NAME}.Debug.log 2>&1
+    """
+ 
+    sh """
+    cd build-direct-debug
     mv bin Debug
     """
 }

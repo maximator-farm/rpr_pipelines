@@ -13,7 +13,7 @@ def getCoreSDK(String osName, Map options)
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                 unstash "WindowsSDK"
-                
+
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
                     copy binWin64.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
@@ -38,11 +38,11 @@ def getCoreSDK(String osName, Map options)
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                 unstash "OSXSDK"
-                
+
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
                     cp binMacOS.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
-                """ 
+                """
 
             } else {
                 println "[INFO] The plugin ${options.pluginOSXSha}.zip exists in the storage."
@@ -56,18 +56,18 @@ def getCoreSDK(String osName, Map options)
             break;
 
         default:
-            
+
             if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
 
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                 unstash "Ubuntu18SDK"
-                
+
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
                     cp binUbuntu18.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
-                """ 
+                """
 
             } else {
 
@@ -189,7 +189,7 @@ def executeTests(String osName, String asicName, Map options)
         }
         else if(options.updateRefsByOne)
         {
-            // Update ref images from one card to others 
+            // Update ref images from one card to others
             // TODO: Fix hardcode naming
             executeTestCommand(osName, options)
             executeGenTestRefCommand(osName, options)
@@ -212,7 +212,7 @@ def executeTests(String osName, String asicName, Map options)
     } catch (e) {
         if (options.currentTry < options.nodeReallocateTries) {
             stashResults = false
-        } 
+        }
         println(e.toString())
         println(e.getMessage())
         options.failureMessage = "Failed during testing: ${asicName}-${osName}"
@@ -366,7 +366,7 @@ def executePreBuild(Map options)
     if (env.CHANGE_URL) {
         echo "branch was detected as Pull Request"
         options['isPR'] = true
-        options.testsPackage = "PR" 
+        options.testsPackage = "PR"
     } else {
         currentBuild.description += "<b>Commit author:</b> ${options.AUTHOR_NAME}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -476,7 +476,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 if (summaryReport.failed > 0) {
                     println("Some tests failed")
                     currentBuild.result="UNSTABLE"
-                } 
+                }
             }
             catch(e)
             {
@@ -569,6 +569,7 @@ def call(String projectBranch = "",
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 BUILDER_TAG:'BuilderS',
+                                TESTER_TAG:'Core',
                                 slackChannel:"${SLACK_CORE_CHANNEL}",
                                 renderDevice:renderDevice,
                                 testsPackage:testsPackage,
@@ -576,6 +577,7 @@ def call(String projectBranch = "",
                                 executeBuild:true,
                                 executeTests:true,
                                 reportName:'Test_20Report',
+                                TEST_TIMEOUT:60,
                                 width:width,
                                 gpusCount:gpusCount,
                                 height:height,
