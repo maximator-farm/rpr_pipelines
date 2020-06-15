@@ -80,7 +80,7 @@ def executeBuildWindows(Map options)
                 git config --local user.name "radeonbuildmaster"
                 git config --local user.email "radeonprorender.buildmaster@gmail.com"
                 git add --all
-                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
+                git commit -m "${CIS_OS} release ${env.TAG_NAME}"
                 git push origin HEAD:master
             """
         }
