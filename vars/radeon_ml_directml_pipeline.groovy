@@ -74,11 +74,13 @@ def executeBuildWindows(Map options)
             checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
             bat """
                 MD directml\\${CIS_OS}
+                RMDIR /S/Q directml\\${CIS_OS}
+                MD directml\\${CIS_OS}
                 xcopy ..\\build-direct\\Release "directml\\${CIS_OS}" /s/y/i
                 git config --local user.name "radeonbuildmaster"
                 git config --local user.email "radeonprorender.buildmaster@gmail.com"
                 git add --all
-                git commit -m "${CIS_OS} release v${env.TAG_NAME}"
+                git commit -m "${CIS_OS} release ${env.TAG_NAME}"
                 git push origin HEAD:master
             """
         }
