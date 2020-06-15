@@ -411,13 +411,8 @@ def executePreBuild(Map options)
         options.groupsRBS = tests
     }
 
-    if(options.splitTestsExecution) {
-        options.testsList = options.tests
-    }
-    else {
-        options.testsList = ['']
-        options.tests = tests.join(" ")
-    }
+    options.testsList = ['']
+    options.tests = tests.join(" ")
 
     if (options.sendToRBS)
     {
@@ -562,8 +557,7 @@ def call(String projectBranch = "",
          String width = "0",
          String height = "0",
          String iterations = "0",
-         Boolean sendToRBS = true,
-         Boolean splitTestsExecution = true) {
+         Boolean sendToRBS = true) {
     try
     {
         String PRJ_NAME="RadeonProRenderCore"
@@ -602,7 +596,6 @@ def call(String projectBranch = "",
                                 executeBuild:true,
                                 executeTests:true,
                                 reportName:'Test_20Report',
-                                splitTestsExecution:splitTestsExecution,
                                 TEST_TIMEOUT:60,
                                 width:width,
                                 gpusCount:gpusCount,
