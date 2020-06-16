@@ -86,7 +86,7 @@ def executeTestCommand(String osName, String asicName, Map options)
         build_id = universeClient.build["id"]
         job_id = universeClient.build["job_id"]
     }
-    withEnv(["RBS_USE=${options.sendToRBS}", "RBS_BUILD_ID=${build_id}", "RBS_JOB_ID=${job_id}", "RBS_URL=${universeClient.url}", "RBS_ENV_LABEL=${osName}-${asicName}", "IMAGE_SERVICE_URL=${universeClient.is_url}"]){
+    withEnv(["RBS_USE=${options.sendToRBS}", "RBS_BUILD_ID=${build_id}", "RBS_JOB_ID=${job_id}", "RBS_URL=${universeClient.url}", "RBS_ENV_LABEL=${osName}-${asicName}", "IMAGE_SERVICE_URL=${universeClient.is_url}"])
     {
         dir('scripts')
         {
