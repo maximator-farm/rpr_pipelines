@@ -54,7 +54,7 @@ def executeCheckout(String branchName, String repoName, Boolean disableSubmodule
         checkout scm
 
     } else {
-        checkoutExtensions.add([$class: 'CloneOption', timeout: 60, shallow: true, depth: 2, noTags: false])
+        checkoutExtensions.add([$class: 'CloneOption', timeout: 60, noTags: false])
 
         checkout changelog: changelog, poll: polling,
             scm: [$class: 'GitSCM', branches: repoBranch, doGenerateSubmoduleConfigurations: false,
