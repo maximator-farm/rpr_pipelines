@@ -459,6 +459,22 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
+            	dir("core_tests_configuration") {
+	                bat """
+	                set REMOTE_HOST=admin@172.30.23.112
+	                set REMOTE_ROOT=/home/admin/Server/storage.rpr/www/html
+
+	                set REMOTE_SOURCE=${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/
+	                set REMOTE_PATH=%REMOTE_ROOT%/%REMOTE_SOURCE%
+
+	                bash -c 'rsync -rvzc --delete --include='*.json' --include='*/' --exclude='*' %REMOTE_HOST%:%REMOTE_PATH% .'
+	                """
+            	}
+            } catch (e) {
+                println("[ERROR] Can't download json files with core tests configuration")
+            }
+
+            try {
                 dir("jobs_launcher") {
                     bat """
                     count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults default \"${options.tests}\"
