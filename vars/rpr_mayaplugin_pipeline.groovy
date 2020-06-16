@@ -132,7 +132,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 {
     build_id = "none"
     job_id = "none"
-    if (options.sendToRBS){
+    if (options.sendToRBS && universeClient.build != null){
         build_id = universeClient.build["id"]
         job_id = universeClient.build["job_id"]
     }
