@@ -219,9 +219,10 @@ def executeTests(String osName, String asicName, Map options)
 
 def executePreBuild(Map options)
 {
+    options.executeBuild = false
+
     // manual job
     if (options.forceBuild) {
-        options.executeBuild = true
         options.executeTests = true
     // auto job
     } else {
@@ -263,17 +264,12 @@ def executePreBuild(Map options)
         options.pluginVersion = version_read("convertVR2RPR.py", 'VR2RPR_CONVERTER_VERSION = ')
 
         if (options['incrementVersion']) {
-            if((env.BRANCH_NAME == "develop" || env.BRANCH_NAME == "master") && options.commitAuthor != "radeonprorender") {
+            if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 println "[INFO] Current build version: ${options.pluginVersion}"
 
-                def new_version
-                if (env.BRANCH_NAME == "master") {
-                    new_version = version_inc(options.pluginVersion, 2)
-                } else {
-                    new_version = version_inc(options.pluginVersion, 3)
-                }
+                new_version = version_inc(options.pluginVersion, 3)
                 
                 println "[INFO] New build version: ${new_version}"
                 version_write("convertVR2RPR.py", 'VR2RPR_CONVERTER_VERSION = ', new_version)
@@ -284,7 +280,7 @@ def executePreBuild(Map options)
                 bat """
                   git add convertVR2RPR.py
                   git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                  git push origin HEAD:${env.BRANCH_NAME}
+                  git push origin HEAD:develop
                 """
             }
         }
@@ -310,7 +306,7 @@ def executePreBuild(Map options)
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else if (env.JOB_NAME == "Vray2RPRConvertToolNightly-Maya") {
+    } else if (env.JOB_NAME == "Vray2RPRConvertToolWeekly-Maya") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '15']]]);
@@ -464,12 +460,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_storage/RadeonProRenderMaya_2.9.8.msi",
          String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:NVIDIA_GF1080TI',
+         String platforms = 'Windows:NVIDIA_RTX2080TI',
          Boolean updateORRefs = false,
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          Boolean incrementVersion = true,
-         Boolean skipBuild = true,
          String testsPackage = "",
          String tests = "",
          String toolVersion = "2020",
@@ -490,14 +485,13 @@ def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 incrementVersion:incrementVersion,
-                                skipBuild:skipBuild,
                                 testsPackage:testsPackage,
                                 tests:tests,
                                 toolVersion:toolVersion,
                                 isPreBuilt:isPreBuilt,
                                 forceBuild:forceBuild,
                                 reportName:'Test_20Report',
-                                TESTER_TAG:"VRayMaya",
+                                TESTER_TAG:"VrayMaya",
                                 TEST_TIMEOUT:120])
     }
     catch(e) {
