@@ -57,7 +57,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             println "Exception cause: ${e.getCause()}"
                                             println "Exception stack trace: ${e.getStackTrace()}"
 
-                                            if (e.getClass().toString().contains("FlowInterruptedException")) {
+                                            if (e.getClass().toString().contains("FlowInterruptedException") || e.getClass().toString().contains("AbortException")) {
                                                 e.getCauses().each(){
                                                     // UserInterruption aborting by user
                                                     // ExceededTimeout aborting by timeout
