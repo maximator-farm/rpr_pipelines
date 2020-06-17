@@ -50,6 +50,15 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             executeTests(osName, asicName, newOptions)
                                             i = options.nodeReallocateTries + 1
                                             successCurrentNode = true
+                                        } catch (FlowInterruptedException e) {
+                                            println "[ERROR] GOT FlowInterruptedException"
+                                            println "Exception: ${e.toString()}"
+                                            println "Exception message: ${e.getMessage()}"
+                                            println "Exception cause: ${e.getCause()}"
+                                            println "Exception stack trace: ${e.getStackTrace()}"
+                                            e.getCauses().each(){
+                                                println "Interruption cause: ${it}"
+                                            }
                                         } catch(Exception e) {
                                             println "[ERROR] Failed during tests on ${env.NODE_NAME} node"
                                             println "Exception: ${e.toString()}"
