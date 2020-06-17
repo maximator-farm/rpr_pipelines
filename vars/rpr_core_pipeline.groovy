@@ -378,27 +378,40 @@ def executePreBuild(Map options)
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30']]]);
     }
 
+    def tests = []
+    options.groupsRBS = []
+    if(options.testsPackage != "none")
+    {
+        dir('jobs_test_core')
+        {
+            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
+            // json means custom test suite. Split doesn't supported
+            String tempTests = readFile("jobs/${options.testsPackage}")
+            tempTests.split("\n").each {
+                // TODO: fix: duck tape - error with line ending
+                tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
+            }
+            options.tests = tests
+            options.testsPackage = "none"
+            options.groupsRBS = tests
+        }
+    }
+    else {
+        options.tests.split(" ").each()
+        {
+            tests << "${it}"
+        }
+        options.tests = tests
+        options.groupsRBS = tests
+    }
+
+    options.testsList = ['']
+    options.tests = tests.join(" ")
 
     if (options.sendToRBS)
     {
         try
         {
-            def tests = []
-            if(options.testsPackage != "none")
-            {
-                dir('jobs_test_core')
-                {
-                    checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
-                    // options.splitTestsExecution = false
-                    String tempTests = readFile("jobs/${options.testsPackage}")
-                    tempTests.split("\n").each {
-                        // TODO: fix: duck tape - error with line ending
-                        tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
-                    }
-
-                    options.groupsRBS = tests
-                }
-            }
             options.rbs_prod.startBuild(options)
         }
         catch (e)
@@ -416,6 +429,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
 
+            List lostStashes = []
+
             dir("summaryTestResults")
             {
                 testResultList.each()
@@ -428,12 +443,31 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         }catch(e)
                         {
                             echo "Can't unstash ${it}"
+                            lostStashes.add("'$it'".replace("testResult-", ""))
                             println(e.toString());
                             println(e.getMessage());
                         }
 
                     }
                 }
+            }
+
+            try {
+            	dir("core_tests_configuration") {
+                    bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat ${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/ .")
+            	}
+            } catch (e) {
+                println("[ERROR] Can't download json files with core tests configuration")
+            }
+
+            try {
+                dir("jobs_launcher") {
+                    bat """
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults default \"${options.tests}\"
+                    """
+                }
+            } catch (e) {
+                println("[ERROR] Can't generate number of lost tests")
             }
 
             dir("jobs_launcher")
