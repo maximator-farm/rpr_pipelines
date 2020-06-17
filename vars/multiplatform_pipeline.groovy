@@ -57,7 +57,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             println "Exception cause: ${e.getCause()}"
                                             println "Exception stack trace: ${e.getStackTrace()}"
                                             e.getCauses().each(){
-                                                println "Interruption cause: ${it.getShortDescription()}"
+                                                println "Interruption cause: ${it.getClass()}"
                                             }
                                         } catch(Exception e) {
                                             println "[ERROR] Failed during tests on ${env.NODE_NAME} node"
