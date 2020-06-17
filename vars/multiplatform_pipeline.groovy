@@ -47,9 +47,6 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                         newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
                                         newOptions['tests'] = testName ? testName : options.tests
                                         try {
-                                            timeout(0.5){
-                                                sleep(60)
-                                            }
                                             executeTests(osName, asicName, newOptions)
                                             i = options.nodeReallocateTries + 1
                                             successCurrentNode = true
