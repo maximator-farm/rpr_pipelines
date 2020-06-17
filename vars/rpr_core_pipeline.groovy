@@ -300,7 +300,7 @@ def executeBuild(String osName, Map options)
     try {
         dir('RadeonProRenderSDK')
         {
-            checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderSDK.git')
+            checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git')
         }
 
         outputEnvironmentInfo(osName)
@@ -336,38 +336,32 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
-    currentBuild.description = ""
-    ['projectBranch'].each
-    {
-        if(options[it] != 'master' && options[it] != "")
-        {
-            currentBuild.description += "<b>${it}:</b> ${options[it]}<br/>"
-        }
+
+    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git')
+
+    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+
+
+    println "The last commit was written by ${options.commitAuthor}."
+    println "Commit message: ${options.commitMessage}"
+    println "Commit SHA: ${options.commitSHA}"
+    println "Commit shortSHA: ${options.commitShortSHA}"
+
+    if (options.projectBranch){
+        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+    } else {
+        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
     }
 
-    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderSDK.git')
-
-    AUTHOR_NAME = bat (
-            script: "git show -s --format=%%an HEAD ",
-            returnStdout: true
-            ).split('\r\n')[2].trim()
-
-    echo "The last commit was written by ${AUTHOR_NAME}."
-    options.AUTHOR_NAME = AUTHOR_NAME
-
-    commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true )
-    echo "Commit message: ${commitMessage}"
-    options.commitMessage = commitMessage.split('\r\n')[2].trim()
-
-    options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
     if (env.CHANGE_URL) {
-        echo "branch was detected as Pull Request"
-        options['isPR'] = true
-        options.testsPackage = "PR"
-    } else {
-        currentBuild.description += "<b>Commit author:</b> ${options.AUTHOR_NAME}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        println "Branch was detected as Pull Request"
+        options.isPR = true
     }
 
     if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
