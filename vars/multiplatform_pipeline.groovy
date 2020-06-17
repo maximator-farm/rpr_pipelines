@@ -59,10 +59,13 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                             if (e.getClass().toString().contains("FlowInterruptedException")) {
                                                 e.getCauses().each(){
-                                                    // UserInterruption
-                                                    // ExceededTimeout
-                                                    // Cancelled
+                                                    // UserInterruption aborting by user
+                                                    // ExceededTimeout aborting by timeout
+                                                    // CancelledCause for aborting by new commit
                                                     println "Interruption cause: ${it.getClass()}"
+                                                    if (it.getClass().contains("CancelledCause")) {
+                                                        throw e
+                                                    }
                                                 }
                                             }
                                             // Abort PRs
