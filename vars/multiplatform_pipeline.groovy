@@ -62,10 +62,12 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                                     // UserInterruption aborting by user
                                                     // ExceededTimeout aborting by timeout
                                                     // CancelledCause for aborting by new commit
-                                                    println "Interruption cause: ${it.getClass()}"
-                                                    //if (it.getClass().toString().contains("CancelledCause")) {
-                                                       // throw e
-                                                    //}
+                                                    println "Interruption cause: ${it.getClass().toString()}"
+                                                    if (it.getClass().toString().contains("CancelledCause")) {
+                                                        println "GOT NEW COMMIT"
+                                                        sleep(10)
+                                                        throw e
+                                                    }
                                                 }
                                             }
                                             // Abort PRs
