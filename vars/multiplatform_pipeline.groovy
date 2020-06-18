@@ -67,16 +67,10 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                                     println "Interruption cause: ${causeClassName}"
                                                     if (causeClassName.contains("CancelledCause")) {
                                                         println "GOT NEW COMMIT"
-                                                        // sleep(10)
                                                         throw e
                                                     }
                                                 }
                                             }
-                                            // Abort PRs
-                                            //if (options.containsKey("isPR") &&  options.isPR == true) {
-                                            //    println "[INFO] This build was aborted due to new PR was appeared."
-                                            //    i = options.nodeReallocateTries + 1
-                                            //}
 
                                             // change PC after first failed tries and don't change in the last try
                                             if (i < nodesCount - 1 && nodesCount != 1) {
