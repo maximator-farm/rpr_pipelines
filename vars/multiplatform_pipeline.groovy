@@ -67,6 +67,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                                     println "Interruption cause: ${causeClassName}"
                                                     if (causeClassName.contains("CancelledCause")) {
                                                         println "GOT NEW COMMIT"
+                                                        executeDeploy = null
                                                         throw e
                                                     }
                                                 }
