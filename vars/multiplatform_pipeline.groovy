@@ -100,7 +100,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, def execu
     }
 }
 
-def executePlatform(String osName, String gpuNames, def executeBuild, def executeTests, def executeDeploy, Map options)
+def executePlatform(String osName, String gpuNames, def executeBuild, def executeTests, def executeDeploy Map options)
 {
     def retNode =
     {
