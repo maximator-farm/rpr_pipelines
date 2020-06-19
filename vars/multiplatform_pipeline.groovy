@@ -6,7 +6,7 @@ import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
 
 
-def executeTestsNode(String osName, String gpuNames, def executeTests, def executeDeploy, Map options)
+def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
 {
     if(gpuNames && options['executeTests'])
     {
@@ -100,7 +100,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, def execu
     }
 }
 
-def executePlatform(String osName, String gpuNames, def executeBuild, def executeTests, def executeDeploy Map options)
+def executePlatform(String osName, String gpuNames, def executeBuild, def executeTests, Map options)
 {
     def retNode =
     {
@@ -123,7 +123,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
                     }
                 }
             }
-            executeTestsNode(osName, gpuNames, executeTests, executeDeploy, options)
+            executeTestsNode(osName, gpuNames, executeTests, options)
         }
         catch (e)
         {
@@ -247,7 +247,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                         }
                     }
 
-                    tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, executeDeploy, options)
+                    tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
                 }
                 parallel tasks
             }
