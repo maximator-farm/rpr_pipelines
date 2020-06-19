@@ -67,7 +67,6 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                                     println "Interruption cause: ${causeClassName}"
                                                     if (causeClassName.contains("CancelledCause")) {
                                                         println "GOT NEW COMMIT"
-                                                        executeDeploy = null
                                                         throw e
                                                     }
                                                 }
@@ -256,6 +255,18 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 println(e.toString());
                 println(e.getMessage());
                 currentBuild.result = "FAILURE"
+                String exceptionClassName = e.getClass().toString()
+                if (exceptionClassName.contains("FlowInterruptedException") || exceptionClassName.contains("AbortException")) {
+                    e.getCauses().each(){
+                        // UserInterruption aborting by user
+                        // ExceededTimeout aborting by timeout
+                        // CancelledCause for aborting by new commit
+                        String causeClassName = it.getClass().toString()
+                        if (causeClassName.contains("CancelledCause")) {
+                            executeDeploy = null
+                        }
+                    }
+                }
             }
             finally
             {
