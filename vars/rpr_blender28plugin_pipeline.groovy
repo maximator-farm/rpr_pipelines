@@ -306,7 +306,7 @@ def executeTests(String osName, String asicName, Map options)
 
                         // deinstalling broken addon & reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
-                            installBlenderAddon(osName, "2.8", options, false, true)
+                            installBlenderAddon(osName, "2.83", options, false, true)
                             if (options.currentTry < options.nodeReallocateTries) {
                                 throw new Exception("All tests crashed")
                             }
