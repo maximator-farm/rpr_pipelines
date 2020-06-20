@@ -239,7 +239,7 @@ def executeTests(String osName, String asicName, Map options)
             println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
             println(e.toString())
             // deinstalling broken addon
-            installBlenderAddon(osName, "2.82", options, false, true)
+            installBlenderAddon(osName, "2.83", options, false, true)
             throw e
         }
 
