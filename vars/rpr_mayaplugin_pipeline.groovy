@@ -174,18 +174,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        switch(osName)
-        {
-        case 'Windows':
-            pathToAssets = 'c:/TestResources/MayaAssets'
-            break;
-        default:
-            pathToAssets = "${CIS_TOOLS}/../TestResources/MayaAssets"
-        }
-        dir(pathToAssets)
-        {
-            checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_maya_autotests.git", true, false, true, 'radeonprorender-gitlab', true)
-        }
+        downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MayaAssets/", 'MayaAssets')
 
         try {
             Boolean newPluginInstalled = false
