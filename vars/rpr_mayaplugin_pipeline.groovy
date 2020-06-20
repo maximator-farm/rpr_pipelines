@@ -187,31 +187,29 @@ def executeTests(String osName, String asicName, Map options)
             checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_maya_autotests.git", true, false, true, 'radeonprorender-gitlab', true)
         }
 
-        if (!options['skipBuild']) {
-            try {
-                Boolean newPluginInstalled = false
-                timeout(time: "15", unit: 'MINUTES') {
-                    getMayaPluginInstaller(osName, options)
-                    newPluginInstalled = installMSIPlugin(osName, 'Maya', options)
-                    println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
-                }
-                if (newPluginInstalled) {
-                    timeout(time: "5", unit: 'MINUTES') {
-                        buildRenderCache(osName, options.toolVersion, options.stageName)
-                        if(!fileExists("./Work/Results/Maya/cache_building.jpg")){
-                            println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
-                            throw new Exception("No output image during build cache")
-                        }
+        try {
+            Boolean newPluginInstalled = false
+            timeout(time: "15", unit: 'MINUTES') {
+                getMayaPluginInstaller(osName, options)
+                newPluginInstalled = installMSIPlugin(osName, 'Maya', options)
+                println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
+            }
+            if (newPluginInstalled) {
+                timeout(time: "5", unit: 'MINUTES') {
+                    buildRenderCache(osName, options.toolVersion, options.stageName)
+                    if(!fileExists("./Work/Results/Maya/cache_building.jpg")){
+                        println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
+                        throw new Exception("No output image during build cache")
                     }
                 }
             }
-            catch(e) {
-                println(e.toString())
-                println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
-                // deinstalling broken addon
-                installMSIPlugin(osName, "Maya", options, false, true)
-                throw e
-            }
+        }
+        catch(e) {
+            println(e.toString())
+            println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
+            // deinstalling broken addon
+            installMSIPlugin(osName, "Maya", options, false, true)
+            throw e
         }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
@@ -378,9 +376,13 @@ def executeBuild(String osName, Map options)
         {
             options.branch_postfix = "release"
         }
-        if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
+        else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
         {
             options.branch_postfix = env.BRANCH_NAME.replace('/', '-')
+        }
+        else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop")
+        {
+            options.branch_postfix = options.projectBranch.replace('/', '-')
         }
 
         outputEnvironmentInfo(osName)
@@ -623,11 +625,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             
             try {
-                Boolean isRegression = options.testsPackage.endsWith('.json')
+                String executionType
+                if (options.testsPackage.endsWith('.json')) {
+                    executionType = 'regression'
+                } else if (options.splitTestsExecution) {
+                    executionType = 'split_execution'
+                } else {
+                    executionType = 'default'
+                }
 
                 dir("jobs_launcher") {
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${isRegression}
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${executionType} \"${options.tests}\"
                     """
                 }
             } catch (e) {
@@ -753,7 +762,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         Boolean updateRefs = false,
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,
-        Boolean skipBuild = false,
         String renderDevice = "gpu",
         String testsPackage = "",
         String tests = "",
@@ -839,7 +847,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 incrementVersion:incrementVersion,
-                                skipBuild:skipBuild,
                                 renderDevice:renderDevice,
                                 testsPackage:testsPackage,
                                 tests:tests,

@@ -219,20 +219,18 @@ def executeTests(String osName, String asicName, Map options)
             checkOutBranchOrScm(options['autotest_assets'], "https://gitlab.cts.luxoft.com/autotest_assets/rpr_blender_autotests.git", true, false, true, 'radeonprorender-gitlab', true)
         }
 
-        if (!options['skipBuild']) {
-
+        try {
             try {
-
                 Boolean newPluginInstalled = false
                 timeout(time: "12", unit: 'MINUTES') {
                     getBlenderAddonInstaller(osName, options)
-                    newPluginInstalled = installBlenderAddon(osName, "2.82", options)
+                    newPluginInstalled = installBlenderAddon(osName, "2.83", options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
 
                 if (newPluginInstalled) {
                     timeout(time: "3", unit: 'MINUTES') {
-                        buildRenderCache(osName, "2.82", options.stageName)
+                        buildRenderCache(osName, "2.83", options.stageName)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
                             println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
                             throw new Exception("No output image after cache building.")
@@ -244,9 +242,16 @@ def executeTests(String osName, String asicName, Map options)
                 println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
                 println(e.toString())
                 // deinstalling broken addon
-                installBlenderAddon(osName, "2.82", options, false, true)
+                installBlenderAddon(osName, "2.83", options, false, true)
                 throw e
             }
+            
+        } catch(e) {
+            println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
+            println(e.toString())
+            // deinstalling broken addon
+            installBlenderAddon(osName, "2.82", options, false, true)
+            throw e
         }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
@@ -312,7 +317,7 @@ def executeTests(String osName, String asicName, Map options)
 
                         // deinstalling broken addon & reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
-                            installBlenderAddon(osName, "2.82", options, false, true)
+                            installBlenderAddon(osName, "2.8", options, false, true)
                             if (options.currentTry < options.nodeReallocateTries) {
                                 throw new Exception("All tests crashed")
                             }
@@ -443,9 +448,13 @@ def executeBuild(String osName, Map options)
         {
             options.branch_postfix = "release"
         }
-        if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
+        else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
         {
             options.branch_postfix = env.BRANCH_NAME.replace('/', '-')
+        }
+        else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop")
+        {
+            options.branch_postfix = options.projectBranch.replace('/', '-')
         }
 
         outputEnvironmentInfo(osName)
@@ -707,11 +716,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-                Boolean isRegression = options.testsPackage.endsWith('.json')
+                String executionType
+                if (options.testsPackage.endsWith('.json')) {
+                    executionType = 'regression'
+                } else if (options.splitTestsExecution) {
+                    executionType = 'split_execution'
+                } else {
+                    executionType = 'default'
+                }
 
                 dir("jobs_launcher") {
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${isRegression}
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${executionType} \"${options.tests}\"
                     """
                 }
             } catch (e) {
@@ -726,13 +742,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         if (options['isPreBuilt'])
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.82')}" "PreBuilt" "PreBuilt" "PreBuilt"
+                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.83')}" "PreBuilt" "PreBuilt" "PreBuilt"
                             """
                         }
                         else
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.82')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Blender 2.83')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }
                     }
@@ -838,7 +854,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     Boolean updateRefs = false,
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
-    Boolean skipBuild = false,
     String renderDevice = "gpu",
     String testsPackage = "",
     String tests = "",
@@ -928,7 +943,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 incrementVersion:incrementVersion,
-                                skipBuild:skipBuild,
                                 renderDevice:renderDevice,
                                 testsPackage:testsPackage,
                                 tests:tests,
