@@ -73,12 +73,12 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             }
                                             options['nodeRetry'].each{ retry ->
                                                 if (retry['Testers'].equals(nodesList)){
-                                                    retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}", time: LocalDateTime.now().toString()])
+                                                    retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()])
                                                     added = true
                                                 }
                                             }
                                             if (!added){
-                                                options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}", time: LocalDateTime.now().toString()]]]]])
+                                                options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()]]]]])
                                             }
                                             println options['nodeRetry'].inspect()
 
