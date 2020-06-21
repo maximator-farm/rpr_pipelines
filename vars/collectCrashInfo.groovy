@@ -12,7 +12,6 @@ def call(osName, options){
                 Get-Date >> ${logName}
                 Get-EventLog -LogName System -Newest 200 >> ${logName}
                 Get-EventLog -LogName Application -Newest 200 >> ${logName}
-                Get-EventLog -LogName HardwareEvents -Newest 200 >> ${logName}
                 ps | sort -des cpu | select -f 200 | ft -a >> ${logName}
             """
             break;
