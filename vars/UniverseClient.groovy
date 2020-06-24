@@ -54,10 +54,18 @@ class UniverseClient {
     }
 
     def createBuild(envs, suites) {
+        String tag = "Auto"
+        String job_name = env.JOB_NAME.toLowerCase()
+        if (job_name.contains("weekly")) {
+            tag = "weekly"
+        } else if (job_name.contains("manual")){
+            tag = "manual"
+        }
         def request = {
             def buildBody = [
                 'name': env.BUILD_NUMBER,
                 'envs': envs,
+                'tag': tag,
                 'suites': suites
             ]
 
