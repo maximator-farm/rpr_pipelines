@@ -1,4 +1,4 @@
-def call(nodeRetryList){
+def call(Map nodeRetryList){
     nodeRetryList.each{ gpu ->
         try
         {

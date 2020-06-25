@@ -1,4 +1,4 @@
-def call(osName, options){
+def call(String osName, Map options){
     String testsOrTestPackage = options['tests'];
     if (testsOrTestPackage == ''){
         testsOrTestPackage = options['testsPackage']
