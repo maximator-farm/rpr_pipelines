@@ -302,7 +302,7 @@ def executeBuild(String osName, Map options)
     try {
         dir('RadeonProRenderSDK')
         {
-            checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderSDK.git')
+            checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git')
         }
 
         outputEnvironmentInfo(osName)
@@ -338,38 +338,32 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
-    currentBuild.description = ""
-    ['projectBranch'].each
-    {
-        if(options[it] != 'master' && options[it] != "")
-        {
-            currentBuild.description += "<b>${it}:</b> ${options[it]}<br/>"
-        }
+
+    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git')
+
+    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+
+
+    println "The last commit was written by ${options.commitAuthor}."
+    println "Commit message: ${options.commitMessage}"
+    println "Commit SHA: ${options.commitSHA}"
+    println "Commit shortSHA: ${options.commitShortSHA}"
+
+    if (options.projectBranch){
+        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+    } else {
+        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
     }
 
-    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderSDK.git')
-
-    AUTHOR_NAME = bat (
-            script: "git show -s --format=%%an HEAD ",
-            returnStdout: true
-            ).split('\r\n')[2].trim()
-
-    echo "The last commit was written by ${AUTHOR_NAME}."
-    options.AUTHOR_NAME = AUTHOR_NAME
-
-    commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true )
-    echo "Commit message: ${commitMessage}"
-    options.commitMessage = commitMessage.split('\r\n')[2].trim()
-
-    options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
     if (env.CHANGE_URL) {
-        echo "branch was detected as Pull Request"
-        options['isPR'] = true
-        options.testsPackage = "PR"
-    } else {
-        currentBuild.description += "<b>Commit author:</b> ${options.AUTHOR_NAME}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        println "Branch was detected as Pull Request"
+        options.isPR = true
     }
 
     if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
@@ -386,27 +380,40 @@ def executePreBuild(Map options)
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30']]]);
     }
 
+    def tests = []
+    options.groupsRBS = []
+    if(options.testsPackage != "none")
+    {
+        dir('jobs_test_core')
+        {
+            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
+            // json means custom test suite. Split doesn't supported
+            String tempTests = readFile("jobs/${options.testsPackage}")
+            tempTests.split("\n").each {
+                // TODO: fix: duck tape - error with line ending
+                tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
+            }
+            options.tests = tests
+            options.testsPackage = "none"
+            options.groupsRBS = tests
+        }
+    }
+    else {
+        options.tests.split(" ").each()
+        {
+            tests << "${it}"
+        }
+        options.tests = tests
+        options.groupsRBS = tests
+    }
+
+    options.testsList = ['']
+    options.tests = tests.join(" ")
 
     if (options.sendToRBS)
     {
         try
         {
-            def tests = []
-            if(options.testsPackage != "none")
-            {
-                dir('jobs_test_core')
-                {
-                    checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
-                    // options.splitTestsExecution = false
-                    String tempTests = readFile("jobs/${options.testsPackage}")
-                    tempTests.split("\n").each {
-                        // TODO: fix: duck tape - error with line ending
-                        tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
-                    }
-
-                    options.groupsRBS = tests
-                }
-            }
             options.rbs_prod.startBuild(options)
         }
         catch (e)
@@ -424,6 +431,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
 
+            List lostStashes = []
+
             dir("summaryTestResults")
             {
                 unstashCrashInfo(options['nodeRetry'])
@@ -437,12 +446,31 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         }catch(e)
                         {
                             echo "Can't unstash ${it}"
+                            lostStashes.add("'$it'".replace("testResult-", ""))
                             println(e.toString());
                             println(e.getMessage());
                         }
 
                     }
                 }
+            }
+
+            try {
+            	dir("core_tests_configuration") {
+                    bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat ${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/ .")
+            	}
+            } catch (e) {
+                println("[ERROR] Can't download json files with core tests configuration")
+            }
+
+            try {
+                dir("jobs_launcher") {
+                    bat """
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults default \"${options.tests}\"
+                    """
+                }
+            } catch (e) {
+                println("[ERROR] Can't generate number of lost tests")
             }
 
             dir("jobs_launcher")

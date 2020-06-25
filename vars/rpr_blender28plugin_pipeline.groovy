@@ -240,7 +240,7 @@ def executeTests(String osName, String asicName, Map options)
             println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
             println(e.toString())
             // deinstalling broken addon
-            installBlenderAddon(osName, "2.82", options, false, true)
+            installBlenderAddon(osName, "2.83", options, false, true)
             throw e
         }
 
@@ -308,7 +308,7 @@ def executeTests(String osName, String asicName, Map options)
                         // deinstalling broken addon & reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
                             collectCrashInfo(osName, options)
-                            installBlenderAddon(osName, "2.8", options, false, true)
+                            installBlenderAddon(osName, "2.83", options, false, true)
                             if (options.currentTry < options.nodeReallocateTries) {
                                 throw new Exception("All tests crashed")
                             }
@@ -439,11 +439,11 @@ def executeBuild(String osName, Map options)
         {
             options.branch_postfix = "release"
         }
-        if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
+        else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
         {
             options.branch_postfix = env.BRANCH_NAME.replace('/', '-')
         }
-        if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop")
+        else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop")
         {
             options.branch_postfix = options.projectBranch.replace('/', '-')
         }
@@ -708,11 +708,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-                Boolean isRegression = options.testsPackage.endsWith('.json')
+                String executionType
+                if (options.testsPackage.endsWith('.json')) {
+                    executionType = 'regression'
+                } else if (options.splitTestsExecution) {
+                    executionType = 'split_execution'
+                } else {
+                    executionType = 'default'
+                }
 
                 dir("jobs_launcher") {
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${isRegression}
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${executionType} \"${options.tests}\"
                     """
                 }
             } catch (e) {
