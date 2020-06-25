@@ -30,7 +30,7 @@ def call(osName, options){
                 date >> ${logName}
                 dmesg | tail -n 200 >> ${logName}
                 top -b | head -n 200 >> ${logName}
-                iotop --only -b | head -n 200 >> ${logName}
+                sudo iotop --only -b | head -n 200 >> ${logName}
             """
             break;
     }
