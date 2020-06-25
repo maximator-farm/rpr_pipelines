@@ -1,10 +1,9 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
-def executeConfiguration(attemptNum, Map options) {
+def executeConfiguration(osName, attemptNum, Map options) {
 	currentBuild.result = 'SUCCESS'
 
-	String tool = options['Tool'].split(':')[0].trim()
-	String version = options['Tool'].split(':')[1].trim()
+	String tool = options['Tool']
 	String scene_name = options['sceneName']
 	String scene_user = options['sceneUser']
 	String fail_reason = "Unknown"
@@ -113,14 +112,16 @@ def main(Map options) {
 
 		options['django_url'] = "https://render.cis.luxoft.com/render/jenkins/"
 		options['scripts_branch'] = "master"
+
+		String osName = 'Windows'
 		
-		startConfiguration(options)
+		startConfiguration(osName, options)
 	}    
 	
 }
 
-def startConfiguration(options) {
-	def labels = "RenderService"
+def startConfiguration(osName, options) {
+	def labels = "${osName} && RenderService"
 	def nodesCount = getNodesCount(labels)
 	boolean successfullyDone = false
 
@@ -130,18 +131,19 @@ def startConfiguration(options) {
 	for (int attemptNum = 1; attemptNum <= maxAttempts && attemptNum <= nodesCount; attemptNum++) {
 		def currentNodeName = ""
 
-		echo "Scheduling Configuration. Attempt #${attemptNum}"
+		echo "Scheduling Configuration ${osName}. Attempt #${attemptNum}"
 		node(currentLabels) {
 			stage("Configuration") {
 				timeout(time: 15, unit: 'MINUTES') {
 					ws("WS/${options.PRJ_NAME}_Configuration") {
 						currentNodeName = "${env.NODE_NAME}"
 						try {
-							executeConfiguration(attemptNum, options)
+							executeConfiguration(osName, attemptNum, options)
 							successfullyDone = true
 						} catch(FlowInterruptedException e) {
 							throw e
 						} catch (e) {
+							print e
 							//Exclude failed node name
 							currentLabels = currentLabels + " && !" + currentNodeName
 							println("[INFO] Updated labels: ${currentLabels}")
