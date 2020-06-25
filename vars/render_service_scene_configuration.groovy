@@ -192,7 +192,10 @@ def call(String id = '',
 	String PRJ_ROOT='RenderServiceSceneConfiguration'
 	String PRJ_NAME='RenderServiceSceneConfiguration' 
 
-	def OptionsMap = parseOptions(Options)
+	def OptionsMap
+	if (Options) {
+		OptionsMap = parseOptions(Options)
+	}
 
 	main([
 		PRJ_NAME:PRJ_NAME,
