@@ -254,7 +254,7 @@ def executeTests(String osName, String asicName, Map options)
             println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
             println(e.toString())
             // deinstalling broken addon
-            installBlenderAddon(osName, "2.82", options, false, true)
+            installBlenderAddon(osName, "2.83", options, false, true)
             throw e
         }
 
@@ -323,7 +323,7 @@ def executeTests(String osName, String asicName, Map options)
 
                         // deinstalling broken addon & reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
-                            installBlenderAddon(osName, "2.8", options, false, true)
+                            installBlenderAddon(osName, "2.83", options, false, true)
                             if (options.currentTry < options.nodeReallocateTries) {
                                 throw new Exception("All tests crashed")
                             }

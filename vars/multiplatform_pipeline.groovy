@@ -57,11 +57,20 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             println "Exception cause: ${e.getCause()}"
                                             println "Exception stack trace: ${e.getStackTrace()}"
 
-                                            // Abort PRs
-                                            //if (options.containsKey("isPR") &&  options.isPR == true) {
-                                            //    println "[INFO] This build was aborted due to new PR was appeared."
-                                            //    i = options.nodeReallocateTries + 1
-                                            //}
+                                            String exceptionClassName = e.getClass().toString()
+                                            if (exceptionClassName.contains("FlowInterruptedException") || exceptionClassName.contains("AbortException")) {
+                                                e.getCauses().each(){
+                                                    // UserInterruption aborting by user
+                                                    // ExceededTimeout aborting by timeout
+                                                    // CancelledCause for aborting by new commit
+                                                    String causeClassName = it.getClass().toString()
+                                                    println "Interruption cause: ${causeClassName}"
+                                                    if (causeClassName.contains("CancelledCause")) {
+                                                        println "GOT NEW COMMIT"
+                                                        throw e
+                                                    }
+                                                }
+                                            }
 
                                             // change PC after first failed tries and don't change in the last try
                                             if (i < nodesCount - 1 && nodesCount != 1) {
@@ -246,6 +255,18 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 println(e.toString());
                 println(e.getMessage());
                 currentBuild.result = "FAILURE"
+                String exceptionClassName = e.getClass().toString()
+                if (exceptionClassName.contains("FlowInterruptedException") || exceptionClassName.contains("AbortException")) {
+                    e.getCauses().each(){
+                        // UserInterruption aborting by user
+                        // ExceededTimeout aborting by timeout
+                        // CancelledCause for aborting by new commit
+                        String causeClassName = it.getClass().toString()
+                        if (causeClassName.contains("CancelledCause")) {
+                            executeDeploy = null
+                        }
+                    }
+                }
             }
             finally
             {
