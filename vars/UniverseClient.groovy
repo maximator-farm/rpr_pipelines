@@ -20,7 +20,7 @@ class UniverseClient {
         this.product = product;
     }
 
-    def retryWrapper(func) {
+    def retryWrapper(func, validResponseCodes = [200]) {
         def attempt = 0
         def attempts = 5
         def timeout = 30 // seconds
@@ -35,8 +35,17 @@ class UniverseClient {
             this.context.println("Attempt: ${attempt}")
 
             try {
-                func.call()
-                return true
+                def response = func.call()
+                if( validResponseCodes.contains(response.status)){
+                    return true
+                }
+                switch(response.status){
+                    case 401:
+                        this.tokenSetup()
+                        break;
+                }
+                return false
+
             } catch(error) {
                 this.context.println(error)
                 this.context.sleep(timeout)
