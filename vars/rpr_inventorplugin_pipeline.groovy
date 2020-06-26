@@ -14,7 +14,7 @@ def executeBuildWindows(Map options) {
             // copy build results in separate directory
             bat """
                 mkdir ..\\buildResults
-                xcopy /y/i RadeonProRenderInventorPlugin\\bin\\${options.buildPlatform}\\${options.buildConfiguration}\\UsdConvertor.dll ..\\buildResults
+                xcopy /y/i "RadeonProRenderInventorPlugin\\bin\\${options.buildPlatform}\\${options.buildConfiguration}\\UsdConvertor.dll" ..\\buildResults
             """
 
             // copy thirdparty libraries in results directory
@@ -28,7 +28,7 @@ def executeBuildWindows(Map options) {
         zip archive: true, dir: "buildResults", glob: '', zipFile: "Windows_${buildName}.zip"
 
         bat """
-            rename Windows_${win_build_name}.zip PluginWindows.zip
+            rename Windows_${buildName}.zip PluginWindows.zip
         """
         stash includes: "PluginWindows.zip", name: 'appWindows'
         options.pluginWinSha = sha1 "PluginWindows.zip"
