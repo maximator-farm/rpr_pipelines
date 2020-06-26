@@ -80,7 +80,7 @@ class UniverseClient {
                 requestBody: JsonOutput.toJson(buildBody),
                 ignoreSslErrors: true,
                 url: "${this.url}/api/build?jobName=${this.product}",
-                validResponseCodes: '200'
+                validResponseCodes: '0:599'
             )
             
             def jsonSlurper = new JsonSlurperClassic()
@@ -112,7 +112,7 @@ class UniverseClient {
                 requestBody: JsonOutput.toJson(buildBody),
                 ignoreSslErrors: true,
                 url: "${this.url}/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
-                validResponseCodes: '200'
+                validResponseCodes: '0:599'
             )
         }
         retryWrapper(request)
@@ -131,7 +131,7 @@ class UniverseClient {
                 requestBody: JsonOutput.toJson(info),
                 ignoreSslErrors: true,
                 url: "${this.url}/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
-                validResponseCodes: '200'
+                validResponseCodes: '0:599'
             )
         }
         retryWrapper(request)
@@ -162,7 +162,7 @@ class UniverseClient {
                 requestBody: JsonOutput.toJson(buildBody),
                 ignoreSslErrors: true,
                 url: "${this.url}/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
-                validResponseCodes: '200'
+                validResponseCodes: '0:599'
             )
         }
         retryWrapper(request)
