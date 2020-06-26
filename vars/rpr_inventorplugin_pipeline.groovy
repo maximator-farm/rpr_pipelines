@@ -1,7 +1,7 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 def executeBuildWindows(Map options) {
-    String buildName = "${options.buildConfiguration}_${options.buildPlatform}"
+    String buildName = "${options.buildConfiguration}_${options.buildPlatform.replace(' ', '')}"
 
     try {
         dir ("RadeonProRenderInventorPlugin") {
@@ -14,8 +14,16 @@ def executeBuildWindows(Map options) {
             // copy build results in separate directory
             bat """
                 mkdir ..\\buildResults
-                xcopy /y/i "RadeonProRenderInventorPlugin\\bin\\${options.buildPlatform}\\${options.buildConfiguration}\\UsdConvertor.dll" ..\\buildResults
             """
+            if (options.buildPlatform != 'Any CPU') {
+                bat """
+                    xcopy /y/i "RadeonProRenderInventorPlugin\\bin\\${options.buildPlatform}\\${options.buildConfiguration}\\UsdConvertor.dll" ..\\buildResults
+                """
+            } else {
+                bat """
+                    xcopy /y/i "RadeonProRenderInventorPlugin\\bin\\${options.buildConfiguration}\\UsdConvertor.dll" ..\\buildResults
+                """
+            }
 
             // copy thirdparty libraries in results directory
             bat """
