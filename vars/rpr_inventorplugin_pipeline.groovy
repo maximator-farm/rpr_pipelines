@@ -67,6 +67,37 @@ def executeBuild(String osName, Map options) {
 }
 
 
+def executePreBuild(Map options) {
+
+    // manual job
+    if (options.forceBuild) {
+        options.executeBuild = true
+        //options.executeTests = true
+    // auto job
+    } else {
+        options.executeBuild = true
+        //options.executeTests = true
+        options.projectBranch = env.BRANCH_NAME
+        /*if (env.CHANGE_URL)
+        {
+            println "[INFO] Branch was detected as Pull Request"
+            options.isPR = true
+            options.testsPackage = "PR"
+        }
+        else if("${env.BRANCH_NAME}" == "master")
+        {
+           println "[INFO] master branch was detected"
+           options.testsPackage = "master"
+        } else {
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            options.testsPackage = "smoke"
+        }*/
+    }
+
+    // TODO implement other preBuild logic
+}
+
+
 def call(String projectBranch = "",
     String platforms = 'Windows',
     String buildConfiguration = "release",
@@ -93,8 +124,8 @@ def call(String projectBranch = "",
 
         String msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
 
-        // TODO impelemnt PreBuild, Test and Deploy stages
-        multiplatform_pipeline(platforms, null, this.&executeBuild, null, null,
+        // TODO impelemnt Test and Deploy stages
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                                [projectBranch:projectBranch,
                                 incrementVersion:incrementVersion,
                                 forceBuild:forceBuild,
