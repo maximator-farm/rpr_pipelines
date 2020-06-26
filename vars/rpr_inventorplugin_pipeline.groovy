@@ -8,7 +8,7 @@ def executeBuildWindows(Map options) {
             // build plugin
             bat """
                 set msbuild="${options.msBuildPath}"
-                %msbuild% RadeonProRenderInventorPlugin.sln /target:build /maxcpucount /property:Configuration='${options.buildConfiguration}';Platform='{options.buildPlatform}' >> '..\\${STAGE_NAME}_${buildName}.log' 2>&1
+                %msbuild% RadeonProRenderInventorPlugin.sln /target:build /maxcpucount /property:Configuration="${options.buildConfiguration}";Platform="${options.buildPlatform}" >> "..\\${STAGE_NAME}_${buildName}.log" 2>&1
             """
 
             // copy build results in separate directory
