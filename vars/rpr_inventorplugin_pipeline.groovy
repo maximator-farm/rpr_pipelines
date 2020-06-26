@@ -14,7 +14,7 @@ def executeBuildWindows(Map options) {
             // copy build results in separate directory
             bat """
                 mkdir ..\\buildResults
-                xcopy /y/i RadeonProRenderInventorPlugin\\{options.buildPlatform}\\${options.buildConfiguration}\\UsdConvertor.dll ..\\buildResults
+                xcopy /y/i RadeonProRenderInventorPlugin\\bin\\${options.buildPlatform}\\${options.buildConfiguration}\\UsdConvertor.dll ..\\buildResults
             """
 
             // copy thirdparty libraries in results directory
@@ -48,7 +48,9 @@ def executeBuildWindows(Map options) {
 def executeBuild(String osName, Map options) {
     try {
         cleanWS(osName)
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
+        dir('RadeonProRenderInventorPlugin') {
+            checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
+        }
         
         switch(osName)
         {
