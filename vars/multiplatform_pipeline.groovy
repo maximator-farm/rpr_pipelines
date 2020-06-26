@@ -58,7 +58,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             println "Exception stack trace: ${e.getStackTrace()}"
 
                                             String exceptionClassName = e.getClass().toString()
-                                            if (exceptionClassName.contains("FlowInterruptedException") || exceptionClassName.contains("AbortException")) {
+                                            if (exceptionClassName.contains("FlowInterruptedException")) {
                                                 e.getCauses().each(){
                                                     // UserInterruption aborting by user
                                                     // ExceededTimeout aborting by timeout
@@ -256,7 +256,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 println(e.getMessage());
                 currentBuild.result = "FAILURE"
                 String exceptionClassName = e.getClass().toString()
-                if (exceptionClassName.contains("FlowInterruptedException") || exceptionClassName.contains("AbortException")) {
+                if (exceptionClassName.contains("FlowInterruptedException")) {
                     e.getCauses().each(){
                         // UserInterruption aborting by user
                         // ExceededTimeout aborting by timeout
