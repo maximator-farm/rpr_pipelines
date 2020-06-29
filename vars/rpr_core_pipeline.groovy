@@ -1,5 +1,6 @@
 import UniverseClient
 import groovy.transform.Field
+import groovy.json.JsonOutput;
 
 @Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20Core")
 
@@ -259,15 +260,16 @@ def executeTests(String osName, String asicName, Map options)
 
                     // reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        collectCrashInfo(osName, options)
+                        if (osName == "Ubuntu18"){
+                            sh """
+                                echo "Restarting Unix Machine...."
+                                hostname
+                                (sleep 3; sudo shutdown -r now) &
+                            """
+                            sleep(60)
+                        }
                         if (options.currentTry < options.nodeReallocateTries) {
-                            if (osName == "Ubuntu18") {
-                                sh """
-                                    echo "Restarting Unix Machine...."
-                                    hostname
-                                    (sleep 3; sudo shutdown -r now) &
-                                """
-                                sleep(60)
-                            }
                             throw new Exception("All tests crashed")
                         }
                     }
@@ -455,6 +457,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             dir("summaryTestResults")
             {
+                unstashCrashInfo(options['nodeRetry'])
                 testResultList.each()
                 {
                     dir("$it".replace("testResult-", ""))
@@ -505,8 +508,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                 options.commitMessage = options.commitMessage.replace("'", "")
                 options.commitMessage = options.commitMessage.replace('"', '')
+
+                def retryInfo = JsonOutput.toJson(options.nodeRetry)
                 bat """
-                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"  \"${escapeCharsByUnicode(retryInfo.toString())}\"
                 """
                 bat "get_status.bat ..\\summaryTestResults"
             }
@@ -587,6 +592,7 @@ def call(String projectBranch = "",
         String PRJ_NAME="RadeonProRenderCore"
         String PRJ_ROOT="rpr-core"
 
+        def nodeRetry = []
 
         gpusCount = 0
         platforms.split(';').each()
@@ -633,6 +639,7 @@ def call(String projectBranch = "",
                                 iterations:iterations,
                                 sendToRBS:sendToRBS,
                                 universePlatforms: universePlatforms,
+                                nodeRetry: nodeRetry
                                 ])
     }
     catch(e) {

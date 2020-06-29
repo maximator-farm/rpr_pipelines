@@ -2,6 +2,7 @@ import UniverseClient
 import groovy.transform.Field
 
 @Field UniverseClient universeClient = new UniverseClient(this, "https://universeapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20Viewer")
+import groovy.json.JsonOutput;
 
 def getViewerTool(String osName, Map options)
 {
@@ -234,17 +235,18 @@ def executeTests(String osName, String asicName, Map options)
 
                     // reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        collectCrashInfo(osName, options)
+                        if (osName == "Ubuntu18"){
+                            sh """
+                                echo "Restarting Unix Machine...."
+                                hostname
+                                (sleep 3; sudo shutdown -r now) &
+                            """
+                            sleep(60)
+                        }
                         if (options.currentTry < options.nodeReallocateTries) {
-                            if (osName == "Ubuntu18") {
-                                sh """
-                                    echo "Restarting Unix Machine...."
-                                    hostname
-                                    (sleep 3; sudo shutdown -r now) &
-                                """
-                                sleep(60)
-                            }
                             throw new Exception("All tests crashed")
-                        } 
+                        }
                     }
                 }
             }
@@ -459,6 +461,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             dir("summaryTestResults")
             {
+                unstashCrashInfo(options['nodeRetry'])
                 testResultList.each()
                 {
                     dir("$it".replace("testResult-", ""))
@@ -496,8 +499,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
                     dir("jobs_launcher") {
+                        def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         bat """
-                        build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('RprViewer')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                        build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('RprViewer')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(retryInfo.toString())}\"
                         """
                     }
                 }
@@ -584,6 +588,8 @@ def call(String projectBranch = "",
          String tests = "",
          Boolean sendToRBS = true) {
 
+    def nodeRetry = []
+
     String PRJ_ROOT='rpr-core'
     String PRJ_NAME='RadeonProViewer'
     String projectRepo='git@github.com:Radeon-Pro/RadeonProViewer.git'
@@ -614,6 +620,7 @@ def call(String projectBranch = "",
                             TEST_TIMEOUT:120,
                             DEPLOY_TIMEOUT:45,
                             tests:tests,
+                            nodeRetry: nodeRetry,
                             sendToRBS:sendToRBS,
                             universePlatforms: universePlatforms])
 }

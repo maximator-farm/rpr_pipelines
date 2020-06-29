@@ -4,6 +4,7 @@ import hudson.plugins.git.GitException;
 import java.nio.channels.ClosedChannelException;
 import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
+import java.time.*;
 
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
@@ -31,7 +32,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                         def nodesCount = nodesList.size()
                         options.nodeReallocateTries = nodesCount + 1
                         boolean successCurrentNode = false
-                        
+
                         for (int i = 0; i < options.nodeReallocateTries; i++)
                         {
                             node(nodeLabels)
@@ -71,6 +72,23 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                                     }
                                                 }
                                             }
+
+                                            // add info about retry to options
+                                            boolean added = false;
+                                            String testsOrTestPackage = newOptions['tests'];
+                                            if (testsOrTestPackage == ''){
+                                                testsOrTestPackage = newOptions['testsPackage']
+                                            }
+                                            options['nodeRetry'].each{ retry ->
+                                                if (retry['Testers'].equals(nodesList)){
+                                                    retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()])
+                                                    added = true
+                                                }
+                                            }
+                                            if (!added){
+                                                options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()]]]]])
+                                            }
+                                            println options['nodeRetry'].inspect()
 
                                             // change PC after first failed tries and don't change in the last try
                                             if (i < nodesCount - 1 && nodesCount != 1) {
