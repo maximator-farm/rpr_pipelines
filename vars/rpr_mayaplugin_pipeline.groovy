@@ -267,9 +267,13 @@ def executeTests(String osName, String asicName, Map options)
 
                     // deinstalling broken addon & reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
-                        installMSIPlugin(osName, "Maya", options, false, true)
-                        if (options.currentTry < options.nodeReallocateTries) {
-                            throw new Exception("All tests crashed")
+                        if (sessionReport.summary.total != sessionReport.summary.skipped){
+                            installMSIPlugin(osName, "Maya", options, false, true)
+                            if (options.currentTry < options.nodeReallocateTries) {
+                                throw new Exception("All tests crashed")
+                            } else {
+                                println "Group skipped"
+                            }
                         }
                     }
 
