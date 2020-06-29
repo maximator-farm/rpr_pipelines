@@ -79,33 +79,92 @@ def executeBuild(String osName, Map options) {
 
 
 def executePreBuild(Map options) {
-
     // manual job
     if (options.forceBuild) {
+        env.BRANCH_NAME = options['projectBranch']
         options.executeBuild = true
+        // TODO add tests stage initialization
         //options.executeTests = true
     // auto job
     } else {
         options.executeBuild = true
+        // TODO add tests stage initialization
         //options.executeTests = true
-        options.projectBranch = env.BRANCH_NAME
-        /*if (env.CHANGE_URL)
+        if (env.CHANGE_URL)
         {
             println "[INFO] Branch was detected as Pull Request"
             options.isPR = true
-            options.testsPackage = "PR"
+            // TODO add tests stage initialization
+            //options.testsPackage = "PR"
         }
         else if("${env.BRANCH_NAME}" == "master")
         {
            println "[INFO] master branch was detected"
-           options.testsPackage = "master"
+            // TODO add tests stage initialization
+           //options.testsPackage = "master"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options.testsPackage = "smoke"
-        }*/
+            // TODO add tests stage initialization
+            //options.testsPackage = "smoke"
+        }
     }
 
-    // TODO implement other preBuild logic
+    if(!env.CHANGE_URL){
+
+        checkOutBranchOrScm(env.BRANCH_NAME, 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
+
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitSHA = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()      
+        // TODO get plugin version
+        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="')
+
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${options.commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
+
+        if (options.incrementVersion) {
+            if ("${options.commitAuthor}" != "radeonprorender") {
+                
+                println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                
+                println "[INFO] Current build version: ${options.pluginVersion}"
+                
+                options.pluginVersion = version_inc(options.pluginVersion, 1)
+                println "[INFO] New build version: ${options.pluginVersion}"
+
+                version_write("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="', options.pluginVersion)
+                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="')
+                println "[INFO] Updated build version: ${options.pluginVersion}"
+
+                //TODO make commit with updated plugin version and push it
+            } 
+        }
+
+        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+    }
+
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25']]]);
+    } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25']]]);
+    } else if (env.CHANGE_URL) {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
+    }
 }
 
 
