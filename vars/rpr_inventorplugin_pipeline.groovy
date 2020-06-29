@@ -137,7 +137,14 @@ def executePreBuild(Map options) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="')
                 println "[INFO] Updated build version: ${options.pluginVersion}"
 
-                //TODO make commit with updated plugin version and push it
+                bat """
+                    git add RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest
+                    git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                    git push origin HEAD:${env.BRANCH_NAME}
+                """
+
+                //get commit's sha which have to be build
+                options.projectBranch = bat (script: "git log --format=%%H -1", returnStdout: true).split('\r\n')[2].trim()
             } 
         }
 
