@@ -87,6 +87,7 @@ class UniverseClient {
             def content = jsonSlurper.parseText(res.content);
             this.build = content["build"];
             this.context.echo content["msg"];
+            return res;
         }
         retryWrapper(request)
     }
@@ -114,6 +115,7 @@ class UniverseClient {
                 url: "${this.url}/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
                 validResponseCodes: '0:599'
             )
+            return res;
         }
         retryWrapper(request)
     }
@@ -133,6 +135,8 @@ class UniverseClient {
                 url: "${this.url}/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
                 validResponseCodes: '0:599'
             )
+
+            return res;
         }
         retryWrapper(request)
     }
@@ -164,6 +168,8 @@ class UniverseClient {
                 url: "${this.url}/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
                 validResponseCodes: '0:599'
             )
+
+            return res;
         }
         retryWrapper(request)
     }
