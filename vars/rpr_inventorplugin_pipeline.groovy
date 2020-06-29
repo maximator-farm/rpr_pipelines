@@ -130,7 +130,7 @@ def executePreBuild(Map options) {
                 
                 println "[INFO] Current build version: ${options.pluginVersion}"
                 
-                options.pluginVersion = version_inc(options.pluginVersion, 1)
+                options.pluginVersion = version_inc(options.pluginVersion, 4)
                 println "[INFO] New build version: ${options.pluginVersion}"
 
                 version_write("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="', options.pluginVersion)
