@@ -63,7 +63,7 @@ class UniverseClient {
     }
 
     def createBuild(envs, suites) {
-        splittedJobName=env.JOB_NAME.split('/')
+        def splittedJobName=env.JOB_NAME.split('/')
 
         def tags = []
 
