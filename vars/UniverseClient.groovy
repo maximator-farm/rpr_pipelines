@@ -63,7 +63,8 @@ class UniverseClient {
     }
 
     def createBuild(envs, suites) {
-        def splittedJobName = env.JOB_NAME.split("/")
+        def splittedJobName = []
+        splittedJobName = env.JOB_NAME.split("/")
         this.context.echo "SPLITTED JOB NAME = ${splittedJobName}"
 
         def tags = []
@@ -79,7 +80,7 @@ class UniverseClient {
         }
 
         tags << tag
-        splittedJobName.remove(0)
+        splittedJobName.removeAt(0)
         splittedJobName.each {
             tags << "${it}"
         }
