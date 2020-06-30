@@ -81,7 +81,7 @@ class UniverseClient {
         }
 
         tags << tag
-        splittedJobName.removeAt(0)
+        splittedJobName.remove(0)
         splittedJobName.each {
             tags << "${it}"
         }
