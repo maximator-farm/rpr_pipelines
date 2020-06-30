@@ -77,7 +77,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             boolean added = false;
                                             String testsOrTestPackage = newOptions['tests'];
                                             if (testsOrTestPackage == ''){
-                                                testsOrTestPackage = newOptions['testsPackage']
+                                                testsOrTestPackage = newOptions['testsPackage'].replace(' ', '_')
                                             }
                                             options['nodeRetry'].each{ retry ->
                                                 if (retry['Testers'].equals(nodesList)){
