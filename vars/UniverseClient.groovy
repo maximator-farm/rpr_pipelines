@@ -63,9 +63,9 @@ class UniverseClient {
     }
 
     def createBuild(envs, suites) {
-        println "BUILD_TAG = ${env.BUILD_TAG}"
-        println "BUILD_URL = ${env.BUILD_URL}"
-        println "JOB_NAME = ${env.JOB_NAME}"
+        this.context.echo "BUILD_TAG = ${env.BUILD_TAG}"
+        this.context.echo "BUILD_URL = ${env.BUILD_URL}"
+        this.context.echo "JOB_NAME = ${env.JOB_NAME}"
         String tag = "Other"
         String job_name = env.JOB_NAME.toLowerCase()
         if (job_name.contains("weekly")) {
