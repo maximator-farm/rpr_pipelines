@@ -65,7 +65,7 @@ class UniverseClient {
     def createBuild(envs, suites) {
         def request = {
             def splittedJobName = []
-            splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/")))
+            splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/", 2)))
             this.context.echo "SPLITTED JOB NAME = ${splittedJobName}"
             this.context.echo "JOB_NAME = ${splittedJobName[0]}"
 
