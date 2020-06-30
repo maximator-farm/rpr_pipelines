@@ -63,30 +63,30 @@ class UniverseClient {
     }
 
     def createBuild(envs, suites) {
-        def splittedJobName = []
-        splittedJobName = Arrays.asList(env.JOB_NAME.split("/"))
-        this.context.echo "SPLITTED JOB NAME = ${splittedJobName}"
-        this.context.echo "JOB_NAME = ${splittedJobName[0]}"
-
-        def tags = []
-
-        String tag = "Other"
-        String job_name = splittedJobName[0].toLowerCase()
-        if (job_name.contains("weekly")) {
-            tag = "Weekly"
-        } else if (job_name.contains("manual")){
-            tag = "Manual"
-        } else if (job_name.contains("auto")) {
-            tag = "Auto"
-        }
-
-        tags << tag
-        splittedJobName.remove(0)
-        splittedJobName.each {
-            tags << "${it}"
-        }
-
         def request = {
+            def splittedJobName = []
+            splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/")))
+            this.context.echo "SPLITTED JOB NAME = ${splittedJobName}"
+            this.context.echo "JOB_NAME = ${splittedJobName[0]}"
+
+            def tags = []
+
+            String tag = "Other"
+            String job_name = splittedJobName[0].toLowerCase()
+            if (job_name.contains("weekly")) {
+                tag = "Weekly"
+            } else if (job_name.contains("manual")){
+                tag = "Manual"
+            } else if (job_name.contains("auto")) {
+                tag = "Auto"
+            }
+
+            tags << tag
+            splittedJobName.remove(0)
+            splittedJobName.each {
+                tags << "${it}"
+            }
+
             def buildBody = [
                 'name': env.BUILD_NUMBER,
                 'envs': envs,
