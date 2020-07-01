@@ -658,13 +658,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         if (options['isPreBuilt'])
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Maya 2019')}" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(retryInfo.toString())}\"
+                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Maya 2019')}" "PreBuilt" "PreBuilt" "PreBuilt"
                             """
                         }
                         else
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Maya 2019')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(retryInfo.toString())}\"
+                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Maya 2019')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }
                     }
