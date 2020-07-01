@@ -732,6 +732,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 {
                     dir("jobs_launcher") {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
+                        println("${retryInfo.toString()}");
+                        println("${escapeCharsByUnicode(retryInfo.toString())}");
                         if (options['isPreBuilt'])
                         {
                             bat """
