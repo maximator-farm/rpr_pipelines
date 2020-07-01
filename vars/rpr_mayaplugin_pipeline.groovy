@@ -2,7 +2,7 @@ import groovy.transform.Field
 import UniverseClient
 import groovy.json.JsonOutput;
 
-@Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com/", env, "https://imgs.cis.luxoft.com/", "AMD%20Radeon™%20ProRender%20for%20Maya")
+@Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com/", "AMD%20Radeon™%20ProRender%20for%20Maya")
 
 
 def getMayaPluginInstaller(String osName, Map options)

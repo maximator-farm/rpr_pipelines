@@ -1,7 +1,7 @@
 import UniverseClient
 import groovy.transform.Field
 
-@Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com/", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20Viewer")
+@Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20Viewer")
 import groovy.json.JsonOutput;
 
 def getViewerTool(String osName, Map options)
