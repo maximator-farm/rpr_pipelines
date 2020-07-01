@@ -489,8 +489,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                 def retryInfo = JsonOutput.toJson(options.nodeRetry)
                 bat """
-                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} "${escapeCharsByUnicode(retryInfo.toString())}" \"${escapeCharsByUnicode(options.commitMessage)}\"
+                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} ${escapeCharsByUnicode(options.commitMessage)} ${escapeCharsByUnicode(retryInfo.toString())}
                 """
+
                 bat "get_status.bat ..\\summaryTestResults"
             }
 
