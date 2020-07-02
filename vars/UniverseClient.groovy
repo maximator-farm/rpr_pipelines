@@ -64,8 +64,15 @@ class UniverseClient {
 
     def createBuild(envs, suites) {
         def request = {
+            def splittedJobName = []
+            splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/", 2)))
+            this.context.echo "SPLITTED JOB NAME = ${splittedJobName}"
+            this.context.echo "JOB_NAME = ${splittedJobName[0]}"
+
+            def tags = []
+
             String tag = "Other"
-            String job_name = env.JOB_NAME.toLowerCase()
+            String job_name = splittedJobName[0].toLowerCase()
             if (job_name.contains("weekly")) {
                 tag = "Weekly"
             } else if (job_name.contains("manual")){
@@ -74,10 +81,16 @@ class UniverseClient {
                 tag = "Auto"
             }
 
+            tags << tag
+            splittedJobName.remove(0)
+            splittedJobName.each {
+                tags << "${it}"
+            }
+
             def buildBody = [
                 'name': env.BUILD_NUMBER,
                 'envs': envs,
-                'tag': tag,
+                'tags': tags,
                 'suites': suites
             ]
 
