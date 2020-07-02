@@ -342,9 +342,8 @@ def executePreBuild(Map options)
     checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git')
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+    options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
     options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-
 
     println "The last commit was written by ${options.commitAuthor}."
     println "Commit message: ${options.commitMessage}"
@@ -489,8 +488,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                 def retryInfo = JsonOutput.toJson(options.nodeRetry)
                 bat """
-                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"  \"${escapeCharsByUnicode(retryInfo.toString())}\"
+                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(retryInfo.toString())}\"
                 """
+
                 bat "get_status.bat ..\\summaryTestResults"
             }
 
