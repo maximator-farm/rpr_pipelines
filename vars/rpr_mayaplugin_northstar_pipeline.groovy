@@ -164,6 +164,10 @@ def executeTests(String osName, String asicName, Map options)
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
 
+                writeFile file: 'local_config.py', text: """original_render = 'tahoe'
+                tool_name = 'maya'
+                report_type = 'ct'"""
+
                 // setTester in rbs
                 if (options.sendToRBS) {
                     options.rbs_prod.setTester(options)
@@ -598,6 +602,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
         if(options['executeTests'] && testResultList)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
+            writeFile file: 'local_config.py', text: """original_render = 'tahoe'
+                tool_name = 'maya'
+                report_type = 'ct'"""
 
             List lostStashes = []
 
