@@ -168,7 +168,7 @@ def executeTestCommand(String osName, Map options)
         dir('scripts')
         {
             bat """
-            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} >> ..\\${options.stageName}.log  2>&1
+            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion}>> ..\\${options.stageName}.log  2>&1
             """
         }
         break;
@@ -177,7 +177,7 @@ def executeTestCommand(String osName, Map options)
         dir("scripts")
         {
             sh """
-            ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} >> ../${options.stageName}.log 2>&1
+            ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion}>> ../${options.stageName}.log 2>&1
             """
         }
     }
@@ -214,13 +214,13 @@ def executeTests(String osName, String asicName, Map options)
                 Boolean newPluginInstalled = false
                 timeout(time: "12", unit: 'MINUTES') {
                     getBlenderAddonInstaller(osName, options)
-                    newPluginInstalled = installBlenderAddon(osName, "2.83", options)
+                    newPluginInstalled = installBlenderAddon(osName, options.toolVersion, options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
 
                 if (newPluginInstalled) {
                     timeout(time: "3", unit: 'MINUTES') {
-                        buildRenderCache(osName, "2.83", options.stageName)
+                        buildRenderCache(osName, options.toolVersion, options.stageName)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
                             println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
                             throw new Exception("No output image after cache building.")
@@ -232,7 +232,7 @@ def executeTests(String osName, String asicName, Map options)
                 println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
                 println(e.toString())
                 // deinstalling broken addon
-                installBlenderAddon(osName, "2.83", options, false, true)
+                installBlenderAddon(osName, options.toolVersion, options, false, true)
                 throw e
             }
             
@@ -240,7 +240,7 @@ def executeTests(String osName, String asicName, Map options)
             println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
             println(e.toString())
             // deinstalling broken addon
-            installBlenderAddon(osName, "2.83", options, false, true)
+            installBlenderAddon(osName, options.toolVersion, options, false, true)
             throw e
         }
 
@@ -308,7 +308,7 @@ def executeTests(String osName, String asicName, Map options)
                         // deinstalling broken addon & reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
                             collectCrashInfo(osName, options)
-                            installBlenderAddon(osName, "2.83", options, false, true)
+                            installBlenderAddon(osName, options.toolVersion, options, false, true)
                             if (options.currentTry < options.nodeReallocateTries) {
                                 throw new Exception("All tests crashed")
                             }
@@ -736,13 +736,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         if (options['isPreBuilt'])
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender 2.83")} "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(retryInfo.toString())}\"
+                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(retryInfo.toString())}\"
                             """
                         }
                         else
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender 2.83")} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(retryInfo.toString())}\"
+                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(retryInfo.toString())}\"
                             """
                         }
                     }
@@ -862,7 +862,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
     String customBuildLinkOSX = "",
-    String engine = "1.0")
+    String engine = "1.0",
+    String toolVersion = "2.83")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -941,6 +942,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 renderDevice:renderDevice,
                                 testsPackage:testsPackage,
                                 tests:tests,
+                                toolVersion:toolVersion,
                                 isPreBuilt:isPreBuilt,
                                 forceBuild:forceBuild,
                                 reportName:'Test_20Report',
