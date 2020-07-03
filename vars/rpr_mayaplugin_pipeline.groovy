@@ -279,10 +279,14 @@ def executeTests(String osName, String asicName, Map options)
 
                     // deinstalling broken addon & reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
-                        collectCrashInfo(osName, options)
-                        installMSIPlugin(osName, "Maya", options, false, true)
-                        if (options.currentTry < options.nodeReallocateTries) {
-                            throw new Exception("All tests crashed")
+                        if (sessionReport.summary.total != sessionReport.summary.skipped){
+                            collectCrashInfo(osName, options)
+                            installMSIPlugin(osName, "Maya", options, false, true)
+                            if (options.currentTry < options.nodeReallocateTries) {
+                                throw new Exception("All tests crashed")
+                            } else {
+                                println "Group skipped"
+                            }
                         }
                     }
 
@@ -454,7 +458,7 @@ def executePreBuild(Map options)
         checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
         options.commitShortSHA = options.commitSHA[0..6]
 
@@ -658,13 +662,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         if (options['isPreBuilt'])
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Maya 2019')}" "PreBuilt" "PreBuilt" "PreBuilt"
+                            build_reports.bat ..\\summaryTestResults "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(retryInfo.toString())}\"
                             """
                         }
                         else
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('Maya 2019')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                            build_reports.bat ..\\summaryTestResults "Maya" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(retryInfo.toString())}\"
                             """
                         }
                     }
