@@ -138,28 +138,33 @@ def executeTestCommand(String osName, String asicName, Map options)
         build_id = universeClient.build["id"]
         job_id = universeClient.build["job_id"]
     }
-    withEnv(["RBS_USE=${options.sendToRBS}", "RBS_BUILD_ID=${build_id}", "RBS_JOB_ID=${job_id}", "RBS_URL=${universeClient.url}", "RBS_ENV_LABEL=${osName}-${asicName}", "IMAGE_SERVICE_URL=${universeClient.is_url}"])
+    withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
+        usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')])
     {
-        switch(osName)
+        withEnv(["RBS_USE=${options.sendToRBS}", "RBS_BUILD_ID=${build_id}", "RBS_JOB_ID=${job_id}",
+            "RBS_URL=${universeClient.url}", "RBS_ENV_LABEL=${osName}-${asicName}", "IS_URL=${universeClient.is_url}"])
         {
-            case 'Windows':
-                dir('scripts')
-                {
-                    bat """
-                        run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} >> ../${options.stageName}.log  2>&1
-                    """
-                }
-                break;
-            case 'OSX':
-                dir('scripts')
-                {
-                    sh """
-                        ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} >> ../${options.stageName}.log 2>&1
-                    """
-                }
-                break;
-            default:
-                echo "[WARNING] ${osName} is not supported"
+            switch(osName)
+            {
+                case 'Windows':
+                    dir('scripts')
+                    {
+                        bat """
+                            run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} >> ../${options.stageName}.log  2>&1
+                        """
+                    }
+                    break;
+                case 'OSX':
+                    dir('scripts')
+                    {
+                        sh """
+                            ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} >> ../${options.stageName}.log 2>&1
+                        """
+                    }
+                    break;
+                default:
+                    echo "[WARNING] ${osName} is not supported"
+            }
         }
     }
 }

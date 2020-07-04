@@ -172,24 +172,30 @@ def executeTestCommand(String osName, String asicName, Map options)
         build_id = universeClient.build["id"]
         job_id = universeClient.build["job_id"]
     }
-    withEnv(["RBS_USE=${options.sendToRBS}", "RBS_BUILD_ID=${build_id}", "RBS_JOB_ID=${job_id}", "RBS_URL=${universeClient.url}", "RBS_ENV_LABEL=${osName}-${asicName}", "IMAGE_SERVICE_URL=${universeClient.is_url}"]){
-        switch(osName)
+    withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
+        usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')])
+    {
+        withEnv(["RBS_USE=${options.sendToRBS}", "RBS_BUILD_ID=${build_id}", "RBS_JOB_ID=${job_id}",
+            "RBS_URL=${universeClient.url}", "RBS_ENV_LABEL=${osName}-${asicName}", "IS_URL=${universeClient.is_url}"])
         {
-        case 'Windows':
-            dir('scripts')
+            switch(osName)
             {
-                bat """
-                run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  >> ..\\${options.stageName}.log  2>&1
-                """
-            }
-            break;
-        // OSX & Ubuntu18
-        default:
-            dir("scripts")
-            {
-                sh """
-                ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} >> ../${options.stageName}.log 2>&1
-                """
+            case 'Windows':
+                dir('scripts')
+                {
+                    bat """
+                    run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  >> ..\\${options.stageName}.log  2>&1
+                    """
+                }
+                break;
+            // OSX & Ubuntu18
+            default:
+                dir("scripts")
+                {
+                    sh """
+                    ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} >> ../${options.stageName}.log 2>&1
+                    """
+                }
             }
         }
     }

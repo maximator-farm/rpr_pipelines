@@ -129,36 +129,41 @@ def executeTestCommand(String osName, String asicName, Map options)
         job_id = universeClient.build["job_id"]
     }
 
-    withEnv(["RBS_USE=${options.sendToRBS}", "RBS_BUILD_ID=${build_id}", "RBS_JOB_ID=${job_id}", "RBS_URL=${universeClient.url}", "RBS_ENV_LABEL=${osName}-${asicName}", "IMAGE_SERVICE_URL=${universeClient.is_url}"])
+    withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
+        usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')])
     {
-        switch(osName) {
-            case 'Windows':
-                dir('scripts')
-                {
-                    bat """
-                    run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}.log 2>&1
-                    """
-                }
-                break;
-            case 'OSX':
-                dir('scripts')
-                {
-                    withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
-                        sh """
-                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}.log 2>&1
+        withEnv(["RBS_USE=${options.sendToRBS}", "RBS_BUILD_ID=${build_id}", "RBS_JOB_ID=${job_id}",
+            "RBS_URL=${universeClient.url}", "RBS_ENV_LABEL=${osName}-${asicName}", "IS_URL=${universeClient.is_url}"])
+        {
+            switch(osName) {
+                case 'Windows':
+                    dir('scripts')
+                    {
+                        bat """
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}.log 2>&1
                         """
                     }
-                }
-                break;
-            default:
-                dir('scripts')
-                {
-                    withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
-                        sh """
-                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}.log 2>&1
-                        """
+                    break;
+                case 'OSX':
+                    dir('scripts')
+                    {
+                        withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
+                            sh """
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}.log 2>&1
+                            """
+                        }
                     }
-                }
+                    break;
+                default:
+                    dir('scripts')
+                    {
+                        withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
+                            sh """
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}.log 2>&1
+                            """
+                        }
+                    }
+            }
         }
     }
 }
