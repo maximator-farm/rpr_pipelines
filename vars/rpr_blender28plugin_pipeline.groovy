@@ -210,9 +210,6 @@ def executeTests(String osName, String asicName, Map options)
             try {
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
-
-                // RBS: setTester in rbs at last version
-
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
 
             } catch(e) {
