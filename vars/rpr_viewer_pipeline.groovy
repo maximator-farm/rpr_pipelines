@@ -590,10 +590,10 @@ def call(String projectBranch = "",
 
     def universePlatforms = convertPlatforms(platforms);
 
-    println platforms
-    println tests
-    println testsPackage
-    println universePlatforms
+    println "Platforms: ${platforms}"
+    println "Tests: ${tests}"
+    println "Tests package: ${testsPackage}"
+    println "UMS platforms: ${universePlatforms}"
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                            [projectBranch:projectBranch,
