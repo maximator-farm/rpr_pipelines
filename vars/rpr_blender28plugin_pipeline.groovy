@@ -445,8 +445,6 @@ def executeBuildLinux(String osName, Map options)
 
 def executeBuild(String osName, Map options)
 {
-    cleanWS(osName)
-
     if (options.sendToRBS){
         universeClient.stage("Build-" + osName , "begin")
     }
