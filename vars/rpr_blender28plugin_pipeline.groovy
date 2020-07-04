@@ -688,9 +688,6 @@ def executePreBuild(Map options)
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
             universeClient.createBuild(options.universePlatforms, options.groupsRBS)
-
-            // old version RBS
-            // options.rbs_dev.startBuild(options)
         }
         catch (e)
         {
