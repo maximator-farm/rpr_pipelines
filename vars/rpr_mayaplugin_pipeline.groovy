@@ -134,15 +134,15 @@ def executeTestCommand(String osName, String asicName, Map options)
 {
     build_id = "none"
     job_id = "none"
-    if (options.sendToRBS && universeClient.build != null){
+    if (options.sendToUMS && universeClient.build != null){
         build_id = universeClient.build["id"]
         job_id = universeClient.build["job_id"]
     }
     withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
         usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')])
     {
-        withEnv(["RBS_USE=${options.sendToRBS}", "RBS_BUILD_ID=${build_id}", "RBS_JOB_ID=${job_id}",
-            "RBS_URL=${universeClient.url}", "RBS_ENV_LABEL=${osName}-${asicName}", "IS_URL=${universeClient.is_url}"])
+        withEnv(["UMS_USE=${options.sendToUMS}", "UMS_BUILD_ID=${build_id}", "UMS_JOB_ID=${job_id}",
+            "UMS_URL=${universeClient.url}", "UMS_ENV_LABEL=${osName}-${asicName}", "IS_URL=${universeClient.is_url}"])
         {
             switch(osName)
             {
@@ -171,7 +171,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    if (options.sendToRBS){
+    if (options.sendToUMS){
         universeClient.stage("Tests-${osName}-${asicName}", "begin")
     }
 
@@ -274,7 +274,7 @@ def executeTests(String osName, String asicName, Map options)
                         currentBuild.result = "FAILED"
                     }
 
-                    if (options.sendToRBS)
+                    if (options.sendToUMS)
                     {
                         universeClient.stage("Tests-${osName}-${asicName}", "end")
                     }
@@ -376,7 +376,7 @@ def executeBuildOSX(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    if (options.sendToRBS){
+    if (options.sendToUMS){
         universeClient.stage("Build-" + osName , "begin")
     }
 
@@ -420,7 +420,7 @@ def executeBuild(String osName, Map options)
     finally {
         archiveArtifacts "*.log"
     }
-    if (options.sendToRBS){
+    if (options.sendToUMS){
         universeClient.stage("Build-" + osName, "end")
     }
 }
@@ -545,7 +545,7 @@ def executePreBuild(Map options)
     }
     
     def tests = []
-    options.groupsRBS = []
+    options.groupsUMS = []
 
     if(options.testsPackage != "none")
     {
@@ -557,7 +557,7 @@ def executePreBuild(Map options)
             {
                 def testsByJson = readJSON file: "jobs/${options.testsPackage}"
                 testsByJson.each() {
-                    options.groupsRBS << "${it.key}"
+                    options.groupsUMS << "${it.key}"
                 }
                 options.splitTestsExecution = false
             }
@@ -569,7 +569,7 @@ def executePreBuild(Map options)
                 }
                 options.tests = tests
                 options.testsPackage = "none"
-                options.groupsRBS = tests
+                options.groupsUMS = tests
             }
         }
     }
@@ -578,7 +578,7 @@ def executePreBuild(Map options)
             tests << "${it}"
         }
         options.tests = tests
-        options.groupsRBS = tests
+        options.groupsUMS = tests
     }
 
     if(options.splitTestsExecution) {
@@ -589,12 +589,12 @@ def executePreBuild(Map options)
         options.testsList = ['']
     }
 
-    if (options.sendToRBS)
+    if (options.sendToUMS)
     {
         try
         {
             universeClient.tokenSetup()
-            universeClient.createBuild(options.universePlatforms, options.groupsRBS)
+            universeClient.createBuild(options.universePlatforms, options.groupsUMS)
         }
         catch (e)
         {
@@ -735,7 +735,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                          reportName: 'Test Report',
                          reportTitles: 'Summary Report, Performance Report, Compare Report'])
 
-            if (options.sendToRBS) {
+            if (options.sendToUMS) {
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
                     universeClient.changeStatus(status)
@@ -781,7 +781,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String toolVersion = "2020",
         Boolean forceBuild = false,
         Boolean splitTestsExecution = true,
-        Boolean sendToRBS = true,
+        Boolean sendToUMS = true,
         String resX = '0',
         String resY = '0',
         String SPU = '25',
@@ -877,7 +877,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 forceBuild:forceBuild,
                                 reportName:'Test_20Report',
                                 splitTestsExecution:splitTestsExecution,
-                                sendToRBS:sendToRBS,
+                                sendToUMS:sendToUMS,
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:120,
                                 DEPLOY_TIMEOUT:120,
@@ -896,7 +896,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     }
     catch(e) {
         currentBuild.result = "FAILED"
-        if (options.sendToRBS){
+        if (options.sendToUMS){
             universeClient.changeStatus(currentBuild.result)
         }
         println(e.toString());

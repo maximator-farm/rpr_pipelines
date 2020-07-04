@@ -104,15 +104,15 @@ def executeTestCommand(String osName, String asicName, Map options)
 {
     build_id = "none"
     job_id = "none"
-    if (options.sendToRBS && universeClient.build != null){
+    if (options.sendToUMS && universeClient.build != null){
         build_id = universeClient.build["id"]
         job_id = universeClient.build["job_id"]
     }
     withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
         usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')])
     {
-        withEnv(["RBS_USE=${options.sendToRBS}", "RBS_BUILD_ID=${build_id}", "RBS_JOB_ID=${job_id}",
-            "RBS_URL=${universeClient.url}", "RBS_ENV_LABEL=${osName}-${asicName}", "IS_URL=${universeClient.is_url}"])
+        withEnv(["UMS_USE=${options.sendToUMS}", "UMS_BUILD_ID=${build_id}", "UMS_JOB_ID=${job_id}",
+            "UMS_URL=${universeClient.url}", "UMS_ENV_LABEL=${osName}-${asicName}", "IS_URL=${universeClient.is_url}"])
         {
             switch(osName)
             {
@@ -147,7 +147,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    if (options.sendToRBS){
+    if (options.sendToUMS){
         universeClient.stage("Tests-${osName}-${asicName}", "begin")
     }
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
@@ -230,7 +230,7 @@ def executeTests(String osName, String asicName, Map options)
                         currentBuild.result = "FAILED"
                     }
 
-                    if (options.sendToRBS)
+                    if (options.sendToUMS)
                     {
                         universeClient.stage("Tests-${osName}-${asicName}", "end")
                     }
@@ -333,7 +333,7 @@ def executeBuildLinux(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    if (options.sendToRBS){
+    if (options.sendToUMS){
         universeClient.stage("Build-" + osName , "begin")
     }
 
@@ -360,7 +360,7 @@ def executeBuild(String osName, Map options)
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
-    if (options.sendToRBS){
+    if (options.sendToUMS){
         universeClient.stage("Build-" + osName, "end")
     }
 }
@@ -403,12 +403,12 @@ def executePreBuild(Map options)
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '50']]]);
     }
 
-    if (options.sendToRBS)
+    if (options.sendToUMS)
     {
         try
         {
             def tests = []
-            options.groupsRBS = []
+            options.groupsUMS = []
             if(options.testsPackage != "none")
             {
                 dir('jobs_test_rprviewer')
@@ -421,7 +421,7 @@ def executePreBuild(Map options)
                         tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
                     }
 
-                    options.groupsRBS = tests
+                    options.groupsUMS = tests
                 }
             }
             else {
@@ -429,17 +429,17 @@ def executePreBuild(Map options)
                 {
                     tests << "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
                 }
-                options.groupsRBS = tests
+                options.groupsUMS = tests
             }
             // Universe : auth because now we in node
             // If use httpRequest in master slave will catch 408 error
             universeClient.tokenSetup()
 
             println("Test groups:")
-            println(options.groupsRBS)
+            println(options.groupsUMS)
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            universeClient.createBuild(options.universePlatforms, options.groupsRBS)
+            universeClient.createBuild(options.universePlatforms, options.groupsUMS)
         }
         catch (e)
         {
@@ -561,7 +561,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                          reportName: 'Test Report',
                          reportTitles: 'Summary Report, Performance Report, Compare Report'])
 
-            if (options.sendToRBS) {
+            if (options.sendToUMS) {
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
                     universeClient.changeStatus(status)
@@ -585,7 +585,7 @@ def call(String projectBranch = "",
          Boolean enableNotifications = true,
          String testsPackage = "",
          String tests = "",
-         Boolean sendToRBS = true) {
+         Boolean sendToUMS = true) {
 
     def nodeRetry = []
 
@@ -620,6 +620,6 @@ def call(String projectBranch = "",
                             DEPLOY_TIMEOUT:45,
                             tests:tests,
                             nodeRetry: nodeRetry,
-                            sendToRBS:sendToRBS,
+                            sendToUMS:sendToUMS,
                             universePlatforms: universePlatforms])
 }
