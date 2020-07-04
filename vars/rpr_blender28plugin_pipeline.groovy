@@ -312,8 +312,6 @@ def executeTests(String osName, String asicName, Map options)
                         if (options.sendToRBS)
                         {
                             universeClient.stage("Tests-${osName}-${asicName}", "end")
-                            // options.rbs_prod.sendSuiteResult(sessionReport, options)
-                            // options.rbs_dev.sendSuiteResult(sessionReport, options)
                         }
 
                         echo "Stashing test results to : ${options.testResultsName}"
