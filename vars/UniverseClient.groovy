@@ -108,7 +108,7 @@ class UniverseClient {
             def POSSIBLE_TAGS = ["Weekly", "Auto", "Manual"]
             for (tagName in POSSIBLE_TAGS) {
                 if (jobName.contains(tagName.toLowerCase())) {
-                    tag = "${it}"
+                    tag = tagName
                     break
                 }
             }
