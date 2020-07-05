@@ -106,8 +106,8 @@ class UniverseClient {
             String tag = "Other"
             String jobName = splittedJobName[0].toLowerCase()
             def POSSIBLE_TAGS = ["Weekly", "Auto", "Manual"]
-            for (String tagName: POSSIBLE_TAGS) {
-                if (jobName.contains(tagName.toLowerCase()){
+            for (tagName in POSSIBLE_TAGS) {
+                if (jobName.contains(tagName.toLowerCase())) {
                     tag = "${it}"
                     break
                 }
