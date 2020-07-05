@@ -73,12 +73,12 @@ class UniverseClient {
 
             String tag = "Other"
             String job_name = splittedJobName[0].toLowerCase()
-            if (job_name.contains("weekly")) {
-                tag = "Weekly"
-            } else if (job_name.contains("manual")){
-                tag = "Manual"
-            } else if (job_name.contains("auto")) {
-                tag = "Auto"
+            def POSSIBLE_TAGS = ["Weekly", "Auto", "Manual"]
+            POSSIBLE_TAGS.each {
+                if (job_name.contains("${it}".toLowerCase()){
+                    tag = "${it}"
+                    break
+                }
             }
 
             tags << tag
