@@ -3,6 +3,9 @@ import groovy.json.JsonOutput
 import groovy.json.JsonSlurperClassic;
 // imports for work with JSONs
 
+/**
+ * Client for Universal Monitoring System
+ */
 class UniverseClient {
     def context;
     def url;
@@ -12,6 +15,15 @@ class UniverseClient {
     def env;
     def is_url;
 
+    /**
+     * Main constructor
+     *
+     * @param context
+     * @param url Universal Monitoring System API  url (example: "https://umsapi.cis.luxoft.com" )
+     * @param env Jenkins environment variables object
+     * @param is_url Image Service API url (example: "https://imgs.cis.luxoft.com")
+     * @param product Name of product (example: "RPR_Maya")
+     */
     UniverseClient(context, url, env, is_url, product) {
         this.url = url;
         this.context = context;
@@ -20,6 +32,12 @@ class UniverseClient {
         this.product = product;
     }
 
+    /**
+     * function retry wrapper for request function (required to return response)
+     *
+     * @param func function to be retried
+     * @param validResponseCodes response codes that will be indicated as OK
+     */
     def retryWrapper(func, validResponseCodes = [200]) {
         def attempt = 0
         def attempts = 5
@@ -27,8 +45,8 @@ class UniverseClient {
 
         this.context.waitUntil {
             if (attempt == attempts) {
-                println("Attempts: 0. Exit.")
-                return true
+                this.context.println("End attemts")
+                return true //break the loop
             }
 
             attempt++
@@ -37,31 +55,45 @@ class UniverseClient {
             try {
                 def response = func.call()
                 if( validResponseCodes.contains(response.status)){
-                    return true
+                    return true //break the loop
                 }
                 switch(response.status){
                     case 401:
                         this.tokenSetup()
                         break;
                 }
-                return false
+                return false // continue loop
 
             } catch(error) {
                 this.context.println(error)
                 this.context.sleep(timeout)
-                // timeout = timeout + 30
-                return false
+                return false // continue loop
             }
         }
     }
 
-    def tokenSetup(cred) {
-        def response = this.context.httpRequest consoleLogResponseBody: true, authentication: 'universeMonitoringSystem', httpMode: 'POST',  url: "${this.url}/user/login", validResponseCodes: '200'
+    /**
+     * Setup UMS authorization token
+     */
+    def tokenSetup() {
+        def response = this.context.httpRequest(
+            consoleLogResponseBody: true,
+            authentication: 'universeMonitoringSystem',
+            httpMode: 'POST',
+            url: "${this.url}/user/login",
+            validResponseCodes: '200'
+        )
         def token = this.context.readJSON text: "${response.content}"
         this.token = "${token['token']}"
         this.context.echo this.token
     }
 
+    /**
+     * Create build in UMS API and set up build id variable in current client
+     *
+     * @param envs environment list in format: ["OS-1:GPU-1", ..."OS-N:GPU-N"]
+     * @param suites suites names list ["Suite1", "Suite2", ..., "SuiteN"]
+     */
     def createBuild(envs, suites) {
         def request = {
             def splittedJobName = []
@@ -72,10 +104,10 @@ class UniverseClient {
             def tags = []
 
             String tag = "Other"
-            String job_name = splittedJobName[0].toLowerCase()
+            String jobName = splittedJobName[0].toLowerCase()
             def POSSIBLE_TAGS = ["Weekly", "Auto", "Manual"]
-            POSSIBLE_TAGS.each {
-                if (job_name.contains("${it}".toLowerCase()){
+            for (String tagName: POSSIBLE_TAGS) {
+                if (jobName.contains(tagName.toLowerCase()){
                     tag = "${it}"
                     break
                 }
@@ -116,9 +148,13 @@ class UniverseClient {
         retryWrapper(request)
     }
 
-
+    /**
+     * Create stage in UMS API of current build
+     *
+     * @param name Stage name
+     * @param action String type of action (only "begin" or "end" possible)
+     */
     def stage(name, action) {
-        // String name - stage name, String action - enum ["begin", "end"]
         def request = {
             def buildBody = [
                 'stage': [
@@ -165,6 +201,11 @@ class UniverseClient {
         retryWrapper(request)
     }
 
+    /**
+     * Change build status on UMS API
+     *
+     * @param status String Status name
+     */
     def changeStatus(status) {
         def request = {
             def mapStatuses = [
