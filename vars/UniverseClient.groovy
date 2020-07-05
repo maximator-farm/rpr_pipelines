@@ -180,27 +180,6 @@ class UniverseClient {
         retryWrapper(request)
     }
 
-    def sendInfo(info) {
-        // String name - stage name, String action - enum ["begin", "end"]
-        def request = {
-            def res = this.context.httpRequest(
-                consoleLogResponseBody: true,
-                contentType: 'APPLICATION_JSON',
-                customHeaders: [
-                    [name: 'Authorization', value: "Token ${this.token}"]
-                ],
-                httpMode: 'PUT',
-                requestBody: JsonOutput.toJson(info),
-                ignoreSslErrors: true,
-                url: "${this.url}/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
-                validResponseCodes: '0:599'
-            )
-
-            return res;
-        }
-        retryWrapper(request)
-    }
-
     /**
      * Change build status on UMS API
      *
