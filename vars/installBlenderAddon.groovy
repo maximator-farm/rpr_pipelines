@@ -175,7 +175,7 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                             echo import bpy >> disableRPRAddon.py
                             echo bpy.ops.preferences.addon_disable'(module="rprblender")'  >> disableRPRAddon.py
                             echo bpy.ops.wm.save_userpref'()' >> disableRPRAddon.py
-                            blender -b -P disableRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
+                            blender${tool_version} -b -P disableRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
 
                             echo "Removing RPR Addon for Blender." >> ${options.stageName}.uninstall.log 2>&1
 
@@ -183,7 +183,7 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                             echo bpy.ops.preferences.addon_remove'(module="rprblender")' >> removeRPRAddon.py
                             echo bpy.ops.wm.save_userpref'()' >> removeRPRAddon.py
 
-                            blender -b -P removeRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
+                            blender${tool_version} -b -P removeRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
                         """
                     }
                 } catch (e) {
@@ -212,7 +212,7 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                             echo import bpy >> disableRPRAddon.py
                             echo bpy.ops.preferences.addon_disable'(module="rprblender")'  >> disableRPRAddon.py
                             echo bpy.ops.wm.save_userpref'()' >> disableRPRAddon.py
-                            blender -b -P disableRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
+                            blender${tool_version} -b -P disableRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
 
                             echo "Removing RPR Addon for Blender." >> ${options.stageName}.uninstall.log 2>&1
 
@@ -220,7 +220,7 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                             echo bpy.ops.preferences.addon_remove'(module="rprblender")' >> removeRPRAddon.py
                             echo bpy.ops.wm.save_userpref'()' >> removeRPRAddon.py
 
-                            blender -b -P removeRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
+                            blender${tool_version} -b -P removeRPRAddon.py >> ${options.stageName}.uninstall.log 2>&1
                         """
                     }
                 } catch (e) {
