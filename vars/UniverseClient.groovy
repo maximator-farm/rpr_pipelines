@@ -85,7 +85,6 @@ class UniverseClient {
         )
         def token = this.context.readJSON text: "${response.content}"
         this.token = "${token['token']}"
-        this.context.echo this.token
     }
 
     /**
