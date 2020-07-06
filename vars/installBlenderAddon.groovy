@@ -286,7 +286,7 @@ def installBlenderAddon(String osName, String tool_version, Map options)
                 echo bpy.ops.preferences.addon_enable'(module="rprblender")' >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref'()' >> registerRPRinBlender.py
 
-                blender -b -P registerRPRinBlender.py >> ${options.stageName}.install.log 2>&1
+                blender${tool_version} -b -P registerRPRinBlender.py >> ${options.stageName}.install.log 2>&1
             """
             break;
 
@@ -304,7 +304,7 @@ def installBlenderAddon(String osName, String tool_version, Map options)
                 echo bpy.ops.preferences.addon_enable'(module="rprblender")' >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref'()' >> registerRPRinBlender.py
 
-                blender -b -P registerRPRinBlender.py >> ${options.stageName}.install.log 2>&1
+                blender${tool_version} -b -P registerRPRinBlender.py >> ${options.stageName}.install.log 2>&1
             """
     }
 }
