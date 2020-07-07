@@ -66,8 +66,14 @@ def executeConfiguration(osName, attemptNum, Map options) {
 							switch(tool) {
 								case 'Blender':
 									// copy necessary scripts for render and start read process
-									// TODO copy configuration scripts
-									// TODO call script
+									bat """
+										copy "render_service_scripts\\scene_scanning\\read_blender_configuration.py" "."
+										copy "render_service_scripts\\scene_scanning\\launch_blender.py" "."
+									"""
+									// Launch render
+									withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+										python3("launch_blender.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% ")
+									}
 									break;
 							}
 						case 'Write':
@@ -111,7 +117,7 @@ def main(Map options) {
 		options['JOB_PATH']="${JOB_PATH}"
 
 		options['django_url'] = "https://render.cis.luxoft.com/render/jenkins/"
-		options['scripts_branch'] = "master"
+		options['scripts_branch'] = "inemankov/scene_scanning_blender"
 
 		String osName = 'Windows'
 		
