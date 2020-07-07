@@ -47,6 +47,10 @@ def executeTests(String osName, String asicName, Map options)
         unstash "app${osName}"
 
         executeTestCommand(osName)
+
+        if (options.testPerformance) {
+            stash includes: "${STAGE_NAME}.gtest.xml", name: "${options.testResultsName}"
+        }
     }
     catch (e)
     {
@@ -276,40 +280,77 @@ def executeBuild(String osName, Map options)
 def executeDeploy(Map options, List platformList, List testResultList)
 {
     cleanWS()
-    checkOutBranchOrScm("master", "git@github.com:Radeon-Pro/RadeonProImageProcessingSDK.git")
 
-    bat """
-    git rm -r *
-    """
+    if (options.testPerformance) {
 
-    platformList.each() {
-        dir("${it}") {
-            unstash "deploy${it}"
+        dir("testResults") {
+            testResultList.each() {
+
+                try {
+                    unstash "$it"
+                } catch(e) {
+                    echo "[ERROR] Failed to unstash ${it}"
+                    println(e.toString());
+                    println(e.getMessage());
+                }
+
+            }
         }
-    }
-    unstash "models"
-    unstash "samples"
-    unstash "txtFiles"
-    unstash "include"
 
-    bat """
-    git add --all
-    git commit -m "buildmaster: SDK release v${env.TAG_NAME}"
-    git tag -a rif_sdk_${env.TAG_NAME} -m "rif_sdk_${env.TAG_NAME}"
-    git push --tag origin HEAD:master
-    """
+        dir ("rif-report") {
+            checkOutBranchOrScm("master", "https://gitlab.cts.luxoft.com/inemankov/rif-report.git", true, false, true, "radeonprorender-gitlab", true)
+
+            bat """
+            set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
+            pip install -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
+            python build_report.py --test_results ../testResults --output_dir ../results
+            """
+        }
+
+        publishHTML([allowMissing: false,
+                     alwaysLinkToLastBuild: false,
+                     keepAll: true,
+                     reportDir: 'results',
+                     reportFiles: 'summary_report.html',
+                     reportName: 'Test Report',
+                     reportTitles: 'Summary Report'])
+    } else {
+        checkOutBranchOrScm("master", "git@github.com:Radeon-Pro/RadeonProImageProcessingSDK.git")
+
+        bat """
+        git rm -r *
+        """
+
+        platformList.each() {
+            dir("${it}") {
+                unstash "deploy${it}"
+            }
+        }
+        unstash "models"
+        unstash "samples"
+        unstash "txtFiles"
+        unstash "include"
+
+        bat """
+        git add --all
+        git commit -m "buildmaster: SDK release v${env.TAG_NAME}"
+        git tag -a rif_sdk_${env.TAG_NAME} -m "rif_sdk_${env.TAG_NAME}"
+        git push --tag origin HEAD:master
+        """
+    }
 }
 
 def call(String projectBranch = "",
          String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII;Ubuntu18:NVIDIA_GTX980;OSX:AMD_RXVEGA;CentOS7;Ubuntu18-Clang',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
-         String cmakeKeys = '') {
+         String cmakeKeys = '',
+         Boolean testPerformance = false) {
     //TOOD: Ubuntu AMD_RadeonVII
     String PRJ_NAME="RadeonProImageProcessor"
     String PRJ_ROOT="rpr-core"
 
-    def deployStage = env.TAG_NAME ? this.&executeDeploy : null
+    def deployStage = env.TAG_NAME || testPerformance ? this.&executeDeploy : null
     platforms = env.TAG_NAME ? "Windows;Ubuntu18;OSX;CentOS7;" : platforms
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, deployStage,
@@ -323,5 +364,6 @@ def call(String projectBranch = "",
                             executeTests:true,
                             PRJ_NAME:PRJ_NAME,
                             PRJ_ROOT:PRJ_ROOT,
-                            cmakeKeys:cmakeKeys])
+                            cmakeKeys:cmakeKeys,
+                            testPerformance:testPerformance])
 }
