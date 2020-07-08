@@ -189,11 +189,9 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     if (osName == "OSX"){
-        dir ("/Users/user") {
-            sh """
-                [[ -f ~/.bash_profile ]] && . ~/.bash_profile
-            """
-        }
+        sh """
+            [[ -f /Users/user/.bash_profile ]] && . /Users/user/.bash_profile
+        """
     }
 
     try {
