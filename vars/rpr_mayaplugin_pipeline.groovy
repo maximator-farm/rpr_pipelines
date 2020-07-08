@@ -15,6 +15,7 @@ def getMayaPluginInstaller(String osName, Map options)
                 if (options.pluginWinSha) {
                     win_addon_name = options.pluginWinSha
                 } else {
+                    // FIXME: fix plugin name for testing pre builded installer
                     win_addon_name = "unknown"
                 }
             } else {
@@ -335,10 +336,13 @@ def executeBuildWindows(Map options)
             echo print(view.Fetch().GetString(1)) >> getMsiProductCode.py
         """
 
+        // FIXME: hot fix for STVCIS-1215
         options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
 
         println "[INFO] Built MSI product code: ${options.productCode}"
 
+        //options.productCode = "unknown"
+        options.pluginWinSha = sha1 'RadeonProRenderMaya.msi'
         stash includes: 'RadeonProRenderMaya.msi', name: 'appWindows'
     }
 }
@@ -368,7 +372,7 @@ def executeBuildOSX(Map options)
             stash includes: 'RadeonProRenderMaya.dmg', name: "appOSX"
 
             // TODO: detect ID of installed plugin
-            options.productCode = "unknown"
+            // options.productCode = "unknown"
             options.pluginOSXSha = sha1 'RadeonProRenderMaya.dmg'
         }
     }
