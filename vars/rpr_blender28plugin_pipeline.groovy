@@ -188,6 +188,14 @@ def executeTests(String osName, String asicName, Map options)
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
+    if (osName == "OSX"){
+        dir ("/Users/user") {
+            sh """
+                [[ -f ~/.bash_profile ]] && . ~/.bash_profile
+            """
+        }
+    }
+
     try {
 
         timeout(time: "5", unit: 'MINUTES') {
