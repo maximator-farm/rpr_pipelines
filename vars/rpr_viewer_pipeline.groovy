@@ -1,3 +1,4 @@
+import groovy.json.JsonOutput;
 
 def getViewerTool(String osName, Map options)
 {
@@ -207,17 +208,18 @@ def executeTests(String osName, String asicName, Map options)
 
                     // reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        collectCrashInfo(osName, options)
+                        if (osName == "Ubuntu18"){
+                            sh """
+                                echo "Restarting Unix Machine...."
+                                hostname
+                                (sleep 3; sudo shutdown -r now) &
+                            """
+                            sleep(60)
+                        }
                         if (options.currentTry < options.nodeReallocateTries) {
-                            if (osName == "Ubuntu18") {
-                                sh """
-                                    echo "Restarting Unix Machine...."
-                                    hostname
-                                    (sleep 3; sudo shutdown -r now) &
-                                """
-                                sleep(60)
-                            }
                             throw new Exception("All tests crashed")
-                        } 
+                        }
                     }
                 }
             }
@@ -326,24 +328,15 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
-    dir("RadeonProViewer")
-    {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], true)
+    checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], true)
 
-        AUTHOR_NAME = bat(
-                script: "git show -s --format=%%an HEAD ",
-                returnStdout: true
-        ).split('\r\n')[2].trim()
+    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+    options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
+    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
-        echo "The last commit was written by ${AUTHOR_NAME}."
-        options.AUTHOR_NAME = AUTHOR_NAME
-
-        commitMessage = bat(script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
-        echo "Commit message: ${commitMessage}"
-        options.commitMessage = commitMessage
-
-        options['commitSHA'] = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-    }
+    println "The last commit was written by ${options.commitAuthor}."
+    println "Commit message: ${options.commitMessage}"
+    println "Commit SHA: ${options.commitSHA}"
 
     if (env.CHANGE_URL) {
         echo "branch was detected as Pull Request"
@@ -372,6 +365,7 @@ def executePreBuild(Map options)
     }
 
     // groupsRBS parameter saved for future
+    // TODO: check could it be removed
     def tests = []
     options.groupsRBS = []
 
@@ -436,6 +430,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             dir("summaryTestResults")
             {
+                unstashCrashInfo(options['nodeRetry'])
                 testResultList.each()
                 {
                     dir("$it".replace("testResult-", ""))
@@ -473,8 +468,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
                     dir("jobs_launcher") {
+                        def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         bat """
-                        build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('RprViewer')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                        build_reports.bat ..\\summaryTestResults "RprViewer" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(retryInfo.toString())}\"
                         """
                     }
                 }
@@ -551,6 +547,8 @@ def call(String projectBranch = "",
          String tests = "",
          Boolean splitTestsExecution = true) {
 
+    def nodeRetry = []
+
     String PRJ_ROOT='rpr-core'
     String PRJ_NAME='RadeonProViewer'
     String projectRepo='git@github.com:Radeon-Pro/RadeonProViewer.git'
@@ -572,5 +570,6 @@ def call(String projectBranch = "",
                             testsPackage:testsPackage,
                             TEST_TIMEOUT:40,
                             DEPLOY_TIMEOUT:45,
-                            tests:tests])
+                            tests:tests,
+                            nodeRetry: nodeRetry])
 }

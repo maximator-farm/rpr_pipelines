@@ -1,4 +1,5 @@
-import RBSProduction
+import RBSProduction;
+import groovy.json.JsonOutput;
 
 def getMaxPluginInstaller(String osName, Map options)
 {
@@ -115,19 +116,17 @@ def executeTests(String osName, String asicName, Map options)
 
         downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MaxAssets/", 'MaxAssets')
 
-        if (!options['skipBuild']) {
-            try {
-                Boolean newPluginInstalled = false
-                timeout(time: "15", unit: 'MINUTES') {
-                    getMaxPluginInstaller(osName, options)
-                    newPluginInstalled = installMSIPlugin(osName, 'Max', options)
-                    println "[INFO] Install function return ${newPluginInstalled}"
-                }
-            } catch(e) {
-                println(e.toString())
-                println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
-                throw e
+        try {
+            Boolean newPluginInstalled = false
+            timeout(time: "15", unit: 'MINUTES') {
+                getMaxPluginInstaller(osName, options)
+                newPluginInstalled = installMSIPlugin(osName, 'Max', options)
+                println "[INFO] Install function return ${newPluginInstalled}"
             }
+        } catch(e) {
+            println(e.toString())
+            println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
+            throw e
         }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
@@ -193,6 +192,7 @@ def executeTests(String osName, String asicName, Map options)
 
                     // deinstalling broken addon & reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        collectCrashInfo(osName, options)
                         installMSIPlugin(osName, "Max", options, false, true)
                         if (options.currentTry < options.nodeReallocateTries) {
                             throw new Exception("All tests crashed")
@@ -259,9 +259,13 @@ def executeBuild(String osName, Map options)
         {
             options.branch_postfix = "release"
         }
-        if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
+        else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
         {
             options.branch_postfix = env.BRANCH_NAME.replace('/', '-')
+        }
+        else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop")
+        {
+            options.branch_postfix = options.projectBranch.replace('/', '-')
         }
 
         outputEnvironmentInfo(osName)
@@ -332,7 +336,7 @@ def executePreBuild(Map options)
         checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
         options.commitShortSHA = options.commitSHA[0..6]
 
@@ -486,6 +490,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             dir("summaryTestResults")
             {
+                unstashCrashInfo(options['nodeRetry'])
                 testResultList.each()
                 {
                     dir("$it".replace("testResult-", ""))
@@ -507,11 +512,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             
             try {
-                Boolean isRegression = options.testsPackage.endsWith('.json')
+                String executionType
+                if (options.testsPackage.endsWith('.json')) {
+                    executionType = 'regression'
+                } else if (options.splitTestsExecution) {
+                    executionType = 'split_execution'
+                } else {
+                    executionType = 'default'
+                }
 
                 dir("jobs_launcher") {
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${isRegression}
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${executionType} \"${options.tests}\"
                     """
                 }
             } catch (e) {
@@ -524,16 +536,17 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
                     dir("jobs_launcher") {
+                        def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         if (options['isPreBuilt'])
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('3ds Max')}" "PreBuilt" "PreBuilt" "PreBuilt"
+                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("3ds Max")} "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(retryInfo.toString())}\"
                             """
                         }
                         else
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "${escapeCharsByUnicode('3ds Max')}" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("3ds Max")} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(retryInfo.toString())}\"
                             """
                         }
                     }
@@ -633,7 +646,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         Boolean updateRefs = false,
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,
-        Boolean skipBuild = false,
         String renderDevice = "2",
         String testsPackage = "",
         String tests = "",
@@ -653,6 +665,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     SPU = (SPU == 'Default') ? '60' : SPU
     iter = (iter == 'Default') ? '120' : iter
     theshold = (theshold == 'Default') ? '0.01' : theshold
+    def nodeRetry = []
     try
     {
         Boolean isPreBuilt = customBuildLinkWindows.length() > 0
@@ -710,7 +723,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 incrementVersion:incrementVersion,
-                                skipBuild:skipBuild,
                                 renderDevice:renderDevice,
                                 testsPackage:testsPackage,
                                 tests:tests,
@@ -731,7 +743,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 SPU: SPU,
                                 iter: iter,
                                 theshold: theshold,
-                                customBuildLinkWindows: customBuildLinkWindows
+                                customBuildLinkWindows: customBuildLinkWindows,
+                                nodeRetry: nodeRetry
                                 ])
         }
         catch (e) {

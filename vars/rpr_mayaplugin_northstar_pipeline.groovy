@@ -164,6 +164,10 @@ def executeTests(String osName, String asicName, Map options)
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
 
+                writeFile file: 'local_config.py', text: """original_render = 'tahoe'
+                tool_name = 'maya'
+                report_type = 'ct'"""
+
                 // setTester in rbs
                 if (options.sendToRBS) {
                     options.rbs_prod.setTester(options)
@@ -203,28 +207,32 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        if (options.engine == '2'){
-            REF_PATH_PROFILE="${REF_PATH_PROFILE}-NorthStar"
-        }
-
-        options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
         outputEnvironmentInfo(osName, options.stageName)
 
-        if(options['updateRefs'])
-        {
+        if(options['updateRefs']) {
             executeTestCommand(osName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         }
-        else
-        {
-            try 
-            {
-                println "[INFO] Downloading reference images for ${options.tests}"
-                receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
+        else {
+            // RPR baseline
+            try {
+                println "[INFO] Downloading RPR-Tahoe-1.0 reference images for ${options.tests}"
+                receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/first')
                 options.tests.split(" ").each() {
-                    receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
+                    receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/first')
+                }
+            } catch (e) {
+                println("[WARNING] Baseline doesn't exist.")
+            }
+            // Northstar baseline
+            REF_PATH_PROFILE="${REF_PATH_PROFILE}-NorthStar"
+            try {
+                println "[INFO] Downloading RPR-Tahoe-1.0 reference images for ${options.tests}"
+                receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/second')
+                options.tests.split(" ").each() {
+                    receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/second')
                 }
             } catch (e) {
                 println("[WARNING] Baseline doesn't exist.")
@@ -594,6 +602,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
         if(options['executeTests'] && testResultList)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
+            writeFile file: 'local_config.py', text: """original_render = 'tahoe'
+                tool_name = 'maya'
+                report_type = 'ct'"""
 
             List lostStashes = []
 
@@ -757,30 +768,28 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String testsBranch = "master",
         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;OSX:AMD_RXVEGA',
         Boolean updateRefs = false,
-        Boolean enableNotifications = true,
-        Boolean incrementVersion = true,
+        Boolean enableNotifications = false,
+        Boolean incrementVersion = false,
         String renderDevice = "gpu",
         String testsPackage = "",
         String tests = "",
         String toolVersion = "2020",
         Boolean forceBuild = false,
         Boolean splitTestsExecution = true,
-        Boolean sendToRBS = true,
+        Boolean sendToRBS = false,
         String resX = '0',
         String resY = '0',
         String SPU = '25',
         String iter = '50',
         String theshold = '0.05',
         String customBuildLinkWindows = "",
-        String customBuildLinkOSX = "",
-        String engine = "1.0")
+        String customBuildLinkOSX = "")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
     SPU = (SPU == 'Default') ? '25' : SPU
     iter = (iter == 'Default') ? '50' : iter
     theshold = (theshold == 'Default') ? '0.05' : theshold
-    engine = (engine == '2.0 (Northstar)') ? '2' : '1'
     def nodeRetry = []
     try
     {
@@ -868,7 +877,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 theshold: theshold,
                                 customBuildLinkWindows: customBuildLinkWindows,
                                 customBuildLinkOSX: customBuildLinkOSX,
-                                engine: engine,
+                                engine: '2',
                                 nodeRetry: nodeRetry
                                 ])
     }
