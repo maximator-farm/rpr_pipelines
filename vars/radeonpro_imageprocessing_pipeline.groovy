@@ -1,4 +1,4 @@
-def executeTestCommand(String osName)
+def executeTestCommand(String osName, Boolean testPerformance)
 {
     switch(osName)
     {
@@ -9,10 +9,17 @@ def executeTestCommand(String osName)
         dir("unittest")
         {
             bat "mkdir testSave"
-            bat """
-            set RIF_AI_FP16_ENABLED=1
-            ..\\bin\\UnitTest.exe -t .\\testSave -r .\\referenceImages --models ..\\models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ..\\${STAGE_NAME}.log  2>&1
-            """
+            if (testPerformance) {
+                bat """
+                set RIF_AI_FP16_ENABLED=1
+                ..\\bin\\UnitTest.exe --mode p --gtest_filter=\"Performance.*\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ..\\${STAGE_NAME}.log  2>&1
+                """
+            } else {
+                bat """
+                set RIF_AI_FP16_ENABLED=1
+                ..\\bin\\UnitTest.exe -t .\\testSave -r .\\referenceImages --models ..\\models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ..\\${STAGE_NAME}.log  2>&1
+                """
+            }
         }
         break;
     case 'OSX':
@@ -22,7 +29,11 @@ def executeTestCommand(String osName)
         dir("unittest")
         {
             sh "mkdir testSave"
-            sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            if (testPerformance) {
+                sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest --mode p --gtest_filter=\"Performance.*\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            } else {
+                sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            }
         }
         break;
     default:
@@ -32,7 +43,11 @@ def executeTestCommand(String osName)
         dir("unittest")
         {
             sh "mkdir testSave"
-            sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            if (testPerformance) {
+                sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest --mode p --gtest_filter=\"Performance.*\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            } else {
+                sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            }
         }
     }
 }
@@ -46,20 +61,21 @@ def executeTests(String osName, String asicName, Map options)
         outputEnvironmentInfo(osName)
         unstash "app${osName}"
 
-        executeTestCommand(osName)
-
-        if (options.testPerformance) {
-            stash includes: "${STAGE_NAME}.gtest.xml", name: "${options.testResultsName}"
-        }
+        executeTestCommand(osName, options.testPerformance)
     }
     catch (e)
     {
         println(e.toString());
         println(e.getMessage());
-        throw e
+        if (!options.testPerformance) {
+            throw e
+        }
     }
     finally {
         archiveArtifacts "*.log"
+        if (options.testPerformance) {
+            stash includes: "${STAGE_NAME}.gtest.xml, ${STAGE_NAME}.log", name: "${options.testResultsName}", allowEmpty: true
+        }
         junit "*.gtest.xml"
     }
 }
