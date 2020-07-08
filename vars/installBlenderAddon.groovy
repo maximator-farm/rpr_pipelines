@@ -170,6 +170,7 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                 {
                     timeout(time: "5", unit: 'MINUTES') {
                         sh """
+                            bash
                             echo "Disabling RPR Addon for Blender." >> ${options.stageName}.uninstall.log 2>&1
 
                             echo import bpy >> disableRPRAddon.py
@@ -279,6 +280,7 @@ def installBlenderAddon(String osName, String tool_version, Map options)
                 addon_name = "${options.commitSHA}_OSX"
             }
             sh """
+                bash
                 echo "Installing RPR Addon in Blender" >> ${options.stageName}.install.log
                 echo import bpy >> registerRPRinBlender.py
                 echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"' >> registerRPRinBlender.py
