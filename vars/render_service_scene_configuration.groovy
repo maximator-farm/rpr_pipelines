@@ -103,6 +103,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
 				println(e.getMessage())
 				println(e.getStackTrace())
 				print e
+				println(fail_reason)
 				throw e
 			}
 	}
@@ -166,7 +167,7 @@ def startConfiguration(osName, options) {
 
 	if (!successfullyDone) {
 		node("RenderService") {
-			// Send info that configuration process failed on all machines
+			render_service_send_render_status('Failure', options.id, options.django_url)
 		}
 		throw new Exception("Job was failed by all used nodes!")
 	} else {
@@ -206,6 +207,7 @@ def call(String id = '',
 	}
 
 	main([
+		id:id,
 		PRJ_NAME:PRJ_NAME,
 		PRJ_ROOT:PRJ_ROOT,
 		Tool:Tool,
