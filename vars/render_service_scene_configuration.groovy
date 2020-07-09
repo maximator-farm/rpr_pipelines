@@ -61,29 +61,19 @@ def executeConfiguration(osName, attemptNum, Map options) {
 				}
 
 				try {
-					switch(options.Action) {
-						case 'Read':
-							switch(tool) {
-								case 'Blender':
-									// copy necessary scripts for render and start read process
-									bat """
-										copy "render_service_scripts\\scene_scanning\\read_blender_configuration.py" "."
-										copy "render_service_scripts\\scene_scanning\\launch_blender.py" "."
-									"""
-									// Launch render
-									withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-										python3("launch_blender.py --tool \"2.83\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% ")
-									}
-									break;
+					switch(tool) {
+						case 'Blender':
+							// copy necessary scripts for render and start read process
+							bat """
+								copy "render_service_scripts\\scene_scanning\\read_blender_configuration.py" "."
+								copy "render_service_scripts\\scene_scanning\\write_blender_configuration.py" "."
+								copy "render_service_scripts\\scene_scanning\\launch_blender.py" "."
+							"""
+							// Launch render
+							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+								python3("launch_blender.py --tool \"2.83\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --action \"${options.Action}\" --options \"${options.Options}\" ")
 							}
-						case 'Write':
-							switch(tool) {
-								case 'Blender':
-									// copy necessary scripts for render and start write process
-									// TODO copy configuration scripts
-									// TODO call script
-									break;
-							}
+							break;
 					}
 
 				} catch(FlowInterruptedException e) {
@@ -181,13 +171,6 @@ def getNodesCount(labels) {
 
 	return nodesCount
 }
-
-@NonCPS
-def parseOptions(String Options) {
-	def jsonSlurper = new groovy.json.JsonSlurperClassic()
-
-	return jsonSlurper.parseText(Options)
-}
 	
 def call(String id = '',
 	String Tool = '',
@@ -201,10 +184,7 @@ def call(String id = '',
 	String PRJ_ROOT='RenderServiceSceneConfiguration'
 	String PRJ_NAME='RenderServiceSceneConfiguration' 
 
-	def OptionsMap
-	if (Options) {
-		OptionsMap = parseOptions(Options)
-	}
+	Options = Options.replace('\"', '\"\"')
 
 	main([
 		id:id,
@@ -215,6 +195,7 @@ def call(String id = '',
 		sceneName:sceneName,
 		sceneUser:sceneUser,
 		maxAttempts:maxAttempts,
-		Action:Action
+		Action:Action,
+		Options:Options
 		])
 	}
