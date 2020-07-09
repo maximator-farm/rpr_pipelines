@@ -1,3 +1,7 @@
+import UniverseClient
+import groovy.transform.Field
+
+@Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20Viewer")
 import groovy.json.JsonOutput;
 
 def getViewerTool(String osName, Map options)
@@ -96,32 +100,47 @@ def executeGenTestRefCommand(String osName, Map options)
     }
 }
 
-def executeTestCommand(String osName, Map options)
+def executeTestCommand(String osName, String asicName, Map options)
 {
-    switch(osName)
+    build_id = "none"
+    job_id = "none"
+    if (options.sendToUMS && universeClient.build != null){
+        build_id = universeClient.build["id"]
+        job_id = universeClient.build["job_id"]
+    }
+    withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
+        usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')])
     {
-    case 'Windows':
-        dir('scripts')
+        withEnv(["UMS_USE=${options.sendToUMS}", "UMS_BUILD_ID=${build_id}", "UMS_JOB_ID=${job_id}",
+            "UMS_URL=${universeClient.url}", "UMS_ENV_LABEL=${osName}-${asicName}", "IS_URL=${universeClient.is_url}",
+            "UMS_LOGIN=${UMS_USER}", "UMS_PASSWORD=${UMS_PASSWORD}", "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}"])
         {
-            bat """
-            run.bat ${options.testsPackage} \"${options.tests}\">> ../${options.stageName}.log  2>&1
-            """
-        }
-        break;
+            switch(osName)
+            {
+            case 'Windows':
+                dir('scripts')
+                {
+                    bat """
+                    run.bat ${options.testsPackage} \"${options.tests}\" >> ../${options.stageName}.log  2>&1
+                    """
+                }
+                break;
 
-    case 'OSX':
-        echo "OSX is not supported"
-        break;
+            case 'OSX':
+                echo "OSX is not supported"
+                break;
 
-    default:
-        dir('scripts')
-        {
-            withEnv(["LD_LIBRARY_PATH=../RprViewer/engines/hybrid:\$LD_LIBRARY_PATH"]) {
-                sh """
-                chmod +x ../RprViewer/RadeonProViewer
-                chmod +x run.sh
-                ./run.sh ${options.testsPackage} \"${options.tests}\">> ../${options.stageName}.log  2>&1
-                """
+            default:
+                dir('scripts')
+                {
+                    withEnv(["LD_LIBRARY_PATH=../RprViewer/engines/hybrid:\$LD_LIBRARY_PATH"]) {
+                        sh """
+                        chmod +x ../RprViewer/RadeonProViewer
+                        chmod +x run.sh
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" >> ../${options.stageName}.log  2>&1
+                        """
+                    }
+                }
             }
         }
     }
@@ -129,6 +148,9 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
+    if (options.sendToUMS){
+        universeClient.stage("Tests-${osName}-${asicName}", "begin")
+    }
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
@@ -138,9 +160,6 @@ def executeTests(String osName, String asicName, Map options)
             try {
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rprviewer.git')
-                if (options.sendToRBS) {
-                    options.rbs_prod.setTester(options)
-                }
                 getViewerTool(osName, options)
             } catch(e) {
                 println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
@@ -159,7 +178,7 @@ def executeTests(String osName, String asicName, Map options)
         outputEnvironmentInfo(osName)
 
         if(options['updateRefs']) {
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
         } else {
@@ -174,7 +193,7 @@ def executeTests(String osName, String asicName, Map options)
             {
                 println("Baseline doesn't exist.")
             }
-            executeTestCommand(osName, options)
+            executeTestCommand(osName, asicName, options)
         }
     } catch (e) {
         if (options.currentTry < options.nodeReallocateTries) {
@@ -201,6 +220,11 @@ def executeTests(String osName, String asicName, Map options)
                     {
                         options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
                         currentBuild.result = "FAILED"
+                    }
+
+                    if (options.sendToUMS)
+                    {
+                        universeClient.stage("Tests-${osName}-${asicName}", "end")
                     }
 
                     echo "Stashing test results to : ${options.testResultsName}"
@@ -301,6 +325,10 @@ def executeBuildLinux(Map options)
 
 def executeBuild(String osName, Map options)
 {
+    if (options.sendToUMS){
+        universeClient.stage("Build-" + osName , "begin")
+    }
+
     try {
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
         outputEnvironmentInfo(osName)
@@ -324,6 +352,9 @@ def executeBuild(String osName, Map options)
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
+    if (options.sendToUMS){
+        universeClient.stage("Build-" + osName, "end")
+    }
 }
 
 def executePreBuild(Map options)
@@ -341,7 +372,7 @@ def executePreBuild(Map options)
     if (env.CHANGE_URL) {
         echo "branch was detected as Pull Request"
         options['isPR'] = true
-        options.testsPackage = "PR" 
+        options.testsPackage = "PR"
     }
     else if(env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         options.testsPackage = "master"
@@ -364,10 +395,8 @@ def executePreBuild(Map options)
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '50']]]);
     }
 
-    // groupsRBS parameter saved for future
-    // TODO: check could it be removed
     def tests = []
-    options.groupsRBS = []
+    options.groupsUMS = []
 
     if(options.testsPackage != "none")
     {
@@ -379,7 +408,7 @@ def executePreBuild(Map options)
             {
                 def testsByJson = readJSON file: "jobs/${options.testsPackage}"
                 testsByJson.each() {
-                    options.groupsRBS << "${it.key}"
+                    options.groupsUMS << "${it.key}"
                 }
                 options.splitTestsExecution = false
             }
@@ -392,7 +421,7 @@ def executePreBuild(Map options)
                 }
                 options.tests = tests
                 options.testsPackage = "none"
-                options.groupsRBS = tests
+                options.groupsUMS = tests
             }
         }
     }
@@ -403,18 +432,37 @@ def executePreBuild(Map options)
             tests << "${it}"
         }
         options.tests = tests
-        options.groupsRBS = tests
+        options.groupsUMS = tests
     }
-
-    //println(options.groupsRBS)
 
     if(options.splitTestsExecution)
     {
         options.testsList = options.tests
     }
-    else {
+    else
+    {
         options.testsList = ['']
         options.tests = tests.join(" ")
+    }
+
+    if (options.sendToUMS)
+    {
+        try
+        {
+            // Universe : auth because now we in node
+            // If use httpRequest in master slave will catch 408 error
+            universeClient.tokenSetup()
+
+            println("Test groups:")
+            println(options.groupsUMS)
+
+            // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+            universeClient.createBuild(options.universePlatforms, options.groupsUMS)
+        }
+        catch (e)
+        {
+            println(e.toString())
+        }
     }
 }
 
@@ -530,6 +578,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
                          reportFiles: 'summary_report.html, performance_report.html, compare_report.html',
                          reportName: 'Test Report',
                          reportTitles: 'Summary Report, Performance Report, Compare Report'])
+
+            if (options.sendToUMS) {
+                try {
+                    String status = currentBuild.result ?: 'SUCCESSFUL'
+                    universeClient.changeStatus(status)
+                }
+                catch (e){
+                    println(e.getMessage())
+                }
+            }
         }
     }
     catch(e)
@@ -545,13 +603,21 @@ def call(String projectBranch = "",
          Boolean enableNotifications = true,
          String testsPackage = "",
          String tests = "",
-         Boolean splitTestsExecution = true) {
+         Boolean splitTestsExecution = true,
+         Boolean sendToUMS = true) {
 
     def nodeRetry = []
 
     String PRJ_ROOT='rpr-core'
     String PRJ_NAME='RadeonProViewer'
     String projectRepo='git@github.com:Radeon-Pro/RadeonProViewer.git'
+
+    def universePlatforms = convertPlatforms(platforms);
+
+    println "Platforms: ${platforms}"
+    println "Tests: ${tests}"
+    println "Tests package: ${testsPackage}"
+    println "UMS platforms: ${universePlatforms}"
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                            [projectBranch:projectBranch,
@@ -571,5 +637,7 @@ def call(String projectBranch = "",
                             TEST_TIMEOUT:40,
                             DEPLOY_TIMEOUT:45,
                             tests:tests,
-                            nodeRetry: nodeRetry])
+                            nodeRetry: nodeRetry,
+                            sendToUMS:sendToUMS,
+                            universePlatforms: universePlatforms])
 }
