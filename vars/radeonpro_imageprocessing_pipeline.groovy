@@ -74,7 +74,11 @@ def executeTests(String osName, String asicName, Map options)
     finally {
         archiveArtifacts "*.log"
         if (options.testPerformance) {
-            stash includes: "${STAGE_NAME}.gtest.xml, unittest/rif_performance_*.csv", name: "${options.testResultsName}", allowEmpty: true
+        	bat """
+        	move rif_performance_*.csv .
+            rename rif_performance_*.csv ${STAGE_NAME}.csv
+            """
+            stash includes: "${STAGE_NAME}.gtest.xml, ${STAGE_NAME}.csv", name: "${options.testResultsName}", allowEmpty: true
         }
         junit "*.gtest.xml"
     }
