@@ -74,8 +74,12 @@ def executeTests(String osName, String asicName, Map options)
     finally {
         archiveArtifacts "*.log"
         if (options.testPerformance) {
-        	bat """
-        	move rif_performance_*.csv .
+            dir('unittest') {
+                bat """
+                move rif_performance_*.csv ..
+                """
+            }
+            bat """
             rename rif_performance_*.csv ${STAGE_NAME}.csv
             """
             stash includes: "${STAGE_NAME}.gtest.xml, ${STAGE_NAME}.csv", name: "${options.testResultsName}", allowEmpty: true
@@ -317,7 +321,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
         }
 
-        dir ("rif-report") {
+        dir("rif-report") {
             checkOutBranchOrScm("master", "https://gitlab.cts.luxoft.com/inemankov/rif-report.git", true, false, true, "radeonprorender-gitlab", true)
 
             bat """
