@@ -73,15 +73,28 @@ def executeTests(String osName, String asicName, Map options)
     }
     finally {
         archiveArtifacts "*.log"
+
         if (options.testPerformance) {
-            dir('unittest') {
-                bat """
-                move rif_performance_*.csv ..
-                """
+
+            switch(osName) {
+                case 'Windows':
+                    bat """
+                    move unittest\\rif_performance_*.csv .
+                    rename rif_performance_*.csv ${STAGE_NAME}.csv
+                    """
+                    break;
+                case 'OSX':
+                    sh """
+                    mv unittest/rif_performance_*.csv ./${STAGE_NAME}.csv
+                    """
+                    break;
+                default:
+                    sh """
+                    mv unittest/rif_performance_*.csv ./${STAGE_NAME}.csv
+                    """
+                    break;
             }
-            bat """
-            rename rif_performance_*.csv ${STAGE_NAME}.csv
-            """
+
             stash includes: "${STAGE_NAME}.gtest.xml, ${STAGE_NAME}.csv", name: "${options.testResultsName}", allowEmpty: true
         }
         junit "*.gtest.xml"
