@@ -118,6 +118,12 @@ def main(Map options) {
 }
 
 def startConfiguration(osName, options) {
+	node("RenderService || Windows && Builder") {
+		stage("Send Build Number") {
+			render_service_send_build_number(currentBuild.number, options.id, options.django_url)
+		}
+	}
+	
 	def labels = "${osName} && RenderService"
 	def nodesCount = getNodesCount(labels)
 	boolean successfullyDone = false
