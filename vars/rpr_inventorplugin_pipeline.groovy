@@ -123,7 +123,7 @@ def executePreBuild(Map options) {
     println "Commit SHA: ${options.commitSHA}"
 
     if (options.incrementVersion) {
-        if (env.BRANCH_NAME == "master" && options.commitAuthor} != "radeonprorender") {
+        if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
             
             println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
             
