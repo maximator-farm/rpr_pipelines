@@ -26,11 +26,12 @@ def executeBuildWindows(Map options) {
                 """
             }
 
-            // copy thirdparty libraries in results directory
+            // copy thirdparty libraries and necessary files from repository in results directory
             bat """
                 xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\USD.NET.dll ..\\buildResults
                 xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\UsdCs.dll ..\\buildResults
                 xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\libusd_ms.dll ..\\buildResults
+                xcopy /y/i RadeonProRenderInventorPlugin\\Autodesk.UsdConvertor.Inventor.addin  ..\\buildResults
             """
         }
         
