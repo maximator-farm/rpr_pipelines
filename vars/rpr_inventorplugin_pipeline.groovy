@@ -14,36 +14,31 @@ def executeBuildWindows(Map options) {
 
             // copy build results in separate directory
             bat """
-                mkdir ..\\buildResults
+                mkdir buildResults
             """
-            if (options.buildPlatform != 'Any CPU') {
-                bat """
-                    xcopy /y/i "RadeonProRenderInventorPlugin\\bin\\${options.buildPlatform}\\${options.buildConfiguration}\\UsdConvertor.dll" ..\\buildResults
-                """
-            } else {
-                bat """
-                    xcopy /y/i "RadeonProRenderInventorPlugin\\bin\\${options.buildConfiguration}\\UsdConvertor.dll" ..\\buildResults
-                """
-            }
+
+            String buildPlatformPath = (options.buildPlatfrom == 'Any CPU') ? "" : options.buildPlatfrom
+            bat """
+                xcopy /y/i "RadeonProRenderInventorPlugin\\bin\\${buildPlatformPath}\\${options.buildConfiguration}\\UsdConvertor.dll" buildResults
+            """
 
             // copy thirdparty libraries and necessary files from repository in results directory
             bat """
-                xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\USD.NET.dll ..\\buildResults
-                xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\UsdCs.dll ..\\buildResults
-                xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\libusd_ms.dll ..\\buildResults
-                xcopy /y/i RadeonProRenderInventorPlugin\\Autodesk.UsdConvertor.Inventor.addin  ..\\buildResults
+                xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\USD.NET.dll buildResults
+                xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\UsdCs.dll buildResults
+                xcopy /y/i RadeonProRenderInventorPlugin\\ThirdParty\\usd-unity-sdk\\libusd_ms.dll buildResults
+                xcopy /y/i RadeonProRenderInventorPlugin\\Autodesk.UsdConvertor.Inventor.addin  buildResults
             """
+
+            zip archive: true, dir: "buildResults", glob: '', zipFile: "Windows_${buildName}.zip"
+            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/Windows_${buildName}.zip">[BUILD: ${BUILD_ID}] Windows_${buildName}.zip</a></h3>"""
+
+            bat """
+                rename Windows_${buildName}.zip PluginWindows.zip
+            """
+            stash includes: "PluginWindows.zip", name: 'appWindows'
+            options.pluginWinSha = sha1 "PluginWindows.zip"
         }
-        
-        zip archive: true, dir: "buildResults", glob: '', zipFile: "Windows_${buildName}.zip"
-        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/Windows_${buildName}.zip">[BUILD: ${BUILD_ID}] Windows_${buildName}.zip</a></h3>"""
-
-        bat """
-            rename Windows_${buildName}.zip PluginWindows.zip
-        """
-        stash includes: "PluginWindows.zip", name: 'appWindows'
-        options.pluginWinSha = sha1 "PluginWindows.zip"
-
     } catch (FlowInterruptedException error) {
         println "[INFO] Job was aborted during build stage"
         throw error
@@ -58,9 +53,8 @@ def executeBuildWindows(Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
-        cleanWS(osName)
         dir('RadeonProRenderInventorPlugin') {
-            checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
+            checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
         }
         
         switch(osName)
@@ -83,7 +77,6 @@ def executeBuild(String osName, Map options) {
 def executePreBuild(Map options) {
     // manual job
     if (options.forceBuild) {
-        env.BRANCH_NAME = options['projectBranch']
         options.executeBuild = true
         // TODO add tests stage initialization
         //options.executeTests = true
@@ -99,19 +92,19 @@ def executePreBuild(Map options) {
             // TODO add tests stage initialization
             //options.testsPackage = "PR"
         }
-        else if("${env.BRANCH_NAME}" == "master")
+        else if("${options.projectBranch}" == "master")
         {
            println "[INFO] master branch was detected"
             // TODO add tests stage initialization
            //options.testsPackage = "master"
         } else {
-            println "[INFO] ${env.BRANCH_NAME} branch was detected"
+            println "[INFO] ${options.projectBranch} branch was detected"
             // TODO add tests stage initialization
             //options.testsPackage = "smoke"
         }
     }
 
-    checkOutBranchOrScm(env.BRANCH_NAME, 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
+    checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
@@ -124,7 +117,7 @@ def executePreBuild(Map options) {
     println "Commit SHA: ${options.commitSHA}"
 
     if (options.incrementVersion) {
-        if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
+        if (options.projectBranch == "master" && options.commitAuthor != "radeonprorender") {
             
             println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
             
@@ -140,7 +133,7 @@ def executePreBuild(Map options) {
             bat """
                 git add RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest
                 git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                git push origin HEAD:${env.BRANCH_NAME}
+                git push origin HEAD:${options.projectBranch}
             """
 
             //get commit's sha which have to be build
@@ -148,7 +141,7 @@ def executePreBuild(Map options) {
         } 
     }
 
-    currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+    currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
     currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
     currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
