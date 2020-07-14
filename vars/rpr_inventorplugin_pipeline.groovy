@@ -1,13 +1,14 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 def executeBuildWindows(Map options) {
-    String buildName = "${options.buildConfiguration}_${options.buildPlatform.replace(' ', '')}"
+    String buildName = "${options.buildConfiguration}_${options.buildPlatform.replace(' ', '')}_${options.pluginVersion}"
+    String msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
 
     try {
         dir ("RadeonProRenderInventorPlugin") {
             // build plugin
             bat """
-                set msbuild="${options.msBuildPath}"
+                set msbuild="${msBuildPath}"
                 %msbuild% RadeonProRenderInventorPlugin.sln /target:build /maxcpucount /property:Configuration="${options.buildConfiguration}";Platform="${options.buildPlatform}" >> "..\\${STAGE_NAME}_${buildName}.log" 2>&1
             """
 
@@ -109,51 +110,48 @@ def executePreBuild(Map options) {
         }
     }
 
-    if(!env.CHANGE_URL){
+    checkOutBranchOrScm(env.BRANCH_NAME, 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
 
-        checkOutBranchOrScm(env.BRANCH_NAME, 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
+    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+    options.commitSHA = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()      
+    // TODO get plugin version
+    options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="')
 
-        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
-        options.commitSHA = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()      
-        // TODO get plugin version
-        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="')
+    println "The last commit was written by ${options.commitAuthor}."
+    println "Commit message: ${options.commitMessage}"
+    println "Commit SHA: ${options.commitSHA}"
 
-        println "The last commit was written by ${options.commitAuthor}."
-        println "Commit message: ${options.commitMessage}"
-        println "Commit SHA: ${options.commitSHA}"
+    if (options.incrementVersion) {
+        if (env.BRANCH_NAME == "master" && options.commitAuthor} != "radeonprorender") {
+            
+            println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+            
+            println "[INFO] Current build version: ${options.pluginVersion}"
+            
+            options.pluginVersion = version_inc(options.pluginVersion, 4)
+            println "[INFO] New build version: ${options.pluginVersion}"
 
-        if (options.incrementVersion) {
-            if ("${options.commitAuthor}" != "radeonprorender") {
-                
-                println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
-                
-                println "[INFO] Current build version: ${options.pluginVersion}"
-                
-                options.pluginVersion = version_inc(options.pluginVersion, 4)
-                println "[INFO] New build version: ${options.pluginVersion}"
+            version_write("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="', options.pluginVersion)
+            options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="')
+            println "[INFO] Updated build version: ${options.pluginVersion}"
 
-                version_write("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="', options.pluginVersion)
-                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="')
-                println "[INFO] Updated build version: ${options.pluginVersion}"
+            bat """
+                git add RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest
+                git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                git push origin HEAD:${env.BRANCH_NAME}
+            """
 
-                bat """
-                    git add RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest
-                    git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                    git push origin HEAD:${env.BRANCH_NAME}
-                """
-
-                //get commit's sha which have to be build
-                options.projectBranch = bat (script: "git log --format=%%H -1", returnStdout: true).split('\r\n')[2].trim()
-            } 
-        }
-
-        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
-        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+            //get commit's sha which have to be build
+            options.projectBranch = bat (script: "git log --format=%%H -1", returnStdout: true).split('\r\n')[2].trim()
+        } 
     }
+
+    currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+    currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
     if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
@@ -199,8 +197,6 @@ def call(String projectBranch = "",
             }
         }
 
-        String msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
-
         // TODO impelemnt Test and Deploy stages
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                                [projectBranch:projectBranch,
@@ -212,7 +208,6 @@ def call(String projectBranch = "",
                                 buildPlatform:buildPlatform,
                                 gpusCount:gpusCount,
                                 BUILDER_TAG:"BuilderInv",
-                                msBuildPath: msBuildPath,
                                 ])
     } catch(e) {
         currentBuild.result = "FAILED"
