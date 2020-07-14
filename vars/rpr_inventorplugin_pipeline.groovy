@@ -9,7 +9,7 @@ def executeBuildWindows(Map options) {
             // build plugin
             bat """
                 set msbuild="${msBuildPath}"
-                %msbuild% RadeonProRenderInventorPlugin.sln /target:build /maxcpucount /property:Configuration="${options.buildConfiguration}";Platform="${options.buildPlatform}" >> "..\\${STAGE_NAME}_${buildName}.log" 2>&1
+                %msbuild% RadeonProRenderInventorPlugin.sln /target:build /maxcpucount /property:Configuration="${options.buildConfiguration}";Platform="${options.buildPlatform}" >> "${STAGE_NAME}_${buildName}.log" 2>&1
             """
 
             // copy build results in separate directory
@@ -69,7 +69,9 @@ def executeBuild(String osName, Map options) {
         currentBuild.result = "FAILED"
         throw e
     } finally {
-        archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+        dir ('RadeonProRenderInventorPlugin') {
+            archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+        }
     }
 }
 
