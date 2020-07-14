@@ -499,17 +499,24 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-                Boolean isRegression = options.testsPackage.endsWith('.json')
+                String executionType
+                if (options.testsPackage.endsWith('.json')) {
+                    executionType = 'regression'
+                } else if (options.splitTestsExecution) {
+                    executionType = 'split_execution'
+                } else {
+                    executionType = 'default'
+                }
 
-                //dir("jobs_launcher") {
-                //    bat """
-                //    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${isRegression}
-                //    """
-                //}
-                
+                dir("jobs_launcher") {
+                    bat """
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${executionType} \"${options.tests}\"
+                    """
+                }
             } catch (e) {
                 println("[ERROR] Can't generate number of lost tests")
             }
+            
             String branchName = env.BRANCH_NAME ?: options.projectBranch
 
             try {
