@@ -17,7 +17,7 @@ def executeBuildWindows(Map options) {
                 mkdir buildResults
             """
 
-            String buildPlatformPath = (options.buildPlatfrom == 'Any CPU') ? "" : options.buildPlatfrom
+            String buildPlatformPath = (options.buildPlatform == 'Any CPU') ? "" : options.buildPlatform
             bat """
                 xcopy /y/i "RadeonProRenderInventorPlugin\\bin\\${buildPlatformPath}\\${options.buildConfiguration}\\UsdConvertor.dll" buildResults
             """
