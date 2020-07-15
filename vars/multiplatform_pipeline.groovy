@@ -140,7 +140,13 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
                     }
                 }
             }
-            executeTestsNode(osName, gpuNames, executeTests, options)
+            if (options.containsKey('tests') && options.containsKey('testsPackage')){
+                if (options['testsPackage'] != 'none' || options['tests'].size() == 0 || !(options['tests'].size() == 1 && options['tests'].get(0).length() == 0)){ // BUG: can throw exception if options['tests'] is string with length 1
+                    executeTestsNode(osName, gpuNames, executeTests, options)
+                }
+            } else {
+                executeTestsNode(osName, gpuNames, executeTests, options)
+            }
         }
         catch (e)
         {
@@ -268,7 +274,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 }
                 parallel tasks
             }
-            catch (e) 
+            catch (e)
             {
                 println(e.toString());
                 println(e.getMessage());
@@ -300,7 +306,13 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                 {
                                     if(executeDeploy && options['executeTests'])
                                     {
-                                        executeDeploy(options, platformList, testResultList)
+                                        if (options.containsKey('tests') && options.containsKey('testsPackage')){
+                                            if (options['testsPackage'] != 'none' || options['tests'].size() == 0 || !(options['tests'].size() == 1 && options['tests'].get(0).length() == 0)){
+                                                executeDeploy(options, platformList, testResultList)
+                                            }
+                                        } else {
+                                            executeDeploy(options, platformList, testResultList)
+                                        }
                                     }
                                 }
                                 catch (e) {
