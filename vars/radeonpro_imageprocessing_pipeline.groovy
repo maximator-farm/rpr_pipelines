@@ -301,7 +301,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII;Ubuntu18:NVIDIA_GTX980;OSX:AMD_RXVEGA;CentOS7;Ubuntu18-Clang',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT;Ubuntu18:NVIDIA_GTX980;OSX:AMD_RXVEGA;CentOS7;Ubuntu18-Clang',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = '') {
@@ -317,7 +317,7 @@ def call(String projectBranch = "",
                             enableNotifications:enableNotifications,
                             BUILDER_TAG:'BuilderS',
                             TESTER_TAG:'RIF',
-                            BUILD_TIMEOUT:'15',
+                            BUILD_TIMEOUT:'30',
                             TEST_TIMEOUT:'30',
                             executeBuild:true,
                             executeTests:true,
