@@ -94,13 +94,13 @@ def executePreBuild(Map options) {
             // TODO add tests stage initialization
             //options.testsPackage = "PR"
         }
-        else if("${options.projectBranch}" == "master")
+        else if("${env.BRANCH_NAME}" == "master")
         {
            println "[INFO] master branch was detected"
             // TODO add tests stage initialization
            //options.testsPackage = "master"
         } else {
-            println "[INFO] ${options.projectBranch} branch was detected"
+            println "[INFO] ${env.BRANCH_NAME} branch was detected"
             // TODO add tests stage initialization
             //options.testsPackage = "smoke"
         }
@@ -119,7 +119,7 @@ def executePreBuild(Map options) {
     println "Commit SHA: ${options.commitSHA}"
 
     if (options.incrementVersion) {
-        if (options.projectBranch == "master" && options.commitAuthor != "radeonprorender") {
+        if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
             
             println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
             
@@ -135,7 +135,7 @@ def executePreBuild(Map options) {
             bat """
                 git add RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest
                 git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                git push origin HEAD:${options.projectBranch}
+                git push origin HEAD:master
             """
 
             //get commit's sha which have to be build
@@ -143,7 +143,11 @@ def executePreBuild(Map options) {
         } 
     }
 
-    currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+    if (options.projectBranch){
+        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+    } else {
+        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+    }
     currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
     currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
