@@ -112,7 +112,7 @@ def main(Map options) {
 		options['PRJ_PATH']="${PRJ_PATH}"
 		options['JOB_PATH']="${JOB_PATH}"
 
-		options['django_url'] = "http://172.26.157.251:82/project/jenkins/"
+		options['django_url'] = "https://render.cis.luxoft.com/project/jenkins/"
 		options['scripts_branch'] = "master"
 
 		String osName = 'Windows'
