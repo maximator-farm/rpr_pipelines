@@ -40,10 +40,11 @@ def executeConvert(osName, gpuName, attemptNum, Map options) {
 				// download scene, check if it is already downloaded
 				try {
 					// initialize directory RenderServiceStorage
+					render_service_send_render_status("Downloading scene", options.id, options.django_url)
 					bat """
 						if not exist "..\\..\\RenderServiceStorage" mkdir "..\\..\\RenderServiceStorage"
 					"""
-					render_service_send_render_status("Downloading scene", options.id, options.django_url)
+					render_service_clear_scenes(osName)
 					Boolean sceneExists = fileExists "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}"
 					if (sceneExists) {
 						print("[INFO] Scene is copying from Render Service Storage on this PC")

@@ -39,6 +39,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
 					bat """
 						if not exist "..\\..\\RenderServiceStorage" mkdir "..\\..\\RenderServiceStorage"
 					"""
+					render_service_clear_scenes(osName)
 					Boolean sceneExists = fileExists "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}"
 					if (sceneExists) {
 						print("[INFO] Scene is copying from Render Service Storage on this PC")
