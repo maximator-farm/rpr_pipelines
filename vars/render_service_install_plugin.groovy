@@ -11,52 +11,47 @@ def call(String pluginLink, String pluginHash, String tool, String version, Stri
 			break;
 
 		default:
-			sceneExists = fileExists "${CIS_TOOLS}/../PluginsBinaries/${pluginHash}_Windows.msi"
+			sceneExists = fileExists "${CIS_TOOLS}/../PluginsBinaries/${pluginHash}.msi"
 			break;
 	}
 
 	Map installationOptions = [
-		'isPreBuilt': true,
 		'stageName': 'RenderServiceRender',
-		'customBuildLinkWindows': pluginLink
+		'customBuildLinkWindows': pluginLink,
 	]
 
+	switch(toolName) {
+		case 'Blender':
+			installationOptions['commitSHA'] = pluginHash
+			break;
+
+		default:
+			installationOptions['productCode'] = pluginHash
+			break;
+	}
+
 	if (sceneExists) {
-		switch(toolName) {
-			case 'Blender':
-				bat """
-					move "${CIS_TOOLS}\\..\\PluginsBinaries\\${pluginHash}_Windows.zip" ${pluginHash}_Windows.zip
-				"""
-				break;
-
-			default:
-				bat """
-					move "${CIS_TOOLS}\\..\\PluginsBinaries\\${pluginHash}_Windows.msi" ${pluginHash}_Windows.msi
-				"""
-				break;
-		}
-
-		installationOptions['pluginWinSha'] = pluginHash
+		println("[INFO] Plugin with hash ${pluginHash} was found in Plugin Storage")
 	} else {
+		println("[INFO] Plugin with hash ${pluginHash} wasn't found in Plugin Storage. Downloading it.")
 		try {
 			render_service_send_render_status("Downloading plugin", id, django_url)
 			clearBinariesWin()
 
 			downloadPlugin('Windows', toolName, installationOptions, 'renderServiceCredentials')
-			String win_addon_name = installationOptions.pluginWinSha
 
 			switch(toolName) {
 				case 'Blender':
 					bat """
 						IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-						move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.zip"
+						move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${pluginHash}_Windows.zip"
 					"""
 					break;
 
 				default:
 					bat """
 						IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-						move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.msi"
+						move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${pluginHash}.msi"
 					"""
 					break;
 			}

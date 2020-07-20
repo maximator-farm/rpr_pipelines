@@ -46,11 +46,12 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 					render_service_send_render_status("Downloading scene", options.id, options.django_url)
 					Boolean sceneExists = fileExists "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}"
 					if (sceneExists) {
-						print("Scene is copying from Render Service Storage on this PC")
+						print("[INFO] Scene is copying from Render Service Storage on this PC")
 						bat """
 							copy "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}" "${scene_name}"
 						"""
 					} else {
+						print("[INFO] Scene wasn't found in Render Service Storage on this PC. Downloading it.")
 						withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 							bat """
 								curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.Scene}"
