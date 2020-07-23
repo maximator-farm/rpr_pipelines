@@ -335,7 +335,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
         }
 
         dir("rif-report") {
-            checkOutBranchOrScm("master", "https://gitlab.cts.luxoft.com/inemankov/rif-report.git", true, false, true, "radeonprorender-gitlab", true)
+            checkOutBranchOrScm("master", "git@github.com:luxteam/rif_report.git")
 
             bat """
             set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
