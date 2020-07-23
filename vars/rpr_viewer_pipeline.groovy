@@ -613,7 +613,8 @@ def call(String projectBranch = "",
          String testsPackage = "",
          String tests = "",
          Boolean splitTestsExecution = true,
-         Boolean sendToUMS = true) {
+         Boolean sendToUMS = true,
+         String tester_tag = 'RprViewer') {
 
     def nodeRetry = []
 
@@ -637,7 +638,7 @@ def call(String projectBranch = "",
                             PRJ_ROOT:PRJ_ROOT,
                             projectRepo:projectRepo,
                             BUILDER_TAG:'BuilderViewer',
-                            TESTER_TAG:'RprViewer',
+                            TESTER_TAG:tester_tag,
                             executeBuild:true,
                             executeTests:true,
                             splitTestsExecution:splitTestsExecution,

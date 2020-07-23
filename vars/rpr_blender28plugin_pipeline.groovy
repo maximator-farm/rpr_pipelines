@@ -886,7 +886,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
     String customBuildLinkOSX = "",
-    String engine = "1.0")
+    String engine = "1.0",
+    String tester_tag = "Blender2.8")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -980,7 +981,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:90,
                                 DEPLOY_TIMEOUT:150,
-                                TESTER_TAG:"Blender2.8",
+                                TESTER_TAG:tester_tag,
                                 BUILDER_TAG:"BuildBlender2.8",
                                 universePlatforms: universePlatforms,
                                 resX: resX,

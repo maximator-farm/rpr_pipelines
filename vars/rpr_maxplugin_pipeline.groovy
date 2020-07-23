@@ -681,7 +681,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String SPU = '25',
         String iter = '50',
         String theshold = '0.05',
-        String customBuildLinkWindows = "")
+        String customBuildLinkWindows = "",
+        String tester_tag = 'Max')
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -765,7 +766,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 sendToUMS: sendToUMS,
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:180,
-                                TESTER_TAG:'Max',
+                                TESTER_TAG:tester_tag,
                                 universePlatforms: universePlatforms,
                                 resX: resX,
                                 resY: resY,
