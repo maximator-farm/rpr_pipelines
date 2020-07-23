@@ -5,6 +5,7 @@ import java.nio.channels.ClosedChannelException;
 import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
@@ -81,7 +82,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             }
                                             options['nodeRetry'].each{ retry ->
                                                 if (retry['Testers'].equals(nodesList)){
-                                                    retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()])
+                                                    retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))])
                                                     added = true
                                                 }
                                             }
