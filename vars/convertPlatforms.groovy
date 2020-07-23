@@ -11,12 +11,15 @@ def call(String platforms) {
     for (String item : byOS) {
         String[] osPlusGPUs;
         osPlusGPUs = item.split(':');
-        os = osPlusGPUs[0]
-        String[] gpus;
-        gpus = osPlusGPUs[1].split(',')
+        if (osPlusGPUs.size() > 1)
+        {
+            os = osPlusGPUs[0]
+            String[] gpus;
+            gpus = osPlusGPUs[1].split(',')
 
-        for (String gpu: gpus) {
-            collectedLabels.add(os + '-' + gpu)
+            for (String gpu: gpus) {
+                collectedLabels.add(os + '-' + gpu)
+            }
         }
     }
     return collectedLabels;   
