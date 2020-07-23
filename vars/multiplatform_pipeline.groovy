@@ -26,7 +26,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                         def testerTag = options.TESTER_TAG
                         if (options.TESTER_TAG.indexOf(' ') < 0){
-                            def testerTag = options.TESTER_TAG ? "${options.TESTER_TAG} && Tester" : "Tester"
+                            testerTag = options.TESTER_TAG ? "${options.TESTER_TAG} && Tester" : "Tester"
                         }
                         // reallocate node for each test
                         def nodeLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
