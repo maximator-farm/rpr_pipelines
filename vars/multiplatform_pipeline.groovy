@@ -24,7 +24,11 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                     options.testsList.each() { testName ->
                         println("Scheduling ${osName}:${asicName} ${testName}")
 
-                        def testerTag = options.TESTER_TAG ? "${options.TESTER_TAG} && Tester" : "Tester"
+                        if options.TESTER_TAG.indexOf(' ') > -1{
+                            def testerTag = options.TESTER_TAG
+                        } else{
+                            def testerTag = options.TESTER_TAG ? "${options.TESTER_TAG} && Tester" : "Tester"
+                        }
                         // reallocate node for each test
                         def nodeLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
                         def nodesList = nodesByLabel label: nodeLabels, offline: false
