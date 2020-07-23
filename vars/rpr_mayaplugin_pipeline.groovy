@@ -856,7 +856,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             }
         }
 
-         def universePlatforms = convertPlatforms(platforms);
+        def universePlatforms = convertPlatforms(platforms);
 
         println "Platforms: ${platforms}"
         println "Tests: ${tests}"
@@ -902,7 +902,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     }
     catch(e) {
         currentBuild.result = "FAILED"
-        if (options.sendToUMS){
+        if (sendToUMS){
             universeClient.changeStatus(currentBuild.result)
         }
         println(e.toString());

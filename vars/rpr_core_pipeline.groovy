@@ -652,7 +652,7 @@ def call(String projectBranch = "",
     }
     catch(e) {
         currentBuild.result = "FAILED"
-        if (options.sendToUMS){
+        if (sendToUMS){
             universeClient.changeStatus(currentBuild.result)
         }
         println(e.toString());

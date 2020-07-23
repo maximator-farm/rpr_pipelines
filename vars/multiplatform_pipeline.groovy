@@ -251,30 +251,32 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
                 platforms.split(';').each()
                 {
-                    List tokens = it.tokenize(':')
-                    String osName = tokens.get(0)
-                    String gpuNames = ""
-                    if (tokens.size() > 1)
-                    {
-                        gpuNames = tokens.get(1)
-                    }
-
-                    platformList << osName
-                    if(gpuNames)
-                    {
-                        gpuNames.split(',').each()
+                    if (it) {
+                        List tokens = it.tokenize(':')
+                        String osName = tokens.get(0)
+                        String gpuNames = ""
+                        if (tokens.size() > 1)
                         {
-                            // if not split - testsList doesn't exists
-                            options.testsList = options.testsList ?: ['']
-                            options['testsList'].each() { testName ->
-                                String asicName = it
-                                String testResultItem = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
-                                testResultList << testResultItem
+                            gpuNames = tokens.get(1)
+                        }
+
+                        platformList << osName
+                        if(gpuNames)
+                        {
+                            gpuNames.split(',').each()
+                            {
+                                // if not split - testsList doesn't exists
+                                options.testsList = options.testsList ?: ['']
+                                options['testsList'].each() { testName ->
+                                    String asicName = it
+                                    String testResultItem = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
+                                    testResultList << testResultItem
+                                }
                             }
                         }
-                    }
 
-                    tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
+                        tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
+                    }
                 }
                 parallel tasks
             }

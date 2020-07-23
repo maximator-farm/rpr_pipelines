@@ -998,7 +998,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     catch(e)
     {
         currentBuild.result = "FAILED"
-        if (options.sendToUMS){
+        if (sendToUMS){
             universeClient.changeStatus(currentBuild.result)
         }
         failureMessage = "INIT FAILED"
