@@ -296,33 +296,75 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
             }
             finally
             {
-                node("Windows && ReportBuilder")
+                Boolean executeDeployStage = true
+                if (options['executeTests']) {
+                    if (options.containsKey('tests') && options.containsKey('testsPackage')){
+                        if (options['testsPackage'] == 'none' && options['tests'].size() == 1 && options['tests'].get(0).length() == 0){
+                            executeDeployStage = false
+                        }
+                    }
+                } else {
+                    executeDeployStage = false
+                }
+                if(executeDeployStage && options['executeTests'])
                 {
                     stage("Deploy")
                     {
-                        timeout(time: "${options.DEPLOY_TIMEOUT}", unit: 'MINUTES')
-                        {
-                            ws("WS/${options.PRJ_NAME}_Deploy") {
+                        def reportBuilderLabels = "Windows && ReportBuilder"
+                        def reportBuildersList = nodesByLabel label: reportBuilderLabels, offline: false
+                        println "Found the following PCs for deploy report: ${reportBuildersList}"
+                        def nodesCount = reportBuildersList.size()
+                        deployTries = nodesCount + 1
+                        boolean successCurrentNode = false
 
-                                try
+                        for (int i = 0; i < deployTries; i++)
+                        {
+                            node(reportBuilderLabels)
+                            {
+                                timeout(time: "${options.DEPLOY_TIMEOUT}", unit: 'MINUTES')
                                 {
-                                    if(executeDeploy && options['executeTests'])
-                                    {
-                                        if (options.containsKey('tests') && options.containsKey('testsPackage')){
-                                            if (options['testsPackage'] != 'none' || options['tests'].size() == 0 || !(options['tests'].size() == 1 && options['tests'].get(0).length() == 0)){
-                                                executeDeploy(options, platformList, testResultList)
-                                            }
-                                        } else {
+                                    ws("WS/${options.PRJ_NAME}_Deploy") {
+                                        try
+                                        {
                                             executeDeploy(options, platformList, testResultList)
+                                            i = deployTries + 1
+                                            successCurrentNode = true
+                                        }
+                                        catch (e) {
+                                            println "[ERROR] Failed during tests on ${env.NODE_NAME} node"
+                                            println "Exception: ${e.toString()}"
+                                            println "Exception message: ${e.getMessage()}"
+                                            println "Exception cause: ${e.getCause()}"
+                                            println "Exception stack trace: ${e.getStackTrace()}"
+
+                                            String exceptionClassName = e.getClass().toString()
+                                            if (exceptionClassName.contains("FlowInterruptedException")) {
+                                                e.getCauses().each(){
+                                                    // UserInterruption aborting by user
+                                                    // ExceededTimeout aborting by timeout
+                                                    // CancelledCause for aborting by new commit
+                                                    String causeClassName = it.getClass().toString()
+                                                    println "Interruption cause: ${causeClassName}"
+                                                    if (causeClassName.contains("CancelledCause")) {
+                                                        println "GOT NEW COMMIT"
+                                                        throw e
+                                                    }
+                                                }
+                                            }
+
+                                            // change PC after first failed tries and don't change in the last try
+                                            if (i < nodesCount - 1 && nodesCount != 1) {
+                                                println "[INFO] Updating label after failure deploy. Adding !${env.NODE_NAME} to labels list."
+                                                reportBuilderLabels += " && !${env.NODE_NAME}"
+                                            }
                                         }
                                     }
                                 }
-                                catch (e) {
-                                    println(e.toString());
-                                    println(e.getMessage());
-                                    throw e
-                                }
                             }
+                        }
+                        if (!successCurrentNode) {
+                            currentBuild.result = "FAILED"
+                            println "[ERROR] All report builders failed."
                         }
                     }
                 }
