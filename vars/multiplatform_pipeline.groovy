@@ -306,7 +306,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 } else {
                     executeDeployStage = false
                 }
-                if(executeDeployStage && options['executeTests'])
+                if(executeDeploy && executeDeployStage)
                 {
                     stage("Deploy")
                     {
