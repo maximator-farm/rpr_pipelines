@@ -314,7 +314,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                         def reportBuildersList = nodesByLabel label: reportBuilderLabels, offline: false
                         println "Found the following PCs for deploy report: ${reportBuildersList}"
                         def nodesCount = reportBuildersList.size()
-                        deployTries = nodesCount + 1
+                        deployTries = nodesCount
                         boolean successCurrentNode = false
 
                         for (int i = 0; i < deployTries; i++)
@@ -352,8 +352,8 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                                 }
                                             }
 
-                                            // change PC after first failed tries and don't change in the last try
-                                            if (i < nodesCount - 1 && nodesCount != 1) {
+                                            // change PC after failed tries
+                                            if (i < nodesCount) {
                                                 println "[INFO] Updating label after failure deploy. Adding !${env.NODE_NAME} to labels list."
                                                 reportBuilderLabels += " && !${env.NODE_NAME}"
                                             }
