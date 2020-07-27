@@ -112,9 +112,6 @@ def main(Map options) {
 		options['PRJ_PATH']="${PRJ_PATH}"
 		options['JOB_PATH']="${JOB_PATH}"
 
-		options['django_url'] = "https://render.cis.luxoft.com/project/jenkins/"
-		options['scripts_branch'] = "master"
-
 		String osName = 'Windows'
 		
 		startConfiguration(osName, options)
@@ -191,7 +188,9 @@ def call(String id = '',
 	String sceneUser = '',
 	String maxAttempts = '',
 	String Action = '',
-	String Options = ''
+	String Options = '',
+	String djangoUrl = '',
+	String scriptsBranch = ''
 	) {
 	String PRJ_ROOT='RenderServiceSceneConfiguration'
 	String PRJ_NAME='RenderServiceSceneConfiguration' 
@@ -209,6 +208,8 @@ def call(String id = '',
 		sceneUser:sceneUser,
 		maxAttempts:maxAttempts,
 		Action:Action,
-		Options:Options
+		Options:Options,
+		django_url:djangoUrl,
+		scripts_branch:scriptsBranch
 		])
 	}

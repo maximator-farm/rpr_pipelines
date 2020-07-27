@@ -120,18 +120,6 @@ def main(String platforms, Map options) {
 		options['PRJ_PATH']="${PRJ_PATH}"
 		options['JOB_PATH']="${JOB_PATH}"
 
-		boolean PRODUCTION = true
-
-		if (PRODUCTION) {
-			options['django_url'] = "https://render.cis.luxoft.com/viewer/jenkins/"
-			options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
-			options['scripts_branch'] = "master"
-		} else {
-			options['django_url'] = "https://testrender.cis.luxoft.com/viewer/jenkins/"
-			options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
-			options['scripts_branch'] = "develop"
-		}
-
 		List tokens = platforms.tokenize(':')
 		String osName = tokens.get(0)
 		String deviceName = tokens.get(1)
@@ -234,7 +222,9 @@ def call(
 	String iterations = '',
 	String scene_name = '',
 	String max_attempts = '',
-	String timeout
+	String timeout,
+	String djangoUrl = '',
+	String scriptsBranch = ''
 	) {
 	String PRJ_ROOT='RenderServiceViewerJob'
 	String PRJ_NAME='RenderServiceViewerJob'  
@@ -256,7 +246,9 @@ def call(
 		iterations:iterations,
 		scene_name:scene_name,
 		max_attempts:max_attempts,
-		timeout:timeout
+		timeout:timeout,
+		django_url:djangoUrl,
+		scripts_branch:scriptsBranch
 		])
 	}
 
