@@ -54,6 +54,9 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                         if (causeClassName.contains("CancelledCause")) {
                                             println "GOT NEW COMMIT"
                                             throw e
+                                        } else if (causeClassName.contains("UserInterruption")) {
+                                            println "[INFO] Build was aborted by user"
+                                            throw e
                                         }
                                     }
                                 }
@@ -126,6 +129,9 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
                                     println "Interruption cause: ${causeClassName}"
                                     if (causeClassName.contains("CancelledCause")) {
                                         println "GOT NEW COMMIT"
+                                        throw e
+                                    } else if (causeClassName.contains("UserInterruption")) {
+                                        println "[INFO] Build was aborted by user"
                                         throw e
                                     }
                                 }
@@ -331,6 +337,9 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                         println "Interruption cause: ${causeClassName}"
                                         if (causeClassName.contains("CancelledCause")) {
                                             println "GOT NEW COMMIT"
+                                            throw e
+                                        } else if (causeClassName.contains("UserInterruption")) {
+                                            println "[INFO] Build was aborted by user"
                                             throw e
                                         }
                                     }
