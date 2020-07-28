@@ -28,30 +28,37 @@ def executeConfiguration(osName, attemptNum, Map options) {
 					throw e
 				}
 
+				// download and install plugin
+				if (options["PluginLink"]) {
+					render_service_install_plugin(options["PluginLink"], options["pluginHash"], tool, "2.83", options.id, options.django_url)
+				}
+
 				// download scene, check if it is already downloaded
 				try {
 					// initialize directory RenderServiceStorage
 					bat """
 						if not exist "..\\..\\RenderServiceStorage" mkdir "..\\..\\RenderServiceStorage"
 					"""
-					def exists = fileExists "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}"
-					if (exists) {
-						print("Scene is copying from Render Service Storage on this PC")
+					render_service_clear_scenes(osName)
+					Boolean sceneExists = fileExists "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}"
+					if (sceneExists) {
+						print("[INFO] Scene is copying from Render Service Storage on this PC")
 						bat """
-							copy "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}" "${scene_name}"
+							copy "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}" "${scene_name}"
 						"""
 					} else {
+						print("[INFO] Scene wasn't found in Render Service Storage on this PC. Downloading it.")
 						withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 							bat """
 								curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.Scene}"
 							"""
 						}
-						
-						bat """
-							if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
-							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}"
-							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${scene_name}"
-						"""
+						if (options['Action'] == 'Read') {
+							bat """
+								if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
+								copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}"
+							"""
+						}
 					}
 				} catch(FlowInterruptedException e) {
 					throw e
@@ -72,6 +79,13 @@ def executeConfiguration(osName, attemptNum, Map options) {
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 								python3("launch_blender.py --tool \"2.83\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --action \"${options.Action}\" --configuration_options \"${options.ConfigurationOptions}\" --options_structure \"${options.OptionsStructure}\" ")
+							}
+							if (options['Action'] == 'Write') {
+								String updatedSceneHash = sha1 scene_name
+								bat """
+									if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
+									copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${updatedSceneHash}"
+								"""
 							}
 							break;
 					}
@@ -181,10 +195,13 @@ def getNodesCount(labels) {
 def call(String id = '',
 	String Tool = '',
 	String Scene = '',
+	String PluginLink = '',
 	String sceneName = '',
 	String sceneUser = '',
 	String maxAttempts = '',
 	String Action = '',
+	String sceneHash = '',
+	String pluginHash = '',
 	String ConfigurationOptions = '',
 	String OptionsStructure = ''
 	) {
@@ -200,10 +217,13 @@ def call(String id = '',
 		PRJ_ROOT:PRJ_ROOT,
 		Tool:Tool,
 		Scene:Scene,
+		PluginLink:PluginLink,
 		sceneName:sceneName,
 		sceneUser:sceneUser,
 		maxAttempts:maxAttempts,
 		Action:Action,
+		sceneHash:sceneHash,
+		pluginHash:pluginHash,
 		ConfigurationOptions:ConfigurationOptions,
 		OptionsStructure:OptionsStructure
 		])
