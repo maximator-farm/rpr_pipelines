@@ -26,7 +26,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
 
                     try {
                         retringFunction(functionOptions, nodesList)
-                    } catch {
+                    } catch(Exception e) {
                         String exceptionClassName = e.getClass().toString()
 
                         if (exceptionClassName.contains("FlowInterruptedException")) {

@@ -5,6 +5,7 @@ import java.nio.channels.ClosedChannelException;
 import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
@@ -29,7 +30,14 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                         newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
                         newOptions['tests'] = testName ? testName : options.tests
 
-                        def testerTag = options.TESTER_TAG ? "${options.TESTER_TAG} && Tester" : "Tester"
+                        def testerTag = "Tester"
+                        if (options.TESTER_TAG){
+                            if (options.TESTER_TAG.indexOf(' ') > -1){
+                                testerTag = options.TESTER_TAG
+                            }else {
+                                testerTag = "${options.TESTER_TAG} && Tester"
+                            }
+                        }
                         def testerLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
 
                         def retringFunction = { functionOptions, nodesList ->
@@ -45,7 +53,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 }
                                 options['nodeRetry'].each{ retry ->
                                     if (retry['Testers'].equals(nodesList)){
-                                        retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()])
+                                        retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))])
                                         added = true
                                     }
                                 }
@@ -265,7 +273,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                         def reportBuilderLabels = "Windows && ReportBuilder"
 
                         def retringFunction = { functionOptions, nodesList ->
-                            executeBuild(osName, options)
+                            executeDeploy(options, platformList, testResultList)
                             functionOptions['successCurrentNode'] = true
                         }
 
