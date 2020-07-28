@@ -56,7 +56,8 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
 
                     if (successCurrentNode) {
                         i = tries + 1
-                    } else if ((!reuseLastNode && i < nodesCount) || (reuseLastNode && i < nodesCount - 1)) {
+                    // exclude label of failed machine only if it isn't necessary to reuse last node and if it isn't last try
+                    } else if (!(reuseLastNode && i == nodesCount - 1)) {
                         println "[INFO] Updating label after failure. Adding !${env.NODE_NAME} to labels list for ${labels}."
                         labels += " && !${env.NODE_NAME}"
                     }
