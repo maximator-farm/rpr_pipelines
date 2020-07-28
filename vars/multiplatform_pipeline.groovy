@@ -40,10 +40,9 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                         }
                         def testerLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
 
-                        def retringFunction = { functionOptions, nodesList ->
+                        def retringFunction = { nodesList ->
                             try {
                                 executeTests(osName, asicName, newOptions)
-                                functionOptions['successCurrentNode'] = true
                             } catch(Exception e) {
                                 // add info about retry to options
                                 boolean added = false;
@@ -92,9 +91,8 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
                 {
                     def builderLabels = "${osName} && ${options.BUILDER_TAG}"
 
-                    def retringFunction = { functionOptions, nodesList ->
+                    def retringFunction = { nodesList ->
                         executeBuild(osName, options)
-                        functionOptions['successCurrentNode'] = true
                     }
 
                     run_with_retries(builderLabels, options.BUILD_TIMEOUT, retringFunction, false, "Build", options)
@@ -272,9 +270,8 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                     {
                         def reportBuilderLabels = "Windows && ReportBuilder"
 
-                        def retringFunction = { functionOptions, nodesList ->
+                        def retringFunction = { nodesList ->
                             executeDeploy(options, platformList, testResultList)
-                            functionOptions['successCurrentNode'] = true
                         }
 
                         run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options)

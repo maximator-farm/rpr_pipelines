@@ -22,10 +22,11 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             timeout(time: "${stageTimeout}", unit: 'MINUTES')
             {
                 ws("WS/${options.PRJ_NAME}_${stageName}") {
-                    Map functionOptions = ['successCurrentNode': successCurrentNode]
+                    successCurrentNode = false
 
                     try {
-                        retringFunction(functionOptions, nodesList)
+                        retringFunction(nodesList)
+                        successCurrentNode = true
                     } catch(Exception e) {
                         String exceptionClassName = e.getClass().toString()
 
@@ -52,8 +53,6 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                         println "Exception cause: ${e.getCause()}"
                         println "Exception stack trace: ${e.getStackTrace()}"
                     }
-                    
-                    successCurrentNode = functionOptions['successCurrentNode']
 
                     if (successCurrentNode) {
                         i = tries + 1
