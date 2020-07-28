@@ -4,6 +4,7 @@ import hudson.plugins.git.GitException;
 import java.nio.channels.ClosedChannelException;
 import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
+import java.time.*;
 
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
@@ -31,7 +32,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                         def nodesCount = nodesList.size()
                         options.nodeReallocateTries = nodesCount + 1
                         boolean successCurrentNode = false
-                        
+
                         for (int i = 0; i < options.nodeReallocateTries; i++)
                         {
                             node(nodeLabels)
@@ -58,7 +59,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             println "Exception stack trace: ${e.getStackTrace()}"
 
                                             String exceptionClassName = e.getClass().toString()
-                                            if (exceptionClassName.contains("FlowInterruptedException") || exceptionClassName.contains("AbortException")) {
+                                            if (exceptionClassName.contains("FlowInterruptedException")) {
                                                 e.getCauses().each(){
                                                     // UserInterruption aborting by user
                                                     // ExceededTimeout aborting by timeout
@@ -71,6 +72,23 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                                     }
                                                 }
                                             }
+
+                                            // add info about retry to options
+                                            boolean added = false;
+                                            String testsOrTestPackage = newOptions['tests'];
+                                            if (testsOrTestPackage == ''){
+                                                testsOrTestPackage = newOptions['testsPackage'].replace(' ', '_')
+                                            }
+                                            options['nodeRetry'].each{ retry ->
+                                                if (retry['Testers'].equals(nodesList)){
+                                                    retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()])
+                                                    added = true
+                                                }
+                                            }
+                                            if (!added){
+                                                options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()]]]]])
+                                            }
+                                            println options['nodeRetry'].inspect()
 
                                             // change PC after first failed tries and don't change in the last try
                                             if (i < nodesCount - 1 && nodesCount != 1) {
@@ -122,7 +140,13 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
                     }
                 }
             }
-            executeTestsNode(osName, gpuNames, executeTests, options)
+            if (options.containsKey('tests') && options.containsKey('testsPackage')){
+                if (options['testsPackage'] != 'none' || options['tests'].size() == 0 || !(options['tests'].size() == 1 && options['tests'].get(0).length() == 0)){ // BUG: can throw exception if options['tests'] is string with length 1
+                    executeTestsNode(osName, gpuNames, executeTests, options)
+                }
+            } else {
+                executeTestsNode(osName, gpuNames, executeTests, options)
+            }
         }
         catch (e)
         {
@@ -223,40 +247,42 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
                 platforms.split(';').each()
                 {
-                    List tokens = it.tokenize(':')
-                    String osName = tokens.get(0)
-                    String gpuNames = ""
-                    if (tokens.size() > 1)
-                    {
-                        gpuNames = tokens.get(1)
-                    }
-
-                    platformList << osName
-                    if(gpuNames)
-                    {
-                        gpuNames.split(',').each()
+                    if (it) {
+                        List tokens = it.tokenize(':')
+                        String osName = tokens.get(0)
+                        String gpuNames = ""
+                        if (tokens.size() > 1)
                         {
-                            // if not split - testsList doesn't exists
-                            options.testsList = options.testsList ?: ['']
-                            options['testsList'].each() { testName ->
-                                String asicName = it
-                                String testResultItem = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
-                                testResultList << testResultItem
+                            gpuNames = tokens.get(1)
+                        }
+
+                        platformList << osName
+                        if(gpuNames)
+                        {
+                            gpuNames.split(',').each()
+                            {
+                                // if not split - testsList doesn't exists
+                                options.testsList = options.testsList ?: ['']
+                                options['testsList'].each() { testName ->
+                                    String asicName = it
+                                    String testResultItem = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
+                                    testResultList << testResultItem
+                                }
                             }
                         }
-                    }
 
-                    tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
+                        tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
+                    }
                 }
                 parallel tasks
             }
-            catch (e) 
+            catch (e)
             {
                 println(e.toString());
                 println(e.getMessage());
                 currentBuild.result = "FAILURE"
                 String exceptionClassName = e.getClass().toString()
-                if (exceptionClassName.contains("FlowInterruptedException") || exceptionClassName.contains("AbortException")) {
+                if (exceptionClassName.contains("FlowInterruptedException")) {
                     e.getCauses().each(){
                         // UserInterruption aborting by user
                         // ExceededTimeout aborting by timeout
@@ -282,7 +308,13 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                 {
                                     if(executeDeploy && options['executeTests'])
                                     {
-                                        executeDeploy(options, platformList, testResultList)
+                                        if (options.containsKey('tests') && options.containsKey('testsPackage')){
+                                            if (options['testsPackage'] != 'none' || options['tests'].size() == 0 || !(options['tests'].size() == 1 && options['tests'].get(0).length() == 0)){
+                                                executeDeploy(options, platformList, testResultList)
+                                            }
+                                        } else {
+                                            executeDeploy(options, platformList, testResultList)
+                                        }
                                     }
                                 }
                                 catch (e) {
