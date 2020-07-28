@@ -67,9 +67,7 @@ def executeTests(String osName, String asicName, Map options)
     {
         println(e.toString());
         println(e.getMessage());
-        if (!options.testPerformance) {
-            throw e
-        }
+        throw e
     }
     finally {
         archiveArtifacts "*.log"
@@ -390,6 +388,8 @@ def call(String projectBranch = "",
     def deployStage = env.TAG_NAME || testPerformance ? this.&executeDeploy : null
     platforms = env.TAG_NAME ? "Windows;Ubuntu18;OSX;CentOS7;" : platforms
 
+    def nodeRetry = []
+
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, deployStage,
                            [projectBranch:projectBranch,
                             enableNotifications:enableNotifications,
@@ -402,5 +402,6 @@ def call(String projectBranch = "",
                             PRJ_NAME:PRJ_NAME,
                             PRJ_ROOT:PRJ_ROOT,
                             cmakeKeys:cmakeKeys,
-                            testPerformance:testPerformance])
+                            testPerformance:testPerformance,
+                            nodeRetry: nodeRetry])
 }
