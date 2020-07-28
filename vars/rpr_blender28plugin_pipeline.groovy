@@ -978,7 +978,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 splitTestsExecution:splitTestsExecution,
                                 sendToUMS: sendToUMS,
                                 gpusCount:gpusCount,
-                                TEST_TIMEOUT:90,
+                                TEST_TIMEOUT:150,
                                 DEPLOY_TIMEOUT:150,
                                 TESTER_TAG:"Blender2.8",
                                 BUILDER_TAG:"BuildBlender2.8",
