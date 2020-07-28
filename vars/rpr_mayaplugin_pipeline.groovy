@@ -704,6 +704,19 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try
             {
+                dir("jobs_launcher") {
+                    archiveArtifacts "launcher.engine.log"
+                }
+            }
+            catch(e)
+            {
+                println("ERROR during archiving launcher.engine.log")
+                println(e.toString())
+                println(e.getMessage())
+            }
+
+            try
+            {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 if (summaryReport.error > 0) {
                     println("Some tests crashed")
