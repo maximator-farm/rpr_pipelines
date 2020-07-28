@@ -23,7 +23,36 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             {
                 ws("WS/${options.PRJ_NAME}_${stageName}") {
                     Map functionOptions = ['successCurrentNode': successCurrentNode]
-                    retringFunction(functionOptions, nodesList)
+
+                    try {
+                        retringFunction(functionOptions, nodesList)
+                    } catch {
+                        String exceptionClassName = e.getClass().toString()
+
+                        if (exceptionClassName.contains("FlowInterruptedException")) {
+                            e.getCauses().each(){
+                                // UserInterruption aborting by user
+                                // ExceededTimeout aborting by timeout
+                                // CancelledCause for aborting by new commit
+                                String causeClassName = it.getClass().toString()
+                                println "Interruption cause: ${causeClassName}"
+                                if (causeClassName.contains("CancelledCause")) {
+                                    println "GOT NEW COMMIT"
+                                    throw e
+                                } else if (causeClassName.contains("UserInterruption")) {
+                                    println "[INFO] Build was aborted by user"
+                                    throw e
+                                }
+                            }
+                        }
+
+                        println "[ERROR] Failed during tests on ${env.NODE_NAME} node"
+                        println "Exception: ${e.toString()}"
+                        println "Exception message: ${e.getMessage()}"
+                        println "Exception cause: ${e.getCause()}"
+                        println "Exception stack trace: ${e.getStackTrace()}"
+                    }
+                    
                     successCurrentNode = functionOptions['successCurrentNode']
 
                     if (successCurrentNode) {

@@ -37,30 +37,6 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 executeTests(osName, asicName, newOptions)
                                 functionOptions['successCurrentNode'] = true
                             } catch(Exception e) {
-                                println "[ERROR] Failed during tests on ${env.NODE_NAME} node"
-                                println "Exception: ${e.toString()}"
-                                println "Exception message: ${e.getMessage()}"
-                                println "Exception cause: ${e.getCause()}"
-                                println "Exception stack trace: ${e.getStackTrace()}"
-
-                                String exceptionClassName = e.getClass().toString()
-                                if (exceptionClassName.contains("FlowInterruptedException")) {
-                                    e.getCauses().each(){
-                                        // UserInterruption aborting by user
-                                        // ExceededTimeout aborting by timeout
-                                        // CancelledCause for aborting by new commit
-                                        String causeClassName = it.getClass().toString()
-                                        println "Interruption cause: ${causeClassName}"
-                                        if (causeClassName.contains("CancelledCause")) {
-                                            println "GOT NEW COMMIT"
-                                            throw e
-                                        } else if (causeClassName.contains("UserInterruption")) {
-                                            println "[INFO] Build was aborted by user"
-                                            throw e
-                                        }
-                                    }
-                                }
-
                                 // add info about retry to options
                                 boolean added = false;
                                 String testsOrTestPackage = newOptions['tests'];
@@ -77,6 +53,8 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                     options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()]]]]])
                                 }
                                 println options['nodeRetry'].inspect()
+
+                                throw e
                             }
                         }
 
@@ -107,36 +85,8 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
                     def builderLabels = "${osName} && ${options.BUILDER_TAG}"
 
                     def retringFunction = { functionOptions, nodesList ->
-                        try
-                        {
-                            executeBuild(osName, options)
-                            functionOptions['successCurrentNode'] = true
-                        }
-                        catch (e) {
-                            println "[ERROR] Failed during build on ${env.NODE_NAME} node"
-                            println "Exception: ${e.toString()}"
-                            println "Exception message: ${e.getMessage()}"
-                            println "Exception cause: ${e.getCause()}"
-                            println "Exception stack trace: ${e.getStackTrace()}"
-
-                            String exceptionClassName = e.getClass().toString()
-                            if (exceptionClassName.contains("FlowInterruptedException")) {
-                                e.getCauses().each(){
-                                    // UserInterruption aborting by user
-                                    // ExceededTimeout aborting by timeout
-                                    // CancelledCause for aborting by new commit
-                                    String causeClassName = it.getClass().toString()
-                                    println "Interruption cause: ${causeClassName}"
-                                    if (causeClassName.contains("CancelledCause")) {
-                                        println "GOT NEW COMMIT"
-                                        throw e
-                                    } else if (causeClassName.contains("UserInterruption")) {
-                                        println "[INFO] Build was aborted by user"
-                                        throw e
-                                    }
-                                }
-                            }
-                        }
+                        executeBuild(osName, options)
+                        functionOptions['successCurrentNode'] = true
                     }
 
                     run_with_retries(builderLabels, options.BUILD_TIMEOUT, retringFunction, false, "Build", options)
@@ -315,36 +265,8 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                         def reportBuilderLabels = "Windows && ReportBuilder"
 
                         def retringFunction = { functionOptions, nodesList ->
-                            try
-                            {
-                                executeDeploy(options, platformList, testResultList)
-                                functionOptions['successCurrentNode'] = true
-                            }
-                            catch (e) {
-                                println "[ERROR] Failed during tests on ${env.NODE_NAME} node"
-                                println "Exception: ${e.toString()}"
-                                println "Exception message: ${e.getMessage()}"
-                                println "Exception cause: ${e.getCause()}"
-                                println "Exception stack trace: ${e.getStackTrace()}"
-
-                                String exceptionClassName = e.getClass().toString()
-                                if (exceptionClassName.contains("FlowInterruptedException")) {
-                                    e.getCauses().each(){
-                                        // UserInterruption aborting by user
-                                        // ExceededTimeout aborting by timeout
-                                        // CancelledCause for aborting by new commit
-                                        String causeClassName = it.getClass().toString()
-                                        println "Interruption cause: ${causeClassName}"
-                                        if (causeClassName.contains("CancelledCause")) {
-                                            println "GOT NEW COMMIT"
-                                            throw e
-                                        } else if (causeClassName.contains("UserInterruption")) {
-                                            println "[INFO] Build was aborted by user"
-                                            throw e
-                                        }
-                                    }
-                                }
-                            }
+                            executeBuild(osName, options)
+                            functionOptions['successCurrentNode'] = true
                         }
 
                         run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options)
