@@ -526,6 +526,19 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try
             {
+                dir("jobs_launcher") {
+                    archiveArtifacts "launcher.engine.log"
+                }
+            }
+            catch(e)
+            {
+                println("ERROR during archiving launcher.engine.log")
+                println(e.toString())
+                println(e.getMessage())
+            }
+
+            try
+            {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 if (summaryReport.error > 0) {
                     println("Some tests crashed")
@@ -594,7 +607,8 @@ def call(String projectBranch = "",
          String width = "0",
          String height = "0",
          String iterations = "0",
-         Boolean sendToUMS = true) {
+         Boolean sendToUMS = true,
+         String tester_tag = 'Core') {
     try
     {
         String PRJ_NAME="RadeonProRenderCore"
@@ -632,7 +646,7 @@ def call(String projectBranch = "",
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 BUILDER_TAG:'BuilderS',
-                                TESTER_TAG:'Core',
+                                TESTER_TAG:tester_tag,
                                 slackChannel:"${SLACK_CORE_CHANNEL}",
                                 renderDevice:renderDevice,
                                 testsPackage:testsPackage,
@@ -652,7 +666,7 @@ def call(String projectBranch = "",
     }
     catch(e) {
         currentBuild.result = "FAILED"
-        if (options.sendToUMS){
+        if (sendToUMS){
             universeClient.changeStatus(currentBuild.result)
         }
         println(e.toString());

@@ -552,6 +552,19 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try
             {
+                dir("jobs_launcher") {
+                    archiveArtifacts "launcher.engine.log"
+                }
+            }
+            catch(e)
+            {
+                println("ERROR during archiving launcher.engine.log")
+                println(e.toString())
+                println(e.getMessage())
+            }
+
+            try
+            {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 if (summaryReport.error > 0) {
                     println("Some tests crashed")
@@ -613,7 +626,8 @@ def call(String projectBranch = "",
          String testsPackage = "",
          String tests = "",
          Boolean splitTestsExecution = true,
-         Boolean sendToUMS = true) {
+         Boolean sendToUMS = true,
+         String tester_tag = 'RprViewer') {
 
     def nodeRetry = []
 
@@ -637,7 +651,7 @@ def call(String projectBranch = "",
                             PRJ_ROOT:PRJ_ROOT,
                             projectRepo:projectRepo,
                             BUILDER_TAG:'BuilderViewer',
-                            TESTER_TAG:'RprViewer',
+                            TESTER_TAG:tester_tag,
                             executeBuild:true,
                             executeTests:true,
                             splitTestsExecution:splitTestsExecution,

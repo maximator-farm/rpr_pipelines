@@ -792,6 +792,19 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try
             {
+                dir("jobs_launcher") {
+                    archiveArtifacts "launcher.engine.log"
+                }
+            }
+            catch(e)
+            {
+                println("ERROR during archiving launcher.engine.log")
+                println(e.toString())
+                println(e.getMessage())
+            }
+
+            try
+            {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 if (summaryReport.error > 0) {
                     println("[INFO] Some tests marked as error. Build result = FAILED.")
@@ -887,6 +900,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkLinux = "",
     String customBuildLinkOSX = "",
     String engine = "1.0",
+    String tester_tag = "Blender2.8",
     String toolVersion = "2.83")
 {
     resX = (resX == 'Default') ? '0' : resX
@@ -980,9 +994,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 splitTestsExecution:splitTestsExecution,
                                 sendToUMS: sendToUMS,
                                 gpusCount:gpusCount,
-                                TEST_TIMEOUT:90,
+                                TEST_TIMEOUT:150,
                                 DEPLOY_TIMEOUT:150,
-                                TESTER_TAG:"Blender2.8",
+                                TESTER_TAG:tester_tag,
                                 BUILDER_TAG:"BuildBlender2.8",
                                 universePlatforms: universePlatforms,
                                 resX: resX,
@@ -1000,7 +1014,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     catch(e)
     {
         currentBuild.result = "FAILED"
-        if (options.sendToUMS){
+        if (sendToUMS){
             universeClient.changeStatus(currentBuild.result)
         }
         failureMessage = "INIT FAILED"

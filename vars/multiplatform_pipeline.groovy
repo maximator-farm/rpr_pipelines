@@ -5,6 +5,7 @@ import java.nio.channels.ClosedChannelException;
 import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
@@ -24,7 +25,14 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                     options.testsList.each() { testName ->
                         println("Scheduling ${osName}:${asicName} ${testName}")
 
-                        def testerTag = options.TESTER_TAG ? "${options.TESTER_TAG} && Tester" : "Tester"
+                        def testerTag = "Tester"
+                        if (options.TESTER_TAG){
+                            if (options.TESTER_TAG.indexOf(' ') > -1){
+                                testerTag = options.TESTER_TAG
+                            }else {
+                                testerTag = "${options.TESTER_TAG} && Tester"
+                            }
+                        }
                         // reallocate node for each test
                         def nodeLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
                         def nodesList = nodesByLabel label: nodeLabels, offline: false
@@ -81,7 +89,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             }
                                             options['nodeRetry'].each{ retry ->
                                                 if (retry['Testers'].equals(nodesList)){
-                                                    retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()])
+                                                    retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))])
                                                     added = true
                                                 }
                                             }
@@ -247,30 +255,32 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
                 platforms.split(';').each()
                 {
-                    List tokens = it.tokenize(':')
-                    String osName = tokens.get(0)
-                    String gpuNames = ""
-                    if (tokens.size() > 1)
-                    {
-                        gpuNames = tokens.get(1)
-                    }
-
-                    platformList << osName
-                    if(gpuNames)
-                    {
-                        gpuNames.split(',').each()
+                    if (it) {
+                        List tokens = it.tokenize(':')
+                        String osName = tokens.get(0)
+                        String gpuNames = ""
+                        if (tokens.size() > 1)
                         {
-                            // if not split - testsList doesn't exists
-                            options.testsList = options.testsList ?: ['']
-                            options['testsList'].each() { testName ->
-                                String asicName = it
-                                String testResultItem = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
-                                testResultList << testResultItem
+                            gpuNames = tokens.get(1)
+                        }
+
+                        platformList << osName
+                        if(gpuNames)
+                        {
+                            gpuNames.split(',').each()
+                            {
+                                // if not split - testsList doesn't exists
+                                options.testsList = options.testsList ?: ['']
+                                options['testsList'].each() { testName ->
+                                    String asicName = it
+                                    String testResultItem = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
+                                    testResultList << testResultItem
+                                }
                             }
                         }
-                    }
 
-                    tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
+                        tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
+                    }
                 }
                 parallel tasks
             }
