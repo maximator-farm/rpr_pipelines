@@ -1,4 +1,4 @@
-def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLastNode, def stageName, def options) {
+def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLastNode, def stageName, def options, List allowedExceptions = []) {
     def nodesList = nodesByLabel label: labels, offline: false
     println "Found the following PCs: ${nodesList}"
     def nodesCount = nodesList.size()
@@ -52,6 +52,24 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                         println "Exception message: ${e.getMessage()}"
                         println "Exception cause: ${e.getCause()}"
                         println "Exception stack trace: ${e.getStackTrace()}"
+
+                        if (allowedExceptions.size() != 0) {
+                            Boolean isExceptionAllowed = false
+
+                            for (allowedException in allowedExceptions) {
+                                if (exceptionClassName.contains(allowedException)) {
+                                    isExceptionAllowed = true
+                                    break
+                                }
+                            }
+
+                            if (!isExceptionAllowed) {
+                                println("[INFO] Exception isn't allowed")
+                                throw e
+                            } else {
+                                println("[INFO] Exception found in allowed exceptions")
+                            }
+                        }
                     }
 
                     if (successCurrentNode) {
