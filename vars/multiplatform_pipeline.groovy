@@ -274,7 +274,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                             executeDeploy(options, platformList, testResultList)
                         }
 
-                        run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options)
+                        run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options, [], 2)
                     }
                 }
             }
