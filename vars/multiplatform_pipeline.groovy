@@ -95,7 +95,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
                         executeBuild(osName, options)
                     }
 
-                    run_with_retries(builderLabels, options.BUILD_TIMEOUT, retringFunction, false, "Build", options)
+                    run_with_retries(builderLabels, options.BUILD_TIMEOUT, retringFunction, false, "Build", options, ['FlowInterruptedException'])
                 }
             }
             if (options.containsKey('tests') && options.containsKey('testsPackage')){
@@ -274,7 +274,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                             executeDeploy(options, platformList, testResultList)
                         }
 
-                        run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options)
+                        run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options, [], 2)
                     }
                 }
             }

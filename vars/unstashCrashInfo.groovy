@@ -1,4 +1,4 @@
-def call(nodeRetryList){ //FIXME: add type of nodeRetryList
+def call(List nodeRetryList){
     nodeRetryList.each{ gpu ->
         try
         {
