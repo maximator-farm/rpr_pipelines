@@ -86,7 +86,7 @@ def executeBuildOSX(Map options)
                 mkdir -p mps/${CIS_OS}
                 rm -fdr mps/${CIS_OS}
                 mkdir -p mps/${CIS_OS}
-                cp -r ../build/bin/* ./mps/${CIS_OS}
+                cp -R ../build/bin/* ./mps/${CIS_OS}
                 git config --local user.name "radeonbuildmaster"
                 git config --local user.email "radeonprorender.buildmaster@gmail.com"
                 git add --all
