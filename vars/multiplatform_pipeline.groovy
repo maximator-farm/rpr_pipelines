@@ -57,7 +57,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                     }
                                 }
                                 if (!added){
-                                    options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()]]]]])
+                                    options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))]]]]])
                                 }
                                 println options['nodeRetry'].inspect()
 
