@@ -262,7 +262,7 @@ def executeTests(String osName, String asicName, Map options)
                     }
 
                     echo "Stashing test results to : ${options.testResultsName}"
-                    stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+                    stash includes: '**/*', excludes: '**/cache/*', name: "${options.testResultsName}", allowEmpty: true
 
                     // reallocate node if there are still attempts
                     if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
