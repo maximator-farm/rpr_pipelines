@@ -25,6 +25,11 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                     options.testsList.each() { testName ->
                         println("Scheduling ${osName}:${asicName} ${testName}")
 
+                        Map newOptions = options.clone()
+                        newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
+                        newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
+                        newOptions['tests'] = testName ? testName : options.tests
+
                         def testerTag = "Tester"
                         if (options.TESTER_TAG){
                             if (options.TESTER_TAG.indexOf(' ') > -1){
@@ -33,85 +38,34 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 testerTag = "${options.TESTER_TAG} && Tester"
                             }
                         }
-                        // reallocate node for each test
-                        def nodeLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
-                        def nodesList = nodesByLabel label: nodeLabels, offline: false
-                        println "Found the following PCs for the task: ${nodesList}"
-                        def nodesCount = nodesList.size()
-                        options.nodeReallocateTries = nodesCount + 1
-                        boolean successCurrentNode = false
+                        def testerLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
 
-                        for (int i = 0; i < options.nodeReallocateTries; i++)
-                        {
-                            node(nodeLabels)
-                            {
-                                println("[INFO] Launched ${testName} task at: ${env.NODE_NAME}")
-                                options.currentTry = i
-                                timeout(time: "${options.TEST_TIMEOUT}", unit: 'MINUTES')
-                                {
-                                    ws("WS/${options.PRJ_NAME}_Test")
-                                    {
-                                        Map newOptions = options.clone()
-                                        newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
-                                        newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
-                                        newOptions['tests'] = testName ? testName : options.tests
-                                        try {
-                                            executeTests(osName, asicName, newOptions)
-                                            i = options.nodeReallocateTries + 1
-                                            successCurrentNode = true
-                                        } catch(Exception e) {
-                                            println "[ERROR] Failed during tests on ${env.NODE_NAME} node"
-                                            println "Exception: ${e.toString()}"
-                                            println "Exception message: ${e.getMessage()}"
-                                            println "Exception cause: ${e.getCause()}"
-                                            println "Exception stack trace: ${e.getStackTrace()}"
-
-                                            String exceptionClassName = e.getClass().toString()
-                                            if (exceptionClassName.contains("FlowInterruptedException")) {
-                                                e.getCauses().each(){
-                                                    // UserInterruption aborting by user
-                                                    // ExceededTimeout aborting by timeout
-                                                    // CancelledCause for aborting by new commit
-                                                    String causeClassName = it.getClass().toString()
-                                                    println "Interruption cause: ${causeClassName}"
-                                                    if (causeClassName.contains("CancelledCause")) {
-                                                        println "GOT NEW COMMIT"
-                                                        throw e
-                                                    }
-                                                }
-                                            }
-
-                                            // add info about retry to options
-                                            boolean added = false;
-                                            String testsOrTestPackage = newOptions['tests'];
-                                            if (testsOrTestPackage == ''){
-                                                testsOrTestPackage = newOptions['testsPackage'].replace(' ', '_')
-                                            }
-                                            options['nodeRetry'].each{ retry ->
-                                                if (retry['Testers'].equals(nodesList)){
-                                                    retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))])
-                                                    added = true
-                                                }
-                                            }
-                                            if (!added){
-                                                options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().toString()]]]]])
-                                            }
-                                            println options['nodeRetry'].inspect()
-
-                                            // change PC after first failed tries and don't change in the last try
-                                            if (i < nodesCount - 1 && nodesCount != 1) {
-                                                println "[INFO] Updating label after failure task. Adding !${env.NODE_NAME} to labels list."
-                                                nodeLabels += " && !${env.NODE_NAME}"
-                                            }
-                                        }
+                        def retringFunction = { nodesList ->
+                            try {
+                                executeTests(osName, asicName, newOptions)
+                            } catch(Exception e) {
+                                // add info about retry to options
+                                boolean added = false;
+                                String testsOrTestPackage = newOptions['tests'];
+                                if (testsOrTestPackage == ''){
+                                    testsOrTestPackage = newOptions['testsPackage'].replace(' ', '_')
+                                }
+                                options['nodeRetry'].each{ retry ->
+                                    if (retry['Testers'].equals(nodesList)){
+                                        retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))])
+                                        added = true
                                     }
                                 }
+                                if (!added){
+                                    options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))]]]]])
+                                }
+                                println options['nodeRetry'].inspect()
+
+                                throw e
                             }
                         }
-                        if (!successCurrentNode) {
-                            currentBuild.result = "FAILED"
-                            println "[ERROR] All allocated nodes failed."
-                        }
+
+                        run_with_retries(testerLabels, options.TEST_TIMEOUT, retringFunction, true, "Test", options)
                     }
 
                 }
@@ -133,19 +87,15 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
         {
             if(options['executeBuild'] && executeBuild)
             {
-                node("${osName} && ${options.BUILDER_TAG}")
+                stage("Build-${osName}")
                 {
-                    println("Started build at ${NODE_NAME}")
-                    stage("Build-${osName}")
-                    {
-                        timeout(time: "${options.BUILD_TIMEOUT}", unit: 'MINUTES')
-                        {
-                            ws("WS/${options.PRJ_NAME}_Build")
-                            {
-                                executeBuild(osName, options)
-                            }
-                        }
+                    def builderLabels = "${osName} && ${options.BUILDER_TAG}"
+
+                    def retringFunction = { nodesList ->
+                        executeBuild(osName, options)
                     }
+
+                    run_with_retries(builderLabels, options.BUILD_TIMEOUT, retringFunction, false, "Build", options, ['FlowInterruptedException'])
                 }
             }
             if (options.containsKey('tests') && options.containsKey('testsPackage')){
@@ -304,34 +254,27 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
             }
             finally
             {
-                node("Windows && ReportBuilder")
+                Boolean executeDeployStage = true
+                if (options['executeTests']) {
+                    if (options.containsKey('tests') && options.containsKey('testsPackage')){
+                        if (options['testsPackage'] == 'none' && options['tests'].size() == 1 && options['tests'].get(0).length() == 0){
+                            executeDeployStage = false
+                        }
+                    }
+                } else {
+                    executeDeployStage = false
+                }
+                if(executeDeploy && executeDeployStage)
                 {
                     stage("Deploy")
                     {
-                        timeout(time: "${options.DEPLOY_TIMEOUT}", unit: 'MINUTES')
-                        {
-                            ws("WS/${options.PRJ_NAME}_Deploy") {
+                        def reportBuilderLabels = "Windows && ReportBuilder"
 
-                                try
-                                {
-                                    if(executeDeploy && options['executeTests'])
-                                    {
-                                        if (options.containsKey('tests') && options.containsKey('testsPackage')){
-                                            if (options['testsPackage'] != 'none' || options['tests'].size() == 0 || !(options['tests'].size() == 1 && options['tests'].get(0).length() == 0)){
-                                                executeDeploy(options, platformList, testResultList)
-                                            }
-                                        } else {
-                                            executeDeploy(options, platformList, testResultList)
-                                        }
-                                    }
-                                }
-                                catch (e) {
-                                    println(e.toString());
-                                    println(e.getMessage());
-                                    throw e
-                                }
-                            }
+                        def retringFunction = { nodesList ->
+                            executeDeploy(options, platformList, testResultList)
                         }
+
+                        run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options, [], 2)
                     }
                 }
             }
