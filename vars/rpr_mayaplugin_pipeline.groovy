@@ -12,66 +12,99 @@ def getMayaPluginInstaller(String osName, Map options)
         case 'Windows':
 
             if (options['isPreBuilt']) {
-                if (options.pluginWinSha) {
-                    win_addon_name = options.pluginWinSha
+
+                println "[INFO] PluginWinSha: ${options['pluginWinSha']}"
+
+                if (options['pluginWinSha']) {
+                    if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.msi")) {
+                        println "[INFO] The plugin ${options['pluginWinSha']}.msi exists in the storage."
+                    } else {
+                        clearBinariesWin()
+
+                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                        downloadPlugin(osName, "Maya", options)
+
+                        bat """
+                            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                            move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.msi"
+                        """
+                    }
                 } else {
-                    // FIXME: fix plugin name for testing pre builded installer
-                    win_addon_name = "unknown"
-                }
-            } else {
-                win_addon_name = options.productCode
-            }
+                    clearBinariesWin()
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${win_addon_name}.msi")) {
-
-                clearBinariesWin()
-
-                if (options['isPreBuilt']) {
-                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
                     downloadPlugin(osName, "Maya", options)
-                    win_addon_name = options.pluginWinSha
+
+                    bat """
+                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                        move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.msi"
+                    """
+                }
+
+            } else {
+                if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['productCode']}.msi")) {
+                    println "[INFO] The plugin ${options['productCode']}.msi exists in the storage."
                 } else {
+                    clearBinariesWin()
+
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "appWindows"
+
+                    bat """
+                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                        move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['productCode']}.msi"
+                    """
                 }
-
-                bat """
-                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move RadeonProRender*.msi "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.msi"
-                """
-
-            } else {
-                println "[INFO] The plugin ${win_addon_name}.msi exists in the storage."
             }
 
             break;
 
         case "OSX":
 
-            if (!options.pluginOSXSha) {
-                options.pluginOSXSha = "unknown"
-            }
+            if (options['isPreBuilt']) {
 
-            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg"))
-            {
-                clearBinariesUnix()
+                println "[INFO] PluginOSXSha: ${options['pluginOSXSha']}"
 
-                if (options['isPreBuilt']) {
-                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                    downloadPlugin(osName, "Maya", options)
-                    osx_addon_name = options.pluginOSXSha
+                if (options['pluginOSXSha']) {
+                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg")) {
+                        println "[INFO] The plugin ${options['pluginOSXSha']}.dmg exists in the storage."
+                    } else {
+                        clearBinariesUnix()
+
+                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                        downloadPlugin(osName, "Maya", options)
+
+                        sh """
+                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                            mv RadeonProRender*.dmg "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg"
+                        """
+                    }
                 } else {
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appOSX"
+                    clearBinariesUnix()
+
+                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
+                    downloadPlugin(osName, "Maya", options)
+
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv RadeonProRender*.dmg "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg"
+                    """
                 }
 
-                sh """
-                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    mv RadeonProRenderMaya*.dmg "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg"
-                """
-
             } else {
-                println "[INFO] The plugin ${options.pluginOSXSha}.dmg exists in the storage."
+                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg")) {
+                    println "[INFO] The plugin ${options.pluginOSXSha}.dmg exists in the storage."
+                } else {
+                    clearBinariesUnix()
+
+                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                    unstash "appOSX"
+                   
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv RadeonProRender*.dmg "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg"
+                    """
+                }
             }
 
             break;
@@ -432,103 +465,103 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
-    if (options['isPreBuilt'])
-    {
-        //plugin is pre built
-        options['executeBuild'] = false
-        options['executeTests'] = true
-        return
-    }
-
-    // manual job
-    if (options.forceBuild) {
-        options.executeBuild = true
+    // manual job with prebuilt plugin
+    if (options.isPreBuilt) {
+        println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
+        currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
+        options.executeBuild = false
         options.executeTests = true
+    // manual job
+    } else if (options.forceBuild) {
+        println "[INFO] Manual job launch detected"
+        options['executeBuild'] = true
+        options['executeTests'] = true
     // auto job
     } else {
         if (env.CHANGE_URL) {
             println "[INFO] Branch was detected as Pull Request"
-            options.isPR = true
-            options.executeBuild = true
-            options.executeTests = true
-            options.testsPackage = "regression.json"
+            options['executeBuild'] = true
+            options['executeTests'] = true
+            options['testsPackage'] = "regression.json"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options.executeBuild = true
-           options.executeTests = true
-           options.testsPackage = "regression.json"
+           options['executeBuild'] = true
+           options['executeTests'] = true
+           options['testsPackage'] = "regression.json"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options.testsPackage = "smoke"
+            options['testsPackage'] = "regression.json"
         }
     }
 
-    dir('RadeonProRenderMayaPlugin')
-    {
-        checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
+    if (!options['isPreBuilt']) {
+        dir('RadeonProRenderMayaPlugin')
+        {
+            checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
 
-        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-        options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
-        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-        options.commitShortSHA = options.commitSHA[0..6]
+            options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+            options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
+            options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            options.commitShortSHA = options.commitSHA[0..6]
 
-        println "The last commit was written by ${options.commitAuthor}."
-        println "Commit message: ${options.commitMessage}"
-        println "Commit SHA: ${options.commitSHA}"
-        println "Commit shortSHA: ${options.commitShortSHA}"
+            println "The last commit was written by ${options.commitAuthor}."
+            println "Commit message: ${options.commitMessage}"
+            println "Commit SHA: ${options.commitSHA}"
+            println "Commit shortSHA: ${options.commitShortSHA}"
 
-        if (options.projectBranch){
-            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-        } else {
-            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-        }
-
-        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
-
-        if (options['incrementVersion']) {
-            if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
-
-                println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
-                println "[INFO] Current build version: ${options.pluginVersion}"
-
-                def new_version = version_inc(options.pluginVersion, 3)
-                println "[INFO] New build version: ${new_version}"
-                version_write("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION', new_version)
-
-                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
-                println "[INFO] Updated build version: ${options.pluginVersion}"
-
-                bat """
-                  git add version.h
-                  git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                  git push origin HEAD:develop
-                """
-
-                //get commit's sha which have to be build
-                options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-                options.projectBranch = options.commitSHA
-                println "[INFO] Project branch hash: ${options.projectBranch}"
+            if (options.projectBranch){
+                currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+            } else {
+                currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
-            else
-            {
-                if(options.commitMessage.contains("CIS:BUILD"))
-                {
-                    options['executeBuild'] = true
-                }
 
-                if(options.commitMessage.contains("CIS:TESTS"))
+            options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
+
+            if (options['incrementVersion']) {
+                if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
+
+                    println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                    println "[INFO] Current build version: ${options.pluginVersion}"
+
+                    def new_version = version_inc(options.pluginVersion, 3)
+                    println "[INFO] New build version: ${new_version}"
+                    version_write("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION', new_version)
+
+                    options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
+                    println "[INFO] Updated build version: ${options.pluginVersion}"
+
+                    bat """
+                      git add version.h
+                      git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                      git push origin HEAD:develop
+                    """
+
+                    //get commit's sha which have to be build
+                    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                    options.projectBranch = options.commitSHA
+                    println "[INFO] Project branch hash: ${options.projectBranch}"
+                }
+                else
                 {
-                    options['executeBuild'] = true
-                    options['executeTests'] = true
+                    if(options.commitMessage.contains("CIS:BUILD"))
+                    {
+                        options['executeBuild'] = true
+                    }
+
+                    if(options.commitMessage.contains("CIS:TESTS"))
+                    {
+                        options['executeBuild'] = true
+                        options['executeTests'] = true
+                    }
                 }
             }
+
+            currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+            currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
         }
-
-        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
-        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
-
     }
 
     if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {

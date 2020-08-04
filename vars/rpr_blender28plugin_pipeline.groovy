@@ -7,41 +7,54 @@ import groovy.json.JsonOutput;
 
 def getBlenderAddonInstaller(String osName, Map options)
 {
-
     switch(osName)
     {
         case 'Windows':
 
             if (options['isPreBuilt']) {
-                if (options.pluginWinSha) {
-                    win_addon_name = options.pluginWinSha
+
+                println "[INFO] PluginWinSha: ${options['pluginWinSha']}"
+
+                if (options['pluginWinSha']) {
+                    if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip")) {
+                        println "[INFO] The plugin ${options['pluginWinSha']}.zip exists in the storage."
+                    } else {
+                        clearBinariesWin()
+
+                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                        downloadPlugin(osName, "Blender", options)
+
+                        bat """
+                            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                            move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip"
+                        """
+                    }
                 } else {
-                    win_addon_name = "unknown"
-                }
-            } else {
-                win_addon_name = "${options.commitSHA}_Windows"
-            }
+                    clearBinariesWin()
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${win_addon_name}.zip")) {
-
-                clearBinariesWin()
-
-                if (options['isPreBuilt']) {
-                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
                     downloadPlugin(osName, "Blender", options)
-                    win_addon_name = options.pluginWinSha
+
+                    bat """
+                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                        move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
+                    """
+                }
+
+            } else {
+                if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
+                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
                 } else {
+                    clearBinariesWin()
+
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "appWindows"
+
+                    bat """
+                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                        move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}_${osName}.zip"
+                    """
                 }
-
-                bat """
-                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.zip"
-                """
-
-            } else {
-                println "[INFO] The plugin ${win_addon_name}.zip exists in the storage."
             }
 
             break;
@@ -49,35 +62,49 @@ def getBlenderAddonInstaller(String osName, Map options)
         case "OSX":
 
             if (options['isPreBuilt']) {
-                if (options.pluginOSXSha) {
-                    osx_addon_name = options.pluginOSXSha
+
+                println "[INFO] PluginOSXSha: ${options['pluginOSXSha']}"
+
+                if (options['pluginOSXSha']) {
+                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip")) {
+                        println "[INFO] The plugin ${options['pluginOSXSha']}.zip exists in the storage."
+                    } else {
+                        clearBinariesUnix()
+
+                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                        downloadPlugin(osName, "Blender", options)
+
+                        sh """
+                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                            mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
+                        """
+                    }
                 } else {
-                    osx_addon_name = "unknown"
-                }
-            } else {
-                osx_addon_name = "${options.commitSHA}_OSX"
-            }
+                    clearBinariesUnix()
 
-            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${osx_addon_name}.zip"))
-            {
-                clearBinariesUnix()
-
-                if (options['isPreBuilt']) {
-                    println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
                     downloadPlugin(osName, "Blender", options)
-                    osx_addon_name = options.pluginOSXSha
+
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
+                    """
+                }
+
+            } else {
+                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
+                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
                 } else {
+                    clearBinariesUnix()
+
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
                     unstash "appOSX"
+                   
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"
+                    """
                 }
-
-                sh """
-                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${osx_addon_name}.zip"
-                """
-
-            } else {
-                println "[INFO] The plugin ${osx_addon_name}.zip exists in the storage."
             }
 
             break;
@@ -85,35 +112,49 @@ def getBlenderAddonInstaller(String osName, Map options)
         default:
 
             if (options['isPreBuilt']) {
-                if (options.pluginUbuntuSha) {
-                    ubuntu_addon_name = options.pluginUbuntuSha
+
+                println "[INFO] PluginOSXSha: ${options['pluginUbuntuSha']}"
+
+                if (options['pluginUbuntuSha']) {
+                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
+                        println "[INFO] The plugin ${options['pluginUbuntuSha']}.zip exists in the storage."
+                    } else {
+                        clearBinariesUnix()
+
+                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                        downloadPlugin(osName, "Blender", options)
+
+                        sh """
+                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                            mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                        """
+                    }
                 } else {
-                    ubuntu_addon_name = "unknown"
-                }
-            } else {
-                ubuntu_addon_name = "${options.commitSHA}_${osName}"
-            }
+                    clearBinariesUnix()
 
-            if(!fileExists("${CIS_TOOLS}/../PluginsBinaries/${ubuntu_addon_name}.zip"))
-            {
-                clearBinariesUnix()
-
-                if (options['isPreBuilt']) {
-                    println "[INFO] The prebuilt plugin does not exist in the storage. Downloading and copying..."
+                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
                     downloadPlugin(osName, "Blender", options)
-                    ubuntu_addon_name = options.pluginUbuntuSha
-                } else {
-                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "app${osName}"
+
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                    """
                 }
 
-                sh """
-                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                     mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${ubuntu_addon_name}.zip"
-                """
-
             } else {
-                println "[INFO] The plugin ${ubuntu_addon_name}.zip exists in the storage."
+                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
+                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
+                } else {
+                    clearBinariesUnix()
+
+                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                    unstash "appOSX"
+                   
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv RadeonProRenderBlender*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"
+                    """
+                }
             }
     }
 
@@ -516,105 +557,105 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
-    if (options['isPreBuilt'])
-    {
-        //plugin is pre built
-        options['executeBuild'] = false
-        options['executeTests'] = true
-        return
-    }
-
-    // manual job
-    if (options.forceBuild) {
-        options.executeBuild = true
+    // manual job with prebuilt plugin
+    if (options.isPreBuilt) {
+        println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
+        currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
+        options.executeBuild = false
         options.executeTests = true
+    // manual job
+    } else if (options.forceBuild) {
+        println "[INFO] Manual job launch detected"
+        options['executeBuild'] = true
+        options['executeTests'] = true
     // auto job
     } else {
         if (env.CHANGE_URL) {
             println "[INFO] Branch was detected as Pull Request"
-            options.isPR = true
-            options.executeBuild = true
-            options.executeTests = true
-            options.testsPackage = "regression.json"
+            options['executeBuild'] = true
+            options['executeTests'] = true
+            options['testsPackage'] = "regression.json"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options.executeBuild = true
-           options.executeTests = true
-           options.testsPackage = "regression.json"
+           options['executeBuild'] = true
+           options['executeTests'] = true
+           options['testsPackage'] = "regression.json"
         } else {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options.testsPackage = "regression.json"
+            options['testsPackage'] = "regression.json"
         }
     }
 
-    dir('RadeonProRenderBlenderAddon')
-    {
-        checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
+    if (!options['isPreBuilt']) {
+        dir('RadeonProRenderBlenderAddon')
+        {
+            checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
 
-        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-        options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
-        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-        options.commitShortSHA = options.commitSHA[0..6]
+            options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+            options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
+            options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            options.commitShortSHA = options.commitSHA[0..6]
 
-        println(bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim());
-        println "The last commit was written by ${options.commitAuthor}."
-        println "Commit message: ${options.commitMessage}"
-        println "Commit SHA: ${options.commitSHA}"
-        println "Commit shortSHA: ${options.commitShortSHA}"
+            println(bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim());
+            println "The last commit was written by ${options.commitAuthor}."
+            println "Commit message: ${options.commitMessage}"
+            println "Commit SHA: ${options.commitSHA}"
+            println "Commit shortSHA: ${options.commitShortSHA}"
 
-        if (options.projectBranch){
-            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-        } else {
-            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-        }
-
-        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
-
-        if (options['incrementVersion']) {
-            if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
-
-                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ')
-                println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
-                println "[INFO] Current build version: ${options.pluginVersion}"
-
-                def new_version = version_inc(options.pluginVersion, 3, ', ')
-                println "[INFO] New build version: ${new_version}"
-                version_write("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', new_version, ', ')
-
-                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ', "true").replace(', ', '.')
-                println "[INFO] Updated build version: ${options.pluginVersion}"
-
-                bat """
-                    git add src/rprblender/__init__.py
-                    git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                    git push origin HEAD:develop
-                """
-
-                //get commit's sha which have to be build
-                options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-                options.projectBranch = options.commitSHA
-                println "[INFO] Project branch hash: ${options.projectBranch}"
+            if (options.projectBranch){
+                currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+            } else {
+                currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
-            else
-            {
-                if(options.commitMessage.contains("CIS:BUILD"))
-                {
-                    options['executeBuild'] = true
-                }
 
-                if(options.commitMessage.contains("CIS:TESTS"))
+            options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
+
+            if (options['incrementVersion']) {
+                if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
+
+                    options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ')
+                    println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                    println "[INFO] Current build version: ${options.pluginVersion}"
+
+                    def new_version = version_inc(options.pluginVersion, 3, ', ')
+                    println "[INFO] New build version: ${new_version}"
+                    version_write("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', new_version, ', ')
+
+                    options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ', "true").replace(', ', '.')
+                    println "[INFO] Updated build version: ${options.pluginVersion}"
+
+                    bat """
+                        git add src/rprblender/__init__.py
+                        git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                        git push origin HEAD:develop
+                    """
+
+                    //get commit's sha which have to be build
+                    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                    options.projectBranch = options.commitSHA
+                    println "[INFO] Project branch hash: ${options.projectBranch}"
+                }
+                else
                 {
-                    options['executeBuild'] = true
-                    options['executeTests'] = true
+                    if(options.commitMessage.contains("CIS:BUILD"))
+                    {
+                        options['executeBuild'] = true
+                    }
+
+                    if(options.commitMessage.contains("CIS:TESTS"))
+                    {
+                        options['executeBuild'] = true
+                        options['executeTests'] = true
+                    }
                 }
             }
+
+            currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+            currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
         }
-
-        currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
-        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
-
     }
 
     if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
@@ -634,7 +675,6 @@ def executePreBuild(Map options)
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     }
-
 
     def tests = []
     options.groupsUMS = []
@@ -702,6 +742,7 @@ def executePreBuild(Map options)
 
 def executeDeploy(Map options, List platformList, List testResultList)
 {
+    cleanWS()
     try {
         if(options['executeTests'] && testResultList)
         {
