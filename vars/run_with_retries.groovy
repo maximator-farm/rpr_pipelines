@@ -19,6 +19,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
     }
 
     Boolean successCurrentNode = false
+    options['nodeReallocateTries'] = tries
 
     for (int i = 0; i < tries; i++)
     {
