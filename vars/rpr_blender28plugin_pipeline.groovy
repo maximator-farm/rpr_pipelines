@@ -42,7 +42,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                 }
 
             } else {
-                if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
+                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
                     println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
                 } else {
                     clearBinariesWin()
