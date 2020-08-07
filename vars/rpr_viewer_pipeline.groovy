@@ -371,30 +371,41 @@ def executePreBuild(Map options)
     println "Commit message: ${options.commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
 
+    if (options.projectBranch){
+        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+    } else {
+        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+    }
+
+    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
     if (env.CHANGE_URL) {
         echo "branch was detected as Pull Request"
-        options['isPR'] = true
         options.testsPackage = "PR"
-    }
-    else if(env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+    } else if(env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         options.testsPackage = "master"
-    }
-    else if(env.BRANCH_NAME) {
+    } else if(env.BRANCH_NAME) {
         options.testsPackage = "smoke"
     }
 
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+    if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
+    } else if (env.JOB_NAME == "RadeonProViewer-WeeklyFull") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     } else {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '50']]]);
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     }
 
     def tests = []
