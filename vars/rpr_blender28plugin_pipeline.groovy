@@ -499,20 +499,6 @@ def executeBuild(String osName, Map options)
             checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
         }
 
-        options.branch_postfix = ""
-        if(env.BRANCH_NAME && env.BRANCH_NAME == "master")
-        {
-            options.branch_postfix = "release"
-        }
-        else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
-        {
-            options.branch_postfix = env.BRANCH_NAME.replace('/', '-')
-        }
-        else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop")
-        {
-            options.branch_postfix = options.projectBranch.replace('/', '-')
-        }
-
         outputEnvironmentInfo(osName)
 
         switch(osName)
@@ -557,6 +543,7 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
+
     // manual job with prebuilt plugin
     if (options.isPreBuilt) {
         println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
@@ -584,6 +571,21 @@ def executePreBuild(Map options)
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
             options['testsPackage'] = "regression.json"
         }
+    }
+
+    // branch postfix
+    options["branch_postfix"] = ""
+    if(env.BRANCH_NAME && env.BRANCH_NAME == "master")
+    {
+        options["branch_postfix"] = "release"
+    }
+    else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
+    {
+        options["branch_postfix"] = env.BRANCH_NAME.replace('/', '-')
+    }
+    else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop")
+    {
+        options["branch_postfix"] = options.projectBranch.replace('/', '-')
     }
 
     if (!options['isPreBuilt']) {
