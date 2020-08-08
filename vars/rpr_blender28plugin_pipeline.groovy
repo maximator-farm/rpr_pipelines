@@ -150,7 +150,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appOSX"
+                    unstash "app${osName}"
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
