@@ -217,6 +217,16 @@ def executeBuildCentOS(Map options) {
 
 def executeBuild(String osName, Map options) {
 
+    // autoupdate houdini license
+    try {
+        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'sidefxCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+            print(python3("${CIS_TOOLS}/autoupdate_houdini.py --username \"$USERNAME\" --password \"$PASSWORD\" --version \"${options.houdiniVersion}\""))
+        }
+    } catch (e) {
+        print e
+    }
+
+
     try {
         dir('RadeonProRenderUSD') {
             checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git')
@@ -361,7 +371,8 @@ def call(String projectBranch = "",
         Boolean forceBuild = false,
         Boolean splitTestsExectuion = false,
         Boolean enableHoudini = true,
-        Boolean rebuildUSD = false)
+        Boolean rebuildUSD = false,
+        String houdiniVersion = "18.0.460")
 {
     try
     {
@@ -385,6 +396,7 @@ def call(String projectBranch = "",
                                 TEST_TIMEOUT:30,
                                 enableHoudini:enableHoudini,
                                 rebuildUSD:rebuildUSD,
+                                houdiniVersion:houdiniVersion,
                                 BUILDER_TAG:'Builder6'
                                 ])
     }
