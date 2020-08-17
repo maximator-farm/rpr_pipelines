@@ -166,7 +166,7 @@ def executeBuildLinux(Map options) {
         if (options.enableHoudini) {
             sh """
                 mkdir build
-                export HFS=/opt/hfs18.0.460
+                export HFS=/opt/${options.houdiniVersion}
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
@@ -202,7 +202,7 @@ def executeBuildCentOS(Map options) {
         if (options.enableHoudini) {
             sh """
                 mkdir build
-                export HFS=/opt/hfs18.0.460
+                export HFS=/opt/${options.houdiniVersion}
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
