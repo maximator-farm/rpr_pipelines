@@ -130,7 +130,7 @@ def executeBuildOSX(Map options) {
         if (options.enableHoudini) {
             sh """
                 mkdir build
-                export HFS=/Applications/Houdini/Current/Frameworks/Houdini.framework/Versions/Current/Resources
+                export HFS=/Applications/Houdini/Houdini${options.houdiniVersion}/Frameworks/Houdini.framework/Versions/Current/Resources
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
