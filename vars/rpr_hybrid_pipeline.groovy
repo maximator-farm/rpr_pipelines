@@ -99,8 +99,6 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
             println("Error during HTML report publish")
             println(err.getMessage())
         }
-
-        //error("Failure")
     }
     finally {
         archiveArtifacts "*.log"
@@ -121,16 +119,23 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
+    Boolean some_stage_fail = false
     options['testsQuality'].split(",").each() {
         try {
             options['RENDER_QUALITY'] = "${it}"
             executeTestsCustomQuality(osName, asicName, options)
         }
         catch (e) {
+            // suppress exception for start next quality test
+            some_stage_fail = true
             println(e.toString())
             println(e.getMessage())
         }
-}
+    }
+    if (some_stage_fail) {
+        // send error signal for mark stage as failed
+        error "Error during tests execution"
+    }
 }
 
 
