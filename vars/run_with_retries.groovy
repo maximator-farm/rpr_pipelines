@@ -1,7 +1,15 @@
 def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLastNode, def stageName, def options, List allowedExceptions = [], Integer maxNumberOfRetries = -1) {
-    def nodesList = nodesByLabel label: labels, offline: false
-    println "Found the following PCs: ${nodesList}"
-    def nodesCount = nodesList.size()
+    List nodesListAll = nodesByLabel label: labels, offline: true
+    List nodesListOnline = nodesByLabel label: labels, offline: false
+    println "[INFO] Found ${nodesListOnline.size()} suitable online nodes (total suitable nodes: ${nodesListAll.size()})"
+    // if less than 2 suitable online nodes are found and some nodes are offline - sleep and retry search
+    if (nodesListOnline.size() < 2 && nodesListAll.size() != nodesListOnline.size()) {
+        println "[INFO] Too few nodes found. Search will be retried after pause"
+        sleep(time: 10, unit: 'MINUTES')
+        nodesListOnline = nodesByLabel label: labels, offline: false
+    }
+    println "Found the following PCs: ${nodesListOnline}"
+    def nodesCount = nodesListOnline.size()
     def tries = nodesCount
 
     if (reuseLastNode) {
@@ -31,7 +39,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                     successCurrentNode = false
 
                     try {
-                        retringFunction(nodesList)
+                        retringFunction(nodesListOnline)
                         successCurrentNode = true
                     } catch(Exception e) {
                         String exceptionClassName = e.getClass().toString()
