@@ -163,7 +163,7 @@ def executeBuildOSX(Map options)
         mkdir build
         cd build
         cmake ${cmakeKeysOSX} .. >> ../${STAGE_NAME}.log 2>&1
-        make -j >> ../${STAGE_NAME}.log 2>&1
+        make -j 4 >> ../${STAGE_NAME}.log 2>&1
     """
     
     sh """
@@ -197,7 +197,7 @@ def executeBuildLinux(Map options)
         mkdir build
         cd build
         cmake ${cmakeKeysLinux[CIS_OS]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow_cc -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}.log 2>&1
-        make -j >> ../${STAGE_NAME}.log 2>&1
+        make -j 4 >> ../${STAGE_NAME}.log 2>&1
     """
 
     sh """
