@@ -50,16 +50,18 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 if (testsOrTestPackage == ''){
                                     testsOrTestPackage = newOptions['testsPackage'].replace(' ', '_')
                                 }
-                                options['nodeRetry'].each{ retry ->
-                                    if (retry['Testers'].equals(nodesList)){
-                                        retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))])
-                                        added = true
+                                if (options['nodeRetry']) {
+                                    options['nodeRetry'].each{ retry ->
+                                        if (retry['Testers'].equals(nodesList)){
+                                            retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))])
+                                            added = true
+                                        }
                                     }
+                                    if (!added){
+                                        options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))]]]]])
+                                    }
+                                    println options['nodeRetry'].inspect()
                                 }
-                                if (!added){
-                                    options['nodeRetry'].add([Testers: nodesList, Tries: [["${testsOrTestPackage}": [[host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))]]]]])
-                                }
-                                println options['nodeRetry'].inspect()
 
                                 throw e
                             }
