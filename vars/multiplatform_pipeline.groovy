@@ -138,6 +138,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
         def date = new Date()
         dateFormatter = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss")
+        dateFormatter.setTimeZone(TimeZone.getTimeZone("GMT+3:00"))
         options.JOB_STARTED_TIME = dateFormatter.format(date)
 
         /*properties([[$class: 'BuildDiscarderProperty', strategy:
