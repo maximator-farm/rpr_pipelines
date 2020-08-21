@@ -226,7 +226,6 @@ def executePreBuild(Map options)
     } else {
         if (env.CHANGE_URL) {
             println "[INFO] Branch was detected as Pull Request"
-            options.isPR = true
             options.executeTests = true
             options.testsPackage = "Master"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
@@ -438,13 +437,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options.testsStatus = ""
             }
 
-            publishHTML([allowMissing: false,
-                         alwaysLinkToLastBuild: false,
-                         keepAll: true,
-                         reportDir: 'summaryTestResults',
-                         reportFiles: 'summary_report.html',
-                         reportName: 'Test Report',
-                         reportTitles: 'Summary Report'])
+            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report")
         }
     }
     catch (e) {

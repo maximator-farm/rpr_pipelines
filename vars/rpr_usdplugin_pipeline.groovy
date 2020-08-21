@@ -130,7 +130,7 @@ def executeBuildOSX(Map options) {
         if (options.enableHoudini) {
             sh """
                 mkdir build
-                export HFS=/Applications/Houdini/Current/Frameworks/Houdini.framework/Versions/Current/Resources
+                export HFS=/Applications/Houdini/Houdini${options.houdiniVersion}/Frameworks/Houdini.framework/Versions/Current/Resources
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
@@ -166,7 +166,7 @@ def executeBuildLinux(Map options) {
         if (options.enableHoudini) {
             sh """
                 mkdir build
-                export HFS=/opt/hfs18.0.460
+                export HFS=/opt/hfs${options.houdiniVersion}
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
@@ -202,7 +202,7 @@ def executeBuildCentOS(Map options) {
         if (options.enableHoudini) {
             sh """
                 mkdir build
-                export HFS=/opt/hfs18.0.460
+                export HFS=/opt/hfs${options.houdiniVersion}
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
@@ -216,6 +216,16 @@ def executeBuildCentOS(Map options) {
 
 
 def executeBuild(String osName, Map options) {
+
+    // autoupdate houdini license
+    try {
+        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'sidefxCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+            print(python3("${CIS_TOOLS}/autoupdate_houdini.py --username \"$USERNAME\" --password \"$PASSWORD\" --version \"${options.houdiniVersion}\""))
+        }
+    } catch (e) {
+        print e
+    }
+
 
     try {
         dir('RadeonProRenderUSD') {
@@ -277,7 +287,6 @@ def executePreBuild(Map options) {
     } else {
         if (env.CHANGE_URL) {
             println "[INFO] Branch was detected as Pull Request"
-            options.isPR = true
             options.executeBuild = true
             options.executeTests = true
             options.testsPackage = "PR"
@@ -362,7 +371,8 @@ def call(String projectBranch = "",
         Boolean forceBuild = false,
         Boolean splitTestsExectuion = false,
         Boolean enableHoudini = true,
-        Boolean rebuildUSD = false)
+        Boolean rebuildUSD = false,
+        String houdiniVersion = "18.0.532")
 {
     try
     {
@@ -386,6 +396,7 @@ def call(String projectBranch = "",
                                 TEST_TIMEOUT:30,
                                 enableHoudini:enableHoudini,
                                 rebuildUSD:rebuildUSD,
+                                houdiniVersion:houdiniVersion,
                                 BUILDER_TAG:'Builder6'
                                 ])
     }

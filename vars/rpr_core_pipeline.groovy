@@ -383,7 +383,6 @@ def executePreBuild(Map options)
 
     if (env.CHANGE_URL) {
         println "Branch was detected as Pull Request"
-        options.isPR = true
     }
 
     if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
@@ -565,13 +564,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options.testsStatus = ""
             }
 
-            publishHTML([allowMissing: false,
-                         alwaysLinkToLastBuild: false,
-                         keepAll: true,
-                         reportDir: 'summaryTestResults',
-                         reportFiles: 'summary_report.html, performance_report.html, compare_report.html',
-                         reportName: 'Test Report',
-                         reportTitles: 'Summary Report, Performance Report, Compare Report'])
+            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                "Test Report", "Summary Report, Performance Report, Compare Report")
 
             if (options.sendToUMS) {
                 try {

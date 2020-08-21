@@ -259,7 +259,6 @@ def executePreBuild(Map options)
 
     if (env.CHANGE_URL) {
         echo "branch was detected as Pull Request"
-        options['isPR'] = true
     }
 
     if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
@@ -342,13 +341,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             """
         }
 
-        publishHTML([allowMissing: false,
-                     alwaysLinkToLastBuild: false,
-                     keepAll: true,
-                     reportDir: 'results',
-                     reportFiles: 'summary_report.html',
-                     reportName: 'Test Report',
-                     reportTitles: 'Summary Report'])
+        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report")
     } else {
         checkOutBranchOrScm("master", "git@github.com:Radeon-Pro/RadeonProImageProcessingSDK.git")
 
@@ -403,5 +396,6 @@ def call(String projectBranch = "",
                             PRJ_ROOT:PRJ_ROOT,
                             cmakeKeys:cmakeKeys,
                             testPerformance:testPerformance,
-                            nodeRetry: nodeRetry])
+                            nodeRetry: nodeRetry,
+                            retriesForTestStage:1])
 }

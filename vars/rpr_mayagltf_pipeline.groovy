@@ -396,7 +396,6 @@ def executePreBuild(Map options)
                 if (env.CHANGE_URL)
                 {
                     echo "branch was detected as Pull Request"
-                    options['isPR'] = true
                     options['executeBuild'] = true
                     options['executeTests'] = true
                     options.testsPackage = "PR"
@@ -582,13 +581,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options.testsStatus = ""
             }
 
-            publishHTML([allowMissing: false,
-                         alwaysLinkToLastBuild: false,
-                         keepAll: true,
-                         reportDir: 'summaryTestResults',
-                         reportFiles: 'summary_report.html, performance_report.html, compare_report.html',
-                         reportName: 'Test Report',
-                         reportTitles: 'Summary Report, Performance Report, Compare Report'])
+            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                "Test Report", "Summary Report, Performance Report, Compare Report")
 
             if (options.sendToRBS)
             {
