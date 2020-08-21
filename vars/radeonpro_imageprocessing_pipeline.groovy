@@ -341,13 +341,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             """
         }
 
-        publishHTML([allowMissing: false,
-                     alwaysLinkToLastBuild: false,
-                     keepAll: true,
-                     reportDir: 'results',
-                     reportFiles: 'summary_report.html',
-                     reportName: 'Test Report',
-                     reportTitles: 'Summary Report'])
+        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report")
     } else {
         checkOutBranchOrScm("master", "git@github.com:Radeon-Pro/RadeonProImageProcessingSDK.git")
 

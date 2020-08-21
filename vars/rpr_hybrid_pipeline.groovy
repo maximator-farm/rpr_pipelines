@@ -93,14 +93,8 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
 
             stash includes: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures/**/*", name: "testResult-${asicName}-${osName}-${options.RENDER_QUALITY}", allowEmpty: true
 
-            publishHTML([allowMissing: true,
-                         alwaysLinkToLastBuild: false,
-                         keepAll: true,
-                         escapeUnderscores: false,
-                         reportDir: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures",
-                         reportFiles: "report.html",
-                         reportName: "${STAGE_NAME}_${options.RENDER_QUALITY}_failures",
-                         reportTitles: "${STAGE_NAME}_${options.RENDER_QUALITY}_failures"])
+            utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-${options.RENDER_QUALITY}_failures", "report.html", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures")
+
         } catch (err) {
             println("Error during HTML report publish")
             println(err.getMessage())

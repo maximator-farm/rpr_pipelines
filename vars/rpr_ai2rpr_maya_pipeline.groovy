@@ -434,13 +434,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options.testsStatus = ""
             }
 
-            publishHTML([allowMissing: false,
-                         alwaysLinkToLastBuild: false,
-                         keepAll: true,
-                         reportDir: 'summaryTestResults',
-                         reportFiles: 'summary_report.html',
-                         reportName: 'Test Report',
-                         reportTitles: 'Summary Report'])
+            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report")
         }
     }
     catch (e) {

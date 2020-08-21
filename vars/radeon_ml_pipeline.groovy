@@ -59,13 +59,7 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
         }
         finally {
             archiveArtifacts "*.log"
-            publishHTML([allowMissing: true,
-                         alwaysLinkToLastBuild: true,
-                         keepAll: true,
-                         reportDir: 'results',
-                         reportFiles: 'report.html',
-                         reportName: "FT ${osName}-${asicName}",
-                         reportTitles: "FT ${osName}-${asicName}"])
+            utils.publishReport(this, "${BUILD_URL}", "results", "report.html", "FT ${osName}-${asicName}", "FT ${osName}-${asicName}")
         }
     }
 }
