@@ -130,7 +130,7 @@ def executeTests(String osName, String asicName, Map options)
             println(e.toString())
             println(e.getMessage())
         }
-    }
+}
 }
 
 
@@ -354,5 +354,6 @@ def call(String projectBranch = "",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
                             slackTocken:"${SLACK_BAIKAL_TOCKEN}",
                             TEST_TIMEOUT:30,
-                            cmakeKeys:cmakeKeys])
+                            cmakeKeys:cmakeKeys,
+                            retriesForTestStage:1])
 }

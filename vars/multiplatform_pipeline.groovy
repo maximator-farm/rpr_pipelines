@@ -64,10 +64,9 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 throw e
                             }
                         }
-
-                        run_with_retries(testerLabels, options.TEST_TIMEOUT, retringFunction, true, "Test", newOptions)
+                        Integer retries_count = options.retriesForTestStage ?: -1
+                        run_with_retries(testerLabels, options.TEST_TIMEOUT, retringFunction, true, "Test", newOptions, [], retries_count)
                     }
-
                 }
             }
         }

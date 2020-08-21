@@ -284,6 +284,7 @@ def call(String projectBranch = "",
                             cmakeKeys:cmakeKeys,
                             slackChannel:"${SLACK_ML_CHANNEL}",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
-                            slackTocken:"slack-ml-channel"])
+                            slackTocken:"slack-ml-channel",
+                            retriesForTestStage:1])
 
 }

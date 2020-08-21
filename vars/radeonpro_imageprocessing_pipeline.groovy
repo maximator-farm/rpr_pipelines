@@ -396,5 +396,6 @@ def call(String projectBranch = "",
                             PRJ_ROOT:PRJ_ROOT,
                             cmakeKeys:cmakeKeys,
                             testPerformance:testPerformance,
-                            nodeRetry: nodeRetry])
+                            nodeRetry: nodeRetry,
+                            retriesForTestStage:1])
 }
