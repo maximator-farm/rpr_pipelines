@@ -50,7 +50,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 if (testsOrTestPackage == ''){
                                     testsOrTestPackage = newOptions['testsPackage'].replace(' ', '_')
                                 }
-                                if (options['nodeRetry']) {
+                                if (options.containsKey('nodeRetry')) {
                                     options['nodeRetry'].each{ retry ->
                                         if (retry['Testers'].equals(nodesList)){
                                             retry['Tries'][testsOrTestPackage].add([host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.crash.log", time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))])
