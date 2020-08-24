@@ -74,13 +74,19 @@ def createRelease(String jobName, String repositoryUrl, String branch) {
             httpMode: 'GET'
         )
         def releasesParsed = parseResponse(releases.content)
-        def shouldBeUploaded = true
+        def shouldBeUploaded = false
+        def tagIsBusy = false
+        def releaseAlreadyPushed = false
         for (release in releasesParsed) {
-            if (release['name'].contains("Weekly Development builds")) {
-                println("[INFO] Previous build was found")
+            if (release['tag_name'] == "v${version}" && release['author']['login'] != 'radeonprorender') {
+                println("[INFO] Release with same tag has already published by other user")
+                tagIsBusy = true
+                break
+            } else if (release['name'].contains("Weekly Development builds")) {
+                println("[INFO] Previous release was found")
                 if (release['tag_name'] == "v${version}") {
                     println("[INFO] Previous release has same tag. It won't be reuploaded")
-                    shouldBeUploaded = false
+                    releaseAlreadyPushed = true
                 } else {
                     httpRequest(
                         url: "${repositoryApiUrl}/releases/${release.id}",
@@ -92,6 +98,9 @@ def createRelease(String jobName, String repositoryUrl, String branch) {
 
                 break
             }
+        }
+        if (!tagIsBusy && !releaseAlreadyPushed) {
+            shouldBeUploaded = true
         }
 
         if (shouldBeUploaded) {
