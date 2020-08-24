@@ -29,7 +29,7 @@ class utils {
                      reportTitles: reportTitles])
         try {
             self.httpRequest(
-                url: "${buildUrl}/${reportName.replace(' ', '_20')}/",
+                url: "${buildUrl}/${reportName.replace('_', '_5f').replace(' ', '_20')}/",
                 authentication: 'jenkinsCredentials',
                 httpMode: 'GET'
             )
