@@ -1,3 +1,5 @@
+import groovy.json.JsonOutput
+
 class utils {
 
     static int getTimeoutFromXML(Object self, String test, String keyword, Integer additional_xml_timeout) 
@@ -15,6 +17,43 @@ class utils {
             return -1
         }
         
+    }
+
+    static def markNodeOffline(Object self, String nodeName, String offlineMessage)
+    {
+        try {
+            def nodes = jenkins.model.Jenkins.instance.getLabel(nodeName).getNodes()
+            nodes[0].getComputer().doToggleOffline(offlineMessage)
+            self.println("[INFO] Node '${nodeName}' was marked as failed")
+        } catch (e) {
+            self.println("[ERROR] Failed to mark node '${nodeName}' as offline")
+            self.println(e)
+            throw e
+        }
+    }
+
+    static def sendExceptionToSlack(Object self, String jobName, String buildNumber, String buildUrl, String webhook, String channel, String message)
+    {
+        try {
+            def slackMessage = [
+                attachments: [[
+                    "title": "${jobName} [${buildNumber}]",
+                    "title_link": "${buildUrl}",
+                    "color": "#720000",
+                    "text": message
+                ]],
+                channel: channel
+            ]
+            self.httpRequest(
+                url: webhook,
+                httpMode: 'POST',
+                requestBody: JsonOutput.toJson(slackMessage)
+            )
+            self.println("[INFO] Exception was sent to Slack")
+        } catch (e) {
+            self.println("[ERROR] Failed to send exception to Slack")
+            self.println(e)
+        }
     }
 
     static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles)

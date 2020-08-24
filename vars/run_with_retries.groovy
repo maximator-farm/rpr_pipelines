@@ -59,6 +59,24 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                                     throw e
                                 }
                             }
+                        } else if (exceptionClassName.contains("RemotingSystemException")) {
+                            String nodeName = env.NODE_NAME
+                            try {
+                                // take master node for send exception in Slack channel
+                                node ("master") {
+                                    withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
+                                        utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "${nodeName}: RemotingSystemException appeared. Node is going to be marked as offline")
+                                        utils.markNodeOffline(this, nodeName, "RemotingSystemException appeared. This node was marked as offline")
+                                        utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "${nodeName}: Node was marked as offline")
+                                    }
+                                }
+                            } catch (e2) {
+                                node ("master") {
+                                    withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
+                                        utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "Failed to mark node '${nodeName}' as offline")
+                                    }
+                                }
+                            }
                         }
 
                         println "[ERROR] Failed during tests on ${env.NODE_NAME} node"
