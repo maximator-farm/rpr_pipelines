@@ -19,6 +19,21 @@ class utils {
         
     }
 
+    static def isTimeoutExceeded(Exception e) {
+        Boolean result = false
+        String exceptionClassName = e.getClass().toString()
+        if (exceptionClassName.contains("FlowInterruptedException")) {
+            for (cause in e.getCauses()) {
+                String causeClassName = cause.getClass().toString()
+                if (causeClassName.contains("ExceededTimeout")) {
+                    result = true
+                    break
+                }
+            }
+        }
+        return result
+    }
+
     static def markNodeOffline(Object self, String nodeName, String offlineMessage)
     {
         try {
