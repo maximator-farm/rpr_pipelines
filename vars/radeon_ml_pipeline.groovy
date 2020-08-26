@@ -129,8 +129,8 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     bat """
-    xcopy ..\\\\RML_thirdpary\\\\MIOpen third_party\\\\miopen /s/y/i
-    xcopy ..\\\\RML_thirdpary\\\\tensorflow third_party\\\\tensorflow /s/y/i
+    xcopy ..\\\\RML_thirdparty\\\\MIOpen third_party\\\\miopen /s/y/i
+    xcopy ..\\\\RML_thirdparty\\\\tensorflow third_party\\\\tensorflow /s/y/i
     """
 
     cmakeKeysWin ='-G "Visual Studio 15 2017 Win64" -DRML_DIRECTML=ON -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
@@ -209,7 +209,7 @@ def executeBuildLinux(Map options)
         cd build
         mv bin Release
         cp ../third_party/miopen/libMIOpen.so* ./Release
-        cp ../third_party/tensorflow/tensorflow/linux/* ./Release
+        cp ../third_party/tensorflow/linux/* ./Release
 
         mkdir ./Release/rml
         mkdir ./Release/rml/rml
