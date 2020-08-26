@@ -163,7 +163,7 @@ def executeBuildOSX(Map options)
         cp -r ../RML_thirdparty/tensorflow/ ./third_party/tensorflow
     """
 
-    cmakeKeysOSX = '-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON'
+    cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
     sh """
         mkdir build
         cd build
@@ -194,8 +194,8 @@ def executeBuildLinux(Map options)
         cp -r ../RML_thirdparty/tensorflow/ ./third_party/tensorflow
     """
     cmakeKeysLinux = [
-            'Ubuntu18': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=ON -DRML_MPS=OFF',
-            'CentOS7_6': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
+        'Ubuntu18': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=ON -DRML_MPS=OFF',
+        'CentOS7_6': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
     ]
 
     sh """
@@ -209,7 +209,7 @@ def executeBuildLinux(Map options)
         cd build
         mv bin Release
         cp ../third_party/miopen/libMIOpen.so* ./Release
-        cp ../third_party/tensorflow/linux/* ./Release
+        cp ../third_party/tensorflow/tensorflow/linux/* ./Release
 
         mkdir ./Release/rml
         mkdir ./Release/rml/rml
