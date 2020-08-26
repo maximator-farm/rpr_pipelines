@@ -125,6 +125,34 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
 
 def call(String platforms, def executePreBuild, def executeBuild, def executeTests, def executeDeploy, Map options) {
     try {
+        try {
+            if (env.BuildPriority) {
+                currentBuild.displayName = "${currentBuild.displayName} (Priority: ${env.BuildPriority})"
+                println("[INFO] Priority was set by BuildPriority parameter")
+            } else {
+                def jenkins = Jenkins.getInstance();        
+                def views = Jenkins.getInstance().getViews()
+
+                def jobsViews = []
+                for (view in views) {
+                    if (view.contains(jenkins.getItem(currentBuild.getProjectName()))) {
+                        jobsViews.add(view.getDisplayName())
+                    }
+                }
+
+                if (jobsViews.contains('Autojobs')) {
+                    currentBuild.displayName = "${currentBuild.displayName} (Priority: 20)"
+                } else if (jobsViews.contains('Large_autojobs')) {
+                    currentBuild.displayName = "${currentBuild.displayName} (Priority: 30)"
+                } else {
+                    currentBuild.displayName = "${currentBuild.displayName} (Priority: 40)"
+                }
+                println("[INFO] Priority was set based on view of job")
+            }
+        } catch (e) {
+            println("[ERROR Can't add priority in build name")
+            println(e.toString())
+        }
 
         // if it's PR - supersede all previously launched executions
         if(env.CHANGE_ID) {
