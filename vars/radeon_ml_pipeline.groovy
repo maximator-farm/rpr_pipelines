@@ -129,8 +129,8 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     bat """
-        xcopy ..\\RML_MIOpen third_party\\miopen /s/y/i
-        xcopy ..\\RML_tensorflow_cc third_party\\tensorflow_cc /s/y/i
+        xcopy ..\\RML_thirdpary\\MIOpen third_party\\miopen /s/y/i
+        xcopy ..\\RML_thirdpary\\tensorflow third_party\\tensorflow /s/y/i
     """
 
     cmakeKeysWin ='-G "Visual Studio 15 2017 Win64" -DRML_DIRECTML=ON -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
@@ -158,7 +158,12 @@ def executeBuildWindows(Map options)
 
 def executeBuildOSX(Map options)
 {
-    cmakeKeysOSX = '-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON'
+    sh """
+        cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
+        cp -r ../RML_thirdparty/tensorflow/ ./third_party/tensorflow
+    """
+
+    cmakeKeysOSX = '-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON'
     sh """
         mkdir build
         cd build
@@ -185,8 +190,8 @@ def executeBuildOSX(Map options)
 def executeBuildLinux(Map options)
 {
     sh """
-        cp -r ../RML_MIOpen/* ./third_party/miopen
-        cp -r ../RML_tensorflow_cc/ ./third_party/tensorflow_cc
+        cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
+        cp -r ../RML_thirdparty/tensorflow/ ./third_party/tensorflow
     """
     cmakeKeysLinux = [
             'Ubuntu18': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=ON -DRML_MPS=OFF',
@@ -270,8 +275,8 @@ def executeBuild(String osName, Map options)
     {
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
-        receiveFiles("rpr-ml/MIOpen/*", "../RML_MIOpen")
-        receiveFiles("rpr-ml/tensorflow_cc/*", "../RML_tensorflow_cc")
+        receiveFiles("rpr-ml/MIOpen/*", "../RML_thirdparty/MIOpen")
+        receiveFiles("rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
 
         outputEnvironmentInfo(osName)
 
@@ -331,7 +336,7 @@ def call(String projectBranch = "",
          Boolean executeFT = true)
 {
     String PRJ_ROOT='rpr-ml'
-    String PRJ_NAME='RadeonML_com'
+    String PRJ_NAME='RadeonML'
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
             [platforms:platforms,
