@@ -138,7 +138,7 @@ def executeBuildWindows(Map options)
     bat """
         mkdir build
         cd build
-        cmake ${cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow_cc -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}.log 2>&1
+        cmake ${cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}.log 2>&1
         set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
         %msbuild% RadeonML.sln -property:Configuration=Release >> ..\\${STAGE_NAME}.log 2>&1
     """
@@ -146,7 +146,7 @@ def executeBuildWindows(Map options)
     bat """
         cd build
         xcopy ..\\third_party\\miopen\\MIOpen.dll .\\Release\\MIOpen.dll*
-        xcopy ..\\third_party\\tensorflow_cc\\windows\\* .\\Release
+        xcopy ..\\third_party\\tensorflow\\windows\\* .\\Release
         mkdir .\\Release\\rml
         mkdir .\\Release\\rml\\rml
         mkdir .\\Release\\rml\\rml_internal
@@ -201,7 +201,7 @@ def executeBuildLinux(Map options)
     sh """
         mkdir build
         cd build
-        cmake ${cmakeKeysLinux[CIS_OS]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow_cc -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}.log 2>&1
+        cmake ${cmakeKeysLinux[CIS_OS]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}.log 2>&1
         make -j 4 >> ../${STAGE_NAME}.log 2>&1
     """
 
@@ -209,7 +209,7 @@ def executeBuildLinux(Map options)
         cd build
         mv bin Release
         cp ../third_party/miopen/libMIOpen.so* ./Release
-        cp ../third_party/tensorflow_cc/linux/* ./Release
+        cp ../third_party/tensorflow/linux/* ./Release
 
         mkdir ./Release/rml
         mkdir ./Release/rml/rml
