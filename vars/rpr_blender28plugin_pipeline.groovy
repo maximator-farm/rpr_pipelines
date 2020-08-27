@@ -395,12 +395,6 @@ def executeTests(String osName, String asicName, Map options)
                         def sessionReport = null
                         sessionReport = readJSON file: 'Results/Blender28/session_report.json'
 
-                        // if none launched tests - mark build failed
-                        if (sessionReport.summary.total == 0)
-                        {
-                            currentBuild.result = "FAILURE"
-                        }
-
                         if (options.sendToUMS)
                         {
                             universeClient.stage("Tests-${osName}-${asicName}", "end")
@@ -931,13 +925,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 if (summaryReport.error > 0) {
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
-                    currentBuild.result="FAILURE"
+                    currentBuild.result = "FAILURE"
 
                     problemMessageManager.saveGlobalFailReason("Some tests marked as error")
                 }
                 else if (summaryReport.failed > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
-                    currentBuild.result="UNSTABLE"
+                    currentBuild.result = "UNSTABLE"
 
                     problemMessageManager.saveUnstableReason("Some tests marked as failed")
                 }
@@ -948,7 +942,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 println(e.getMessage())
                 println("CAN'T GET TESTS STATUS")
                 problemMessageManager.saveUnstableReason("Can't get tests status")
-                currentBuild.result="UNSTABLE"
+                currentBuild.result = "UNSTABLE"
             }
 
             try

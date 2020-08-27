@@ -1,3 +1,5 @@
+import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
+import hudson.model.Result
 import groovy.json.JsonOutput
 
 class utils {
@@ -17,6 +19,10 @@ class utils {
             return -1
         }
         
+    }
+
+    static def setForciblyBuildResult(RunWrapper currentBuild, String buildResult) {
+        currentBuild.build().@result = Result.fromString(buildResult)
     }
 
     static def isTimeoutExceeded(Exception e) {

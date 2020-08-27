@@ -1,4 +1,4 @@
-def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLastNode, def stageName, def options, List allowedExceptions = [], Integer maxNumberOfRetries = -1, String osName = "") {
+def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLastNode, def stageName, def options, List allowedExceptions = [], Integer maxNumberOfRetries = -1, String osName = "", Boolean setBuildStatus = false) {
     List nodesListAll = nodesByLabel label: labels, offline: true
     List nodesListOnline = nodesByLabel label: labels, offline: false
     println "[INFO] Found ${nodesListOnline.size()} suitable online nodes (total suitable nodes: ${nodesListAll.size()})"
@@ -114,7 +114,9 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                                         options.problemMessageManager.saveGeneralFailReason("Unknown reason", stageName, osName)
                                     }
                                 }
-                                currentBuild.result="FAILURE"
+                                if (setBuildStatus) {
+                                    currentBuild.result = "FAILURE"
+                                }
                                 throw e
                             } else {
                                 println("[INFO] Exception found in allowed exceptions")
@@ -131,9 +133,10 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                                     options.problemMessageManager.saveGeneralFailReason("Unknown reason", stageName, osName)
                                 }
                             }
-                            currentBuild.result = "FAILURE"
                             println "[ERROR] All nodes on ${stageName} stage with labels ${labels} failed."
-                            currentBuild.result="FAILURE"
+                            if (setBuildStatus) {
+                                currentBuild.result = "FAILURE"
+                            }
                             throw e
                         }
                     }

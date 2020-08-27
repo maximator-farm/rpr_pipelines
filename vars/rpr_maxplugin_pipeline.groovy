@@ -237,13 +237,6 @@ def executeTests(String osName, String asicName, Map options)
                     def sessionReport = null
                     sessionReport = readJSON file: 'Results/Max/session_report.json'
 
-                    // if none launched tests - mark build failed
-                    if (sessionReport.summary.total == 0)
-                    {
-                        options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
-                        currentBuild.result = "FAILURE"
-                    }
-
                     if (options.sendToUMS)
                     {
                         universeClient.stage("Tests-${osName}-${asicName}", "end")
@@ -695,25 +688,25 @@ def executeDeploy(Map options, List platformList, List testResultList)
             {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 if (summaryReport.error > 0) {
-                    println("Some tests crashed")
-                    currentBuild.result="FAILURE"
+                    println("[INFO] Some tests marked as error. Build result = FAILURE.")
+                    currentBuild.result = "FAILURE"
 
                     problemMessageManager.saveGlobalFailReason("Some tests marked as error")
                 }
                 else if (summaryReport.failed > 0) {
-                    println("Some tests failed")
-                    currentBuild.result="UNSTABLE"
+                    println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
+                    currentBuild.result = "UNSTABLE"
 
                     problemMessageManager.saveUnstableReason("Some tests marked as failed")
-                } else {
-                    currentBuild.result="SUCCESS"
                 }
             }
             catch(e)
             {
+                println(e.toString())
+                println(e.getMessage())
                 println("CAN'T GET TESTS STATUS")
                 problemMessageManager.saveUnstableReason("Can't get tests status")
-                currentBuild.result="UNSTABLE"
+                currentBuild.result = "UNSTABLE"
             }
 
             try
@@ -746,8 +739,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
         }
     }
     catch (e) {
-        currentBuild.result = "FAILURE"
         println(e.toString());
+        println(e.getMessage());
         throw e
     }
     finally
