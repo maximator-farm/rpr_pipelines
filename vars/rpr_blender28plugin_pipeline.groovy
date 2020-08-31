@@ -1022,7 +1022,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkOSX = "",
     String engine = "1.0",
     String tester_tag = "Blender2.8",
-    String toolVersion = "2.83")
+    String toolVersion = "2.83",
+    String parallelExecutionType = "TakeOneNodePerGroup")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -1135,7 +1136,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         customBuildLinkOSX: customBuildLinkOSX,
                         engine: engine,
                         nodeRetry: nodeRetry,
-                        problemMessageManager: problemMessageManager
+                        problemMessageManager: problemMessageManager,
+                        parallelExecutionType:parallelExecutionType
                         ]
         }
         catch(e)
