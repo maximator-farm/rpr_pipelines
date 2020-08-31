@@ -62,7 +62,7 @@ public class ProblemMessageManager {
         try {
             // ignore general error messages if specific message has already saved
             if (problemScope == ProblemScope.GENERAL) {
-                if (osName) {
+                if (!osName) {
                     if (failReasons.containsKey(stageName)) {
                         return
                     } else {
