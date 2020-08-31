@@ -66,26 +66,28 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                         String causeClassName = it.getClass().toString()
                                         println "Interruption cause: ${causeClassName}"
                                         if (causeClassName.contains("CancelledCause")) {
-                                            expectedExceptionMessage = "Build was aborted by new commit"
+                                            expectedExceptionMessage = "Build was aborted by new commit."
                                         } else if (causeClassName.contains("UserInterruption")) {
-                                            expectedExceptionMessage = "Build was aborted by user"
+                                            expectedExceptionMessage = "Build was aborted by user."
                                         } else if ((causeClassName.contains("TimeoutStepExecution") || causeClassName.contains("ExceededTimeout")) && (!expectedExceptionMessage || expectedExceptionMessage == 'Unknown reason')) {
-                                            expectedExceptionMessage = "Timeout exceeded (pipelines layer)"
+                                            expectedExceptionMessage = "Timeout exceeded (pipelines layer)."
                                         }
                                     }
                                 } else if (exceptionClassName.contains("ClosedChannelException") || exceptionClassName.contains("RemotingSystemException") || exceptionClassName.contains("InterruptedException")) {
-                                    expectedExceptionMessage = "Lost connection with machine"
+                                    expectedExceptionMessage = "Lost connection with machine."
                                 }
 
                                 // add info about retry to options
                                 boolean added = false;
-                                String testsOrTestPackage = newOptions['tests'];
-                                if (testsOrTestPackage == ''){
+                                String testsOrTestPackage
+                                if (newOptions['splitTestsExecution']) {
+                                    testsOrTestPackage = newOptions['tests']
+                                } else if (newOptions['testsPackage']) {
                                     testsOrTestPackage = newOptions['testsPackage'].replace(' ', '_')
                                 }
 
                                 if (!expectedExceptionMessage) {
-                                    expectedExceptionMessage = "Unexpected exception"
+                                    expectedExceptionMessage = "Unexpected exception."
                                 }
 
                                 if (options.containsKey('nodeRetry')) {
@@ -282,22 +284,21 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                     println("[ERROR] Failed during prebuild stage on ${env.NODE_NAME}")
                                     println(e.toString());
                                     println(e.getMessage());
-
                                     String exceptionClassName = e.getClass().toString()
                                     if (exceptionClassName.contains("FlowInterruptedException")) {
                                         e.getCauses().each(){
                                             String causeClassName = it.getClass().toString()
                                             if (causeClassName.contains("ExceededTimeout")) {
                                                 if (options.problemMessageManager) {
-                                                    options.problemMessageManager.saveSpecificFailReason("Timeout exceeded", "PreBuild")
+                                                    options.problemMessageManager.saveSpecificFailReason("Timeout exceeded.", "PreBuild")
                                                 }
                                             }
                                         }
                                     }
                                     if (options.problemMessageManager) {
-                                        options.problemMessageManager.saveGeneralFailReason("Unknown reason", "PreBuild")
+                                        options.problemMessageManager.saveGeneralFailReason("Unknown reason.", "PreBuild")
                                     }
-
+                                    GithubNotificator.closeUnfinishedSteps(env, options, "PreBuild stage was failed.")
                                     throw e
                                 }
                             }
