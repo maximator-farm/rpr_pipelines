@@ -328,22 +328,21 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                     println("[ERROR] Failed during prebuild stage on ${env.NODE_NAME}")
                                     println(e.toString());
                                     println(e.getMessage());
-
                                     String exceptionClassName = e.getClass().toString()
                                     if (exceptionClassName.contains("FlowInterruptedException")) {
                                         e.getCauses().each(){
                                             String causeClassName = it.getClass().toString()
                                             if (causeClassName.contains("ExceededTimeout")) {
                                                 if (options.problemMessageManager) {
-                                                    options.problemMessageManager.saveSpecificFailReason("Timeout exceeded", "PreBuild")
+                                                    options.problemMessageManager.saveSpecificFailReason("Timeout exceeded.", "PreBuild")
                                                 }
                                             }
                                         }
                                     }
                                     if (options.problemMessageManager) {
-                                        options.problemMessageManager.saveGeneralFailReason("Unknown reason", "PreBuild")
+                                        options.problemMessageManager.saveGeneralFailReason("Unknown reason.", "PreBuild")
                                     }
-
+                                    GithubNotificator.closeUnfinishedSteps(env, options, "PreBuild stage was failed.")
                                     throw e
                                 }
                             }

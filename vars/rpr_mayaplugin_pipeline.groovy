@@ -1,6 +1,9 @@
 import groovy.transform.Field
 import UniverseClient
 import groovy.json.JsonOutput;
+import net.sf.json.JSON
+import net.sf.json.JSONSerializer
+import net.sf.json.JsonConfig
 
 @Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com/", "AMD%20Radeon™%20ProRender%20for%20Maya")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -232,55 +235,59 @@ def executeTests(String osName, String asicName, Map options)
     try {
         try {
             timeout(time: "5", unit: 'MINUTES') {
+                GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading tests repository.", "${BUILD_URL}")
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
             }
         } catch (e) {
             if (utils.isTimeoutExceeded(e)) {
-                throw new ExpectedExceptionWrapper("Failed to prepare test group (timeout exceeded)", e)
+                throw new ExpectedExceptionWrapper("Failed to download tests repository due to timeout.", e)
             } else {
-                throw new ExpectedExceptionWrapper("Failed to prepare test group", e)
-            }            
+                throw new ExpectedExceptionWrapper("Failed to download tests repository.", e)
+            }
         }
 
         try {
+            GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading test scenes.", "${BUILD_URL}")
             downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MayaAssets/", 'MayaAssets')
-        } catch (Exception e) {
-            throw new ExpectedExceptionWrapper("Failed downloading of Assets", e)
+        } catch (e) {
+            throw new ExpectedExceptionWrapper("Failed to download test scenes.", e)
         }
 
         try {
             Boolean newPluginInstalled = false
             try {
                 timeout(time: "15", unit: 'MINUTES') {
+                    GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Installing the plugin.", "${BUILD_URL}")
                     getMayaPluginInstaller(osName, options)
                     newPluginInstalled = installMSIPlugin(osName, 'Maya', options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
             } catch (e) {
                 if (utils.isTimeoutExceeded(e)) {
-                    throw new ExpectedExceptionWrapper("Failed to install plugin (timeout exceeded)", e)
+                    throw new ExpectedExceptionWrapper("Failed to install the plugin due to timeout.", e)
                 } else {
-                    throw new ExpectedExceptionWrapper("Failed to install plugin", e)
+                    throw new ExpectedExceptionWrapper("Failed to install the plugin.", e)
                 }
             }
         
             try {
                 if (newPluginInstalled) {
                     timeout(time: "3", unit: 'MINUTES') {
+                        GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Building cache.", "${BUILD_URL}")
                         buildRenderCache(osName, options.toolVersion, options.stageName)
                         if(!fileExists("./Work/Results/Maya/cache_building.jpg")){
                             println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
-                            throw new ExpectedExceptionWrapper("No output image after cache building.", new Exception("No output image after cache building"))
+                            throw new ExpectedExceptionWrapper("No output image after cache building.", new Exception("No output image after cache building."))
                         }
                     }
                 }
             } catch (e) {
                 if (utils.isTimeoutExceeded(e)) {
-                    throw new ExpectedExceptionWrapper("Failed to build cache (timeout exceeded)", e)
+                    throw new ExpectedExceptionWrapper("Failed to build cache due to timeout.", e)
                 } else {
-                    throw new ExpectedExceptionWrapper("Failed to build cache", e)
+                    throw new ExpectedExceptionWrapper("Failed to build cache.", e)
                 }
             }
             
@@ -289,11 +296,7 @@ def executeTests(String osName, String asicName, Map options)
             println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
             // deinstalling broken addon
             installMSIPlugin(osName, "Maya", options, false, true)
-            if (e instanceof ExpectedExceptionWrapper) {
-                throw e
-            } else {
-                throw new ExpectedExceptionWrapper("Failed plugin installation", e)
-            }
+            throw e
         }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
@@ -316,6 +319,7 @@ def executeTests(String osName, String asicName, Map options)
             {
                 try 
                 {
+                    GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")
                     println "[INFO] Downloading reference images for ${options.tests}"
                     receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
                     options.tests.split(" ").each() {
@@ -324,11 +328,11 @@ def executeTests(String osName, String asicName, Map options)
                 } catch (e) {
                     println("[WARNING] Baseline doesn't exist.")
                 }
-
+                GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Executing tests.", "${BUILD_URL}")
                 executeTestCommand(osName, asicName, options)
             }
         } catch (e) {
-            throw new ExpectedExceptionWrapper(e.getMessage()?:"Unknown reason", e)
+            throw new ExpectedExceptionWrapper("An error occurred while executing tests. Please contact support.", e)
         }
 
     } catch (e) {
@@ -337,40 +341,70 @@ def executeTests(String osName, String asicName, Map options)
         } 
         println(e.toString())
         println(e.getMessage())
-        options.failureMessage = "Failed during testing: ${asicName}-${osName}"
-        options.failureError = e.getMessage()
-        throw e
-    } finally {
-        archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-        if (stashResults) {
-            dir('Work')
-            {
-                if (fileExists("Results/Maya/session_report.json")) {
-
-                    def sessionReport = null
-                    sessionReport = readJSON file: 'Results/Maya/session_report.json'
-
-                    if (options.sendToUMS)
-                    {
-                        universeClient.stage("Tests-${osName}-${asicName}", "end")
-                    }
-
-                    echo "Stashing test results to : ${options.testResultsName}"
-                    stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
-
-                    // deinstalling broken addon
-                    if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
-                        if (sessionReport.summary.total != sessionReport.summary.skipped){
-                            collectCrashInfo(osName, options, options.currentTry)
-                            installMSIPlugin(osName, "Maya", options, false, true)
-                            throw new ExpectedExceptionWrapper("All tests crashed", new Exception("All tests crashed"))
-                        }
-                    }
-
-                }
-            }
+        if (e instanceof ExpectedExceptionWrapper) {
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, e.getMessage(), "${BUILD_URL}")
+            throw e
         } else {
-            println "[INFO] Task ${options.tests} will be retried."
+            String errorMessage = "The reason is not automatically identified. Please contact support."
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, errorMessage, "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper(errorMessage, e)
+        }
+    } finally {
+        try {
+            archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+            if (stashResults) {
+                dir('Work')
+                {
+                    if (fileExists("Results/Maya/session_report.json")) {
+
+                        def sessionReport = null
+                        sessionReport = readJSON file: 'Results/Maya/session_report.json'
+
+                        if (options.sendToUMS)
+                        {
+                            universeClient.stage("Tests-${osName}-${asicName}", "end")
+                        }
+
+                        if (sessionReport.summary.error > 0) {
+                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "Some tests were marked as error. Check the report for details.", "${BUILD_URL}")
+                        } else if (sessionReport.summary.failed > 0) {
+                            GithubNotificator.updateStatus("Test", options['stageName'], "success", env, options, "Some tests were marked as failed. Check the report for details.", "${BUILD_URL}")
+                        } else {
+                            GithubNotificator.updateStatus("Test", options['stageName'], "success", env, options, "Tests completed successfully.", "${BUILD_URL}")
+                        }
+
+                        echo "Stashing test results to : ${options.testResultsName}"
+                        stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+
+                        // deinstalling broken addon
+                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                            if (sessionReport.summary.total != sessionReport.summary.skipped){
+                                collectCrashInfo(osName, options, options.currentTry)
+                                installMSIPlugin(osName, "Maya", options, false, true)
+                                String errorMessage
+                                if (options.currentTry < options.nodeReallocateTries) {
+                                    errorMessage = "All tests were marked as error. The test group will be restarted."
+                                } else {
+                                    errorMessage = "All tests were marked as error."
+                                }
+                                throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
+                            }
+                        }
+
+                    }
+                }
+            } else {
+                println "[INFO] Task ${options.tests} will be retried."
+            }
+        } catch (e) {
+            if (e instanceof ExpectedExceptionWrapper) {
+                GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, e.getMessage(), "${BUILD_URL}")
+                throw e
+            } else {
+                String errorMessage = "An error occurred while saving test results. Please contact support."
+                GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, , "${BUILD_URL}")
+                throw new ExpectedExceptionWrapper(errorMessage, e)
+            }
         }
     }
 }
@@ -379,6 +413,7 @@ def executeBuildWindows(Map options)
 {
     dir('RadeonProRenderMayaPlugin\\MayaPkg')
     {
+        GithubNotificator.updateStatus("Build", "Windows", "pending", env, options, "Building the plugin.", "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -392,7 +427,8 @@ def executeBuildWindows(Map options)
 
         archiveArtifacts "RadeonProRender*.msi"
         String BUILD_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).msi" : "RadeonProRenderMaya_${options.pluginVersion}.msi"
-        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+        String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
         bat """
             rename RadeonProRender*.msi RadeonProRenderMaya.msi
@@ -414,6 +450,8 @@ def executeBuildWindows(Map options)
         //options.productCode = "unknown"
         options.pluginWinSha = sha1 'RadeonProRenderMaya.msi'
         stash includes: 'RadeonProRenderMaya.msi', name: 'appWindows'
+
+        GithubNotificator.updateStatus("Build", "Windows", "success", env, options, "The plugin was successfully built and published.", pluginUrl)
     }
 }
 
@@ -421,6 +459,7 @@ def executeBuildOSX(Map options)
 {
     dir('RadeonProRenderMayaPlugin/MayaPkg')
     {
+        GithubNotificator.updateStatus("Build", "OSX", "pending", env, options, "Building plugin.", "${BUILD_URL}/artifact/Build-OSX.log")
         sh """
             ./build_osx_installer.sh >> ../../${STAGE_NAME}.log 2>&1
         """
@@ -436,7 +475,8 @@ def executeBuildOSX(Map options)
 
             archiveArtifacts "RadeonProRender*.dmg"
             String BUILD_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).dmg" : "RadeonProRenderMaya_${options.pluginVersion}.dmg"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+            String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             sh "cp RadeonProRender*.dmg RadeonProRenderMaya.dmg"
             stash includes: 'RadeonProRenderMaya.dmg', name: "appOSX"
@@ -444,6 +484,8 @@ def executeBuildOSX(Map options)
             // TODO: detect ID of installed plugin
             // options.productCode = "unknown"
             options.pluginOSXSha = sha1 'RadeonProRenderMaya.dmg'
+
+            GithubNotificator.updateStatus("Build", "OSX", "success", env, options, "The plugin was successfully built and published.", pluginUrl)
         }
     }
 }
@@ -459,9 +501,12 @@ def executeBuild(String osName, Map options)
         dir('RadeonProRenderMayaPlugin')
         {
             try {
+                GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading plugin repository.")
                 checkOutBranchOrScm(options.projectBranch, options.projectRepo)
             } catch (e) {
-                problemMessageManager.saveSpecificFailReason("Failed clonning of plugin repository", "Build", osName)
+                String errorMessage = "Failed to download plugin repository."
+                GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
+                problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
                 throw e
             }
         }
@@ -481,10 +526,11 @@ def executeBuild(String osName, Map options)
                 echo "[WARNING] ${osName} is not supported"
             }
         } catch (e) {
-            problemMessageManager.saveSpecificFailReason("Failed during plugin building", "Build", osName)
+            String errorMessage = "Failed to build the plugin."
+            GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
+            problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
             throw e
         }
-
     } catch (e) {
         throw e
     }
@@ -516,6 +562,9 @@ def executePreBuild(Map options)
             options['executeBuild'] = true
             options['executeTests'] = true
             options['testsPackage'] = "regression.json"
+            GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
+            options.githubNotificator = githubNotificator
+            githubNotificator.initPR(options, "${BUILD_URL}")
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
@@ -548,7 +597,9 @@ def executePreBuild(Map options)
             try {
                 checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
             } catch (e) {
-                problemMessageManager.saveSpecificFailReason("Failed clonning of plugin repository", "PreBuild")
+                String errorMessage = "Failed to download plugin repository."
+                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
+                problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
                 throw e
             }
 
@@ -616,7 +667,9 @@ def executePreBuild(Map options)
                 currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
             } catch (e) {
-                problemMessageManager.saveSpecificFailReason("Failed increment version", "PreBuild")
+                String errorMessage = "Failed to increment plugin version."
+                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
+                problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
                 throw e
             }
         }
@@ -644,52 +697,54 @@ def executePreBuild(Map options)
     options.timeouts = [:]
     options.groupsUMS = []
 
-    dir('jobs_test_maya') 
-    {
-        try {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
-        } catch (e) {
-            problemMessageManager.saveSpecificFailReason("Failed clonning of tests repository", "PreBuild")
-            throw e
-        }
-
-        if(options.testsPackage != "none")
+    try {
+        dir('jobs_test_maya') 
         {
-            // json means custom test suite. Split doesn't supported
-            if(options.testsPackage.endsWith('.json'))
+            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
+
+            if(options.testsPackage != "none")
             {
-                def testsByJson = readJSON file: "jobs/${options.testsPackage}"
-                testsByJson.each() {
-                    options.groupsUMS << "${it.key}"
+                // json means custom test suite. Split doesn't supported
+                if(options.testsPackage.endsWith('.json'))
+                {
+                    def testsByJson = readJSON file: "jobs/${options.testsPackage}"
+                    testsByJson.each() {
+                        options.groupsUMS << "${it.key}"
+                    }
+                    options.splitTestsExecution = false
+                    options.timeouts = ["regression.json": options.REGRESSION_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT]
                 }
-                options.splitTestsExecution = false
-                options.timeouts = ["regression.json": options.REGRESSION_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT]
+                else {
+                    String tempTests = readFile("jobs/${options.testsPackage}")
+                    tempTests.split("\n").each {
+                        // TODO: fix: duck tape - error with line ending
+                        def test_group = "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
+                        tests << test_group
+                        def xml_timeout = utils.getTimeoutFromXML(this, "${test_group}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
+                        options.timeouts["${test_group}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+                    }
+                    options.tests = tests
+                    options.testsPackage = "none"
+                    options.groupsUMS = tests
+                }
             }
-            else {
-                String tempTests = readFile("jobs/${options.testsPackage}")
-                tempTests.split("\n").each {
-                    // TODO: fix: duck tape - error with line ending
-                    def test_group = "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
-                    tests << test_group
-                    def xml_timeout = utils.getTimeoutFromXML(this, "${test_group}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                    options.timeouts["${test_group}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+            else 
+            {
+                options.tests.split(" ").each() 
+                {
+                    tests << "${it}"
+                    def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
+                    options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
                 options.tests = tests
-                options.testsPackage = "none"
                 options.groupsUMS = tests
             }
         }
-        else 
-        {
-            options.tests.split(" ").each() 
-            {
-                tests << "${it}"
-                def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
-            }
-            options.tests = tests
-            options.groupsUMS = tests
-        }
+    } catch (e) {
+        String errorMessage = "Failed to configurate tests."
+        GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
+        problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
+        throw e
     }
 
     if(options.splitTestsExecution) {
@@ -714,6 +769,8 @@ def executePreBuild(Map options)
             println(e.toString())
         }
     }
+
+    GithubNotificator.updateStatus("PreBuild", "Version increment", "success", env, options, "PreBuild stage was successfully finished.")
 }
 
 def executeDeploy(Map options, List platformList, List testResultList)
@@ -723,9 +780,12 @@ def executeDeploy(Map options, List platformList, List testResultList)
         if(options['executeTests'] && testResultList)
         {
             try {
+                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Preparing tests results.", "${BUILD_URL}")
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
             } catch (e) {
-                problemMessageManager.saveSpecificFailReason("Failed clonning of tests repository", "Deploy")
+                String errorMessage = "Failed to download tests repository."
+                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 throw e
             }
 
@@ -778,27 +838,34 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try
             {
+                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report.", "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
                     dir("jobs_launcher") {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
+                        dir("..\\summaryTestResults") {
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                        }
                         if (options['isPreBuilt'])
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(retryInfo.toString())}\"
+                            build_reports.bat ..\\summaryTestResults "Maya" "PreBuilt" "PreBuilt" "PreBuilt"
                             """
                         }
                         else
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults "Maya" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(retryInfo.toString())}\"
+                            build_reports.bat ..\\summaryTestResults "Maya" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }
                     }
                 }
             } catch(e) {
-                problemMessageManager.saveSpecificFailReason("Failed report building", "Deploy")
-                println("ERROR during report building")
+                String errorMessage = "Failed to build test report."
+                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
+                println("[ERROR] Failed to build test report.")
                 println(e.toString())
                 println(e.getMessage())
                 throw e
@@ -812,7 +879,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
             catch(e)
             {
-                println("ERROR during slack status generation")
+                println("[ERROR] during slack status generation")
                 println(e.toString())
                 println(e.getMessage())
             }
@@ -825,14 +892,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
             catch(e)
             {
-                println("ERROR during archiving launcher.engine.log")
+                println("[ERROR] during archiving launcher.engine.log")
                 println(e.toString())
                 println(e.getMessage())
             }
 
+            Map summaryTestResults = [:]
             try
             {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
+                summaryTestResults['passed'] = summaryReport.passed
+                summaryTestResults['failed'] = summaryReport.failed
+                summaryTestResults['error'] = summaryReport.error
                 if (summaryReport.error > 0) {
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
                     currentBuild.result = "FAILURE"
@@ -850,7 +921,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             {
                 println(e.toString())
                 println(e.getMessage())
-                println("CAN'T GET TESTS STATUS")
+                println("[ERROR] CAN'T GET TESTS STATUS")
                 problemMessageManager.saveUnstableReason("Can't get tests status")
                 currentBuild.result = "UNSTABLE"
             }
@@ -867,10 +938,20 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
+                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Publishing test report.", "${BUILD_URL}")
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                     "Test Report", "Summary Report, Performance Report, Compare Report")
+                if (summaryTestResults) {
+                    // add in description of status check information about tests statuses
+                    // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", env, options, "Report was published successfully. Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                } else {
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", env, options, "Report was published successfully.", "${BUILD_URL}/Test_20Report")
+                }
             } catch(e) {
-                problemMessageManager.saveSpecificFailReason("Failed report publishing", "Deploy")
+                String errorMessage = "Failed to publish test report."
+                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 throw e
             }
 
@@ -911,7 +992,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String testsBranch = "master",
         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;OSX:AMD_RXVEGA',
         Boolean updateRefs = false,
-        Boolean enableNotifications = true,
+        Boolean enableNotifications = false,
         Boolean incrementVersion = true,
         String renderDevice = "gpu",
         String testsPackage = "",
@@ -1036,10 +1117,11 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         customBuildLinkOSX: customBuildLinkOSX,
                         engine: engine,
                         nodeRetry: nodeRetry,
-                        problemMessageManager: problemMessageManager
+                        problemMessageManager: problemMessageManager,
+                        platforms:platforms
                         ]
         } catch (e) {
-            problemMessageManager.saveSpecificFailReason("Failed initialization", "Init")
+            problemMessageManager.saveSpecificFailReason("Failed initialization.", "Init")
 
             throw e
         }
