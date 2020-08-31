@@ -143,6 +143,34 @@ def executeTestsTask(String testName, String osName, String asicName, def execut
 }
 
 
+def executeTasksOnAllFreeNodes(String osName, String asicName, def executeTests, Map options, Iterator testsIterator, Boolean firstRun) {
+    Integer launchingGroupsNumber = 0
+    if (firstRun) {
+        def nodes = nodesByLabel label: getLabels(osName, asicName, options), offline: false
+        for (node in nodes) {
+            def computer = Jenkins.instance.getNode(node).getComputer()
+            if (computer.countIdle() > 0) {
+                launchingGroupsNumber++
+            }
+        }
+    } else {
+        launchingGroupsNumber = 1
+    }
+
+    Map testsExecutors = [:]
+
+    for (int i = 0; i < launchingGroupsNumber; i++) {
+        String testName = getNextTest(testsIterator)
+        testsExecutors["Test-${asicName}-${osName}-${testName}"] = {
+            executeTestsTask(testName, osName, asicName, executeTests, options)
+            executeTasksOnAllFreeNodes(testName, osName, asicName, executeTests, options, testsIterator, false)
+        }                        
+    }
+
+    parallel testsExecutors
+}
+
+
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
 {
     if(gpuNames && options['executeTests'])
@@ -158,28 +186,32 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                     // TODO: replace testsList check to splitExecution var
                     options.testsList = options.testsList ?: ['']
 
-                    Integer launchingGroupsNumber = 1
                     Iterator testsIterator = options.testsList.iterator()
-                    if (!options["parallelExecutionType"] || options["parallelExecutionType"] == "TakeOneNodePerGroup") {
-                        launchingGroupsNumber = 1
-                    } else if (options["parallelExecutionType"] == "TakeAllOnlineNodes") {
-                        List possibleNodes = nodesByLabel label: getLabels(osName, asicName, options), offline: false
-                        launchingGroupsNumber = possibleNodes.size()
+                    if (options["parallelExecutionType"] == "TakeAllFreeNodes") {
+                        executeTasksOnAllFreeNodes(osName, asicName, executeTests, options, testsIterator, true)
+                    } else {
+                        Integer launchingGroupsNumber = 1
+                        if (!options["parallelExecutionType"] || options["parallelExecutionType"] == "TakeOneNodePerGroup") {
+                            launchingGroupsNumber = 1
+                        } else if (options["parallelExecutionType"] == "TakeAllOnlineNodes") {
+                            List possibleNodes = nodesByLabel label: getLabels(osName, asicName, options), offline: false
+                            launchingGroupsNumber = possibleNodes.size()
+                        }
+
+                        Map testsExecutors = [:]
+
+                        for (int i = 0; i < launchingGroupsNumber; i++) {
+                            testsExecutors["Test-${asicName}-${osName}-${i}"] = {
+                                String testName = getNextTest(testsIterator)
+                                while (testName != null) {
+                                    executeTestsTask(testName, osName, asicName, executeTests, options)
+                                    testName = getNextTest(testsIterator)
+                                }
+                            }                        
+                        }
+
+                        parallel testsExecutors
                     }
-
-                    Map testsExecutors = [:]
-
-                    for (int i = 0; i < launchingGroupsNumber; i++) {
-                        testsExecutors["Test-${asicName}-${osName}-${i}"] = {
-                            String testName = getNextTest(testsIterator)
-                            while (testName != null) {
-                                executeTestsTask(testName, osName, asicName, executeTests, options)
-                                testName = getNextTest(testsIterator)
-                            }
-                        }                        
-                    }
-
-                    parallel testsExecutors
                 }
             }
         }
