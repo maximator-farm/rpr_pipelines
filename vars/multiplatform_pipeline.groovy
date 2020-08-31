@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import jenkins.model.Jenkins;
 import groovy.transform.Synchronized;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicBoolean
 
 
 @NonCPS
@@ -143,31 +144,42 @@ def executeTestsTask(String testName, String osName, String asicName, def execut
 }
 
 
-def executeTasksOnAllFreeNodes(String osName, String asicName, def executeTests, Map options, Iterator testsIterator, Boolean firstRun) {
+def executeTasksOnAllFreeNodes(String osName, String asicName, def executeTests, Map options, Iterator testsIterator) {
     Integer launchingGroupsNumber = 0
-    if (firstRun) {
-        def nodes = nodesByLabel label: getLabels(osName, asicName, options), offline: false
-        for (node in nodes) {
-            def computer = Jenkins.instance.getNode(node).getComputer()
-            if (computer.countIdle() > 0) {
-                launchingGroupsNumber++
+    def nodes = nodesByLabel label: getLabels(osName, asicName, options), offline: false
+    for (node in nodes) {
+        def computer = Jenkins.instance.getNode(node).getComputer()
+        if (computer.countIdle() > 0) {
+            launchingGroupsNumber++
+        }
+    }
+    if (launchingGroupsNumber == 0) {
+        // if all suitable nodes is busy now, create only one thread which will be await idle node (if it doesn't exist)
+        def itemsInQueue = jenkins.model.Jenkins.instance.getQueue().getItems()
+        for (itemInQueue in itemsInQueue) {
+            if ("${env.BUILD_URL}".endsWith(itemInQueue.task.getUrl())) {
+                return
             }
         }
-    } else {
-        launchingGroupsNumber = 1
+        launchingGroupsNumber == 1
     }
 
-    Map testsExecutors = [:]
+    if (launchingGroupsNumber > 0) {
+        Map testsExecutors = [:]
 
-    for (int i = 0; i < launchingGroupsNumber; i++) {
-        String testName = getNextTest(testsIterator)
-        testsExecutors["Test-${asicName}-${osName}-${testName}"] = {
-            executeTestsTask(testName, osName, asicName, executeTests, options)
-            executeTasksOnAllFreeNodes(testName, osName, asicName, executeTests, options, testsIterator, false)
-        }                        
+        for (int i = 0; i < launchingGroupsNumber; i++) {
+            String testName = getNextTest(testsIterator)
+            if (testName == null) {
+                return
+            }
+            testsExecutors["Test-${asicName}-${osName}-${testName}"] = {
+                executeTestsTask(testName, osName, asicName, executeTests, options)
+                executeTasksOnAllFreeNodes(osName, asicName, executeTests, options, testsIterator)
+            }                        
+        }
+
+        parallel testsExecutors
     }
-
-    parallel testsExecutors
 }
 
 
@@ -188,7 +200,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                     Iterator testsIterator = options.testsList.iterator()
                     if (options["parallelExecutionType"] == "TakeAllFreeNodes") {
-                        executeTasksOnAllFreeNodes(osName, asicName, executeTests, options, testsIterator, true)
+                        executeTasksOnAllFreeNodes(osName, asicName, executeTests, options, testsIterator)
                     } else {
                         Integer launchingGroupsNumber = 1
                         if (!options["parallelExecutionType"] || options["parallelExecutionType"] == "TakeOneNodePerGroup") {
