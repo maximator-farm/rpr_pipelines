@@ -127,6 +127,15 @@ def executeTestsTask(String testName, String osName, String asicName, def execut
     try {
         Integer retries_count = options.retriesForTestStage ?: -1
         run_with_retries(testerLabels, options.TEST_TIMEOUT, retringFunction, true, "Test", newOptions, [], retries_count, osName)
+    } catch(FlowInterruptedException e) {
+        e.getCauses().each() {
+            String causeClassName = it.getClass().toString()
+            if (causeClassName.contains("UserInterruption")) {
+                throw e
+            }
+        }
+        println "Exception: ${e.toString()}"
+        println "Exception message: ${e.getMessage()}"
     } catch (e) {
         println "Exception: ${e.toString()}"
         println "Exception message: ${e.getMessage()}"
