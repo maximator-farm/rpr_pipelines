@@ -2,6 +2,9 @@ import groovy.transform.Field
 import groovy.json.JsonOutput
 import UniverseClient
 import utils
+import net.sf.json.JSON
+import net.sf.json.JSONSerializer
+import net.sf.json.JsonConfig
 
 @Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Blender")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -928,16 +931,20 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 {
                     dir("jobs_launcher") {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
+                        dir("..\\summaryTestResults") {
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                        }
                         if (options['isPreBuilt'])
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(retryInfo.toString())}\"
+                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt"
                             """
                         }
                         else
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(retryInfo.toString())}\"
+                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }
                     }
