@@ -106,6 +106,8 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                         }
                     }
                 }
+            } else if (exceptionClassName.contains("ClosedChannelException")) {
+                GithubNotificator.updateStatus(stageName, title, "failure", env, options, "Lost connection with machine. Please contact support.")
             }
 
             println "[ERROR] Failed on ${env.NODE_NAME} node"
