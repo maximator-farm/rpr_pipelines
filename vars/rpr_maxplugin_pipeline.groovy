@@ -853,7 +853,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String iter = '50',
         String theshold = '0.05',
         String customBuildLinkWindows = "",
-        String tester_tag = 'Max')
+        String tester_tag = 'Max',
+        String parallelExecutionType = "TakeOneNodePerGroup")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -950,7 +951,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         customBuildLinkWindows: customBuildLinkWindows,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
-                        platforms:platforms
+                        platforms:platforms,
+                        parallelExecutionType:parallelExecutionType
                         ]
         }
         catch (e)

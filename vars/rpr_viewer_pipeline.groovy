@@ -804,7 +804,8 @@ def call(String projectBranch = "",
          String tests = "",
          Boolean splitTestsExecution = true,
          Boolean sendToUMS = true,
-         String tester_tag = 'RprViewer') {
+         String tester_tag = 'RprViewer',
+         String parallelExecutionType = "TakeOneNodePerGroup") {
 
     def nodeRetry = []
     Map options = [:]
@@ -847,7 +848,8 @@ def call(String projectBranch = "",
                         sendToUMS:sendToUMS,
                         universePlatforms: universePlatforms,
                         problemMessageManager: problemMessageManager,
-                        platforms:platforms
+                        platforms:platforms,
+                        parallelExecutionType:parallelExecutionType
                         ]
         } 
         catch(e)

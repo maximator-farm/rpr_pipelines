@@ -1009,7 +1009,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String customBuildLinkWindows = "",
         String customBuildLinkOSX = "",
         String engine = "1.0",
-        String tester_tag = 'Maya')
+        String tester_tag = 'Maya',
+        String parallelExecutionType = "TakeOneNodePerGroup")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -1118,7 +1119,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         engine: engine,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
-                        platforms:platforms
+                        platforms:platforms,
+                        parallelExecutionType:parallelExecutionType
                         ]
         } catch (e) {
             problemMessageManager.saveSpecificFailReason("Failed initialization.", "Init")

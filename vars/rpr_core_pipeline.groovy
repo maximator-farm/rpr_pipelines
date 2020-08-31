@@ -732,7 +732,8 @@ def call(String projectBranch = "",
          String height = "0",
          String iterations = "0",
          Boolean sendToUMS = true,
-         String tester_tag = 'Core') {
+         String tester_tag = 'Core',
+         String parallelExecutionType = "TakeOneNodePerGroup") {
     
     def nodeRetry = []
     Map options = [:]
@@ -790,7 +791,8 @@ def call(String projectBranch = "",
                         universePlatforms: universePlatforms,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
-                        platforms:platforms
+                        platforms:platforms,
+                        parallelExecutionType:parallelExecutionType
                         ]
         }
         catch(e)
