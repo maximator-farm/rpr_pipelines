@@ -9,7 +9,6 @@ import java.time.format.DateTimeFormatter;
 import jenkins.model.Jenkins;
 import groovy.transform.Synchronized;
 import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicBoolean
 
 
 @NonCPS
@@ -154,14 +153,15 @@ def executeTasksOnAllFreeNodes(String osName, String asicName, def executeTests,
         }
     }
     if (launchingGroupsNumber == 0) {
-        // if all suitable nodes is busy now, create only one thread which will be await idle node (if it doesn't exist)
+        // if all suitable nodes is busy now, create only one thread which will be await idle node (if it doesn't exist in queue)
         def itemsInQueue = jenkins.model.Jenkins.instance.getQueue().getItems()
         for (itemInQueue in itemsInQueue) {
+            // url of task has following format: job/JOB_NAME/BUILD_ID/
             if ("${env.BUILD_URL}".endsWith(itemInQueue.task.getUrl())) {
                 return
             }
         }
-        launchingGroupsNumber == 1
+        launchingGroupsNumber = 1
     }
 
     if (launchingGroupsNumber > 0) {
