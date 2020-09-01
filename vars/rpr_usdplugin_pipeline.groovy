@@ -93,6 +93,7 @@ def executeBuildWindows(Map options)
             bat """
                 mkdir build
                 set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+                set HSF=C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}"
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
             """
 
