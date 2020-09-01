@@ -1010,7 +1010,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String customBuildLinkOSX = "",
         String engine = "1.0",
         String tester_tag = 'Maya',
-        String parallelExecutionType = "TakeOneNodePerGroup")
+        String parallelExecutionType = "TakeOneNodePerGPU")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY

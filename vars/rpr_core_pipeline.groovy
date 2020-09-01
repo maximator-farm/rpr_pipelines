@@ -733,7 +733,7 @@ def call(String projectBranch = "",
          String iterations = "0",
          Boolean sendToUMS = true,
          String tester_tag = 'Core',
-         String parallelExecutionType = "TakeOneNodePerGroup") {
+         String parallelExecutionType = "TakeOneNodePerGPU") {
     
     def nodeRetry = []
     Map options = [:]

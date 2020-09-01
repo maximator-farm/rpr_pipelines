@@ -854,7 +854,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String theshold = '0.05',
         String customBuildLinkWindows = "",
         String tester_tag = 'Max',
-        String parallelExecutionType = "TakeOneNodePerGroup")
+        String parallelExecutionType = "TakeOneNodePerGPU")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY

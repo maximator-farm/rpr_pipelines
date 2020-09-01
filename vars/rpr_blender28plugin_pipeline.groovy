@@ -1102,7 +1102,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String engine = "1.0",
     String tester_tag = "Blender2.8",
     String toolVersion = "2.83",
-    String parallelExecutionType = "TakeOneNodePerGroup")
+    String parallelExecutionType = "TakeOneNodePerGPU")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY

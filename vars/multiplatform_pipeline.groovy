@@ -203,7 +203,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                         executeTasksOnAllFreeNodes(osName, asicName, executeTests, options, testsIterator)
                     } else {
                         Integer launchingGroupsNumber = 1
-                        if (!options["parallelExecutionType"] || options["parallelExecutionType"] == "TakeOneNodePerGroup") {
+                        if (!options["parallelExecutionType"] || options["parallelExecutionType"] == "TakeOneNodePerGPU") {
                             launchingGroupsNumber = 1
                         } else if (options["parallelExecutionType"] == "TakeAllOnlineNodes") {
                             List possibleNodes = nodesByLabel label: getLabels(osName, asicName, options), offline: false
