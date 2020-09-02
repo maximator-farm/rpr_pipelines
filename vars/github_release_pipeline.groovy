@@ -129,6 +129,7 @@ def createRelease(String jobName, String repositoryUrl, String branch) {
                     tag_name: "v${version}",
                     target_commitish: parentCommitSha,
                     name: "Weekly Development builds v${version} (${formattedDate})",
+                    prerelease: true
             ]
 
             def releaseInfo = httpRequest(
