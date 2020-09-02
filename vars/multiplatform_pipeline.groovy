@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import jenkins.model.Jenkins;
 import groovy.transform.Synchronized;
 import java.util.Iterator;
+import TestsExecutionType;
 
 
 @NonCPS
@@ -199,13 +200,13 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                     options.testsList = options.testsList ?: ['']
 
                     Iterator testsIterator = options.testsList.iterator()
-                    if (options["parallelExecutionType"] == "TakeAllFreeNodes") {
+                    if (options["parallelExecutionType"] == TestsExecutionType.TAKE_ALL_FREE_NODES) {
                         executeTasksOnAllFreeNodes(osName, asicName, executeTests, options, testsIterator)
                     } else {
                         Integer launchingGroupsNumber = 1
-                        if (!options["parallelExecutionType"] || options["parallelExecutionType"] == "TakeOneNodePerGPU") {
+                        if (!options["parallelExecutionType"] || options["parallelExecutionType"] == TestsExecutionType.TAKE_ONE_NODE_PER_GPU) {
                             launchingGroupsNumber = 1
-                        } else if (options["parallelExecutionType"] == "TakeAllOnlineNodes") {
+                        } else if (options["parallelExecutionType"] == TestsExecutionType.TAKE_ALL_ONLINE_NODES) {
                             List possibleNodes = nodesByLabel label: getLabels(osName, asicName, options), offline: false
                             launchingGroupsNumber = possibleNodes.size()
                         }

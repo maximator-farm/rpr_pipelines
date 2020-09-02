@@ -4,6 +4,7 @@ import groovy.json.JsonOutput;
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
+import TestsExecutionType
 
 @Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20Viewer")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -805,7 +806,7 @@ def call(String projectBranch = "",
          Boolean splitTestsExecution = true,
          Boolean sendToUMS = true,
          String tester_tag = 'RprViewer',
-         String parallelExecutionType = "TakeOneNodePerGPU") {
+         String parallelExecutionTypeString = "TakeOneNodePerGPU")
 
     def nodeRetry = []
     Map options = [:]
@@ -820,9 +821,12 @@ def call(String projectBranch = "",
 
             def universePlatforms = convertPlatforms(platforms);
 
+            def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
+
             println "Platforms: ${platforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
+            println "Tests execution type: ${parallelExecutionType}"
             println "UMS platforms: ${universePlatforms}"
 
             options << [projectBranch:projectBranch,
