@@ -502,9 +502,14 @@ def executeBuild(String osName, Map options)
         {
             try {
                 GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading plugin repository.")
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo)
+                checkOutBranchOrScm(options.projectBranch, options.projectRepo, options['mergeWithBranch'])
             } catch (e) {
-                String errorMessage = "Failed to download plugin repository."
+                String errorMessage
+                if (e.getMessage().contains("Branch not suitable for integration")) {
+                    errorMessage = "Failed to merge branches."
+                } else {
+                    errorMessage = "Failed to download plugin repository."
+                }
                 GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
                 throw e
@@ -595,7 +600,7 @@ def executePreBuild(Map options)
         dir('RadeonProRenderMayaPlugin')
         {
             try {
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
+                checkOutBranchOrScm(options.projectBranch, options.projectRepo, null, true)
             } catch (e) {
                 String errorMessage = "Failed to download plugin repository."
                 GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
@@ -1009,7 +1014,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String customBuildLinkWindows = "",
         String customBuildLinkOSX = "",
         String engine = "1.0",
-        String tester_tag = 'Maya')
+        String tester_tag = 'Maya',
+        String mergeWithBranch = '')
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -1118,7 +1124,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         engine: engine,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
-                        platforms:platforms
+                        platforms:platforms,
+                        mergeWithBranch:mergeWithBranch
                         ]
         } catch (e) {
             problemMessageManager.saveSpecificFailReason("Failed initialization.", "Init")

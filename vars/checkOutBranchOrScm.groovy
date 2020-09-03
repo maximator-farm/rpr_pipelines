@@ -2,11 +2,11 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import hudson.plugins.git.GitException
 import hudson.AbortException
 
-def call(String branchName, String repoName, Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
+def call(String branchName, String repoName, String mergeWithBranch = 'none', Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
     String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false) {
     
     try {
-        executeCheckout(branchName, repoName, disableSubmodules, polling, changelog, credId, useLFS)
+        executeCheckout(branchName, repoName, mergeWithBranch, disableSubmodules, polling, changelog, credId, useLFS)
     } 
     catch (FlowInterruptedException e) 
     {
@@ -19,17 +19,26 @@ def call(String branchName, String repoName, Boolean disableSubmodules=false, Bo
         println(e.getMessage())
         println "[ERROR] Failed to checkout git on ${env.NODE_NAME}. Cleaning workspace and try again."
         cleanWS()
-        executeCheckout(branchName, repoName, disableSubmodules, polling, changelog, credId, useLFS, true)
+        executeCheckout(branchName, repoName, mergeWithBranch, disableSubmodules, polling, changelog, credId, useLFS, true)
     }
 }
 
 
-def executeCheckout(String branchName, String repoName, Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
+def executeCheckout(String branchName, String repoName, String mergeWithBranch = 'none', Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
     String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false) {
 
-    def repoBranch = branchName ? [[name: branchName]] : scm.branches
+    def repoBranch
+    if (mergeWithBranch && mergeWithBranch != 'none') {
+        repoBranch = [[name: mergeWithBranch]]
+        mergeWithBranch = branchName ?: scm.branches[0]['name']
+        echo "Branch which will be merged in: ${repoBranch}"
+        echo "checkout branch: ${mergeWithBranch}; repo: ${repoName}"
+    } else {
+        repoBranch = branchName ? [[name: branchName]] : scm.branches
+        echo "Branch which will be merged in: ${mergeWithBranch}"
+        echo "checkout branch: ${repoBranch}; repo: ${repoName}"
+    }
 
-    echo "checkout branch: ${repoBranch}; repo: ${repoName}"
     echo "Submodules processing: ${!disableSubmodules}"
     echo "Include in polling: ${polling}; Include in changelog: ${changelog}"
 
@@ -42,8 +51,11 @@ def executeCheckout(String branchName, String repoName, Boolean disableSubmodule
             [$class: 'CloneOption', timeout: 60, noTags: false],
             [$class: 'SubmoduleOption', disableSubmodules: disableSubmodules,
              parentCredentials: true, recursiveSubmodules: true, shallow: true, depth: 2,
-             timeout: 60, reference: '', trackingSubmodules: false]
+             timeout: 60, reference: '', trackingSubmodules: false],
     ]
+    if (mergeWithBranch && mergeWithBranch != 'none') {
+        checkoutExtensions.add([$class: 'PreBuildMerge', options: [mergeTarget: mergeWithBranch, mergeRemote: 'origin']])
+    }
 
     if (useLFS) checkoutExtensions.add([$class: 'GitLFSPull'])
     if (wipeWorkspace) checkoutExtensions.add([$class: 'WipeWorkspace'])
