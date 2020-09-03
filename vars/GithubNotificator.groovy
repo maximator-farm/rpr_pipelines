@@ -105,10 +105,6 @@ public class GithubNotificator {
         try {
             for (prStatus in pullRequest.statuses) {
                 if (statusTitle == prStatus.context) {
-                    if (status != 'error' && prStatus.state == 'error') {
-                        context.println("[ERROR] Check was marked as 'error'. Its status can't be replaced by any other status except 'error'")
-                        return
-                    }
                     if (!url) {
                         url = prStatus.targetUrl
                     }
