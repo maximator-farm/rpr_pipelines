@@ -82,8 +82,11 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 String testsOrTestPackage
                                 if (newOptions['splitTestsExecution']) {
                                     testsOrTestPackage = newOptions['tests']
-                                } else if (newOptions['testsPackage']) {
-                                    testsOrTestPackage = newOptions['testsPackage'].replace(' ', '_')
+                                } else if (newOptions['testsPackage'].endsWith('.json')) {
+                                    testsOrTestPackage = newOptions['testsPackage']
+                                } else {
+                                    //all non splitTestsExecution and non regression builds (e.g. any build of core)
+                                    testsOrTestPackage = 'DefaultExecution'
                                 }
 
                                 if (!expectedExceptionMessage) {
