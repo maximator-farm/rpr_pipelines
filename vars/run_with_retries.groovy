@@ -35,7 +35,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
     } else if (stageName == "Test") {
         title = options['stageName']
     } else {
-        title = "Building of report"
+        title = "Building test report"
     }
 
     for (int i = 0; i < tries; i++)
