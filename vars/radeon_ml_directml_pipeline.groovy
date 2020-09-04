@@ -71,7 +71,7 @@ def executeBuildWindows(Map options)
 
     if (env.TAG_NAME) {
         dir("rml-deploy") {
-            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
+            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", null, null, true, false, true, "radeonprorender-gitlab")
             bat """
                 MD "directml\\${CIS_OS}"
                 RMDIR /S/Q "directml\\${CIS_OS}"

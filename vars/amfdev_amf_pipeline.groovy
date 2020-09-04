@@ -573,7 +573,7 @@ def executePreBuild(Map options) {
             }
         }
 
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/AMF.git', true)
+        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/AMF.git', null, null, true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()

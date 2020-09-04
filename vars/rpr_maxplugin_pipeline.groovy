@@ -346,9 +346,14 @@ def executeBuild(String osName, Map options)
         {
             try {
                 GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading plugin repository.")
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo)
+                checkOutBranchOrScm(options.projectBranch, options.projectRepo, options['prBranchName'], options['prRepoName'])
             } catch (e) {
-                String errorMessage = "Failed to download plugin repository."
+                String errorMessage
+                if (e.getMessage().contains("Branch not suitable for integration")) {
+                    errorMessage = "Failed to merge branches."
+                } else {
+                    errorMessage = "Failed to download plugin repository."
+                }
                 GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
                 throw e
@@ -440,7 +445,7 @@ def executePreBuild(Map options)
         dir('RadeonProRenderMaxPlugin')
         {
             try {
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
+                checkOutBranchOrScm(options.projectBranch, options.projectRepo, null, null, true)
             } catch (e) {
                 String errorMessage = "Failed to download plugin repository."
                 GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
@@ -853,7 +858,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String iter = '50',
         String theshold = '0.05',
         String customBuildLinkWindows = "",
-        String tester_tag = 'Max')
+        String tester_tag = 'Max',
+        String mergeablePR = '')
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -917,6 +923,10 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             println "Split tests execution: ${splitTestsExecution}"
             println "UMS platforms: ${universePlatforms}"
 
+            String[] prInfo = mergeablePR.split(";")
+            String prRepoName = prInfo[0]
+            String prBranchName = prInfo[1]
+
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         testsBranch:testsBranch,
@@ -950,7 +960,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         customBuildLinkWindows: customBuildLinkWindows,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
-                        platforms:platforms
+                        platforms:platforms,
+                        prRepoName:prRepoName,
+                        prBranchName:prBranchName
                         ]
         }
         catch (e)

@@ -54,7 +54,7 @@ def executeBuildWindows(Map options) {
 def executeBuild(String osName, Map options) {
     try {
         dir('RadeonProRenderInventorPlugin') {
-            checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
+            checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', null, null, true)
         }
         
         switch(osName)

@@ -81,7 +81,7 @@ def executeBuildOSX(Map options)
 
     if (env.TAG_NAME) {
         dir("rml-deploy") {
-            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, false, true, "radeonprorender-gitlab")
+            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", null, null, true, false, true, "radeonprorender-gitlab")
             sh """
                 mkdir -p mps/${CIS_OS}
                 rm -fdr mps/${CIS_OS}
