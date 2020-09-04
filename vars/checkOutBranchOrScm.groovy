@@ -36,6 +36,7 @@ def executeCheckout(String branchName, String repoName, String prBranchName = ''
         echo "PR commit: ${prBranchName}; PR repo: ${prRepoName}"
     }
 
+    List configs = [[credentialsId: "${credId}", url: "${repoName}"]]
     def checkoutExtensions = [
             [$class: 'PruneStaleBranch'],
             [$class: 'CleanBeforeCheckout'],
@@ -48,16 +49,16 @@ def executeCheckout(String branchName, String repoName, String prBranchName = ''
              timeout: 60, reference: '', trackingSubmodules: false],
     ]
     if (prBranchName) {
-        checkoutExtensions.add([$class: 'PreBuildMerge', options: [mergeTarget: prBranchName, mergeRemote: 'remoteRepo']])
+        if (prRepoName && repoName != prRepoName) {
+            configs.add([credentialsId: "${credId}", url: "${prRepoName}", name: 'remoteRepo'])
+            checkoutExtensions.add([$class: 'PreBuildMerge', options: [mergeTarget: prBranchName, mergeRemote: 'remoteRepo']])
+        } else {
+            checkoutExtensions.add([$class: 'PreBuildMerge', options: [mergeTarget: prBranchName, mergeRemote: 'origin']])
+        }
     }
 
     if (useLFS) checkoutExtensions.add([$class: 'GitLFSPull'])
     if (wipeWorkspace) checkoutExtensions.add([$class: 'WipeWorkspace'])
-
-    List configs = [[credentialsId: "${credId}", url: "${repoName}"]]
-    if (prRepoName && repoName != prRepoName) {
-        configs.add([credentialsId: "${credId}", url: "${prRepoName}", name: 'remoteRepo'])
-    }
 
     // !branchName need for ignore merging testing repos (jobs_test_*) 
     if (!branchName && env.BRANCH_NAME && env.BRANCH_NAME.startsWith("PR-")) {
