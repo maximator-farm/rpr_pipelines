@@ -502,7 +502,7 @@ def executeBuild(String osName, Map options)
         {
             try {
                 GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading plugin repository.")
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo, options['mergeWithBranch'])
+                checkOutBranchOrScm(options.projectBranch, options.projectRepo, options['prBranchName'], options['prRepoName'])
             } catch (e) {
                 String errorMessage
                 if (e.getMessage().contains("Branch not suitable for integration")) {
@@ -600,7 +600,7 @@ def executePreBuild(Map options)
         dir('RadeonProRenderMayaPlugin')
         {
             try {
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo, null, true)
+                checkOutBranchOrScm(options.projectBranch, options.projectRepo, null, null, true)
             } catch (e) {
                 String errorMessage = "Failed to download plugin repository."
                 GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
@@ -1015,7 +1015,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String customBuildLinkOSX = "",
         String engine = "1.0",
         String tester_tag = 'Maya',
-        String mergeWithBranch = '')
+        String mergeablePR = '')
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -1088,6 +1088,10 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             println "Split tests execution: ${splitTestsExecution}"
             println "UMS platforms: ${universePlatforms}"
 
+            String[] prInfo = mergeablePR.split(";")
+            String prRepoName = prInfo[0]
+            String prBranchName = prInfo[1]
+
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         testsBranch:testsBranch,
@@ -1125,7 +1129,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
-                        mergeWithBranch:mergeWithBranch
+                        prRepoName:prRepoName,
+                        prBranchName:prBranchName
                         ]
         } catch (e) {
             problemMessageManager.saveSpecificFailReason("Failed initialization.", "Init")

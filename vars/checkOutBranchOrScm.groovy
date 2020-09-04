@@ -2,11 +2,11 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import hudson.plugins.git.GitException
 import hudson.AbortException
 
-def call(String branchName, String repoName, String mergeWithBranch = 'none', Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
+def call(String branchName, String repoName, String prBranchName = '', String prRepoName = '', Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
     String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false) {
     
     try {
-        executeCheckout(branchName, repoName, mergeWithBranch, disableSubmodules, polling, changelog, credId, useLFS)
+        executeCheckout(branchName, repoName, prBranchName, prRepoName, disableSubmodules, polling, changelog, credId, useLFS)
     } 
     catch (FlowInterruptedException e) 
     {
@@ -19,28 +19,22 @@ def call(String branchName, String repoName, String mergeWithBranch = 'none', Bo
         println(e.getMessage())
         println "[ERROR] Failed to checkout git on ${env.NODE_NAME}. Cleaning workspace and try again."
         cleanWS()
-        executeCheckout(branchName, repoName, mergeWithBranch, disableSubmodules, polling, changelog, credId, useLFS, true)
+        executeCheckout(branchName, repoName, prBranchName, prRepoName, disableSubmodules, polling, changelog, credId, useLFS, true)
     }
 }
 
 
-def executeCheckout(String branchName, String repoName, String mergeWithBranch = 'none', Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
+def executeCheckout(String branchName, String repoName, String prBranchName = '', String prRepoName = '', Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
     String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false) {
 
-    def repoBranch
-    if (mergeWithBranch && mergeWithBranch != 'none') {
-        repoBranch = [[name: mergeWithBranch]]
-        mergeWithBranch = branchName ?: scm.branches[0]['name']
-        echo "Branch which will be merged in: ${repoBranch}"
-        echo "checkout branch: ${mergeWithBranch}; repo: ${repoName}"
-    } else {
-        repoBranch = branchName ? [[name: branchName]] : scm.branches
-        echo "Branch which will be merged in: ${mergeWithBranch}"
-        echo "checkout branch: ${repoBranch}; repo: ${repoName}"
-    }
+    def repoBranch = branchName ? [[name: branchName]] : scm.branches
 
+    echo "Checkout branch: ${repoBranch}; repo: ${repoName}"
     echo "Submodules processing: ${!disableSubmodules}"
     echo "Include in polling: ${polling}; Include in changelog: ${changelog}"
+    if (prBranchName) {
+        echo "PR commit: ${prBranchName}; PR repo: ${prRepoName}"
+    }
 
     def checkoutExtensions = [
             [$class: 'PruneStaleBranch'],
@@ -53,12 +47,17 @@ def executeCheckout(String branchName, String repoName, String mergeWithBranch =
              parentCredentials: true, recursiveSubmodules: true, shallow: true, depth: 2,
              timeout: 60, reference: '', trackingSubmodules: false],
     ]
-    if (mergeWithBranch && mergeWithBranch != 'none') {
-        checkoutExtensions.add([$class: 'PreBuildMerge', options: [mergeTarget: mergeWithBranch, mergeRemote: 'origin']])
+    if (prBranchName) {
+        checkoutExtensions.add([$class: 'PreBuildMerge', options: [mergeTarget: prBranchName, mergeRemote: 'remoteRepo']])
     }
 
     if (useLFS) checkoutExtensions.add([$class: 'GitLFSPull'])
     if (wipeWorkspace) checkoutExtensions.add([$class: 'WipeWorkspace'])
+
+    List configs = [[credentialsId: "${credId}", url: "${repoName}"]]
+    if (prRepoName && repoName != prRepoName) {
+        configs.add([credentialsId: "${credId}", url: "${prRepoName}", name: 'remoteRepo'])
+    }
 
     // !branchName need for ignore merging testing repos (jobs_test_*) 
     if (!branchName && env.BRANCH_NAME && env.BRANCH_NAME.startsWith("PR-")) {
@@ -71,7 +70,7 @@ def executeCheckout(String branchName, String repoName, String mergeWithBranch =
             scm: [$class: 'GitSCM', branches: repoBranch, doGenerateSubmoduleConfigurations: false,
                     extensions: checkoutExtensions,
                     submoduleCfg: [],
-                    userRemoteConfigs: [[credentialsId: "${credId}", url: "${repoName}"]]
+                    userRemoteConfigs: configs
                 ]
     }
     
