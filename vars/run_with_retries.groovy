@@ -11,6 +11,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
     println "Found the following PCs: ${nodesListOnline}"
     def nodesCount = nodesListOnline.size()
     def tries = nodesCount
+    def closedChannelRetries = 0
 
     if (reuseLastNode) {
         tries++
@@ -184,9 +185,14 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
         if (successCurrentNode) {
             i = tries + 1
         // exclude label of failed machine only if it isn't necessary to reuse last node and if it isn't last try
-        } else if (!(reuseLastNode && i == nodesCount - 1) && nodeName) {
+        } else if (!(reuseLastNode && i == nodesCount + closedChannelRetries - 1) && nodeName) {
             println "[EXCLUDE] ${nodeName} from nodes pool (Labels: ${labels})"
             labels += " && !${nodeName}"
+        } else if (!nodeName) {
+            // if ClosedChannelException appeared on 'node' block - add additional try
+            tries++
+            closedChannelRetries++
+            options['nodeReallocateTries']++
         }
     }
 }
