@@ -75,7 +75,7 @@ def executeTestsTask(String testName, String osName, String asicName, def execut
                         expectedExceptionMessage = "Build was aborted by new commit."
                     } else if (causeClassName.contains("UserInterruption")) {
                         expectedExceptionMessage = "Build was aborted by user."
-                    } else if ((causeClassName.contains("TimeoutStepExecution") || causeClassName.contains("ExceededTimeout")) && (!expectedExceptionMessage || expectedExceptionMessage == 'Unknown reason')) {
+                    } else if (utils.isTimeoutExceeded(e)) {
                         expectedExceptionMessage = "Timeout exceeded (pipelines layer)."
                     }
                 }
