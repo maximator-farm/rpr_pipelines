@@ -203,7 +203,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         dir('scripts')
                         {
                             bat """
-                                run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} >> ../${options.stageName}.log  2>&1
+                                run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.retries}>> ../${options.stageName}.log  2>&1
                             """
                         }
                         break;
@@ -211,7 +211,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         dir('scripts')
                         {
                             sh """
-                                ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} >> ../${options.stageName}.log 2>&1
+                                ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.retries}>> ../${options.stageName}.log 2>&1
                             """
                         }
                         break;
@@ -1009,7 +1009,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String customBuildLinkWindows = "",
         String customBuildLinkOSX = "",
         String engine = "1.0",
-        String tester_tag = 'Maya')
+        String tester_tag = 'Maya',
+        Integer retries = 2)
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -1118,7 +1119,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         engine: engine,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
-                        platforms:platforms
+                        platforms:platforms,
+                        retries:retries
                         ]
         } catch (e) {
             problemMessageManager.saveSpecificFailReason("Failed initialization.", "Init")
