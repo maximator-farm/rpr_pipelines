@@ -269,6 +269,20 @@ def executeTests(String osName, String asicName, Map options)
     if (options.sendToUMS){
         universeClient.stage("Tests-${osName}-${asicName}", "begin")
     }
+
+    // get engine from test group name if there are more than one engines
+    if (options.engines.count(",") > 0) {
+        options.engine = options.tests.split("-")[-1]
+        List parsedTestNames = []
+        options.tests.split().each {
+            List testNameParts = it.split("-") as List
+            parsedTestNames.add(testNameParts.subList(0, testNameParts.size() - 1).join("-"))
+        }
+        options.tests = parsedTestNames.join(" ")
+    } else {
+        options.engine = options.engines
+    }
+
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
@@ -820,7 +834,14 @@ def executePreBuild(Map options)
             } else {
                 options.tests.split(" ").each()
                 {
-                    tests << "${it}"
+                    // if there are more than one engines - generate set of tests for each engine
+                    if (options.engines.count(",") > 0) {
+                        options.engines.split(",").each { engine ->
+                            tests << "${it}-${engine}"
+                        }
+                    } else {
+                        tests << "${it}"
+                    }
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
@@ -1099,7 +1120,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
     String customBuildLinkOSX = "",
-    String engine = "1.0",
+    String engines = "1.0",
     String tester_tag = "Blender2.8",
     String toolVersion = "2.83")
 {
@@ -1108,7 +1129,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     SPU = (SPU == 'Default') ? '25' : SPU
     iter = (iter == 'Default') ? '50' : iter
     theshold = (theshold == 'Default') ? '0.05' : theshold
-    engine = (engine == '2.0 (Northstar)') ? 'FULL2' : 'FULL'
     def nodeRetry = []
     Map options = [:]
 
@@ -1116,6 +1136,21 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     {
         try
         {
+            if (!engines) {
+                String errorMessage = "Engines parameter is required."
+                problemMessageManager.saveSpecificFailReason(errorMessage, "Init")
+                throw new Exception(errorMessage)
+            }
+            def formattedEngines = []
+            engines.split(',').each {
+                 if (it.contains('Hybrid')) {
+                    formattedEngines.add(it.split()[1])
+                } else {
+                    formattedEngines.add((it == '2.0 (Northstar)') ? 'FULL2' : 'FULL')
+                }
+            }
+            formattedEngines = formattedEngines.join(',')
+
             Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkLinux
 
             if (isPreBuilt)
@@ -1212,7 +1247,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         customBuildLinkWindows: customBuildLinkWindows,
                         customBuildLinkLinux: customBuildLinkLinux,
                         customBuildLinkOSX: customBuildLinkOSX,
-                        engine: engine,
+                        engines: formattedEngines,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
                         platforms:platforms
@@ -1220,7 +1255,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         }
         catch(e)
         {
-            problemMessageManager.saveSpecificFailReason("Failed initialization.", "Init")
+            problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")
 
             throw e
         }
