@@ -192,10 +192,11 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
             } else {
                 def jenkins = Jenkins.getInstance();        
                 def views = Jenkins.getInstance().getViews()
+                String jobName = env.JOB_NAME.split('/')[0]
 
                 def jobsViews = []
                 for (view in views) {
-                    if (view.contains(jenkins.getItem(currentBuild.getProjectName()))) {
+                    if (view.contains(jenkins.getItem(jobName))) {
                         jobsViews.add(view.getDisplayName())
                     }
                 }
