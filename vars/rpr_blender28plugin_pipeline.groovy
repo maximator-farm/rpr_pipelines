@@ -902,7 +902,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             Map lostStashes = [:]
-            options.engines.count(",").each { engine ->
+            options.engines.split(",").each { engine ->
                 lostStashes[engine] = []
             }
 
