@@ -911,12 +911,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
             {
                 //if there are more than 1 engine - unstash results in separate directory based on engine
                 if (options.engines.count(",") > 0) {
-                    List testNameParts = it.split("-") as List
-                    String engine = testNameParts[-1]
-                    String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                    unstashCrashInfo(options['nodeRetry'], engine)
                     testResultList.each()
                     {
+                        options.engines.split(",").each { engine ->
+                            dir(engine) {
+                                unstashCrashInfo(options['nodeRetry'], engine)
+                            }
+                        }
+                        List testNameParts = it.split("-") as List
+                        String engine = testNameParts[-1]
+                        String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(engine)
                         {
                             dir(parsedTestName.replace("testResult-", ""))
