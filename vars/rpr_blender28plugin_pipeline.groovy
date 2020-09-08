@@ -275,8 +275,7 @@ def executeTests(String osName, String asicName, Map options)
         options.engine = options.tests.split("-")[-1]
         List parsedTestNames = []
         options.tests.split().each {
-            List testNameParts = it.split("-") as List
-            parsedTestNames.add(testNameParts.subList(0, testNameParts.size() - 1).join("-"))
+            parsedTestNames.add((it.split("-") as List).subList(0, testNameParts.size() - 1).join("-"))
         }
         options.tests = parsedTestNames.join(" ")
     } else {
@@ -902,26 +901,64 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 throw e
             }
 
-            List lostStashes = []
+            Map lostStashes = [:]
+            options.engines.count(",").each {
+                lostStashes[it] = []
+            }
 
             dir("summaryTestResults")
             {
-                unstashCrashInfo(options['nodeRetry'])
-                testResultList.each()
-                {
-                    dir("$it".replace("testResult-", ""))
+                //if there are more than 1 engine - unstash results in separate directory based on engine
+                if (options.engines.count(",") > 0) {
+                    List testNameParts = it.split("-") as List
+                    String engine = testNameParts[-1]
+                    String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                    unstashCrashInfo(options['nodeRetry'], engine)
+                    testResultList.each()
                     {
-                        try
+                        dir(engine)
                         {
-                            unstash "$it"
-                        }catch(e)
-                        {
-                            echo "[ERROR] Failed to unstash ${it}"
-                            lostStashes.add("'$it'".replace("testResult-", ""))
-                            println(e.toString());
-                            println(e.getMessage());
-                        }
+                            dir(parsedTestName.replace("testResult-", ""))
+                            {
+                                try
+                                {
+                                    unstash "$it"
+                                }catch(e)
+                                {
+                                    echo "[ERROR] Failed to unstash ${it}"
+                                    lostStashes[engine].add("'$it'".replace("testResult-", ""))
+                                    println(e.toString());
+                                    println(e.getMessage());
+                                }
 
+                            }
+                        }
+                    }
+                    options.engine = options.tests.split("-")[-1]
+                    List parsedTestNames = []
+                    options.tests.split().each {
+                        
+                        
+                    }
+                    options.tests = parsedTestNames.join(" ")
+                } else {
+                    unstashCrashInfo(options['nodeRetry'])
+                    testResultList.each()
+                    {
+                        dir("$it".replace("testResult-", ""))
+                        {
+                            try
+                            {
+                                unstash "$it"
+                            }catch(e)
+                            {
+                                echo "[ERROR] Failed to unstash ${it}"
+                                lostStashes[options.engines].add("'$it'".replace("testResult-", ""))
+                                println(e.toString());
+                                println(e.getMessage());
+                            }
+
+                        }
                     }
                 }
             }
@@ -937,9 +974,24 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
 
                 dir("jobs_launcher") {
-                    bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${executionType} \"${options.tests}\"
-                    """
+                    //if there are more than 1 engine - unstash results in separate directory based on engine
+                    if (options.engines.count(",") > 0) {
+                        // delete engine name from names of test groups
+                        Set tests = []
+                        options.tests.split().each { group ->
+                            String parsedTestName = (it.split("-") as List).subList(0, testNameParts.size() - 1).join("-")
+                            tests.add(parsedTestName)
+                        }
+                        options.engines.split(",").each {
+                            bat """
+                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} ${executionType} \"${tests}\"
+                            """
+                        }
+                    } else {
+                        bat """
+                        count_lost_tests.bat \"${lostStashes[options.engines]}\" .. ..\\summaryTestResults ${executionType} \"${options.tests}\"
+                        """
+                    }
                 }
             } catch (e) {
                 println("[ERROR] Can't generate number of lost tests")
@@ -951,22 +1003,40 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
                     dir("jobs_launcher") {
-                        def retryInfo = JsonOutput.toJson(options.nodeRetry)
-                        dir("..\\summaryTestResults") {
-                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
-                            writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
-                        }
-                        if (options['isPreBuilt'])
-                        {
-                            bat """
-                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt"
-                            """
-                        }
-                        else
-                        {
-                            bat """
-                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
-                            """
+                        if (options.engines.count(",") > 0) {
+                            options.engines.split(",").each { engine ->
+                                //TODO implement parsing of retry info
+                                if (options['isPreBuilt'])
+                                {
+                                    bat """
+                                    build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt"
+                                    """
+                                }
+                                else
+                                {
+                                    bat """
+                                    build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                                    """
+                                }
+                            }
+                        } else {
+                            def retryInfo = JsonOutput.toJson(options.nodeRetry)
+                            dir("..\\summaryTestResults") {
+                                JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                                writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                            }
+                            if (options['isPreBuilt'])
+                            {
+                                bat """
+                                build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt"
+                                """
+                            }
+                            else
+                            {
+                                bat """
+                                build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                                """
+                            }
                         }
                     }
                 }
@@ -1009,10 +1079,19 @@ def executeDeploy(Map options, List platformList, List testResultList)
             Map summaryTestResults = [:]
             try
             {
-                def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
-                summaryTestResults['passed'] = summaryReport.passed
-                summaryTestResults['failed'] = summaryReport.failed
-                summaryTestResults['error'] = summaryReport.error
+                if (options.engines.count(",") > 0) {
+                    options.engines.split(",").each {
+                        def summaryReport = readJSON file: "summaryTestResults/${it}/summary_status.json"
+                        summaryTestResults['passed'] = summaryTestResults['passed'] ? summaryTestResults['passed'] + summaryReport.passed : 0
+                        summaryTestResults['failed'] = summaryTestResults['failed'] ? summaryTestResults['failed'] + summaryReport.failed : 0
+                        summaryTestResults['error'] = summaryTestResults['error'] ? summaryTestResults['error'] + summaryReport.error : 0
+                    }
+                } else {
+                    def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
+                    summaryTestResults['passed'] = summaryReport.passed
+                    summaryTestResults['failed'] = summaryReport.failed
+                    summaryTestResults['error'] = summaryReport.error
+                }
                 if (summaryReport.error > 0) {
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
                     currentBuild.result = "FAILURE"
@@ -1048,8 +1127,28 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Publishing test report.", "${BUILD_URL}")
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary Report, Performance Report, Compare Report")
+
+                String targetReports = ["summary_report.html", "performance_report.html", "compare_report.html"]
+                String targetReportsNames = ["Summary Report", "Performance Report", "Compare Report"]
+                String reports
+                String reportsNames
+                if (options.engines.count(",") > 0) {
+                    reports = []
+                    reportsNames = []
+                    options.engines.split(",").each { engine ->
+                        targetReports.each { report ->
+                            reports.add("${engine}/${report}")
+                        }
+                        targetReportsNames.each { name ->
+                            reports.add("${name} (${engine})")
+                        }
+                    }
+                } else {
+                    reports = targetReports
+                    reportsNames = targetReportsNames
+                }
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
+
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
