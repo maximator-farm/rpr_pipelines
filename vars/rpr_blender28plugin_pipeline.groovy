@@ -274,8 +274,9 @@ def executeTests(String osName, String asicName, Map options)
     if (options.engines.count(",") > 0) {
         options.engine = options.tests.split("-")[-1]
         List parsedTestNames = []
-        options.tests.split().each {
-            parsedTestNames.add((it.split("-") as List).subList(0, testNameParts.size() - 1).join("-"))
+        options.tests.split().each { test ->
+            List testNameParts = test.split("-") as List
+            parsedTestNames.add(testNameParts.subList(0, testNameParts.size() - 1).join("-"))
         }
         options.tests = parsedTestNames.join(" ")
     } else {
