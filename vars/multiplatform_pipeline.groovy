@@ -123,8 +123,15 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                             Integer retries_count = options.retriesForTestStage ?: -1
                             run_with_retries(testerLabels, options.TEST_TIMEOUT, retringFunction, true, "Test", newOptions, [], retries_count, osName)
                         } catch (e) {
-                            println "Exception: ${e.toString()}"
-                            println "Exception message: ${e.getMessage()}"
+                            String exceptionClassName = e.getClass().toString()
+                            if (exceptionClassName.contains("FlowInterruptedException")) {
+                                e.getCauses().each(){
+                                    String causeClassName = it.getClass().toString()
+                                    if (causeClassName.contains("CancelledCause") || causeClassName.contains("UserInterruption")) {
+                                        throw e
+                                    }
+                                }
+                            }
                         }
                     }
                 }
