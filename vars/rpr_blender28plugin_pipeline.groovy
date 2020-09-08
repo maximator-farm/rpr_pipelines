@@ -902,8 +902,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             Map lostStashes = [:]
-            options.engines.count(",").each {
-                lostStashes[it] = []
+            options.engines.count(",").each { engine ->
+                lostStashes[engine] = []
             }
 
             dir("summaryTestResults")
@@ -926,7 +926,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                                 }catch(e)
                                 {
                                     echo "[ERROR] Failed to unstash ${it}"
-                                    lostStashes[engine].add("'$it'".replace("testResult-", ""))
+                                    lostStashes[engine].add("'${parsedTestName}'".replace("testResult-", ""))
                                     println(e.toString());
                                     println(e.getMessage());
                                 }
@@ -934,13 +934,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             }
                         }
                     }
-                    options.engine = options.tests.split("-")[-1]
-                    List parsedTestNames = []
-                    options.tests.split().each {
-                        
-                        
-                    }
-                    options.tests = parsedTestNames.join(" ")
                 } else {
                     unstashCrashInfo(options['nodeRetry'])
                     testResultList.each()
@@ -1092,13 +1085,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     summaryTestResults['failed'] = summaryReport.failed
                     summaryTestResults['error'] = summaryReport.error
                 }
-                if (summaryReport.error > 0) {
+                if (summaryTestResults.error > 0) {
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
                     currentBuild.result = "FAILURE"
 
                     problemMessageManager.saveGlobalFailReason("Some tests marked as error.")
                 }
-                else if (summaryReport.failed > 0) {
+                else if (summaryTestResults.failed > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
 
@@ -1128,10 +1121,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Publishing test report.", "${BUILD_URL}")
 
-                String targetReports = ["summary_report.html", "performance_report.html", "compare_report.html"]
-                String targetReportsNames = ["Summary Report", "Performance Report", "Compare Report"]
-                String reports
-                String reportsNames
+                List targetReports = ["summary_report.html", "performance_report.html", "compare_report.html"]
+                List targetReportsNames = ["Summary Report", "Performance Report", "Compare Report"]
+                List reports
+                List reportsNames
                 if (options.engines.count(",") > 0) {
                     reports = []
                     reportsNames = []
