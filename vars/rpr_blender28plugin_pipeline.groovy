@@ -358,6 +358,12 @@ def executeTests(String osName, String asicName, Map options)
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
         if (options.engine == 'FULL2'){
             REF_PATH_PROFILE="${REF_PATH_PROFILE}-NorthStar"
+        } else if (options.engine == 'LOW') {
+            REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridLow"
+        } else if (options.engine == 'MEDIUM') {
+            REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridMedium"
+        } else if (options.engine == 'HIGH') {
+            REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridHigh"
         }
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
@@ -1144,6 +1150,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         targetReports.each { report ->
                             reports.add("${engine}/${report}")
                         }
+                    }
+                    options.enginesNames.split(",").each { engine ->
                         targetReportsNames.each { name ->
                             reportsNames.add("${name} (${engine})")
                         }
@@ -1224,7 +1232,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
     String customBuildLinkOSX = "",
-    String engines = "1.0",
+    String enginesNames = "Tahoe",
     String tester_tag = "Blender2.8",
     String toolVersion = "2.83")
 {
@@ -1250,7 +1258,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                  if (it.contains('Hybrid')) {
                     formattedEngines.add(it.split()[1].toUpperCase())
                 } else {
-                    formattedEngines.add((it == '2.0 (Northstar)') ? 'FULL2' : 'FULL')
+                    formattedEngines.add((it == 'Northstar') ? 'FULL2' : 'FULL')
                 }
             }
             formattedEngines = formattedEngines.join(',')
@@ -1352,6 +1360,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         customBuildLinkLinux: customBuildLinkLinux,
                         customBuildLinkOSX: customBuildLinkOSX,
                         engines: formattedEngines,
+                        enginesNames:enginesNames,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
                         platforms:platforms
