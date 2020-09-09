@@ -1076,8 +1076,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try
             {
-                dir("jobs_launcher") {
-                    bat "get_status.bat ..\\summaryTestResults"
+                if (options.engines.count(",") > 0) {
+                    options.engines.split(",").each {
+                        dir("jobs_launcher") {
+                            bat "get_status.bat ..\\summaryTestResults\\${it}"
+                        }
+                    }
+                } else {
+                    dir("jobs_launcher") {
+                        bat "get_status.bat ..\\summaryTestResults"
+                    }
                 }
             }
             catch(e)
@@ -1106,15 +1114,15 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 if (options.engines.count(",") > 0) {
                     options.engines.split(",").each {
                         def summaryReport = readJSON file: "summaryTestResults/${it}/summary_status.json"
-                        summaryTestResults['passed'] = summaryTestResults['passed'] ? summaryTestResults['passed'] + summaryReport.passed : 0
-                        summaryTestResults['failed'] = summaryTestResults['failed'] ? summaryTestResults['failed'] + summaryReport.failed : 0
-                        summaryTestResults['error'] = summaryTestResults['error'] ? summaryTestResults['error'] + summaryReport.error : 0
+                        summaryTestResults['passed'] = summaryTestResults['passed'] ? summaryTestResults['passed'] + summaryReport['passed'] : summaryReport['passed']
+                        summaryTestResults['failed'] = summaryTestResults['failed'] ? summaryTestResults['failed'] + summaryReport['failed'] : summaryReport['failed']
+                        summaryTestResults['error'] = summaryTestResults['error'] ? summaryTestResults['error'] + summaryReport['error'] : summaryReport['error']
                     }
                 } else {
                     def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
-                    summaryTestResults['passed'] = summaryReport.passed
-                    summaryTestResults['failed'] = summaryReport.failed
-                    summaryTestResults['error'] = summaryReport.error
+                    summaryTestResults['passed'] = summaryReport['passed']
+                    summaryTestResults['failed'] = summaryReport['failed']
+                    summaryTestResults['error'] = summaryReport['error']
                 }
                 if (summaryTestResults.error > 0) {
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
