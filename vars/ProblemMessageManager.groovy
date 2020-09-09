@@ -146,6 +146,9 @@ public class ProblemMessageManager {
                     if (failReasons[stageName].containsKey(osName)) {
                         failReasons[stageName].remove(osName)
                     }
+                    if (failReasons[stageName].size() == 0) {
+                        failReasons.remove(stageName)
+                    }
                 } else {
                     failReasons.remove(stageName)
                 }
