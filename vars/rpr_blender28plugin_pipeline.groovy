@@ -1011,8 +1011,21 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     dir("jobs_launcher") {
                         if (options.engines.count(",") > 0) {
                             options.engines.split(",").each { engine ->
-                                //TODO implement parsing of retry info
-                                def retryInfo = JsonOutput.toJson(options.nodeRetry)
+                                def retryInfoMap = utils.deepcopyCollection(this, options.nodeRetry)
+                                retryInfoMap.each{ gpu ->
+                                    gpu['Tries'].each{ group ->
+                                        group.each{ groupKey, retries ->
+                                            if (groupKey.endsWith(engine)) {
+                                                List testNameParts = groupKey.split("-") as List
+                                                String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                                                group[parsedName] = retries
+                                            }
+                                            group.remove(groupKey)
+                                        }
+                                    }
+                                    gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
+                                }
+                                def retryInfo = JsonOutput.toJson(retryInfoMap)
                                 dir("..\\summaryTestResults\\${engine}") {
                                     JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                                     writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
