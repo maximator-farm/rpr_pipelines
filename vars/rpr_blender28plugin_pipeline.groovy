@@ -219,7 +219,7 @@ def executeTestCommand(String osName, String asicName, Map options)
     } 
     else
     {
-        test_timeout = options.timeouts["${options.tests}"]
+        test_timeout = options.timeouts["${options.parsedTests}"]
     }
 
     println "Set timeout to ${test_timeout}"
@@ -245,7 +245,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir('scripts')
                     {
                         bat """
-                        run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion}>> ..\\${options.stageName}.log  2>&1
+                        run.bat ${options.renderDevice} ${options.testsPackage} \"${options.parsedTests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion}>> ..\\${options.stageName}.log  2>&1
                         """
                     }
                     break;
@@ -254,7 +254,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir("scripts")
                     {
                         sh """
-                        ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion}>> ../${options.stageName}.log 2>&1
+                        ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.parsedTests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion}>> ../${options.stageName}.log 2>&1
                         """
                     }
                 }
@@ -278,9 +278,10 @@ def executeTests(String osName, String asicName, Map options)
             List testNameParts = test.split("-") as List
             parsedTestNames.add(testNameParts.subList(0, testNameParts.size() - 1).join("-"))
         }
-        options.tests = parsedTestNames.join(" ")
+        options.parsedTests = parsedTestNames.join(" ")
     } else {
         options.engine = options.engines
+        options.parsedTests = options.tests
     }
 
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
@@ -372,9 +373,9 @@ def executeTests(String osName, String asicName, Map options)
                 // TODO: receivebaseline for json suite
                 try {
                     GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")
-                    println "[INFO] Downloading reference images for ${options.tests}"
+                    println "[INFO] Downloading reference images for ${options.parsedTests}"
                     receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
-                    options.tests.split(" ").each() {
+                    options.parsedTests.split(" ").each() {
                         receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
                     }
                 } catch (e) {
@@ -445,7 +446,7 @@ def executeTests(String osName, String asicName, Map options)
                     }
                 }
             } else {
-                println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
+                println "[INFO] Task ${options.parsedTests} on ${options.nodeLabels} labels will be retried."
             }
         } catch (e) {
             if (e instanceof ExpectedExceptionWrapper) {
@@ -976,8 +977,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     if (options.engines.count(",") > 0) {
                         // delete engine name from names of test groups
                         Set tests = []
-                        options.tests.split().each { group ->
-                            String parsedTestName = (it.split("-") as List).subList(0, testNameParts.size() - 1).join("-")
+                        options.tests.each { group ->
+                            List testNameParts = group.split("-") as List
+                            String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                             tests.add(parsedTestName)
                         }
                         options.engines.split(",").each {
@@ -1004,6 +1006,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         if (options.engines.count(",") > 0) {
                             options.engines.split(",").each { engine ->
                                 //TODO implement parsing of retry info
+                                def retryInfo = JsonOutput.toJson(options.nodeRetry)
+                                dir("..\\summaryTestResults\\${engine}") {
+                                    JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                                    writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                                }
                                 if (options['isPreBuilt'])
                                 {
                                     bat """
@@ -1138,7 +1145,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             reports.add("${engine}/${report}")
                         }
                         targetReportsNames.each { name ->
-                            reports.add("${name} (${engine})")
+                            reportsNames.add("${name} (${engine})")
                         }
                     }
                 } else {
