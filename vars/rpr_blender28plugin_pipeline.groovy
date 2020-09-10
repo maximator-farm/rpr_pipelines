@@ -452,7 +452,7 @@ def executeTests(String osName, String asicName, Map options)
                     }
                 }
             } else {
-                println "[INFO] Task ${options.parsedTests} on ${options.nodeLabels} labels will be retried."
+                println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
             }
         } catch (e) {
             if (e instanceof ExpectedExceptionWrapper) {

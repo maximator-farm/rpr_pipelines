@@ -795,7 +795,7 @@ def call(String projectBranch = "",
         }
         catch(e)
         {
-            problemMessageManager.saveSpecificFailReason("Failed initialization.", "Init")
+            problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")
 
             throw e
         }
