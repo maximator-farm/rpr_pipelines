@@ -916,41 +916,26 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             dir("summaryTestResults")
             {
-                //if there are more than 1 engine - unstash results in separate directory based on engine
-                if (options.engines.count(",") > 0) {
-                    testResultList.each()
-                    {
-                        options.engines.split(",").each { engine ->
-                            dir(engine) {
-                                unstashCrashInfo(options['nodeRetry'], engine)
-                            }
-                        }
-                        List testNameParts = it.split("-") as List
-                        String engine = testNameParts[-1]
-                        String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        dir(engine)
-                        {
-                            dir(parsedTestName.replace("testResult-", ""))
-                            {
-                                try
-                                {
-                                    unstash "$it"
-                                }catch(e)
-                                {
-                                    echo "[ERROR] Failed to unstash ${it}"
-                                    lostStashes[engine].add("'${parsedTestName}'".replace("testResult-", ""))
-                                    println(e.toString());
-                                    println(e.getMessage());
-                                }
-
-                            }
+                testResultList.each()
+                {
+                    options.engines.split(",").each { engine ->
+                        dir(engine) {
+                            unstashCrashInfo(options['nodeRetry'], engine)
                         }
                     }
-                } else {
-                    unstashCrashInfo(options['nodeRetry'])
-                    testResultList.each()
+                    String engine
+                    String testName
+                    if (options.engines.count(",") > 0) {
+                        List testNameParts = it.split("-") as List
+                        engine = testNameParts[-1]
+                        testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                    } else {
+                        testName = it
+                        engine = options.engines
+                    }
+                    dir(engine)
                     {
-                        dir("$it".replace("testResult-", ""))
+                        dir(testName.replace("testResult-", ""))
                         {
                             try
                             {
@@ -958,7 +943,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             }catch(e)
                             {
                                 echo "[ERROR] Failed to unstash ${it}"
-                                lostStashes[options.engines].add("'$it'".replace("testResult-", ""))
+                                lostStashes[engine].add("'${testName}'".replace("testResult-", ""))
                                 println(e.toString());
                                 println(e.getMessage());
                             }
@@ -979,23 +964,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
 
                 dir("jobs_launcher") {
-                    //if there are more than 1 engine - unstash results in separate directory based on engine
-                    if (options.engines.count(",") > 0) {
-                        // delete engine name from names of test groups
-                        Set tests = []
-                        options.tests.each { group ->
-                            List testNameParts = group.split("-") as List
-                            String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                            tests.add(parsedTestName)
-                        }
-                        options.engines.split(",").each {
-                            bat """
-                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} ${executionType} \"${tests}\"
-                            """
-                        }
-                    } else {
+                    // delete engine name from names of test groups
+                    Set tests = []
+                    options.tests.each { group ->
+                        List testNameParts = group.split("-") as List
+                        String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                        tests.add(parsedTestName)
+                    }
+                    options.engines.split(",").each {
                         bat """
-                        count_lost_tests.bat \"${lostStashes[options.engines]}\" .. ..\\summaryTestResults ${executionType} \"${options.tests}\"
+                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} ${executionType} \"${tests}\"
                         """
                     }
                 }
@@ -1009,56 +987,40 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
                     dir("jobs_launcher") {
-                        if (options.engines.count(",") > 0) {
-                            options.engines.split(",").each { engine ->
-                                def retryInfoMap = utils.deepcopyCollection(this, options.nodeRetry)
-                                retryInfoMap.each{ gpu ->
-                                    gpu['Tries'].each{ group ->
-                                        group.each{ groupKey, retries ->
-                                            if (groupKey.endsWith(engine)) {
-                                                List testNameParts = groupKey.split("-") as List
-                                                String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                                                group[parsedName] = retries
-                                            }
-                                            group.remove(groupKey)
+                        String[] engines = options.engines.split(",")
+                        String[] enginesNames = options.enginesNames.split(",")
+                        for (int i = 0; i < engines.length; i++) {
+                            String engine = engines[i]
+                            String engineName = enginesNames[i]
+                            def retryInfoMap = utils.deepcopyCollection(this, options.nodeRetry)
+                            retryInfoMap.each{ gpu ->
+                                gpu['Tries'].each{ group ->
+                                    group.each{ groupKey, retries ->
+                                        if (groupKey.endsWith(engine)) {
+                                            List testNameParts = groupKey.split("-") as List
+                                            String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                                            group[parsedName] = retries
                                         }
+                                        group.remove(groupKey)
                                     }
-                                    gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
                                 }
-                                def retryInfo = JsonOutput.toJson(retryInfoMap)
-                                dir("..\\summaryTestResults\\${engine}") {
-                                    JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
-                                    writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
-                                }
-                                if (options['isPreBuilt'])
-                                {
-                                    bat """
-                                    build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(engine)}\"
-                                    """
-                                }
-                                else
-                                {
-                                    bat """
-                                    build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(engine)}\"
-                                    """
-                                }
+                                gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
                             }
-                        } else {
-                            def retryInfo = JsonOutput.toJson(options.nodeRetry)
-                            dir("..\\summaryTestResults") {
+                            def retryInfo = JsonOutput.toJson(retryInfoMap)
+                            dir("..\\summaryTestResults\\${engine}") {
                                 JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                                 writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                             }
                             if (options['isPreBuilt'])
                             {
                                 bat """
-                                build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt"
+                                build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(engineName)}\"
                                 """
                             }
                             else
                             {
                                 bat """
-                                build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(engineName)}\"
                                 """
                             }
                         }
@@ -1076,15 +1038,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try
             {
-                if (options.engines.count(",") > 0) {
-                    options.engines.split(",").each {
-                        dir("jobs_launcher") {
-                            bat "get_status.bat ..\\summaryTestResults\\${it}"
-                        }
-                    }
-                } else {
+                options.engines.split(",").each {
                     dir("jobs_launcher") {
-                        bat "get_status.bat ..\\summaryTestResults"
+                        bat "get_status.bat ..\\summaryTestResults\\${it}"
                     }
                 }
             }
@@ -1111,18 +1067,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
             Map summaryTestResults = [:]
             try
             {
-                if (options.engines.count(",") > 0) {
-                    options.engines.split(",").each {
-                        def summaryReport = readJSON file: "summaryTestResults/${it}/summary_status.json"
-                        summaryTestResults['passed'] = summaryTestResults['passed'] ? summaryTestResults['passed'] + summaryReport['passed'] : summaryReport['passed']
-                        summaryTestResults['failed'] = summaryTestResults['failed'] ? summaryTestResults['failed'] + summaryReport['failed'] : summaryReport['failed']
-                        summaryTestResults['error'] = summaryTestResults['error'] ? summaryTestResults['error'] + summaryReport['error'] : summaryReport['error']
-                    }
-                } else {
-                    def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
-                    summaryTestResults['passed'] = summaryReport['passed']
-                    summaryTestResults['failed'] = summaryReport['failed']
-                    summaryTestResults['error'] = summaryReport['error']
+                options.engines.split(",").each {
+                    def summaryReport = readJSON file: "summaryTestResults/${it}/summary_status.json"
+                    summaryTestResults['passed'] = summaryTestResults['passed'] ? summaryTestResults['passed'] + summaryReport['passed'] : summaryReport['passed']
+                    summaryTestResults['failed'] = summaryTestResults['failed'] ? summaryTestResults['failed'] + summaryReport['failed'] : summaryReport['failed']
+                    summaryTestResults['error'] = summaryTestResults['error'] ? summaryTestResults['error'] + summaryReport['error'] : summaryReport['error']
                 }
                 if (summaryTestResults.error > 0) {
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
@@ -1162,23 +1111,21 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                 List targetReports = ["summary_report.html", "performance_report.html", "compare_report.html"]
                 List targetReportsNames = ["Summary Report", "Performance Report", "Compare Report"]
-                List reports
+                List reports = []
                 List reportsNames
-                if (options.engines.count(",") > 0) {
-                    reports = []
-                    reportsNames = []
-                    options.engines.split(",").each { engine ->
-                        targetReports.each { report ->
-                            reports.add("${engine}/${report}")
-                        }
+                options.engines.split(",").each { engine ->
+                    targetReports.each { report ->
+                        reports.add("${engine}/${report}")
                     }
+                }
+                if (options.engines.count(",") > 0) {
+                    reportsNames = []
                     options.enginesNames.split(",").each { engine ->
                         targetReportsNames.each { name ->
                             reportsNames.add("${name} (${engine})")
                         }
                     }
                 } else {
-                    reports = targetReports
                     reportsNames = targetReportsNames
                 }
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
