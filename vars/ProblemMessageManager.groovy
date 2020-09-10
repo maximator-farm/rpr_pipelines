@@ -143,8 +143,11 @@ public class ProblemMessageManager {
         try {
             if (failReasons.containsKey(stageName)) {
                 if (osName) {
-                    if (failReasons[stageName].contains(osName)) {
-                        failReasons[stageName].remove(stageName)
+                    if (failReasons[stageName].containsKey(osName)) {
+                        failReasons[stageName].remove(osName)
+                    }
+                    if (failReasons[stageName].size() == 0) {
+                        failReasons.remove(stageName)
                     }
                 } else {
                     failReasons.remove(stageName)

@@ -129,9 +129,9 @@ def executeTestsTask(String testName, String osName, String asicName, def execut
         Integer retries_count = options.retriesForTestStage ?: -1
         run_with_retries(testerLabels, options.TEST_TIMEOUT, retringFunction, true, "Test", newOptions, [], retries_count, osName)
     } catch(FlowInterruptedException e) {
-        e.getCauses().each() {
+        e.getCauses().each(){
             String causeClassName = it.getClass().toString()
-            if (causeClassName.contains("UserInterruption")) {
+            if (causeClassName.contains("CancelledCause") || causeClassName.contains("UserInterruption")) {
                 throw e
             }
         }
@@ -290,10 +290,11 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
             } else {
                 def jenkins = Jenkins.getInstance();        
                 def views = Jenkins.getInstance().getViews()
+                String jobName = env.JOB_NAME.split('/')[0]
 
                 def jobsViews = []
                 for (view in views) {
-                    if (view.contains(jenkins.getItem(currentBuild.getProjectName()))) {
+                    if (view.contains(jenkins.getItem(jobName))) {
                         jobsViews.add(view.getDisplayName())
                     }
                 }
