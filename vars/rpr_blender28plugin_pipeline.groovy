@@ -973,11 +973,15 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                 dir("jobs_launcher") {
                     // delete engine name from names of test groups
-                    Set tests = []
-                    options.tests.each { group ->
-                        List testNameParts = group.split("-") as List
-                        String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        tests.add(parsedTestName)
+                    def tests = []
+                    if (options.engines.count(",") > 0) {
+                        options.tests.each { group ->
+                            List testNameParts = group.split("-") as List
+                            String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                            tests.add(parsedTestName)
+                        }
+                    } else {
+                        tests = options.tests
                     }
                     options.engines.split(",").each {
                         bat """

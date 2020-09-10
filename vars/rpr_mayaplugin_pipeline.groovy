@@ -883,15 +883,20 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                 dir("jobs_launcher") {
                     // delete engine name from names of test groups
-                    Set tests = []
-                    options.tests.each { group ->
-                        List testNameParts = group.split("-") as List
-                        String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        tests.add(parsedTestName)
+                    def tests = []
+                    if (options.engines.count(",") > 0) {
+                        options.tests.each { group ->
+                            List testNameParts = group.split("-") as List
+                            String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                            tests.add(parsedTestName)
+                        }
+                    } else {
+                        tests = options.tests
                     }
                     options.engines.split(",").each {
+                        // \\\\ - prevent escape sequence '\N'
                         bat """
-                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} ${executionType} \"${tests}\"
+                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\\\${it} ${executionType} \"${tests}\"
                         """
                     }
                 }
@@ -939,14 +944,15 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             }
                             if (options['isPreBuilt'])
                             {
+                                // \\\\ - prevent escape sequence '\N'
                                 bat """
-                                build_reports.bat ..\\summaryTestResults\\${engine} "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(engineName)}\"
+                                build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(engineName)}\"
                                 """
                             }
                             else
                             {
                                 bat """
-                                build_reports.bat ..\\summaryTestResults\\${engine} "Maya" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(engineName)}\"
+                                build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(engineName)}\"
                                 """
                             }
                         }
@@ -966,7 +972,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             {
                 options.engines.split(",").each {
                     dir("jobs_launcher") {
-                        bat "get_status.bat ..\\summaryTestResults\\${it}"
+                        // \\\\ - prevent escape sequence '\N'
+                        bat "get_status.bat ..\\summaryTestResults\\\\${it}"
                     }
                 }
             }
