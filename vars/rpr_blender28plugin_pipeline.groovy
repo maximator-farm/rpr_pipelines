@@ -1033,13 +1033,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                                 if (options['isPreBuilt'])
                                 {
                                     bat """
-                                    build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt"
+                                    build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(engine)}\"
                                     """
                                 }
                                 else
                                 {
                                     bat """
-                                    build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                                    build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(engine)}\"
                                     """
                                 }
                             }
