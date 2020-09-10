@@ -918,20 +918,23 @@ def executeDeploy(Map options, List platformList, List testResultList)
             {
                 testResultList.each()
                 {
-                    options.engines.split(",").each { engine ->
-                        dir(engine) {
-                            unstashCrashInfo(options['nodeRetry'], engine)
-                        }
-                    }
                     String engine
                     String testName
                     if (options.engines.count(",") > 0) {
+                        options.engines.split(",").each { currentEngine ->
+                            dir(currentEngine) {
+                                unstashCrashInfo(options['nodeRetry'], currentEngine)
+                            }
+                        }
                         List testNameParts = it.split("-") as List
                         engine = testNameParts[-1]
                         testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                     } else {
                         testName = it
                         engine = options.engines
+                        dir(engine) {
+                            unstashCrashInfo(options['nodeRetry'])
+                        }
                     }
                     dir(engine)
                     {
@@ -994,8 +997,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             String engineName = enginesNames[i]
                             List retryInfoList
                             if (options.engines.count(",") > 0) {
-                                retryInfoMap = utils.deepcopyCollection(this, options.nodeRetry)
-                                retryInfoMap.each{ gpu ->
+                                retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
+                                retryInfoList.each{ gpu ->
                                     gpu['Tries'].each{ group ->
                                         group.each{ groupKey, retries ->
                                             if (groupKey.endsWith(engine)) {
@@ -1009,9 +1012,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                                     gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
                                 }
                             } else {
-                                retryInfoMap = options.nodeRetry
+                                retryInfoList = options.nodeRetry
                             }
-                            def retryInfo = JsonOutput.toJson(retryInfoMap)
+                            def retryInfo = JsonOutput.toJson(retryInfoList)
                             dir("..\\summaryTestResults\\${engine}") {
                                 JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                                 writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
