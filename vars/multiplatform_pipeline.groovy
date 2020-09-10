@@ -69,7 +69,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             expectedExceptionMessage = "Build was aborted by new commit."
                                         } else if (causeClassName.contains("UserInterruption")) {
                                             expectedExceptionMessage = "Build was aborted by user."
-                                        } else if ((causeClassName.contains("TimeoutStepExecution") || causeClassName.contains("ExceededTimeout")) && (!expectedExceptionMessage || expectedExceptionMessage == 'Unknown reason')) {
+                                        } else if (utils.isTimeoutExceeded(e)) {
                                             expectedExceptionMessage = "Timeout exceeded (pipelines layer)."
                                         }
                                     }
@@ -123,8 +123,15 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                             Integer retries_count = options.retriesForTestStage ?: -1
                             run_with_retries(testerLabels, options.TEST_TIMEOUT, retringFunction, true, "Test", newOptions, [], retries_count, osName)
                         } catch (e) {
-                            println "Exception: ${e.toString()}"
-                            println "Exception message: ${e.getMessage()}"
+                            String exceptionClassName = e.getClass().toString()
+                            if (exceptionClassName.contains("FlowInterruptedException")) {
+                                e.getCauses().each(){
+                                    String causeClassName = it.getClass().toString()
+                                    if (causeClassName.contains("CancelledCause") || causeClassName.contains("UserInterruption")) {
+                                        throw e
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -192,10 +199,11 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
             } else {
                 def jenkins = Jenkins.getInstance();        
                 def views = Jenkins.getInstance().getViews()
+                String jobName = env.JOB_NAME.split('/')[0]
 
                 def jobsViews = []
                 for (view in views) {
-                    if (view.contains(jenkins.getItem(currentBuild.getProjectName()))) {
+                    if (view.contains(jenkins.getItem(jobName))) {
                         jobsViews.add(view.getDisplayName())
                     }
                 }

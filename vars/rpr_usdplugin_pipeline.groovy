@@ -93,7 +93,7 @@ def executeBuildWindows(Map options)
             bat """
                 mkdir build
                 set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
-                set HFS=C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}"
+                set HFS=C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
             """
 
@@ -365,7 +365,7 @@ def call(String projectBranch = "",
         String testsBranch = "master",
         String platforms = 'Windows;Ubuntu18;OSX;CentOS7_6',
         Boolean updateRefs = false,
-        Boolean enableNotifications = false,
+        Boolean enableNotifications = true,
         Boolean incrementVersion = true,
         String testsPackage = "",
         String tests = "",
