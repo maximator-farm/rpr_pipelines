@@ -317,6 +317,20 @@ def executeTests(String osName, String asicName, Map options)
         if (options.engine == '2'){
             REF_PATH_PROFILE="${REF_PATH_PROFILE}-NorthStar"
         }
+        switch(options.engine) {
+            case 'Northstar':
+                REF_PATH_PROFILE="${REF_PATH_PROFILE}-NorthStar"
+                break
+            case 'Hybrid_Low':
+                REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridLow"
+                break
+            case 'Hybrid_Medium':
+                REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridMedium"
+                break
+            case 'Hybrid_High':
+                REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridHigh"
+                break
+        }
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
@@ -1131,7 +1145,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             }
             def formattedEngines = []
             engines.split(',').each {
-                formattedEngines.add((it == 'Northstar') ? '2' : '1')
+                formattedEngines.add(it.replace(' ', '_'))
             }
             formattedEngines = formattedEngines.join(',')
 

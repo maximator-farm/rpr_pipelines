@@ -356,14 +356,19 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        if (options.engine == 'FULL2'){
-            REF_PATH_PROFILE="${REF_PATH_PROFILE}-NorthStar"
-        } else if (options.engine == 'LOW') {
-            REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridLow"
-        } else if (options.engine == 'MEDIUM') {
-            REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridMedium"
-        } else if (options.engine == 'HIGH') {
-            REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridHigh"
+        switch(options.engine) {
+            case 'FULL2':
+                REF_PATH_PROFILE="${REF_PATH_PROFILE}-NorthStar"
+                break
+            case 'LOW':
+                REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridLow"
+                break
+            case 'MEDIUM':
+                REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridMedium"
+                break
+            case 'HIGH':
+                REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridHigh"
+                break
         }
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
