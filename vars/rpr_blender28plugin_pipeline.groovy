@@ -992,19 +992,24 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         for (int i = 0; i < engines.length; i++) {
                             String engine = engines[i]
                             String engineName = enginesNames[i]
-                            def retryInfoMap = utils.deepcopyCollection(this, options.nodeRetry)
-                            retryInfoMap.each{ gpu ->
-                                gpu['Tries'].each{ group ->
-                                    group.each{ groupKey, retries ->
-                                        if (groupKey.endsWith(engine)) {
-                                            List testNameParts = groupKey.split("-") as List
-                                            String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                                            group[parsedName] = retries
+                            List retryInfoList
+                            if (options.engines.count(",") > 0) {
+                                retryInfoMap = utils.deepcopyCollection(this, options.nodeRetry)
+                                retryInfoMap.each{ gpu ->
+                                    gpu['Tries'].each{ group ->
+                                        group.each{ groupKey, retries ->
+                                            if (groupKey.endsWith(engine)) {
+                                                List testNameParts = groupKey.split("-") as List
+                                                String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                                                group[parsedName] = retries
+                                            }
+                                            group.remove(groupKey)
                                         }
-                                        group.remove(groupKey)
                                     }
+                                    gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
                                 }
-                                gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
+                            } else {
+                                retryInfoMap = options.nodeRetry
                             }
                             def retryInfo = JsonOutput.toJson(retryInfoMap)
                             dir("..\\summaryTestResults\\${engine}") {
