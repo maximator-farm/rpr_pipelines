@@ -1055,10 +1055,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try
             {
-                options.engines.split(",").each {
-                    dir("jobs_launcher") {
-                        bat "get_status.bat ..\\summaryTestResults\\${it}"
-                    }
+                dir("jobs_launcher") {
+                    bat "get_status.bat ..\\summaryTestResults True"
                 }
             }
             catch(e)
@@ -1084,19 +1082,17 @@ def executeDeploy(Map options, List platformList, List testResultList)
             Map summaryTestResults = [:]
             try
             {
-                options.engines.split(",").each {
-                    def summaryReport = readJSON file: "summaryTestResults/${it}/summary_status.json"
-                    summaryTestResults['passed'] = summaryTestResults['passed'] ? summaryTestResults['passed'] + summaryReport['passed'] : summaryReport['passed']
-                    summaryTestResults['failed'] = summaryTestResults['failed'] ? summaryTestResults['failed'] + summaryReport['failed'] : summaryReport['failed']
-                    summaryTestResults['error'] = summaryTestResults['error'] ? summaryTestResults['error'] + summaryReport['error'] : summaryReport['error']
-                }
-                if (summaryTestResults.error > 0) {
+                def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
+                summaryTestResults['passed'] = summaryReport.passed
+                summaryTestResults['failed'] = summaryReport.failed
+                summaryTestResults['error'] = summaryReport.error
+                if (summaryReport.error > 0) {
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
                     currentBuild.result = "FAILURE"
 
                     problemMessageManager.saveGlobalFailReason("Some tests marked as error.")
                 }
-                else if (summaryTestResults.failed > 0) {
+                else if (summaryReport.failed > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
 
