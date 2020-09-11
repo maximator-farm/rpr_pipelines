@@ -80,7 +80,7 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
-    checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], null, null, true)
+    checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], true)
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')

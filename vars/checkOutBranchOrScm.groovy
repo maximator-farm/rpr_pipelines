@@ -2,11 +2,11 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import hudson.plugins.git.GitException
 import hudson.AbortException
 
-def call(String branchName, String repoName, String prBranchName = '', String prRepoName = '', Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
+def call(String branchName, String repoName, Boolean disableSubmodules=false, String prBranchName = '', String prRepoName = '', Boolean polling=false, Boolean changelog=true, \
     String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false) {
     
     try {
-        executeCheckout(branchName, repoName, prBranchName, prRepoName, disableSubmodules, polling, changelog, credId, useLFS)
+        executeCheckout(branchName, repoName, disableSubmodules, prBranchName, prRepoName, polling, changelog, credId, useLFS)
     } 
     catch (FlowInterruptedException e) 
     {
@@ -19,12 +19,12 @@ def call(String branchName, String repoName, String prBranchName = '', String pr
         println(e.getMessage())
         println "[ERROR] Failed to checkout git on ${env.NODE_NAME}. Cleaning workspace and try again."
         cleanWS()
-        executeCheckout(branchName, repoName, prBranchName, prRepoName, disableSubmodules, polling, changelog, credId, useLFS, true)
+        executeCheckout(branchName, repoName, disableSubmodules, prBranchName, prRepoName, polling, changelog, credId, useLFS, true)
     }
 }
 
 
-def executeCheckout(String branchName, String repoName, String prBranchName = '', String prRepoName = '', Boolean disableSubmodules=false, Boolean polling=false, Boolean changelog=true, \
+def executeCheckout(String branchName, String repoName, Boolean disableSubmodules=false, String prBranchName = '', String prRepoName = '', Boolean polling=false, Boolean changelog=true, \
     String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false) {
 
     def repoBranch = branchName ? [[name: branchName]] : scm.branches

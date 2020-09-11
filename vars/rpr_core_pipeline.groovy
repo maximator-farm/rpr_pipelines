@@ -380,7 +380,7 @@ def executeBuild(String osName, Map options)
         {
             try {
                 GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading RadeonProRenderSDK repository.")
-                checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git', options['prBranchName'], options['prRepoName'])
+                checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git', false, options['prBranchName'], options['prRepoName'])
             } catch (e) {
                 String errorMessage
                 if (e.getMessage().contains("Branch not suitable for integration")) {

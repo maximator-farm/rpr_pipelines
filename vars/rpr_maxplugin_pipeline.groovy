@@ -346,7 +346,7 @@ def executeBuild(String osName, Map options)
         {
             try {
                 GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading plugin repository.")
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo, options['prBranchName'], options['prRepoName'])
+                checkOutBranchOrScm(options.projectBranch, options.projectRepo, false, options['prBranchName'], options['prRepoName'])
             } catch (e) {
                 String errorMessage
                 if (e.getMessage().contains("Branch not suitable for integration")) {
@@ -445,7 +445,7 @@ def executePreBuild(Map options)
         dir('RadeonProRenderMaxPlugin')
         {
             try {
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo, null, null, true)
+                checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
             } catch (e) {
                 String errorMessage = "Failed to download plugin repository."
                 GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)

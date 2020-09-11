@@ -24,11 +24,11 @@ def executeUnitTestsCommand(String osName, Map options)
 
 def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
     ws("WS/${options.PRJ_NAME}-TestAssets") {
-        checkOutBranchOrScm(options['assetsBranch'], "https://gitlab.cts.luxoft.com/rml/models.git", null, null, true, false, true, "radeonprorender-gitlab", true)
+        checkOutBranchOrScm(options['assetsBranch'], "https://gitlab.cts.luxoft.com/rml/models.git", true, null, null, false, true, "radeonprorender-gitlab", true)
         unstash "app${osName}"
     }
     ws("WS/${options.PRJ_NAME}-FT") {
-        checkOutBranchOrScm(options['testsBranch'], "https://gitlab.cts.luxoft.com/rml/ft_engine.git", null, null, true, false, true, "radeonprorender-gitlab", false)
+        checkOutBranchOrScm(options['testsBranch'], "https://gitlab.cts.luxoft.com/rml/ft_engine.git", true, null, null, false, true, "radeonprorender-gitlab", false)
         try {
             outputEnvironmentInfo(osName, "${STAGE_NAME}.ft")
             switch (osName) {

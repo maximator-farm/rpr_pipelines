@@ -475,7 +475,7 @@ def executePreBuild(Map options)
     }
 
     try {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], null, null, true)
+        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], true)
     } catch (e) {
         String errorMessage = "Failed to download RPRViewer repository."
         GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
