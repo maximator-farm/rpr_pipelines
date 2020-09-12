@@ -1229,13 +1229,13 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     {
         try
         {
-            if (!engines) {
+            if (!enginesNames) {
                 String errorMessage = "Engines parameter is required."
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Init")
                 throw new Exception(errorMessage)
             }
             def formattedEngines = []
-            engines.split(',').each {
+            enginesNames.split(',').each {
                  if (it.contains('Hybrid')) {
                     formattedEngines.add(it.split()[1].toUpperCase())
                 } else {
