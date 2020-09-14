@@ -4,6 +4,7 @@ import groovy.json.JsonOutput;
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
+import TestsExecutionType
 
 @Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20Core")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -380,9 +381,14 @@ def executeBuild(String osName, Map options)
         {
             try {
                 GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading RadeonProRenderSDK repository.")
-                checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git')
+                checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git', false, options['prBranchName'], options['prRepoName'])
             } catch (e) {
-                String errorMessage = "Failed to download RadeonProRenderSDK repository."
+                String errorMessage
+                if (e.getMessage().contains("Branch not suitable for integration")) {
+                    errorMessage = "Failed to merge branches."
+                } else {
+                    errorMessage = "Failed to download plugin repository."
+                }
                 GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
                 throw e
@@ -732,7 +738,9 @@ def call(String projectBranch = "",
          String height = "0",
          String iterations = "0",
          Boolean sendToUMS = true,
-         String tester_tag = 'Core') {
+         String tester_tag = 'Core',
+         String mergeablePR = "",
+         String parallelExecutionTypeString = "TakeOneNodePerGPU")
     
     def nodeRetry = []
     Map options = [:]
@@ -760,10 +768,17 @@ def call(String projectBranch = "",
 
             def universePlatforms = convertPlatforms(platforms);
 
+            def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
+
             println "Platforms: ${platforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
+            println "Tests execution type: ${parallelExecutionType}"
             println "UMS platforms: ${universePlatforms}"
+
+            String[] prInfo = mergeablePR.split(";")
+            String prRepoName = prInfo[0]
+            String prBranchName = prInfo[1]
 
             options << [projectBranch:projectBranch,
                         testsBranch:testsBranch,
@@ -790,7 +805,10 @@ def call(String projectBranch = "",
                         universePlatforms: universePlatforms,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
-                        platforms:platforms
+                        platforms:platforms,
+                        prRepoName:prRepoName,
+                        prBranchName:prBranchName,
+                        parallelExecutionType:parallelExecutionType
                         ]
         }
         catch(e)
