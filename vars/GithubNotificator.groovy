@@ -95,13 +95,16 @@ public class GithubNotificator {
 
     private def updateStatusPr(String stageName, String title, String status, String message = "", String url = "") {
         String statusTitle = "[${stageName.toUpperCase()}] ${title}"
+        // remove testname from title if it's required
+        if (stageName == 'Test') {
+            if (statusTitle.count('-') >= 2) {
+                String[] statusTitleParts = statusTitle.split('-')
+                statusTitle = (statusTitleParts as List).subList(0, 2).join('-')
+            }
+        }
         try {
             for (prStatus in pullRequest.statuses) {
                 if (statusTitle == prStatus.context) {
-                    if (status != 'error' && prStatus.state == 'error') {
-                        context.println("[ERROR] Check was marked as 'error'. Its status can't be replaced by any other status except 'error'")
-                        return
-                    }
                     if (!url) {
                         url = prStatus.targetUrl
                     }

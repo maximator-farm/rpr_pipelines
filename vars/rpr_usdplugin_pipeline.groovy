@@ -79,6 +79,8 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows(Map options)
 {
+    clearBinariesWin()
+
     if (options.rebuildUSD){
         bat """
             if exist USDgen rmdir /s/q USDgen
@@ -93,7 +95,7 @@ def executeBuildWindows(Map options)
             bat """
                 mkdir build
                 set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
-                set HFS=C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}"
+                set HFS=C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
             """
 
@@ -108,7 +110,9 @@ def executeBuildWindows(Map options)
 }
 
 
-def executeBuildOSX(Map options) {
+def executeBuildOSX(Map options) 
+{
+    clearBinariesUnix()
 
     if (options.rebuildUSD) {
         sh """
@@ -144,7 +148,9 @@ def executeBuildOSX(Map options) {
 }
 
 
-def executeBuildLinux(Map options) {
+def executeBuildLinux(Map options) 
+{
+    clearBinariesUnix()
 
     if (options.rebuildUSD) {
         sh """
@@ -221,7 +227,7 @@ def executeBuild(String osName, Map options) {
     // autoupdate houdini license
     try {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'sidefxCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-            print(python3("${CIS_TOOLS}/autoupdate_houdini.py --username \"$USERNAME\" --password \"$PASSWORD\" --version \"${options.houdiniVersion}\""))
+            print(python3("${CIS_TOOLS}/download_houdini.py --username \"$USERNAME\" --password \"$PASSWORD\" --version \"${options.houdiniVersion}\""))
         }
     } catch (e) {
         print e
@@ -365,7 +371,7 @@ def call(String projectBranch = "",
         String testsBranch = "master",
         String platforms = 'Windows;Ubuntu18;OSX;CentOS7_6',
         Boolean updateRefs = false,
-        Boolean enableNotifications = false,
+        Boolean enableNotifications = true,
         Boolean incrementVersion = true,
         String testsPackage = "",
         String tests = "",
