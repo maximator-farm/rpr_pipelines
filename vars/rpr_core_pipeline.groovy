@@ -741,6 +741,7 @@ def call(String projectBranch = "",
          String tester_tag = 'Core',
          String mergeablePR = "",
          String parallelExecutionTypeString = "TakeOneNodePerGPU")
+{
     
     def nodeRetry = []
     Map options = [:]

@@ -807,7 +807,7 @@ def call(String projectBranch = "",
          Boolean sendToUMS = true,
          String tester_tag = 'RprViewer',
          String parallelExecutionTypeString = "TakeOneNodePerGPU")
-
+{
     def nodeRetry = []
     Map options = [:]
 
