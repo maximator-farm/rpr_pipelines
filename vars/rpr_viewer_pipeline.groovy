@@ -140,7 +140,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir('scripts')
                     {
                         bat """
-                        run.bat ${options.testsPackage} \"${options.tests}\" >> ../${options.stageName}.log  2>&1
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.retries} 1>> ../${options.stageName}.log  2>&1
                         """
                     }
                     break;
@@ -156,7 +156,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                             sh """
                             chmod +x ../RprViewer/RadeonProViewer
                             chmod +x run.sh
-                            ./run.sh ${options.testsPackage} \"${options.tests}\" >> ../${options.stageName}.log  2>&1
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.retries} 1>> ../${options.stageName}.log  2>&1
                             """
                         }
                     }
@@ -804,7 +804,8 @@ def call(String projectBranch = "",
          String tests = "",
          Boolean splitTestsExecution = true,
          Boolean sendToUMS = true,
-         String tester_tag = 'RprViewer') {
+         String tester_tag = 'RprViewer',
+         Integer retries = 2) {
 
     def nodeRetry = []
     Map options = [:]
@@ -847,7 +848,8 @@ def call(String projectBranch = "",
                         sendToUMS:sendToUMS,
                         universePlatforms: universePlatforms,
                         problemMessageManager: problemMessageManager,
-                        platforms:platforms
+                        platforms:platforms,
+                        retries:retries
                         ]
         } 
         catch(e)
