@@ -792,41 +792,52 @@ def executePreBuild(Map options)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
 
+            tests = options.tests.split(" ") as List
+            tests.each() {
+                def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
+                options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+            }
+            options.groupsUMS = tests.clone()
+
             if(options.testsPackage != "none")
             {
-                // json means custom test suite. Split doesn't supported
-                if(options.testsPackage.endsWith('.json'))
-                {
-                    def testsByJson = readJSON file: "jobs/${options.testsPackage}"
-                    testsByJson.each() {
-                        options.groupsUMS << "${it.key}"
+                // check that tests package can be splitted or not
+                Boolean canPackageBeSplitted = true
+                def testsByJson = readJSON file: "jobs/${options.testsPackage}.json"
+                testsByJson.each() {
+                    if (it.value) {
+                        canPackageBeSplitted = false
                     }
-                    options.splitTestsExecution = false
-                    options.timeouts = ["regression.json": options.REGRESSION_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT]
                 }
-                else {
-                    String tempTests = readFile("jobs/${options.testsPackage}")
-                    tempTests.split("\n").each {
-                        // TODO: fix: duck tape - error with line ending
-                        def test_group = "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
-                        tests << test_group
-                        def xml_timeout = utils.getTimeoutFromXML(this, "${test_group}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                        options.timeouts["${test_group}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+                if (canPackageBeSplitted) {
+                    println("[INFO] tests group '${options.testsPackage}' can be splitted")
+                } else {
+                    println("[INFO] tests group '${options.testsPackage}' can't be splitted")
+                }
+
+                // create test group for non-splitted tests package (it will be use for run package few time with different engines)
+                testsPackageGroup = "${options.testsPackage}:"
+                testsByJson.each() {
+                    if (!tests.contains(it)) {
+                        if (canPackageBeSplitted) {
+                        	tests << it
+                            def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
+                            options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+                        }
+                        options.groupsUMS << it
+                    } else if (!canPackageBeSplitted) {
+                        // add duplicated group name in name of package group name for exclude it
+                        testsPackageGroup = ";${testsPackageGroup}"
                     }
-                    options.tests = tests
-                    options.testsPackage = "none"
-                    options.groupsUMS = tests
                 }
-            } else {
-                options.tests.split(" ").each()
-                {
-                    tests << "${it}"
-                    def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                    options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+                testsPackageGroup = testsPackageGroup.replace(':;', ';')
+
+                if (!canPackageBeSplitted) {
+                    tests << testsPackageGroup
+                    options.timeouts[options.testsPackage] = options.REGRESSION_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
-                options.tests = tests
-                options.groupsUMS = tests
             }
+            options.tests = tests
         }
     } catch (e) {
         String errorMessage = "Failed to configurate tests."
