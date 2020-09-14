@@ -1190,9 +1190,13 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             println "Tests execution type: ${parallelExecutionType}"
             println "UMS platforms: ${universePlatforms}"
 
-            String[] prInfo = mergeablePR.split(";")
-            String prRepoName = prInfo[0]
-            String prBranchName = prInfo[1]
+            String prRepoName = ""
+            String prBranchName = ""
+            if (mergeablePR) {
+                String[] prInfo = mergeablePR.split(";")
+                prRepoName = prInfo[0]
+                prBranchName = prInfo[1]
+            }
 
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,

@@ -741,6 +741,7 @@ def call(String projectBranch = "",
          String tester_tag = 'Core',
          String mergeablePR = "",
          String parallelExecutionTypeString = "TakeOneNodePerGPU")
+{
     
     def nodeRetry = []
     Map options = [:]
@@ -776,9 +777,13 @@ def call(String projectBranch = "",
             println "Tests execution type: ${parallelExecutionType}"
             println "UMS platforms: ${universePlatforms}"
 
-            String[] prInfo = mergeablePR.split(";")
-            String prRepoName = prInfo[0]
-            String prBranchName = prInfo[1]
+            String prRepoName = ""
+            String prBranchName = ""
+            if (mergeablePR) {
+                String[] prInfo = mergeablePR.split(";")
+                prRepoName = prInfo[0]
+                prBranchName = prInfo[1]
+            }
 
             options << [projectBranch:projectBranch,
                         testsBranch:testsBranch,
