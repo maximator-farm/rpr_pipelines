@@ -4,6 +4,7 @@ import groovy.json.JsonOutput;
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
+import TestsExecutionType
 
 @Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%203ds%20Max")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -859,7 +860,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String theshold = '0.05',
         String customBuildLinkWindows = "",
         String tester_tag = 'Max',
-        String mergeablePR = '')
+        String mergeablePR = "",
+        String parallelExecutionTypeString = "TakeOneNodePerGPU")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -917,10 +919,13 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
             def universePlatforms = convertPlatforms(platforms);
 
+            def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
+
             println "Platforms: ${platforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
             println "Split tests execution: ${splitTestsExecution}"
+            println "Tests execution type: ${parallelExecutionType}"
             println "UMS platforms: ${universePlatforms}"
 
             String[] prInfo = mergeablePR.split(";")
@@ -962,7 +967,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
                         prRepoName:prRepoName,
-                        prBranchName:prBranchName
+                        prBranchName:prBranchName,
+                        parallelExecutionType:parallelExecutionType
                         ]
         }
         catch (e)
