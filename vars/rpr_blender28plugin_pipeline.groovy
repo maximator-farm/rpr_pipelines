@@ -214,7 +214,7 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
 def executeTestCommand(String osName, String asicName, Map options)
 {
     def test_timeout = options.timeouts["${options.tests}"]
-    String testsNames
+    String testsNames = options.tests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
         if (options.testsPackage.split(":")[0] == options.tests) {
@@ -224,8 +224,6 @@ def executeTestCommand(String osName, String asicName, Map options)
             // if tests package isn't splitted and it isn't execution of this package - replace tests package by empty string
             testsPackageName = ""
         }
-    } else {
-        testsNames = options.tests
     }
 
     println "Set timeout to ${test_timeout}"
