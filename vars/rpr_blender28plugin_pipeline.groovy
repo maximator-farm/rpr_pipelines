@@ -843,6 +843,7 @@ def executePreBuild(Map options)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
             }
+            println(tests)
             options.tests = tests
         }
     } catch (e) {
