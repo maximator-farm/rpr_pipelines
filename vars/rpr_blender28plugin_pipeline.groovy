@@ -815,7 +815,7 @@ def executePreBuild(Map options)
                 packageInfo["groups"].each() {
                     if (canPackageBeSplitted) {
                         tests << it.key
-                        groupsUMS << it.key
+                        options.groupsUMS << it.key
                     } else {
                         if (!tests.contains(it.key)) {
                             options.groupsUMS << it.key
