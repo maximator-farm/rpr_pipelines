@@ -39,7 +39,7 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
                         bat """
                         pip install -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                         python -V >> ${STAGE_NAME}.ft.log 2>&1
-                        python run_tests.py -t ../${options.PRJ_NAME}-TestAssets -e ../rml_release/test_app.exe -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                        python run_tests.py -t ../${options.PRJ_NAME}-TestAssets -e rml_release/test_app.exe -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
                         rename ft-executor.log ${STAGE_NAME}.engine.log
                         """
                     }
@@ -50,7 +50,7 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
                         pip3.8 install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                         python3.8 -V >> ${STAGE_NAME}.ft.log 2>&1
                         env >> ${STAGE_NAME}.ft.log 2>&1
-                        python3.8 run_tests.py -t ../${options.PRJ_NAME}-TestAssets -e ../rml_release/test_app -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                        python3.8 run_tests.py -t ../${options.PRJ_NAME}-TestAssets -e rml_release/test_app -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
                         mv ft-executor.log ${STAGE_NAME}.engine.log
                     """
             }
