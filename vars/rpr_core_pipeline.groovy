@@ -92,17 +92,8 @@ def getCoreSDK(String osName, Map options)
     }
 }
 
-def executeGenTestRefCommand(String osName, Map options)
+def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
-    try
-    {
-        //for update existing manifest file
-        receiveFiles("${options.REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
-    }
-    catch(e)
-    {
-        println("baseline_manifest.json not found")
-    }
 
     dir('scripts')
     {
@@ -110,17 +101,17 @@ def executeGenTestRefCommand(String osName, Map options)
         {
             case 'Windows':
                 bat """
-                make_results_baseline.bat
+                make_results_baseline.bat ${delete}
                 """
                 break;
             case 'OSX':
                 sh """
-                ./make_results_baseline.sh
+                ./make_results_baseline.sh ${delete}
                 """
                 break;
             default:
                 sh """
-                ./make_results_baseline.sh
+                ./make_results_baseline.sh ${delete}
                 """
         }
     }
@@ -221,32 +212,23 @@ def executeTests(String osName, String asicName, Map options)
         outputEnvironmentInfo(osName)
 
         try {
-            if(options['updateRefs'])
+            if(options['updateRefs'].contains('Update'))
             {
                 executeTestCommand(osName, asicName, options)
-                executeGenTestRefCommand(osName, options)
+                executeGenTestRefCommand(osName, options, options['updateRefs'].contains('clean'))
                 sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
-            }
-            else if(options.updateRefsByOne)
-            {
-                // Update ref images from one card to others
-                // TODO: Fix hardcode naming
-                executeTestCommand(osName, asicName, options)
-                executeGenTestRefCommand(osName, options)
-                ['AMD_RXVEGA', 'AMD_WX9100', 'AMD_WX7100', 'AMD_RadeonVII', 'NVIDIA_GF1080TI', 'NVIDIA_RTX2080'].each
-                {
-                    sendFiles('./Work/Baseline/', "${options.REF_PATH}/${it}-Windows")
-                }
             }
             else
             {
                 try {
                     GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")
+                    String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_core_autotests_baselines" : "/mnt/c/TestResources/rpr_core_autotests_baselines"
+                    println "[INFO] Downloading reference images for ${options.tests}"
                     options.tests.split(" ").each() {
-                        receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
+                        receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
                     }
-                } catch(e) {
-                    println("[WARNING] Baseline doesn't exist.")
+                } catch (e) {
+                    println("[WARNING] Problem when copying baselines. " + e.getMessage())
                 }
                 GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Executing tests.", "${BUILD_URL}")
                 executeTestCommand(osName, asicName, options)
@@ -728,8 +710,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectBranch = "",
          String testsBranch = "master",
          String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,NVIDIA_GF1080TI,NVIDIA_RTX2080;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_GTX980',
-         Boolean updateRefs = false,
-         Boolean updateRefsByOne = false,
+         String updateRefs = 'No',
          Boolean enableNotifications = true,
          String renderDevice = "gpu",
          String testsPackage = "Full",
@@ -788,7 +769,6 @@ def call(String projectBranch = "",
             options << [projectBranch:projectBranch,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
-                        updateRefsByOne:updateRefsByOne,
                         enableNotifications:enableNotifications,
                         PRJ_NAME:PRJ_NAME,
                         PRJ_ROOT:PRJ_ROOT,
