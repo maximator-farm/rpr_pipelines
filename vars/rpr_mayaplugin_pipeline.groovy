@@ -1039,8 +1039,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                 List reports = []
                 List reportsNames = []
-                options.enginesNames.split(",").each { engine ->
+                options.engines.split(",").each { engine ->
                     reports.add("${engine}/summary_report.html")
+                }
+                options.enginesNames.split(",").each { engine ->
                     reportsNames.add("Summary Report (${engine})")
                 }
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
