@@ -805,7 +805,7 @@ def executePreBuild(Map options)
 
             if(options.testsPackage != "none") 
             {
-                packageInfo = readJSON file: "jobs/${options.testsPackage}.json"
+                packageInfo = readJSON file: "jobs/${options.testsPackage}"
                 options.isPackageSplitted = packageInfo["split"]
                 // if it's build of manual job and package can be splitted - use list of tests which was specified in params (user can change list of tests before run build)
                 if (options.forceBuild && options.isPackageSplitted && options.tests) {
@@ -935,18 +935,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-                String executionType
-                if (options.testsPackage.endsWith('.json')) {
-                    executionType = 'regression'
-                } else if (options.splitTestsExecution) {
-                    executionType = 'split_execution'
-                } else {
-                    executionType = 'default'
-                }
-
                 dir("jobs_launcher") {
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${executionType} \"${options.tests}\"
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults ${options.splitTestsExecution} ${options.testsPackage} \"${options.tests}\"
                     """
                 }
             } catch (e) {
