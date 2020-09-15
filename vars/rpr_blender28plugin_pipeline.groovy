@@ -833,7 +833,7 @@ def executePreBuild(Map options)
                             options.groupsUMS << it.key
                         } else {
                             // add duplicated group name in name of package group name for exclude it
-                            testsPackageGroup = ";${testsPackageGroup}"
+                            testsPackageGroup = "${testsPackageGroup};${it.key}"
                         }
                     }
                 }
