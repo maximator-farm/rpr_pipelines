@@ -792,49 +792,49 @@ def executePreBuild(Map options)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
 
-            tests = options.tests.split(" ") as List
-            tests.each() {
-                def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
-            }
-            options.groupsUMS = tests.clone()
-
             if(options.testsPackage != "none")
             {
-                // check that tests package can be splitted or not
-                Boolean canPackageBeSplitted = true
-                def testsByJson = readJSON file: "jobs/${options.testsPackage}.json"
-                testsByJson.each() {
-                    if (it.value) {
-                        canPackageBeSplitted = false
-                    }
-                }
+                def packageInfo = readJSON file: "jobs/${options.testsPackage}.json"
+                Boolean canPackageBeSplitted = packageInfo["canBeSplitted"]
                 if (canPackageBeSplitted) {
-                    println("[INFO] tests group '${options.testsPackage}' can be splitted")
+                    println("[INFO] Tests package '${options.testsPackage}' can be splitted")
                 } else {
-                    println("[INFO] tests group '${options.testsPackage}' can't be splitted")
+                    tests = options.tests.split(" ") as List
+                    options.groupsUMS = tests.clone()
+                    println("[INFO] Tests package '${options.testsPackage}' can't be splitted")
                 }
 
                 // create test group for non-splitted tests package (it will be use for run package few time with different engines)
-                testsPackageGroup = "${options.testsPackage}:"
-                testsByJson.each() {
-                    if (!tests.contains(it)) {
-                        if (canPackageBeSplitted) {
-                        	tests << it
-                            def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                            options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+                String testsPackageGroup = "${options.testsPackage}:"
+                packageInfo["groups"].each() {
+                    if (canPackageBeSplitted) {
+                        tests << it.key
+                        groupsUMS << it.key
+                    } else {
+                        if (!tests.contains(it.key)) {
+                            options.groupsUMS << it.key
+                        } else {
+                            // add duplicated group name in name of package group name for exclude it
+                            testsPackageGroup = ";${testsPackageGroup}"
                         }
-                        options.groupsUMS << it
-                    } else if (!canPackageBeSplitted) {
-                        // add duplicated group name in name of package group name for exclude it
-                        testsPackageGroup = ";${testsPackageGroup}"
                     }
                 }
-                testsPackageGroup = testsPackageGroup.replace(':;', ';')
+                tests.each() {
+                    def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
+                    options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+                }
+                testsPackageGroup = testsPackageGroup.replace(':;', ':')
 
                 if (!canPackageBeSplitted) {
                     tests << testsPackageGroup
-                    options.timeouts[options.testsPackage] = options.REGRESSION_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                    options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                }
+            } else {
+            	tests = options.tests.split(" ") as List
+                tests.each() {
+                    options.groupsUMS << it
+                    def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
+                    options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
             }
             options.tests = tests
@@ -846,13 +846,7 @@ def executePreBuild(Map options)
         throw e
     }
 
-    if(options.splitTestsExecution) {
-        options.testsList = options.tests
-    }
-    else {
-        options.testsList = ['']
-        options.tests = tests.join(" ")
-    }
+    options.testsList = options.tests
 
     println "timeouts: ${options.timeouts}"
 
@@ -1210,7 +1204,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         gpusCount:gpusCount,
                         TEST_TIMEOUT:180,
                         ADDITIONAL_XML_TIMEOUT:30,
-                        REGRESSION_TIMEOUT:120,
+                        NON_SPLITTED_PACKAGE_TIMEOUT:120,
                         DEPLOY_TIMEOUT:150,
                         TESTER_TAG:tester_tag,
                         BUILDER_TAG:"BuildBlender2.8",
