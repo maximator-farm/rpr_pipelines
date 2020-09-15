@@ -798,13 +798,25 @@ def executePreBuild(Map options)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
 
+            def packageInfo
+            Boolean canPackageBeSplitted
+
+            if(options.testsPackage != "none") 
+            {
+                packageInfo = readJSON file: "jobs/${options.testsPackage}.json"
+                canPackageBeSplitted = packageInfo["canBeSplitted"]
+                // if it's build of manual job and package can be splitted - use list of tests which was specified in params (user can change list of tests before run build)
+                if (options.forceBuild && canPackageBeSplitted && options.tests) {
+                    options.testsPackage = "none"
+                }
+            }
+
             if(options.testsPackage != "none")
             {
-                def packageInfo = readJSON file: "jobs/${options.testsPackage}.json"
-                Boolean canPackageBeSplitted = packageInfo["canBeSplitted"]
                 if (canPackageBeSplitted) {
                     println("[INFO] Tests package '${options.testsPackage}' can be splitted")
                 } else {
+                    // save tests which user wants to run with non-splitted tests package
                     tests = options.tests.split(" ") as List
                     options.groupsUMS = tests.clone()
                     println("[INFO] Tests package '${options.testsPackage}' can't be splitted")
