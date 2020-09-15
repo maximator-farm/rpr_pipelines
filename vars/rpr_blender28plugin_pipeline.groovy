@@ -5,6 +5,7 @@ import utils
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
+import TestsExecutionType
 
 @Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Blender")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -573,9 +574,14 @@ def executeBuild(String osName, Map options)
         {
             try {
                 GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading the plugin repository.")
-                checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+                checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], false, options['prBranchName'], options['prRepoName'])
             } catch (e) {
-                String errorMessage = "Failed to download the plugin repository."
+                String errorMessage
+                if (e.getMessage().contains("Branch not suitable for integration")) {
+                    errorMessage = "Failed to merge branches."
+                } else {
+                    errorMessage = "Failed to download plugin repository."
+                }
                 GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
                 throw e
@@ -1106,7 +1112,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkOSX = "",
     String engine = "1.0",
     String tester_tag = "Blender2.8",
-    String toolVersion = "2.83")
+    String toolVersion = "2.83",
+    String mergeablePR = "",
+    String parallelExecutionTypeString = "TakeOneNodePerGPU")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -1178,11 +1186,22 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
             def universePlatforms = convertPlatforms(platforms);
 
+            def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
+
             println "Platforms: ${platforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
             println "Split tests execution: ${splitTestsExecution}"
+            println "Tests execution type: ${parallelExecutionType}"
             println "UMS platforms: ${universePlatforms}"
+
+            String prRepoName = ""
+            String prBranchName = ""
+            if (mergeablePR) {
+                String[] prInfo = mergeablePR.split(";")
+                prRepoName = prInfo[0]
+                prBranchName = prInfo[1]
+            }
 
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
@@ -1220,7 +1239,10 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         engine: engine,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
-                        platforms:platforms
+                        platforms:platforms,
+                        prRepoName:prRepoName,
+                        prBranchName:prBranchName,
+                        parallelExecutionType:parallelExecutionType
                         ]
         }
         catch(e)

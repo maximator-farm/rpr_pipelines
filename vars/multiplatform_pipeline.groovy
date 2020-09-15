@@ -6,6 +6,21 @@ import hudson.remoting.RequestAbortedException;
 import java.lang.IllegalArgumentException;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import jenkins.model.Jenkins;
+import groovy.transform.Synchronized;
+import java.util.Iterator;
+import TestsExecutionType;
+
+
+@NonCPS
+@Synchronized
+def getNextTest(Iterator iterator) {
+    if (iterator.hasNext()) {
+        return iterator.next()
+    } else {
+        return null
+    }
+}
 
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
@@ -16,124 +31,146 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
         gpuNames.split(',').each()
         {
             String asicName = it
-            testTasks["Test-${it}-${osName}"] = {
+            
+            testTasks["Test-${asicName}-${osName}"] = {
                 stage("Test-${asicName}-${osName}") {
                     // if not split - testsList doesn't exists
                     // TODO: replace testsList check to splitExecution var
                     options.testsList = options.testsList ?: ['']
 
-                    options.testsList.each() { testName ->
-                        println("Scheduling ${osName}:${asicName} ${testName}")
+                    def testerTag = "Tester"
+                    if (options.TESTER_TAG){
+                        if (options.TESTER_TAG.indexOf(' ') > -1){
+                            testerTag = options.TESTER_TAG
+                        }else {
+                            testerTag = "${options.TESTER_TAG} && Tester"
+                        }
+                    } 
+                    def testerLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
 
-                        Map newOptions = options.clone()
-                        newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
-                        newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
-                        newOptions['tests'] = testName ?: options.tests
+                    Iterator testsIterator = options.testsList.iterator()
+                    Integer launchingGroupsNumber = 1
+                    if (!options["parallelExecutionType"] || options["parallelExecutionType"] == TestsExecutionType.TAKE_ONE_NODE_PER_GPU) {
+                        launchingGroupsNumber = 1
+                    } else if (options["parallelExecutionType"] == TestsExecutionType.TAKE_ALL_NODES) {
+                        List possibleNodes = nodesByLabel label: testerLabels, offline: true
+                        launchingGroupsNumber = possibleNodes.size()
+                    }
 
-                        def testerTag = "Tester"
-                        if (options.TESTER_TAG){
-                            if (options.TESTER_TAG.indexOf(' ') > -1){
-                                testerTag = options.TESTER_TAG
-                            }else {
-                                testerTag = "${options.TESTER_TAG} && Tester"
-                            }
-                        } 
-                        def testerLabels = "${osName} && ${testerTag} && OpenCL && gpu${asicName}"
+                    Map testsExecutors = [:]
 
-                        def retringFunction = { nodesList, currentTry ->
-                            try {
-                                executeTests(osName, asicName, newOptions)
-                            } catch(Exception e) {
-                                // save expected exception message for add it in report
-                                String expectedExceptionMessage = ""
-                                if (e instanceof ExpectedExceptionWrapper) {
-                                    expectedExceptionMessage = e.getMessage()
-                                    e = e.getCause()
-                                }
+                    for (int i = 0; i < launchingGroupsNumber; i++) {
+                        testsExecutors["Test-${asicName}-${osName}-${i}"] = {
+                            String testName = getNextTest(testsIterator)
+                            while (testName != null) {
+                                println("Scheduling ${osName}:${asicName} ${testName}")
 
-                                println "[ERROR] Failed during tests on ${env.NODE_NAME} node"
-                                println "Exception: ${e.toString()}"
-                                println "Exception message: ${e.getMessage()}"
-                                println "Exception cause: ${e.getCause()}"
-                                println "Exception stack trace: ${e.getStackTrace()}"
+                                Map newOptions = options.clone()
+                                newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
+                                newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
+                                newOptions['tests'] = testName ?: options.tests
 
-                                String exceptionClassName = e.getClass().toString()
-                                if (exceptionClassName.contains("FlowInterruptedException")) {
-                                    e.getCauses().each(){
-                                        // UserInterruption aborting by user
-                                        // ExceededTimeout aborting by timeout
-                                        // CancelledCause for aborting by new commit
-                                        String causeClassName = it.getClass().toString()
-                                        println "Interruption cause: ${causeClassName}"
-                                        if (causeClassName.contains("CancelledCause")) {
-                                            expectedExceptionMessage = "Build was aborted by new commit."
-                                        } else if (causeClassName.contains("UserInterruption")) {
-                                            expectedExceptionMessage = "Build was aborted by user."
-                                        } else if (utils.isTimeoutExceeded(e)) {
-                                            expectedExceptionMessage = "Timeout exceeded (pipelines layer)."
+                                def retringFunction = { nodesList, currentTry ->
+                                    try {
+                                        executeTests(osName, asicName, newOptions)
+                                    } catch(Exception e) {
+                                        // save expected exception message for add it in report
+                                        String expectedExceptionMessage = ""
+                                        if (e instanceof ExpectedExceptionWrapper) {
+                                            expectedExceptionMessage = e.getMessage()
+                                            e = e.getCause()
                                         }
-                                    }
-                                } else if (exceptionClassName.contains("ClosedChannelException") || exceptionClassName.contains("RemotingSystemException") || exceptionClassName.contains("InterruptedException")) {
-                                    expectedExceptionMessage = "Lost connection with machine."
-                                }
 
-                                // add info about retry to options
-                                boolean added = false;
-                                String testsOrTestPackage
-                                if (newOptions['splitTestsExecution']) {
-                                    testsOrTestPackage = newOptions['tests']
-                                } else if (newOptions['testsPackage']) {
-                                    testsOrTestPackage = newOptions['testsPackage'].replace(' ', '_')
-                                }
+                                        println "[ERROR] Failed during tests on ${env.NODE_NAME} node"
+                                        println "Exception: ${e.toString()}"
+                                        println "Exception message: ${e.getMessage()}"
+                                        println "Exception cause: ${e.getCause()}"
+                                        println "Exception stack trace: ${e.getStackTrace()}"
 
-                                if (!expectedExceptionMessage) {
-                                    expectedExceptionMessage = "Unexpected exception."
-                                }
+                                        String exceptionClassName = e.getClass().toString()
+                                        if (exceptionClassName.contains("FlowInterruptedException")) {
+                                            e.getCauses().each(){
+                                                // UserInterruption aborting by user
+                                                // ExceededTimeout aborting by timeout
+                                                // CancelledCause for aborting by new commit
+                                                String causeClassName = it.getClass().toString()
+                                                println "Interruption cause: ${causeClassName}"
+                                                if (causeClassName.contains("CancelledCause")) {
+                                                    expectedExceptionMessage = "Build was aborted by new commit."
+                                                } else if (causeClassName.contains("UserInterruption")) {
+                                                    expectedExceptionMessage = "Build was aborted by user."
+                                                } else if (utils.isTimeoutExceeded(e)) {
+                                                    expectedExceptionMessage = "Timeout exceeded (pipelines layer)."
+                                                }
+                                            }
+                                        } else if (exceptionClassName.contains("ClosedChannelException") || exceptionClassName.contains("RemotingSystemException") || exceptionClassName.contains("InterruptedException")) {
+                                            expectedExceptionMessage = "Lost connection with machine."
+                                        }
 
-                                if (options.containsKey('nodeRetry')) {
-                                    Map tryInfo = [host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.retry_${currentTry}.crash.log", exception: expectedExceptionMessage, time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))]
+                                        // add info about retry to options
+                                        boolean added = false;
+                                        String testsOrTestPackage
+                                        if (newOptions['splitTestsExecution']) {
+                                            testsOrTestPackage = newOptions['tests']
+                                        } else if (newOptions['testsPackage'].endsWith('.json')) {
+                                            testsOrTestPackage = newOptions['testsPackage']
+                                        } else {
+                                            //all non splitTestsExecution and non regression builds (e.g. any build of core)
+                                            testsOrTestPackage = 'DefaultExecution'
+                                        }
 
-                                    retryLoops: for (testers in options['nodeRetry']) {
-                                        if (testers['Testers'].equals(nodesList)){
-                                            for (group in testers['Tries']) {
-                                                if (group[testsOrTestPackage]) {
-                                                    group[testsOrTestPackage].add(tryInfo)
+                                        if (!expectedExceptionMessage) {
+                                            expectedExceptionMessage = "Unexpected exception."
+                                        }
+
+                                        if (options.containsKey('nodeRetry')) {
+                                            Map tryInfo = [host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.retry_${currentTry}.crash.log", exception: expectedExceptionMessage, time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))]
+
+                                            retryLoops: for (testers in options['nodeRetry']) {
+                                                if (testers['Testers'].equals(nodesList)){
+                                                    for (group in testers['Tries']) {
+                                                        if (group[testsOrTestPackage]) {
+                                                            group[testsOrTestPackage].add(tryInfo)
+                                                            added = true
+                                                            break retryLoops
+                                                        }
+                                                    }
+                                                    // add list for test group if it doesn't exists
+                                                    testers['Tries'].add([(testsOrTestPackage): [tryInfo]])
                                                     added = true
                                                     break retryLoops
                                                 }
                                             }
-                                            // add list for test group if it doesn't exists
-                                            testers['Tries'].add([(testsOrTestPackage): [tryInfo]])
-                                            added = true
-                                            break retryLoops
+
+                                            if (!added){
+                                                options['nodeRetry'].add([Testers: nodesList, gpuName: asicName, osName: osName, Tries: [[(testsOrTestPackage): [tryInfo]]]])
+                                            }
+                                            println options['nodeRetry'].inspect()
                                         }
-                                    }
 
-                                    if (!added){
-                                        options['nodeRetry'].add([Testers: nodesList, gpuName: asicName, osName: osName, Tries: [[(testsOrTestPackage): [tryInfo]]]])
-                                    }
-                                    println options['nodeRetry'].inspect()
-                                }
-
-                                throw e
-                            }
-                        }
-
-                        try {
-                            Integer retries_count = options.retriesForTestStage ?: -1
-                            run_with_retries(testerLabels, options.TEST_TIMEOUT, retringFunction, true, "Test", newOptions, [], retries_count, osName)
-                        } catch (e) {
-                            String exceptionClassName = e.getClass().toString()
-                            if (exceptionClassName.contains("FlowInterruptedException")) {
-                                e.getCauses().each(){
-                                    String causeClassName = it.getClass().toString()
-                                    if (causeClassName.contains("CancelledCause") || causeClassName.contains("UserInterruption")) {
                                         throw e
                                     }
                                 }
+
+                                try {
+                                    Integer retries_count = options.retriesForTestStage ?: -1
+                                    run_with_retries(testerLabels, options.TEST_TIMEOUT, retringFunction, true, "Test", newOptions, [], retries_count, osName)
+                                } catch(FlowInterruptedException e) {
+                                    e.getCauses().each(){
+                                        String causeClassName = it.getClass().toString()
+                                        if (causeClassName.contains("CancelledCause") || causeClassName.contains("UserInterruption")) {
+                                            throw e
+                                        }
+                                    }
+                                } catch (e) {
+                                    // Ignore other exceptions
+                                }
+                                testName = getNextTest(testsIterator)
                             }
-                        }
+                        }                        
                     }
+
+                    parallel testsExecutors
                 }
             }
         }

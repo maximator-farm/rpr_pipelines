@@ -507,7 +507,6 @@ def executePreBuild(Map options) {
     }
 
     if(!env.CHANGE_URL){
-
         checkOutBranchOrScm(env.BRANCH_NAME, 'git@github.com:imatyushin/TAN.git', true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
