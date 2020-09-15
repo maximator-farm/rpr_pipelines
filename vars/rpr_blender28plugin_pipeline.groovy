@@ -215,9 +215,15 @@ def executeTestCommand(String osName, String asicName, Map options)
 {
     def test_timeout = options.timeouts["${options.tests}"]
     String testsNames
-    // if tests package isn't splitted and it's execution of this package - replace test group for non-splitted package by empty string
-    if (options.testsPackage != "none" && !options.isPackageSplitted && options.testsPackage.split(":")[0] == options.tests) {
-        testsNames = ""
+    String testsPackageName = options.testsPackage
+    if (options.testsPackage != "none" && !options.isPackageSplitted) {
+        if (options.testsPackage.split(":")[0] == options.tests) {
+            // if tests package isn't splitted and it's execution of this package - replace test group for non-splitted package by empty string
+            testsNames = ""
+        } else {
+            // if tests package isn't splitted and it isn't execution of this package - replace tests package by empty string
+            testsPackageName = ""
+        }
     } else {
         testsNames = options.tests
     }
@@ -245,7 +251,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir('scripts')
                     {
                         bat """
-                        run.bat ${options.renderDevice} ${options.testsPackage} \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion}>> ..\\${options.stageName}.log  2>&1
+                        run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion}>> ..\\${options.stageName}.log  2>&1
                         """
                     }
                     break;
@@ -254,7 +260,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir("scripts")
                     {
                         sh """
-                        ./run.sh ${options.renderDevice} ${options.testsPackage} \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion}>> ../${options.stageName}.log 2>&1
+                        ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion}>> ../${options.stageName}.log 2>&1
                         """
                     }
                 }
