@@ -213,14 +213,13 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
-    def test_timeout
-    if (options.testsPackage.endsWith('.json')) 
-    {
-        test_timeout = options.timeouts["${options.testsPackage}"]
-    } 
-    else
-    {
-        test_timeout = options.timeouts["${options.tests}"]
+    def test_timeout = options.timeouts["${options.tests}"]
+    String testsNames
+    // if tests package isn't splitted and it's execution of this package - replace test group for non-splitted package by empty string
+    if (options.testsPackage != "none" && !options.isPackageSplitted && options.testsPackage.split(":")[0] == options.tests) {
+        testsNames = ""
+    } else {
+        testsNames = options.tests
     }
 
     println "Set timeout to ${test_timeout}"
@@ -246,7 +245,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir('scripts')
                     {
                         bat """
-                        run.bat ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion}>> ..\\${options.stageName}.log  2>&1
+                        run.bat ${options.renderDevice} ${options.testsPackage} \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion}>> ..\\${options.stageName}.log  2>&1
                         """
                     }
                     break;
@@ -255,7 +254,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir("scripts")
                     {
                         sh """
-                        ./run.sh ${options.renderDevice} ${options.testsPackage} \"${options.tests}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion}>> ../${options.stageName}.log 2>&1
+                        ./run.sh ${options.renderDevice} ${options.testsPackage} \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion}>> ../${options.stageName}.log 2>&1
                         """
                     }
                 }
@@ -799,21 +798,20 @@ def executePreBuild(Map options)
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
 
             def packageInfo
-            Boolean canPackageBeSplitted
 
             if(options.testsPackage != "none") 
             {
                 packageInfo = readJSON file: "jobs/${options.testsPackage}.json"
-                canPackageBeSplitted = packageInfo["canBeSplitted"]
+                options.isPackageSplitted = packageInfo["split"]
                 // if it's build of manual job and package can be splitted - use list of tests which was specified in params (user can change list of tests before run build)
-                if (options.forceBuild && canPackageBeSplitted && options.tests) {
+                if (options.forceBuild && options.isPackageSplitted && options.tests) {
                     options.testsPackage = "none"
                 }
             }
 
             if(options.testsPackage != "none")
             {
-                if (canPackageBeSplitted) {
+                if (options.isPackageSplitted) {
                     println("[INFO] Tests package '${options.testsPackage}' can be splitted")
                 } else {
                     // save tests which user wants to run with non-splitted tests package
@@ -824,10 +822,10 @@ def executePreBuild(Map options)
                     println("[INFO] Tests package '${options.testsPackage}' can't be splitted")
                 }
 
-                // create test group for non-splitted tests package (it will be use for run package few time with different engines)
-                String testsPackageGroup = "${options.testsPackage}:"
+                // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
+                String modifiedPackageName = "${options.testsPackage}:"
                 packageInfo["groups"].each() {
-                    if (canPackageBeSplitted) {
+                    if (options.isPackageSplitted) {
                         tests << it.key
                         options.groupsUMS << it.key
                     } else {
@@ -835,7 +833,7 @@ def executePreBuild(Map options)
                             options.groupsUMS << it.key
                         } else {
                             // add duplicated group name in name of package group name for exclude it
-                            testsPackageGroup = "${testsPackageGroup};${it.key}"
+                            modifiedPackageName = "${modifiedPackageName};${it.key}"
                         }
                     }
                 }
@@ -843,14 +841,15 @@ def executePreBuild(Map options)
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
-                testsPackageGroup = testsPackageGroup.replace(':;', ':')
+                modifiedPackageName = modifiedPackageName.replace(':;', ':')
 
-                if (!canPackageBeSplitted) {
-                    tests << testsPackageGroup
+                if (!options.isPackageSplitted) {
+                    tests << options.testsPackage
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                    options.testsPackage = modifiedPackageName
                 }
             } else {
-            	tests = options.tests.split(" ") as List
+                tests = options.tests.split(" ") as List
                 tests.each() {
                     options.groupsUMS << it
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
