@@ -1122,24 +1122,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Publishing test report.", "${BUILD_URL}")
 
-                List targetReports = ["summary_report.html", "performance_report.html", "compare_report.html"]
-                List targetReportsNames = ["Summary Report", "Performance Report", "Compare Report"]
                 List reports = []
-                List reportsNames
-                options.engines.split(",").each { engine ->
-                    targetReports.each { report ->
-                        reports.add("${engine}/${report}")
-                    }
-                }
-                if (options.engines.count(",") > 0) {
-                    reportsNames = []
-                    options.enginesNames.split(",").each { engine ->
-                        targetReportsNames.each { name ->
-                            reportsNames.add("${name} (${engine})")
-                        }
-                    }
-                } else {
-                    reportsNames = targetReportsNames
+                List reportsNames = []
+                options.enginesNames.split(",").each { engine ->
+                    reports.add("${engine}/summary_report.html")
+                    reportsNames.add("Summary Report (${engine})")
                 }
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
 
