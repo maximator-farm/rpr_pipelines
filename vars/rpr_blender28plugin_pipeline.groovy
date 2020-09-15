@@ -817,8 +817,10 @@ def executePreBuild(Map options)
                     println("[INFO] Tests package '${options.testsPackage}' can be splitted")
                 } else {
                     // save tests which user wants to run with non-splitted tests package
-                    tests = options.tests.split(" ") as List
-                    options.groupsUMS = tests.clone()
+                    if (options.tests) {
+                        tests = options.tests.split(" ") as List
+                        options.groupsUMS = tests.clone()
+                    }
                     println("[INFO] Tests package '${options.testsPackage}' can't be splitted")
                 }
 
