@@ -98,7 +98,7 @@ public class GithubNotificator {
         // remove testname from title if it's required
         if (stageName == 'Test') {
             if (statusTitle.count('-') >= 2) {
-                String[] statusTitleParts = title.split('-')
+                String[] statusTitleParts = statusTitle.split('-')
                 statusTitle = (statusTitleParts as List).subList(0, 2).join('-')
             }
         }
