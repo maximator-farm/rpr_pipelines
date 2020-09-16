@@ -112,10 +112,11 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                         String testsOrTestPackage
                                         if (newOptions['splitTestsExecution']) {
                                             if (newOptions['testsPackage'] != 'none') {
-                                                if (newOptions['isPackageSplitted']) {
+                                                // if package is splitted or if package is non-splitted and group was excluded - take name of test group
+                                                if (newOptions['isPackageSplitted'] || newOptions['testsPackage'].split(':')[1].contains(newOptions['tests'])) {
                                                     testsOrTestPackage = newOptions['tests']
                                                 } else {
-                                                    testsOrTestPackage = newOptions['testsPackage']
+                                                    testsOrTestPackage = newOptions['testsPackage'].split(':')[0]
                                                 }
                                             } else {
                                                 testsOrTestPackage = newOptions['tests']
