@@ -458,14 +458,14 @@ def executePreBuild(Map options)
 {
     if (env.CHANGE_URL) {
         echo "[INFO] Branch was detected as Pull Request"
-        options.testsPackage = "PR"
+        options.testsPackage = "PR.json"
         GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
         options.githubNotificator = githubNotificator
         githubNotificator.initPR(options, "${BUILD_URL}")
     } else if(env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        options.testsPackage = "master"
+        options.testsPackage = "master.json"
     } else if(env.BRANCH_NAME) {
-        options.testsPackage = "smoke"
+        options.testsPackage = "smoke.json"
     }
 
     try {
