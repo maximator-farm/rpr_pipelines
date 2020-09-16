@@ -1,26 +1,55 @@
 def executeTestCommand(String osName)
 {
     dir("Build/bin") {
+        Boolean error_occured = false
         switch (osName) {
             case 'Windows':
-                // add env vars to both logs
-                bat "xcopy ..\\..\\${STAGE_NAME}.log  ..\\..\\${STAGE_NAME}.vk.log*"
-                bat "ren ..\\..\\${STAGE_NAME}.log  ${STAGE_NAME}.dx.log"
-                try{
-                    bat "Release\\test_vk.exe --gtest_output=xml:..\\..\\${STAGE_NAME}.vk.gtest.xml >> ..\\..\\${STAGE_NAME}.vk.log 2>&1"
-                }catch(e){println(e.toString());}
-                bat "Release\\test_dx.exe --gtest_output=xml:..\\..\\${STAGE_NAME}.dx.gtest.xml >> ..\\..\\${STAGE_NAME}.dx.log 2>&1"
+                ['vk', 'dx', 'native'].each() {
+                    outputEnvironmentInfo(osName, "..\\..\\${STAGE_NAME}.${it}")
+                    try{
+                        bat "Release\\test_${it}.exe --gtest_output=xml:..\\..\\${STAGE_NAME}.${it}.gtest.xml >> ..\\..\\${STAGE_NAME}.${it}.log 2>&1"
+                    } catch(e) {
+                        println("[INFO] error during ${it} tests")
+                        println(e.toString())
+                        error_occured = true
+                    }
+                }
                 break;
             case 'OSX':
-                sh """cd ..
-                export LD_LIBRARY_PATH=\$PWD/bin:\$LD_LIBRARY_PATH
-                export LD_LIBRARY_PATH=\$PWD/lib:\$LD_LIBRARY_PATH
-                ./test_mtl --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log 2>&1"""
+                ['mtl', 'native'].each() {
+                    outputEnvironmentInfo(osName, "../${STAGE_NAME}.${it}")
+                    try{
+                        sh """
+                        cd ..
+                        export LD_LIBRARY_PATH=\$PWD/bin:\$LD_LIBRARY_PATH
+                        export LD_LIBRARY_PATH=\$PWD/lib:\$LD_LIBRARY_PATH
+                        ./test_${it} --gtest_output=xml:../${STAGE_NAME}.${it}.gtest.xml >> ../${STAGE_NAME}.${it}.log 2>&1
+                        """
+                    } catch(e) {
+                        println("[INFO] error during ${it} tests")
+                        println(e.toString())
+                        error_occured = true
+                    }
+                }
                 break;
             default:
-                sh """export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
-                export LD_LIBRARY_PATH=\$PWD/../lib:\$LD_LIBRARY_PATH
-                ./test_vk --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ../../${STAGE_NAME}.log 2>&1"""
+                ['vk', 'native'].each() {
+                    outputEnvironmentInfo(osName, "../../${STAGE_NAME}.${it}")
+                    try{
+                        sh """
+                        export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
+                        export LD_LIBRARY_PATH=\$PWD/../lib:\$LD_LIBRARY_PATH
+                        ./test_${it} --gtest_output=xml:../../${STAGE_NAME}.${it}.gtest.xml >> ../../${STAGE_NAME}.${it}.log 2>&1
+                        """
+                    } catch(e) {
+                        println("[INFO] error during ${it} tests")
+                        println(e.toString())
+                        error_occured = true
+                    }
+                }
+        }
+        if (error_occured) {
+            error("Error has been occured during tests execution")
         }
     }
 }
@@ -29,7 +58,6 @@ def executeTests(String osName, String asicName, Map options)
 {
     try {
         checkOutBranchOrScm(options['projectBranch'], options['projectURL'])
-        outputEnvironmentInfo(osName)
         unstash "app${osName}"
         executeTestCommand(osName)
     }
