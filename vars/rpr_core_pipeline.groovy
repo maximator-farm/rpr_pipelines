@@ -471,7 +471,7 @@ def executePreBuild(Map options)
             {
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
                 // json means custom test suite. Split doesn't supported
-                String tempTests = readJSON file: "jobs/${options.testsPackage}"
+                def tempTests = readJSON file: "jobs/${options.testsPackage}"
                 tempTests["groups"].each() {
                     // TODO: fix: duck tape - error with line ending
                     tests << it.key
