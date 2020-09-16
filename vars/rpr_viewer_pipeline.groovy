@@ -72,35 +72,25 @@ def getViewerTool(String osName, Map options)
 }
 
 
-def executeGenTestRefCommand(String osName, Map options)
+def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
-    try
-    {
-        //for update existing manifest file
-        receiveFiles("${options.REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
-    }
-    catch(e)
-    {
-        println("baseline_manifest.json not found")
-    }
-
     dir('scripts')
     {
         switch(osName)
         {
             case 'Windows':
                 bat """
-                make_results_baseline.bat
+                make_results_baseline.bat ${delete}
                 """
                 break;
             case 'OSX':
                 sh """
-                ./make_results_baseline.sh
+                ./make_results_baseline.sh ${delete}
                 """
                 break;
             default:
                 sh """
-                ./make_results_baseline.sh
+                ./make_results_baseline.sh ${delete}
                 """
         }
     }
@@ -206,17 +196,17 @@ def executeTests(String osName, String asicName, Map options)
         outputEnvironmentInfo(osName)
 
         try {
-            if(options['updateRefs']) {
+            if(options['updateRefs'].contains('Update')) {
                 executeTestCommand(osName, asicName, options)
-                executeGenTestRefCommand(osName, options)
+                executeGenTestRefCommand(osName, options, options['updateRefs'].contains('clean'))
                 sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
             } else {
                 try {
                     GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")
+                    String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_viewer_autotests_baselines" : "/mnt/c/TestResources/rpr_viewer_autotests_baselines"
                     println "[INFO] Downloading reference images for ${options.tests}"
-                    receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
                     options.tests.split(" ").each() {
-                        receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
+                        receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
                     }
                 } 
                 catch (e)
@@ -799,7 +789,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectBranch = "",
          String testsBranch = "master",
          String platforms = 'Windows:AMD_RadeonVII;Ubuntu18:AMD_RadeonVII',
-         Boolean updateRefs = false,
+         String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
          String tests = "",

@@ -121,31 +121,21 @@ def getMayaPluginInstaller(String osName, Map options)
 }
 
 
-def executeGenTestRefCommand(String osName, Map options)
+def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
-    try
-    {
-        //for update existing manifest file
-        receiveFiles("${options.REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
-    }
-    catch(e)
-    {
-        println("baseline_manifest.json not found")
-    }
-
     dir('scripts')
     {
         switch(osName)
         {
             case 'Windows':
                 bat """
-                make_results_baseline.bat
+                make_results_baseline.bat ${delete}
                 """
                 break;
             // OSX 
             default:
                 sh """
-                ./make_results_baseline.sh
+                ./make_results_baseline.sh ${delete}
                 """
                 break;
         }
@@ -314,48 +304,47 @@ def executeTests(String osName, String asicName, Map options)
             throw e
         }
 
+        String enginePostfix = ""
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        if (options.engine == '2'){
-            REF_PATH_PROFILE="${REF_PATH_PROFILE}-NorthStar"
-        }
         switch(options.engine) {
             case 'Northstar':
-                REF_PATH_PROFILE="${REF_PATH_PROFILE}-NorthStar"
+                enginePostfix = "NorthStar"
                 break
             case 'Hybrid_Low':
-                REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridLow"
+                enginePostfix = "HybridLow"
                 break
             case 'Hybrid_Medium':
-                REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridMedium"
+                enginePostfix = "HybridMedium"
                 break
             case 'Hybrid_High':
-                REF_PATH_PROFILE="${REF_PATH_PROFILE}-HybridHigh"
+                enginePostfix = "HybridHigh"
                 break
         }
+        REF_PATH_PROFILE = enginePostfix ? "${REF_PATH_PROFILE}-${enginePostfix}" : REF_PATH_PROFILE
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
         outputEnvironmentInfo(osName, options.stageName)
 
         try {
-            if(options['updateRefs'])
+            if(options['updateRefs'].contains('Update'))
             {
                 executeTestCommand(osName, asicName, options)
-                executeGenTestRefCommand(osName, options)
+                executeGenTestRefCommand(osName, options, options['updateRefs'].contains('clean'))
                 sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
             }
             else
             {
-                try 
-                {
+                try {
+                    String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_maya_autotests_baselines" : "/mnt/c/TestResources/rpr_maya_autotests_baselines"
+                    baseline_dir = enginePostfix ? "${baseline_dir}-${enginePostfix}" : baseline_dir
                     GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")
                     println "[INFO] Downloading reference images for ${options.parsedTests}"
-                    receiveFiles("${REF_PATH_PROFILE}/baseline_manifest.json", './Work/Baseline/')
                     options.parsedTests.split(" ").each() {
-                        receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
+                        receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
                     }
                 } catch (e) {
-                    println("[WARNING] Baseline doesn't exist.")
+                    println("[WARNING] Problem when copying baselines. " + e.getMessage())
                 }
                 GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Executing tests.", "${BUILD_URL}")
                 executeTestCommand(osName, asicName, options)
@@ -1103,7 +1092,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String projectBranch = "",
         String testsBranch = "master",
         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;OSX:AMD_RXVEGA',
-        Boolean updateRefs = false,
+        String updateRefs = 'No',
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,
         String renderDevice = "gpu",
