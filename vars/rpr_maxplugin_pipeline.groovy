@@ -618,13 +618,7 @@ def executePreBuild(Map options)
 
     println "timeouts: ${options.timeouts}"
 
-    if(options.splitTestsExecution) {
-        options.testsList = options.tests
-    }
-    else {
-        options.testsList = ['']
-        options.tests = tests.join(" ")
-    }
+    options.testsList = options.tests
 
     if (options.sendToUMS)
     {
