@@ -847,7 +847,9 @@ def executePreBuild(Map options)
                 }
                 modifiedPackageName = modifiedPackageName.replace(':;', ':')
 
-                if (!options.isPackageSplitted) {
+                if (options.isPackageSplitted) {
+                    options.testsPackage = "none"
+                } else {
                     tests << options.testsPackage
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                     options.testsPackage = modifiedPackageName

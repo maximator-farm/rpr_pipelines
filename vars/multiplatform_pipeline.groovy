@@ -116,7 +116,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                                 if (newOptions['isPackageSplitted'] || newOptions['testsPackage'].split(':')[1].contains(newOptions['tests'])) {
                                                     testsOrTestPackage = newOptions['tests']
                                                 } else {
-                                                    testsOrTestPackage = newOptions['testsPackage'].split(':')[0]
+                                                    testsOrTestPackage = newOptions['testsPackage']
                                                 }
                                             } else {
                                                 testsOrTestPackage = newOptions['tests']
