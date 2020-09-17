@@ -573,7 +573,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 dir("jobs_launcher") {
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults default \"${options.tests}\"
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests}\"
                     """
                 }
             } catch (e) {
