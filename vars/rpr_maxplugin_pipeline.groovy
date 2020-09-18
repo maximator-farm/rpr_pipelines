@@ -201,7 +201,11 @@ def executeTests(String osName, String asicName, Map options)
                     String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_max_autotests_baselines" : "/mnt/c/TestResources/rpr_max_autotests_baselines"
                     println "[INFO] Downloading reference images for ${options.tests}"
                     options.tests.split(" ").each() {
-                        receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                        if (it.endsWith(".json")) {
+                            receiveFiles("${REF_PATH_PROFILE}", baseline_dir)
+                        } else {
+                            receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                        }
                     }
                 } catch (e) {
                     println("[WARNING] Baseline doesn't exist.")
@@ -979,7 +983,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         }
         catch (e)
         {
-            problemMessageManager.saveSpecificFailReason("Failed initialization.", "Init")
+            problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")
 
             throw e
         }

@@ -162,7 +162,7 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
 def executeTestCommand(String osName, String asicName, Map options)
 {
     def test_timeout = options.timeouts["${options.tests}"]
-    String testsNames = options.tests
+    String testsNames = options.parsedTests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
         if (options.testsPackage.split(":")[0] == options.tests) {
@@ -221,6 +221,20 @@ def executeTests(String osName, String asicName, Map options)
 {
     if (options.sendToUMS){
         universeClient.stage("Tests-${osName}-${asicName}", "begin")
+    }
+
+    // get engine from test group name if there are more than one engines
+    if (options.engines.count(",") > 0) {
+        options.engine = options.tests.split("-")[-1]
+        List parsedTestNames = []
+        options.tests.split().each { test ->
+            List testNameParts = test.split("-") as List
+            parsedTestNames.add(testNameParts.subList(0, testNameParts.size() - 1).join("-"))
+        }
+        options.parsedTests = parsedTestNames.join(" ")
+    } else {
+        options.engine = options.engines
+        options.parsedTests = options.tests
     }
 
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
@@ -293,10 +307,23 @@ def executeTests(String osName, String asicName, Map options)
             throw e
         }
 
+        String enginePostfix = ""
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        if (options.engine == '2'){
-            REF_PATH_PROFILE="${REF_PATH_PROFILE}-NorthStar"
+        switch(options.engine) {
+            case 'Northstar':
+                enginePostfix = "NorthStar"
+                break
+            case 'Hybrid_Low':
+                enginePostfix = "HybridLow"
+                break
+            case 'Hybrid_Medium':
+                enginePostfix = "HybridMedium"
+                break
+            case 'Hybrid_High':
+                enginePostfix = "HybridHigh"
+                break
         }
+        REF_PATH_PROFILE = enginePostfix ? "${REF_PATH_PROFILE}-${enginePostfix}" : REF_PATH_PROFILE
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
@@ -313,13 +340,15 @@ def executeTests(String osName, String asicName, Map options)
             {
                 try {
                     String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_maya_autotests_baselines" : "/mnt/c/TestResources/rpr_maya_autotests_baselines"
-                    if (options.engine == '2'){
-                        baseline_dir="${baseline_dir}-NorthStar"
-                    }
+                    baseline_dir = enginePostfix ? "${baseline_dir}-${enginePostfix}" : baseline_dir
                     GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")
-                    println "[INFO] Downloading reference images for ${options.tests}"
-                    options.tests.split(" ").each() {
-                        receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                    println "[INFO] Downloading reference images for ${options.parsedTests}"
+                    options.parsedTests.split(" ").each() {
+                        if (it.endsWith(".json")) {
+                            receiveFiles("${REF_PATH_PROFILE}", baseline_dir)
+                        } else {
+                            receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                        }
                     }
                 } catch (e) {
                     println("[WARNING] Problem when copying baselines. " + e.getMessage())
@@ -717,13 +746,14 @@ def executePreBuild(Map options)
 
             if(options.testsPackage != "none")
             {
+                def tempTests = []
+
                 if (options.isPackageSplitted) {
                     println("[INFO] Tests package '${options.testsPackage}' can be splitted")
                 } else {
                     // save tests which user wants to run with non-splitted tests package
                     if (options.tests) {
-                        tests = options.tests.split(" ") as List
-                        options.groupsUMS = tests.clone()
+                        tempTests = options.tests.split(" ") as List
                     }
                     println("[INFO] Tests package '${options.testsPackage}' can't be splitted")
                 }
@@ -732,21 +762,33 @@ def executePreBuild(Map options)
                 String modifiedPackageName = "${options.testsPackage}:"
                 packageInfo["groups"].each() {
                     if (options.isPackageSplitted) {
-                        tests << it.key
-                        options.groupsUMS << it.key
+                        tempTests << it.key
                     } else {
-                        if (!tests.contains(it.key)) {
-                            options.groupsUMS << it.key
-                        } else {
+                        if (tempTests.contains(it.key)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName};${it.key}"
                         }
                     }
                 }
-                tests.each() {
+                tempTests.each() {
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
+                options.tempTests.split(" ").each()
+                {
+                    // if there are more than one engines - generate set of tests for each engine
+                    if (options.engines.count(",") > 0) {
+                        options.engines.split(",").each { engine ->
+                            tests << "${it}-${engine}"
+                        }
+                    } else {
+                        tests << "${it}"
+                    }
+                    def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
+                    options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+                }
+                options.groupsUMS = tests
+
                 modifiedPackageName = modifiedPackageName.replace(':;', ':')
 
                 if (options.isPackageSplitted) {
@@ -756,13 +798,23 @@ def executePreBuild(Map options)
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                     options.testsPackage = modifiedPackageName
                 }
-            } else {
-                tests = options.tests.split(" ") as List
-                tests.each() {
-                    options.groupsUMS << it
+            }
+            else 
+            {
+                options.tests.split(" ").each()
+                {
+                    // if there are more than one engines - generate set of tests for each engine
+                    if (options.engines.count(",") > 0) {
+                        options.engines.split(",").each { engine ->
+                            tests << "${it}-${engine}"
+                        }
+                    } else {
+                        tests << "${it}"
+                    }
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
+                options.groupsUMS = tests
             }
             options.tests = tests
         }
@@ -809,41 +861,75 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 throw e
             }
 
-            List lostStashes = []
+            Map lostStashes = [:]
+            options.engines.split(",").each { engine ->
+                lostStashes[engine] = []
+            }
 
             dir("summaryTestResults")
             {
-                unstashCrashInfo(options['nodeRetry'])
                 testResultList.each()
                 {
-                    dir("$it".replace("testResult-", ""))
-                    {
-                        try
-                        {
-                            unstash "$it"
-                        }catch(e)
-                        {
-                            echo "Can't unstash ${it}"
-                            lostStashes.add("'$it'".replace("testResult-", ""))
-                            println(e.toString());
-                            println(e.getMessage());
+                    String engine
+                    String testName
+                    if (options.engines.count(",") > 0) {
+                        options.engines.split(",").each { currentEngine ->
+                            dir(currentEngine) {
+                                unstashCrashInfo(options['nodeRetry'], currentEngine)
+                            }
                         }
+                        List testNameParts = it.split("-") as List
+                        engine = testNameParts[-1]
+                        testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                    } else {
+                        testName = it
+                        engine = options.engines
+                        dir(engine) {
+                            unstashCrashInfo(options['nodeRetry'])
+                        }
+                    }
+                    dir(engine)
+                    {
+                        dir(testName.replace("testResult-", ""))
+                        {
+                            try
+                            {
+                                unstash "$it"
+                            }catch(e)
+                            {
+                                echo "[ERROR] Failed to unstash ${it}"
+                                lostStashes[engine].add("'${testName}'".replace("testResult-", ""))
+                                println(e.toString());
+                                println(e.getMessage());
+                            }
 
+                        }
                     }
                 }
             }
-
             
             try {
                 dir("jobs_launcher") {
-                    bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests}\"
-                    """
+                    // delete engine name from names of test groups
+                    def tests = []
+                    if (options.engines.count(",") > 0) {
+                        options.tests.each { group ->
+                            List testNameParts = group.split("-") as List
+                            String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                            tests.add(parsedTestName)
+                        }
+                    } else {
+                        tests = options.tests
+                    }
+                    options.engines.split(",").each {
+                        bat """
+                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests}\"
+                        """
+                    }
                 }
             } catch (e) {
                 println("[ERROR] Can't generate number of lost tests")
             }
-
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
 
@@ -853,22 +939,48 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
                     dir("jobs_launcher") {
-                        def retryInfo = JsonOutput.toJson(options.nodeRetry)
-                        dir("..\\summaryTestResults") {
-                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
-                            writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
-                        }
-                        if (options['isPreBuilt'])
-                        {
-                            bat """
-                            build_reports.bat ..\\summaryTestResults "Maya" "PreBuilt" "PreBuilt" "PreBuilt"
-                            """
-                        }
-                        else
-                        {
-                            bat """
-                            build_reports.bat ..\\summaryTestResults "Maya" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
-                            """
+                        String[] engines = options.engines.split(",")
+                        String[] enginesNames = options.enginesNames.split(",")
+                        for (int i = 0; i < engines.length; i++) {
+                            String engine = engines[i]
+                            String engineName = enginesNames[i]
+                            List retryInfoList
+                            if (options.engines.count(",") > 0) {
+                                retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
+                                retryInfoList.each{ gpu ->
+                                    gpu['Tries'].each{ group ->
+                                        group.each{ groupKey, retries ->
+                                            if (groupKey.endsWith(engine)) {
+                                                List testNameParts = groupKey.split("-") as List
+                                                String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                                                group[parsedName] = retries
+                                            }
+                                            group.remove(groupKey)
+                                        }
+                                    }
+                                    gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
+                                }
+                            } else {
+                                retryInfoList = options.nodeRetry
+                            }
+                            def retryInfo = JsonOutput.toJson(retryInfoList)
+                            dir("..\\summaryTestResults\\${engine}") {
+                                JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                                writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                            }
+                            if (options['isPreBuilt'])
+                            {
+                                // \\\\ - prevent escape sequence '\N'
+                                bat """
+                                build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(engineName)}\"
+                                """
+                            }
+                            else
+                            {
+                                bat """
+                                build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(engineName)}\"
+                                """
+                            }
                         }
                     }
                 }
@@ -885,7 +997,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try
             {
                 dir("jobs_launcher") {
-                    bat "get_status.bat ..\\summaryTestResults"
+                    bat "get_status.bat ..\\summaryTestResults True"
                 }
             }
             catch(e)
@@ -950,8 +1062,17 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Publishing test report.", "${BUILD_URL}")
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary Report, Performance Report, Compare Report")
+
+                List reports = []
+                List reportsNames = []
+                options.engines.split(",").each { engine ->
+                    reports.add("${engine}/summary_report.html")
+                }
+                options.enginesNames.split(",").each { engine ->
+                    reportsNames.add("Summary Report (${engine})")
+                }
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
+
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
@@ -1019,17 +1140,16 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String theshold = '0.05',
         String customBuildLinkWindows = "",
         String customBuildLinkOSX = "",
-        String engine = "1.0",
+        String enginesNames = "Tahoe",
         String tester_tag = 'Maya',
         String mergeablePR = "",
-        String parallelExecutionTypeString = "TakeOneNodePerGPU")
+        String parallelExecutionTypeString = "TakeAllNodes")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
     SPU = (SPU == 'Default') ? '25' : SPU
     iter = (iter == 'Default') ? '50' : iter
     theshold = (theshold == 'Default') ? '0.05' : theshold
-    engine = (engine == '2.0 (Northstar)') ? '2' : '1'
     def nodeRetry = []
     Map options = [:]
 
@@ -1037,6 +1157,17 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     {
         try
         {
+            if (!enginesNames) {
+                String errorMessage = "Engines parameter is required."
+                problemMessageManager.saveSpecificFailReason(errorMessage, "Init")
+                throw new Exception(errorMessage)
+            }
+            def formattedEngines = []
+            enginesNames.split(',').each {
+                formattedEngines.add(it.replace(' ', '_'))
+            }
+            formattedEngines = formattedEngines.join(',')
+
             Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX
 
             if (isPreBuilt)
@@ -1139,7 +1270,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         theshold: theshold,
                         customBuildLinkWindows: customBuildLinkWindows,
                         customBuildLinkOSX: customBuildLinkOSX,
-                        engine: engine,
+                        engines: formattedEngines,
+                        enginesNames:enginesNames,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
@@ -1148,7 +1280,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionType:parallelExecutionType
                         ]
         } catch (e) {
-            problemMessageManager.saveSpecificFailReason("Failed initialization.", "Init")
+            problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")
 
             throw e
         }

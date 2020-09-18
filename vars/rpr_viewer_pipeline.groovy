@@ -131,9 +131,12 @@ def executeTestCommand(String osName, String asicName, Map options)
                 switch(osName)
                 {
                 case 'Windows':
+                    String driverPostfix = asicName.endsWith('_Beta') ? " Beta Driver" : ""
+
                     dir('scripts')
                     {
                         bat """
+                        set CIS_RENDER_DEVICE=%CIS_RENDER_DEVICE%${driverPostfix}
                         run.bat \"${testsPackageName}\" \"${testsNames}\" >> ../${options.stageName}.log  2>&1
                         """
                     }
@@ -209,7 +212,11 @@ def executeTests(String osName, String asicName, Map options)
                     String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_viewer_autotests_baselines" : "/mnt/c/TestResources/rpr_viewer_autotests_baselines"
                     println "[INFO] Downloading reference images for ${options.tests}"
                     options.tests.split(" ").each() {
-                        receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                        if (it.endsWith(".json")) {
+                            receiveFiles("${REF_PATH_PROFILE}", baseline_dir)
+                        } else {
+                            receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                        }
                     }
                 } 
                 catch (e)
@@ -798,7 +805,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RadeonVII;Ubuntu18:AMD_RadeonVII',
+         String platforms = 'Windows:AMD_RadeonVII,AMD_RadeonVII_Beta;Ubuntu18:AMD_RadeonVII',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
@@ -806,7 +813,7 @@ def call(String projectBranch = "",
          Boolean splitTestsExecution = true,
          Boolean sendToUMS = true,
          String tester_tag = 'RprViewer',
-         String parallelExecutionTypeString = "TakeOneNodePerGPU")
+         String parallelExecutionTypeString = "TakeAllNodes")
 {
     def nodeRetry = []
     Map options = [:]
@@ -858,7 +865,7 @@ def call(String projectBranch = "",
         } 
         catch(e)
         {
-            problemMessageManager.saveSpecificFailReason("Failed initialization.", "Init")
+            problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")
 
             throw e
         }
