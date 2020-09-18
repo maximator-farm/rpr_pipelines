@@ -834,7 +834,14 @@ def executePreBuild(Map options)
                     tempTests.split("\n").each {
                         // TODO: fix: duck tape - error with line ending
                         def test_group = "${it.replaceAll("[^a-zA-Z0-9_]+","")}"
-                        tests << test_group
+                        // if there are more than one engines - generate set of tests for each engine
+                        if (options.engines.count(",") > 0) {
+                            options.engines.split(",").each { engine ->
+                                tests << "${test_group}-${engine}"
+                            }
+                        } else {
+                            tests << "${test_group}"
+                        }
                         def xml_timeout = utils.getTimeoutFromXML(this, "${test_group}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                         options.timeouts["${test_group}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                     }
