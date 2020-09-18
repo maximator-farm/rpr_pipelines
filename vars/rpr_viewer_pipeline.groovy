@@ -128,9 +128,12 @@ def executeTestCommand(String osName, String asicName, Map options)
                 switch(osName)
                 {
                 case 'Windows':
+                    String driverPostfix = asicName.endsWith('_Beta') ? " Beta Driver" : ""
+
                     dir('scripts')
                     {
                         bat """
+                        set CIS_RENDER_DEVICE=%CIS_RENDER_DEVICE%${driverPostfix}
                         run.bat ${options.testsPackage} \"${options.tests}\" >> ../${options.stageName}.log  2>&1
                         """
                     }
@@ -788,7 +791,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RadeonVII;Ubuntu18:AMD_RadeonVII',
+         String platforms = 'Windows:AMD_RadeonVII,AMD_RadeonVII_Beta;Ubuntu18:AMD_RadeonVII',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
