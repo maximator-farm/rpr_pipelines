@@ -796,7 +796,7 @@ def call(String projectBranch = "",
          Boolean splitTestsExecution = true,
          Boolean sendToUMS = true,
          String tester_tag = 'RprViewer',
-         String parallelExecutionTypeString = "TakeOneNodePerGPU")
+         String parallelExecutionTypeString = "TakeAllNodes")
 {
     def nodeRetry = []
     Map options = [:]

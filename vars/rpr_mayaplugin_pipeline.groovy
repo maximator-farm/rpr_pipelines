@@ -1112,7 +1112,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String enginesNames = "Tahoe",
         String tester_tag = 'Maya',
         String mergeablePR = "",
-        String parallelExecutionTypeString = "TakeOneNodePerGPU")
+        String parallelExecutionTypeString = "TakeAllNodes")
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
