@@ -345,7 +345,7 @@ def executeTests(String osName, String asicName, Map options)
                     println "[INFO] Downloading reference images for ${options.parsedTests}"
                     options.parsedTests.split(" ").each() {
                         if (it.endsWith(".json")) {
-                            receiveFiles("${REF_PATH_PROFILE}", baseline_dir)
+                            receiveFiles("${REF_PATH_PROFILE}/", baseline_dir)
                         } else {
                             receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
                         }
