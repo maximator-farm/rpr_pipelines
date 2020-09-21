@@ -161,7 +161,7 @@ def buildRenderCache(String osName, String toolVersion, String log_name)
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
-    def test_timeout = options.timeouts["${options.tests}"]
+    def test_timeout = options.timeouts["${options.parsedTests}"]
     String testsNames = options.parsedTests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
