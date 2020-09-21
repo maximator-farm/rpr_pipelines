@@ -343,7 +343,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                     if (options.problemMessageManager) {
                                         options.problemMessageManager.saveGeneralFailReason("Unknown reason.", "PreBuild")
                                     }
-                                    GithubNotificator.closeUnfinishedSteps(env, options, "PreBuild stage was failed.")
+                                    GithubNotificator.closeUnfinishedSteps(env, options, currentBuild, "PreBuild stage was failed.")
                                     throw e
                                 }
                             }

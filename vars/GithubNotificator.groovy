@@ -1,4 +1,5 @@
 import java.util.concurrent.atomic.AtomicBoolean
+import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 
 /**
  * Class which manages status checks of PRs
@@ -159,16 +160,32 @@ public class GithubNotificator {
      *
      * @param env Environment variables of main pipeline. It's used for decide that is it PR or not
      * @param options Options map
+     * @param currentBuild Object which represents current build
      * @param message Message of status check. If it's empty current message will be gotten
      */
-    static def closeUnfinishedSteps(env, Map options, String message = "") {
+    static def closeUnfinishedSteps(env, Map options, RunWrapper currentBuild, String message = "") {
         if (env.CHANGE_URL && options.githubNotificator) {
-            options.githubNotificator.closeUnfinishedStepsPr(message)
+            options.githubNotificator.closeUnfinishedStepsPr(currentBuild, options.commitSHA, message)
         }
     }
 
-    private def closeUnfinishedStepsPr(String message = "") {
+    private def closeUnfinishedStepsPr(RunWrapper currentBuild, String commitSHA, String message = "") {
         try {
+            //check that some of next builds (if it exists) has different sha of target commit
+            RunWrapper nextBuild = currentBuild.getNextBuild()
+            while(nextBuild) {
+                String nextBuildSHA = ""
+                nextBuildSHA = getBuildCommit(currentBuild)
+                //if it isn't possible to find commit SHA in description - it isn't initialized yet. Wait 1 minute
+                if(!nextBuildSHA) {
+                    sleep(60)
+                }
+                //if it still isn't possible to get SHA or SHAs are same - it isn't necessary to close status checks (next build will do it if it'll be necessary)
+                if(!nextBuildSHA || nextBuildSHA == commitSHA) {
+                    return
+                }
+                nextBuild = nextBuild.getNextBuild()
+            }
             if(statusesClosed.compareAndSet(false, true)) {
                 //FIXME: get only first stages with each name (it's github API issue: check can't be deleted or updated)
                 List stagesList = []
@@ -197,6 +214,19 @@ public class GithubNotificator {
             context.println(e.toString())
             context.println(e.getMessage())
         }
+    }
+
+    private String getBuildCommit(RunWrapper currentBuild) {
+        String commitSHA = ""
+        def description = currentBuild.description
+        String[] descriptionParts = description.split('<br/>')
+        for (part in descriptionParts) {
+            if (part.contains('Commit SHA')) {
+                commitSHA = part.split(':')[1].replace('<b>', '').replace('</b>', '').trim()
+                break
+            }
+        }
+        return commitSHA
     }
 
     /**
