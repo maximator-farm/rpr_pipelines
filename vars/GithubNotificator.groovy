@@ -182,6 +182,7 @@ public class GithubNotificator {
                 }
                 //if it still isn't possible to get SHA or SHAs are same - it isn't necessary to close status checks (next build will do it if it'll be necessary)
                 if(!nextBuildSHA || nextBuildSHA == commitSHA) {
+                    context.println("[INFO] Found next build which has same SHA of target commit as this commit. Status checks won't be closed")
                     return
                 }
                 nextBuild = nextBuild.getNextBuild()
