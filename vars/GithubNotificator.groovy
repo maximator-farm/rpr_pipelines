@@ -171,23 +171,24 @@ public class GithubNotificator {
 
     private def closeUnfinishedStepsPr(RunWrapper currentBuild, String commitSHA, String message = "") {
         try {
-            //check that some of next builds (if it exists) has different sha of target commit
-            RunWrapper nextBuild = currentBuild.getNextBuild()
-            while(nextBuild) {
-                String nextBuildSHA = ""
-                nextBuildSHA = getBuildCommit(currentBuild)
-                //if it isn't possible to find commit SHA in description - it isn't initialized yet. Wait 1 minute
-                if(!nextBuildSHA) {
-                    sleep(60)
-                }
-                //if it still isn't possible to get SHA or SHAs are same - it isn't necessary to close status checks (next build will do it if it'll be necessary)
-                if(!nextBuildSHA || nextBuildSHA == commitSHA) {
-                    context.println("[INFO] Found next build which has same SHA of target commit as this commit. Status checks won't be closed")
-                    return
-                }
-                nextBuild = nextBuild.getNextBuild()
-            }
             if(statusesClosed.compareAndSet(false, true)) {
+                //check that some of next builds (if it exists) has different sha of target commit
+                RunWrapper nextBuild = currentBuild.getNextBuild()
+                while(nextBuild) {
+                    String nextBuildSHA = ""
+                    nextBuildSHA = getBuildCommit(currentBuild)
+                    //if it isn't possible to find commit SHA in description - it isn't initialized yet. Wait 1 minute
+                    if(!nextBuildSHA) {
+                        sleep(60)
+                    }
+                    //if it still isn't possible to get SHA or SHAs are same - it isn't necessary to close status checks (next build will do it if it'll be necessary)
+                    if(!nextBuildSHA || nextBuildSHA == commitSHA) {
+                        context.println("[INFO] Found next build which has same SHA of target commit as this commit. Status checks won't be closed")
+                        return
+                    }
+                    nextBuild = nextBuild.getNextBuild()
+                }
+                
                 //FIXME: get only first stages with each name (it's github API issue: check can't be deleted or updated)
                 List stagesList = []
                 stagesList << "[PREBUILD] Version increment"
