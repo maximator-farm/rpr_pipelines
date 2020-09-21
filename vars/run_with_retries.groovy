@@ -78,14 +78,14 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                             options.problemMessageManager.saveSpecificFailReason("Build was aborted by new commit.", stageName, osName) 
                         }
                         println "[INFO] GOT NEW COMMIT"
-                        GithubNotificator.closeUnfinishedSteps(env, options, currentBuild, "Build was aborted by new commit.")
+                        GithubNotificator.closeUnfinishedSteps(env, options, "Build was aborted by new commit.")
                         throw e
                     } else if (causeClassName.contains("UserInterruption")) {
                         if (options.problemMessageManager) {
                             options.problemMessageManager.saveSpecificFailReason("Build was aborted by user.", stageName, osName) 
                         }
                         println "[INFO] Build was aborted by user"
-                        GithubNotificator.closeUnfinishedSteps(env, options, currentBuild, "Build was aborted by user.")
+                        GithubNotificator.closeUnfinishedSteps(env, options, "Build was aborted by user.")
                         throw e
                     }
                 }
