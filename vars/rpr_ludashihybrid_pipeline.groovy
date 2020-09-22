@@ -53,8 +53,9 @@ def executeTestCommand(String osName, Map options)
 def executeTestsCustomQuality(String osName, String asicName, Map options)
 {
     cleanWS(osName)
-    String REF_PATH_PROFILE="${options.REF_PATH}/${options.RENDER_QUALITY}/${asicName}-${osName}"
-    String JOB_PATH_PROFILE="${options.JOB_PATH}/${options.RENDER_QUALITY}/${asicName}-${osName}"
+    String parsedAsicName = asicName.replace("_Beta", "")
+    String REF_PATH_PROFILE="${options.REF_PATH}/${options.RENDER_QUALITY}/${parsedAsicName}-${osName}"
+    String JOB_PATH_PROFILE="${options.JOB_PATH}/${options.RENDER_QUALITY}/${parsedAsicName}-${osName}"
     String error_message = ""
 
     try {
