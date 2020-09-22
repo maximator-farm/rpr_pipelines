@@ -725,6 +725,9 @@ def executePreBuild(Map options)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
 
+            options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            println "[INFO] Test branch hash: ${options['testsBranch']}"
+
             if(options.testsPackage != "none")
             {
                 // json means custom test suite. Split doesn't supported

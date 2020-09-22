@@ -470,6 +470,10 @@ def executePreBuild(Map options)
             dir('jobs_test_core')
             {
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
+
+                options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                println "[INFO] Test branch hash: ${options['testsBranch']}"
+
                 // json means custom test suite. Split doesn't supported
                 String tempTests = readFile("jobs/${options.testsPackage}")
                 tempTests.split("\n").each {
