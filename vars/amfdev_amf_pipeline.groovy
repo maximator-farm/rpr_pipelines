@@ -72,7 +72,7 @@ def executeTestCommand(String osName, String build_name, Map options)
             dir('AMF')
             {
                 bat """
-                    autotests.exe >> ../${STAGE_NAME}.${build_name}.log 2>&1
+                    autotests.exe --gtest_filter=\"${options.testsFilter}\" >> ../${STAGE_NAME}.${build_name}.log 2>&1
                 """
             }
             break;
@@ -81,7 +81,7 @@ def executeTestCommand(String osName, String build_name, Map options)
             {
                 sh """
                     chmod u+x autotests
-                    ./autotests >> ../${STAGE_NAME}.${build_name}.log 2>&1
+                    ./autotests --gtest_filter=\"${options.testsFilter}\" >> ../${STAGE_NAME}.${build_name}.log 2>&1
                 """
             }
             break;
@@ -626,7 +626,8 @@ def call(String projectBranch = "",
     String osxLibraryType = "shared,static",
     String linuxLibraryType = "shared,static",
     Boolean incrementVersion = true,
-    Boolean forceBuild = false) {
+    Boolean forceBuild = false,
+    String testsFilter = "*") {
     try {
         String PRJ_NAME="AMF"
         String PRJ_ROOT="gpuopen"
@@ -676,7 +677,8 @@ def call(String projectBranch = "",
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:90,
                                 DEPLOY_TIMEOUT:150,
-                                BUILDER_TAG:"BuilderAMF"
+                                BUILDER_TAG:"BuilderAMF",
+                                testsFilter:testsFilter
                                 ])
     } catch(e) {
         currentBuild.result = "FAILED"
