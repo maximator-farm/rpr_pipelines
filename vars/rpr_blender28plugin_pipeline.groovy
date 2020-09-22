@@ -596,7 +596,7 @@ def executeBuild(String osName, Map options)
                 checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], false, options['prBranchName'], options['prRepoName'])
             } catch (e) {
                 String errorMessage
-                if (e.getMessage().contains("Branch not suitable for integration")) {
+                if (e.getMessage() && e.getMessage().contains("Branch not suitable for integration")) {
                     errorMessage = "Failed to merge branches."
                 } else {
                     errorMessage = "Failed to download plugin repository."
