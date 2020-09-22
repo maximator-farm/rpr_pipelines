@@ -513,7 +513,7 @@ def executeBuildLinux(String osName, Map options) {
 def executeBuild(String osName, Map options) {
     try {
 
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/AMF.git')
+        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
         
         switch(osName)
         {
@@ -573,7 +573,7 @@ def executePreBuild(Map options) {
             }
         }
 
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/AMF.git', true)
+        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
@@ -618,6 +618,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 
 def call(String projectBranch = "",
+    String projectRepo = "git@github.com:amfdev/AMF.git",
     String platforms = 'Windows;OSX;Ubuntu18',
     String buildConfiguration = "release",
     String winVisualStudioVersion = "2017,2019",
@@ -664,6 +665,7 @@ def call(String projectBranch = "",
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
+                                projectRepo:projectRepo,
                                 incrementVersion:incrementVersion,
                                 forceBuild:forceBuild,
                                 PRJ_NAME:PRJ_NAME,
