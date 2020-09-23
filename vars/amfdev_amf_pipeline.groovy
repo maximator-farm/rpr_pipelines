@@ -299,11 +299,11 @@ def executeBuildWindows(Map options) {
                             xcopy /s/y/i ${sourceCodeLocation}\\${win_build_conf.capitalize()}\\autotests.exe binWindows
                         """
 
-                        if (win_build_conf == 'shared') {
+                        if (win_lib_type == 'shared') {
                             bat """
                                 xcopy /s/y/i ${sourceCodeLocation}\\openAmf\\${win_build_conf}\\openAmfLoader.lib binWindows
                             """
-                        } else if (win_build_conf == 'static') {
+                        } else if (win_lib_type == 'static') {
                             bat """
                                 xcopy /s/y/i ${sourceCodeLocation}\\openAmf\\${win_build_conf}\\openAmf.lib binWindows
                             """
