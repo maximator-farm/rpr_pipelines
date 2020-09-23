@@ -1216,6 +1216,10 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 prBranchName = prInfo[1]
             }
 
+            // add 75 minutes for each engine
+            Integer deployTimeout = 150 + 90 * (enginesNames.split(',').length - 1)
+            println "Calculated deploy timeout: ${deployTimeout}"
+
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         testsBranch:testsBranch,
@@ -1239,7 +1243,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         TEST_TIMEOUT:120,
                         ADDITIONAL_XML_TIMEOUT:30,
                         REGRESSION_TIMEOUT:120,
-                        DEPLOY_TIMEOUT:300,
+                        DEPLOY_TIMEOUT:deployTimeout,
                         TESTER_TAG:tester_tag,
                         universePlatforms: universePlatforms,
                         resX: resX,
