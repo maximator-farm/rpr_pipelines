@@ -513,29 +513,7 @@ def executeBuildLinux(String osName, Map options) {
 def executeBuild(String osName, Map options) {
     try {
 
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], true)
-        dir("Thirdparty/OpenCL-Headers") {
-            switch(osName)
-            {
-                case 'Windows':
-                    bat """
-                        git submodule update --init
-                    """
-                    break;
-                case 'OSX':
-                    sh """
-                        git submodule update --init
-                    """
-                    break;
-                default:
-                    sh """
-                        git submodule update --init
-                    """
-            }
-        }
-        dir("amf/public/proj/OpenAMF_Autotests") {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/OpenAMF_Autotests.git')
-        }
+        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
         
         switch(osName)
         {
@@ -641,7 +619,6 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
     String projectRepo = "git@github.com:amfdev/AMF.git",
-    String testsBranch = "master",
     String platforms = 'Windows:AMD_WX7100,AMD_WX9100,AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA',
     String buildConfiguration = "release,debug",
     String winVisualStudioVersion = "2017,2019",
@@ -689,7 +666,6 @@ def call(String projectBranch = "",
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
                                 projectRepo:projectRepo,
-                                testsBranch:testsBranch,
                                 incrementVersion:incrementVersion,
                                 forceBuild:forceBuild,
                                 PRJ_NAME:PRJ_NAME,
