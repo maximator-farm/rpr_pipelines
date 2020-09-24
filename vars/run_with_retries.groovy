@@ -193,6 +193,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             tries++
             closedChannelRetries++
             options['nodeReallocateTries']++
+            println("[INFO] Additional retry failed")
         }
     }
 }
