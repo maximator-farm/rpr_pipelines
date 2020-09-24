@@ -366,7 +366,7 @@ def executeBuild(String osName, Map options)
                 checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git', false, options['prBranchName'], options['prRepoName'])
             } catch (e) {
                 String errorMessage
-                if (e.getMessage().contains("Branch not suitable for integration")) {
+                if (e.getMessage() && e.getMessage().contains("Branch not suitable for integration")) {
                     errorMessage = "Failed to merge branches."
                 } else {
                     errorMessage = "Failed to download plugin repository."
@@ -470,6 +470,10 @@ def executePreBuild(Map options)
             dir('jobs_test_core')
             {
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
+
+                options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                println "[INFO] Test branch hash: ${options['testsBranch']}"
+
                 // json means custom test suite. Split doesn't supported
                 def tempTests = readJSON file: "jobs/${options.testsPackage}"
                 tempTests["groups"].each() {

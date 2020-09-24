@@ -603,7 +603,7 @@ def executeBuild(String osName, Map options)
                 checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], false, options['prBranchName'], options['prRepoName'])
             } catch (e) {
                 String errorMessage
-                if (e.getMessage().contains("Branch not suitable for integration")) {
+                if (e.getMessage() && e.getMessage().contains("Branch not suitable for integration")) {
                     errorMessage = "Failed to merge branches."
                 } else {
                     errorMessage = "Failed to download plugin repository."
@@ -823,6 +823,9 @@ def executePreBuild(Map options)
         dir('jobs_test_blender')
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
+
+            options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            println "[INFO] Test branch hash: ${options['testsBranch']}"
 
             def packageInfo
 

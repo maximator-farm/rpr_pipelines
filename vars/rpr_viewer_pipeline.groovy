@@ -529,6 +529,9 @@ def executePreBuild(Map options)
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rprviewer.git')
 
+            options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            println "[INFO] Test branch hash: ${options['testsBranch']}"
+
             def packageInfo
 
             if(options.testsPackage != "none") 
@@ -805,7 +808,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RadeonVII,AMD_RadeonVII_Beta;Ubuntu18:AMD_RadeonVII',
+         String platforms = 'Windows:AMD_RadeonVII,AMD_RadeonVII_Beta,NVIDIA_RTX2080TI;Ubuntu18:AMD_RadeonVII',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
