@@ -10,7 +10,9 @@ def executeBuildWindows(Map options)
         bat """
             call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
 
-            git apply usd_dev.patch  >> ${STAGE_NAME}.USDPixar.log 2>&1
+            cd USDPixar
+            git apply ../usd_dev.patch  >> ${STAGE_NAME}.USDPixar.log 2>&1
+            cd ..
 
             :: USD
 
@@ -30,9 +32,23 @@ def executeBuildWindows(Map options)
         // for testing
         //set PATH=${WORKSPACE}\\RPRViewer\\RPRViewer\\inst\\bin;${WORKSPACE}\\RPRViewer\\RPRViewer\\inst\\lib;%PATH%
         //set PYTHONPATH=${WORKSPACE}\\RPRViewer\\RPRViewer\\inst\\lib\\python;%PYTHONPATH%
+
+        // delete files before zipping
+        bat """
+            del RPRViewer\\binary\\inst\\pxrConfig.cmake
+            rmdir /Q /S RPRViewer\\binary\\inst\\cmake
+            rmdir /Q /S RPRViewer\\binary\\inst\\include
+            rmdir /Q /S RPRViewer\\binary\\inst\\lib\\cmake
+            rmdir /Q /S RPRViewer\\binary\\inst\\lib\\pkgconfig
+            del RPRViewer\\binary\\inst\\bin\\*.lib
+            del RPRViewer\\binary\\inst\\bin\\*.pdb
+            del RPRViewer\\binary\\inst\\lib\\*.lib
+            del RPRViewer\\binary\\inst\\lib\\*.pdb
+            del RPRViewer\\binary\\inst\\plugin\\usd\\*.lib
+        """
         
         // TODO: filter files for archive
-        zip archive: true, dir: "RPRViewer/binary/inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
+        zip archive: true, dir: "RPRViewer\\binary\\inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
         
     }
 }
