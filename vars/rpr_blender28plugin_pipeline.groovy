@@ -239,7 +239,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir('scripts')
                     {
                         bat """
-                        run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion}>> ..\\${options.stageName}.log  2>&1
+                        run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion} ${options.testCaseRetries} 1>> ..\\${options.stageName}.log  2>&1
                         """
                     }
                     break;
@@ -248,7 +248,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir("scripts")
                     {
                         sh """
-                        ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion}>> ../${options.stageName}.log 2>&1
+                        ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion} ${options.testCaseRetries} 1>> ../${options.stageName}.log 2>&1
                         """
                     }
                 }
@@ -1239,7 +1239,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String tester_tag = "Blender2.8",
     String toolVersion = "2.83",
     String mergeablePR = "",
-    String parallelExecutionTypeString = "TakeAllNodes")
+    String parallelExecutionTypeString = "TakeAllNodes",
+    Integer testCaseRetries = 2)
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -1382,7 +1383,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         platforms:platforms,
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
-                        parallelExecutionType:parallelExecutionType
+                        parallelExecutionType:parallelExecutionType,
+                        testCaseRetries:testCaseRetries
                         ]
         }
         catch(e)
