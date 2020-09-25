@@ -197,7 +197,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         dir('scripts')
                         {
                             bat """
-                                run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.retries} 1>> ../${options.stageName}.log  2>&1
+                                run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} 1>> ../${options.stageName}.log  2>&1
                             """
                         }
                         break;
@@ -205,7 +205,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         dir('scripts')
                         {
                             sh """
-                                ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.retries} 1>> ../${options.stageName}.log 2>&1
+                                ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} 1>> ../${options.stageName}.log 2>&1
                             """
                         }
                         break;
@@ -1143,7 +1143,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String tester_tag = 'Maya',
         String mergeablePR = "",
         String parallelExecutionTypeString = "TakeAllNodes",
-        Integer retries = 2)
+        Integer testCaseRetries = 2)
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -1278,7 +1278,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
-                        retries:retries
+                        testCaseRetries:testCaseRetries
                         ]
         } catch (e) {
             problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")

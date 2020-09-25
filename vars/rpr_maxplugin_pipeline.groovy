@@ -124,7 +124,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts')
                 {
                     bat"""
-                    run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.retries} 1>> ../${options.stageName}.log  2>&1
+                    run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ../${options.stageName}.log  2>&1
                     """
                 }
             }
@@ -871,7 +871,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String tester_tag = 'Max',
         String mergeablePR = "",
         String parallelExecutionTypeString = "TakeOneNodePerGPU",
-        Integer retries = 2)
+        Integer testCaseRetries = 2)
 {
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -983,7 +983,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
-                        retries:retries
+                        testCaseRetries:testCaseRetries
                         ]
         }
         catch (e)

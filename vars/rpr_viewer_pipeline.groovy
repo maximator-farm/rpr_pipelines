@@ -137,7 +137,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     {
                         bat """
                         set CIS_RENDER_DEVICE=%CIS_RENDER_DEVICE%${driverPostfix}
-                        run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.retries} 1>> ../${options.stageName}.log  2>&1
+                        run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} 1>> ../${options.stageName}.log  2>&1
                         """
                     }
                     break;
@@ -153,7 +153,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                             sh """
                             chmod +x ../RprViewer/RadeonProViewer
                             chmod +x run.sh
-                            ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.retries} 1>> ../${options.stageName}.log  2>&1
+                            ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} 1>> ../${options.stageName}.log  2>&1
                             """
                         }
                     }
@@ -817,7 +817,7 @@ def call(String projectBranch = "",
          Boolean sendToUMS = true,
          String tester_tag = 'RprViewer',
          String parallelExecutionTypeString = "TakeAllNodes",
-         Integer retries = 2)
+         Integer testCaseRetries = 2)
 {
     def nodeRetry = []
     Map options = [:]
@@ -865,7 +865,7 @@ def call(String projectBranch = "",
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
                         parallelExecutionType:parallelExecutionType,
-                        retries:retries
+                        testCaseRetries:testCaseRetries
                         ]
         } 
         catch(e)
