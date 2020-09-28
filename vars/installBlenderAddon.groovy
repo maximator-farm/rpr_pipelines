@@ -10,7 +10,7 @@ def call(String osName, String tool_version, Map options, Boolean matlib=false, 
     // temp code for deleting old plugin
     if (osName == 'Windows'){
         println '[INFO] Uninstalling old plugin'
-        uninstallMSI("Radeon%Blender%", options.stageName)
+        uninstallMSI("Radeon%Blender%", options.stageName, options.currentTry)
     }
 
     // Prebuilt plugin will be reinstalled in any cases
