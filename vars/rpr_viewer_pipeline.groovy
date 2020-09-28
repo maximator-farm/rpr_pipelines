@@ -137,7 +137,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     {
                         bat """
                         set CIS_RENDER_DEVICE=%CIS_RENDER_DEVICE%${driverPostfix}
-                        run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} 1>> ../${options.stageName}.log  2>&1
+                        run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} 1>> ../${options.stageName}_${options.currentTry}.log  2>&1
                         """
                     }
                     break;
@@ -153,7 +153,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                             sh """
                             chmod +x ../RprViewer/RadeonProViewer
                             chmod +x run.sh
-                            ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} 1>> ../${options.stageName}.log  2>&1
+                            ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} 1>> ../${options.stageName}_${options.currentTry}.log  2>&1
                             """
                         }
                     }
