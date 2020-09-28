@@ -99,7 +99,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                                     expectedExceptionMessage = "Build was aborted by new commit."
                                                 } else if (causeClassName.contains("UserInterruption") || causeClassName.contains("ExceptionCause")) {
                                                     expectedExceptionMessage = "Build was aborted by user."
-                                                } else if (utils.isTimeoutExceeded(e)) {
+                                                } else if (utils.isTimeoutExceeded(e) && !expectedExceptionMessage.contains("timeout")) {
                                                     expectedExceptionMessage = "Timeout exceeded (pipelines layer)."
                                                 }
                                             }
