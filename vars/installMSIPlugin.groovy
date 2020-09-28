@@ -79,7 +79,7 @@ def uninstallPlugin(String osName, String tool, Map options){
     switch(osName)
     {
         case 'Windows':
-            uninstallMSI("Radeon%${tool}%", options.stageName)
+            uninstallMSI("Radeon%${tool}%", options.stageName, options.currentTry)
             break;
 
         default:
@@ -100,7 +100,7 @@ def installPlugin(String osName, String tool, Map options){
                     addon_name = options.productCode
                 }
                 println "[INFO] MSI name: ${addon_name}.msi"
-                installMSI("${addon_name}.msi", options.stageName)
+                installMSI("${addon_name}.msi", options.stageName, options.currentTry)
             }
             break;
 

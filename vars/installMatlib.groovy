@@ -6,7 +6,7 @@ def call(String osName, Map options)
             receiveFiles("bin_storage/RadeonProMaterialLibrary.msi", "${CIS_TOOLS}\\..\\TestResources/")
 
             echo '[INFO] Reinstalling Material Library'
-            uninstallMSI("Radeon%Material%", options.stageName)
+            uninstallMSI("Radeon%Material%", options.stageName, options.currentTry)
             installMSI("${CIS_TOOLS}/../PluginsBinaries/RadeonProMaterialLibrary.msi", options.stageName)
             break;
 
