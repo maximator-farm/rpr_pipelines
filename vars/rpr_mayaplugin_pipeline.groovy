@@ -402,7 +402,7 @@ def executeTests(String osName, String asicName, Map options)
                         stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
                         // deinstalling broken addon
-                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
                             if (sessionReport.summary.total != sessionReport.summary.skipped){
                                 collectCrashInfo(osName, options, options.currentTry)
                                 installMSIPlugin(osName, "Maya", options, false, true)

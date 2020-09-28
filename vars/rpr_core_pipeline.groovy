@@ -280,7 +280,7 @@ def executeTests(String osName, String asicName, Map options)
                         stash includes: '**/*', excludes: '**/cache/*', name: "${options.testResultsName}", allowEmpty: true
 
                         // reallocate node if there are still attempts
-                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped) {
+                        if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
                             if (sessionReport.summary.total != sessionReport.summary.skipped){
                                 collectCrashInfo(osName, options, options.currentTry)
                                 if (osName == "Ubuntu18"){
