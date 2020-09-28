@@ -3,7 +3,7 @@ def call(String osName, String logName="", Integer currentTry="")
 {
     // logName null - use STAGE_NAME
     logName =  logName ?: "${STAGE_NAME}"
-    currentTry =  currentTry ? "_${currentTry}" : ""
+    currentTry = currentTry != "" && currentTry != null ? "_${currentTry}" : ""
 
     if(osName == 'Windows')
     {
