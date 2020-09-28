@@ -185,7 +185,7 @@ def executeTests(String osName, String asicName, Map options)
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
-        outputEnvironmentInfo(osName, options.stageName)
+        outputEnvironmentInfo(osName, options.stageName, options.currentTry)
 
         try {
             if(options['updateRefs'].contains('Update'))
