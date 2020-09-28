@@ -115,4 +115,30 @@ class utils {
         return ois.readObject()
     }
 
+    static def getReportFailReason(String exceptionMessage) {
+        if (!exceptionMessage) {
+            return "Failed to build report."
+        }
+        String[] messageParts = exceptionMessage.split(" ")
+        Integer exitCode = messageParts[messageParts.length - 1].isInteger() ? messageParts[messageParts.length - 1].toInteger() : null
+
+        if (exitCode && exitCode < 0) {
+            switch(exitCode) {
+                case -1:
+                    return "Failed to build summary report."
+                    break
+                case -2:
+                    return "Failed to build performance report."
+                    break
+                case -3:
+                    return "Failed to build compare report."
+                    break
+                case -4:
+                    return "Failed to build local reports."
+                    break
+            }
+        }
+        return "Failed to build report."
+    }
+
 }

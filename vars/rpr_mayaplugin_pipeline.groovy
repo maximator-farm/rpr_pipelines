@@ -984,7 +984,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     }
                 }
             } catch(e) {
-                String errorMessage = "Failed to build test report."
+                String errorMessage = utils.getReportFailReason(e.getMessage())
                 GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 println("[ERROR] Failed to build test report.")
