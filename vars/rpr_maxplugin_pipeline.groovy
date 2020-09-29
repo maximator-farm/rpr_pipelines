@@ -213,6 +213,7 @@ def executeTests(String osName, String asicName, Map options)
                 GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Executing tests.", "${BUILD_URL}")
                 executeTestCommand(osName, asicName, options)
             }
+            options.executeTestsFinished = true
         } catch (e) {
             throw new ExpectedExceptionWrapper("An error occurred while running tests. Please contact support.", e)
         }
@@ -279,13 +280,16 @@ def executeTests(String osName, String asicName, Map options)
                 println "[INFO] Task ${options.tests} will be retried."
             }
         } catch (e) {
-            if (e instanceof ExpectedExceptionWrapper) {
-                GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, e.getMessage(), "${BUILD_URL}")
-                throw e
-            } else {
-                String errorMessage = "An error occurred while saving test results. Please contact support."
-                GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, , "${BUILD_URL}")
-                throw new ExpectedExceptionWrapper(errorMessage, e)
+            // throw exception in finally block only if test stage was finished
+            if (options.executeTestsFinished) {
+                if (e instanceof ExpectedExceptionWrapper) {
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, e.getMessage(), "${BUILD_URL}")
+                    throw e
+                } else {
+                    String errorMessage = "An error occurred while saving test results. Please contact support."
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, , "${BUILD_URL}")
+                    throw new ExpectedExceptionWrapper(errorMessage, e)
+                }
             }
         }
     }
