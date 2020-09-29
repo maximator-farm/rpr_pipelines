@@ -419,7 +419,7 @@ def executePreBuild(Map options)
         println "Branch was detected as Pull Request"
         GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
         options.githubNotificator = githubNotificator
-        githubNotificator.initPR(options, "${BUILD_URL}")
+        githubNotificator.initPreBuild("${BUILD_URL}")
     }
 
     try {
@@ -525,6 +525,10 @@ def executePreBuild(Map options)
         GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
         problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
         throw e
+    }
+
+    if (env.CHANGE_URL) {
+        options.githubNotificator.initPR(options, "${BUILD_URL}")
     }
 
     GithubNotificator.updateStatus("PreBuild", "Version increment", "success", env, options, "PreBuild stage was successfully finished.")

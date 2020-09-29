@@ -95,7 +95,7 @@ def executeTestCommand(String osName, String asicName, Map options)
     String testsNames = options.tests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
-        if (options.testsPackage.split(":")[0] == options.tests) {
+        if (options.parsedTests.contains(".json")) {
             // if tests package isn't splitted and it's execution of this package - replace test group for non-splitted package by empty string
             testsNames = ""
         } else {
@@ -201,7 +201,7 @@ def executeTests(String osName, String asicName, Map options)
                     String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_max_autotests_baselines" : "/mnt/c/TestResources/rpr_max_autotests_baselines"
                     println "[INFO] Downloading reference images for ${options.tests}"
                     options.tests.split(" ").each() {
-                        if (it.endsWith(".json")) {
+                        if (it.contains(".json")) {
                             receiveFiles("${REF_PATH_PROFILE}/", baseline_dir)
                         } else {
                             receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
@@ -416,7 +416,7 @@ def executePreBuild(Map options)
             options['testsPackage'] = "regression.json"
             GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
             options.githubNotificator = githubNotificator
-            githubNotificator.initPR(options, "${BUILD_URL}")
+            githubNotificator.initPreBuild("${BUILD_URL}")
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
@@ -583,7 +583,7 @@ def executePreBuild(Map options)
                 }
 
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
-                String modifiedPackageName = "${options.testsPackage}:"
+                String modifiedPackageName = "${options.testsPackage}~"
                 packageInfo["groups"].each() {
                     if (options.isPackageSplitted) {
                         tests << it.key
@@ -601,14 +601,20 @@ def executePreBuild(Map options)
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
-                modifiedPackageName = modifiedPackageName.replace(':;', ':')
+                modifiedPackageName = modifiedPackageName.replace('~;', '~')
 
                 if (options.isPackageSplitted) {
                     options.testsPackage = "none"
                 } else {
-                    tests << options.testsPackage
-                    options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                     options.testsPackage = modifiedPackageName
+                    if (options.engines.count(",") > 0) {
+                        options.engines.split(",").each { engine ->
+                            tests << "${modifiedPackageName}-${engine}"
+                        }
+                    } else {
+                        tests << modifiedPackageName
+                    }
+                    options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
             } else {
                 tests = options.tests.split(" ") as List
@@ -625,6 +631,10 @@ def executePreBuild(Map options)
         GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
         problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
         throw e
+    }
+
+    if (env.CHANGE_URL) {
+        options.githubNotificator.initPR(options, "${BUILD_URL}")
     }
 
     println "timeouts: ${options.timeouts}"

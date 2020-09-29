@@ -207,12 +207,12 @@ def executeTestCommand(String osName, String asicName, Map options)
     String testsNames = options.parsedTests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
-        if (options.testsPackage.split(":")[0] == options.tests) {
+        if (options.parsedTests.contains(".json")) {
             // if tests package isn't splitted and it's execution of this package - replace test group for non-splitted package by empty string
             testsNames = ""
         } else {
             // if tests package isn't splitted and it isn't execution of this package - replace tests package by empty string
-            testsPackageName = ""
+            testsPackageName = "none"
         }
     }
 
@@ -384,7 +384,7 @@ def executeTests(String osName, String asicName, Map options)
                     GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")
                     println "[INFO] Downloading reference images for ${options.parsedTests}"
                     options.parsedTests.split(" ").each() {
-                        if (it.endsWith(".json")) {
+                        if (it.contains(".json")) {
                             receiveFiles("${REF_PATH_PROFILE}/", baseline_dir)
                         } else {
                             receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
@@ -687,7 +687,7 @@ def executePreBuild(Map options)
             options.testsPackage = "regression.json"
             GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
             options.githubNotificator = githubNotificator
-            githubNotificator.initPR(options, "${BUILD_URL}")
+            githubNotificator.initPreBuild("${BUILD_URL}")
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
@@ -858,7 +858,7 @@ def executePreBuild(Map options)
                 }
 
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
-                String modifiedPackageName = "${options.testsPackage}:"
+                String modifiedPackageName = "${options.testsPackage}~"
                 packageInfo["groups"].each() {
                     if (options.isPackageSplitted) {
                         tempTests << it.key
@@ -884,14 +884,20 @@ def executePreBuild(Map options)
                 }
                 options.groupsUMS = tests
 
-                modifiedPackageName = modifiedPackageName.replace(':;', ':')
+                modifiedPackageName = modifiedPackageName.replace('~;', '~')
 
                 if (options.isPackageSplitted) {
                     options.testsPackage = "none"
                 } else {
-                    tests << options.testsPackage
-                    options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                     options.testsPackage = modifiedPackageName
+                    if (options.engines.count(",") > 0) {
+                        options.engines.split(",").each { engine ->
+                            tests << "${modifiedPackageName}-${engine}"
+                        }
+                    } else {
+                        tests << modifiedPackageName
+                    }
+                    options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
             } 
             else 
@@ -918,6 +924,10 @@ def executePreBuild(Map options)
         GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
         problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
         throw e
+    }
+
+    if (env.CHANGE_URL) {
+        options.githubNotificator.initPR(options, "${BUILD_URL}")
     }
 
     options.testsList = options.tests
@@ -1015,14 +1025,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         options.tests.each { group ->
                             List testNameParts = group.split("-") as List
                             String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                            tests.add(parsedTestName)
+                            if (!tests.contains(parsedTestName)) {
+                                tests.add(parsedTestName)
+                            }
                         }
                     } else {
                         tests = options.tests
                     }
                     options.engines.split(",").each {
                         bat """
-                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests}\"
+                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\"
                         """
                     }
                 }

@@ -25,6 +25,24 @@ public class GithubNotificator {
     }
 
     /**
+     * Function for init status check of PreBuild stage
+     *
+     * @param url Build url
+     */
+    def initPreBuild(String url) {
+        try {
+            context.println("[INFO] Started initialization of notification for PreBuild stage")
+            String statusTitle = "[PREBUILD] Version increment"
+            pullRequest.createStatus("pending", statusTitle, "Status check for PreBuild stage initiialized.", url)
+            context.println("[INFO] Finished initialization of notification for PreBuild stage")
+        } catch (e) {
+            context.println("[ERROR] Failed to notification for PreBuild stage")
+            context.println(e.toString())
+            context.println(e.getMessage())
+        }
+    }
+
+    /**
      * Function for init status checks of PR: create checks with pending status for all steps which will be executed
      *
      * @param options Options map
@@ -47,15 +65,29 @@ public class GithubNotificator {
 
                     if(gpuNames) {
                         gpuNames.split(',').each() { asicName ->
-                            testCases << "${asicName}-${osName}"
+                            if (options.splitTestsExecution) {
+                                options.tests.each() { testsName ->
+                                    String parsedTestsName = testsName
+                                    if (testsName.contains("~")) {
+                                        String[] testsNameParts = parsedTestsName.split("~")
+                                        String engine = ""
+                                        if (testsNameParts.length == 2 && testsNameParts[1].contains("-")) {
+                                            engine = testsNameParts[1].split("-")[1]
+                                        }
+                                        parsedTestsName = engine ? "${testsNameParts[0]}-${engine}" : "${testsNameParts[0]}"
+                                        parsedTestsName = parsedTestsName.replace(".json", "")
+                                    }
+                                    testCases << "${asicName}-${osName}-${parsedTestsName}"
+                                }
+                            } else {
+                                testCases << "${asicName}-${osName}"
+                            }
                         }
                     }
                 }
             }
 
             String statusTitle = ""
-            statusTitle = "[PREBUILD] Version increment"
-            pullRequest.createStatus("pending", statusTitle, "Status checks initialized", url)
             for (buildCase in buildCases) {
                 statusTitle = "[BUILD] ${buildCase}"
                 pullRequest.createStatus("pending", statusTitle, "This stage will be executed later...", url)
@@ -102,12 +134,14 @@ public class GithubNotificator {
                 context.println("[INFO] Found next build which has same SHA of target commit as this commit. Status check won't be updated")
                 return
             }
-            // remove testname from title if it's required
-            if (stageName == 'Test') {
-                if (statusTitle.count('-') >= 2) {
-                    String[] statusTitleParts = statusTitle.split('-')
-                    statusTitle = (statusTitleParts as List).subList(0, 2).join('-')
+            if (statusTitle.contains("~")) {
+                String[] statusTitleParts = statusTitle.split("~")
+                String engine = ""
+                if (statusTitleParts.length == 2 && statusTitleParts[1].contains("-")) {
+                    engine = statusTitleParts[1].split("-")[1]
                 }
+                statusTitle = engine ? "${statusTitleParts[0]}-${engine}" : "${statusTitleParts[0]}"
+                statusTitle = statusTitle.replace(".json", "")
             }
 
             for (prStatus in pullRequest.statuses) {

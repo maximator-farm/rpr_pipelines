@@ -111,16 +111,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                         boolean added = false;
                                         String testsOrTestPackage
                                         if (newOptions['splitTestsExecution']) {
-                                            if (newOptions['testsPackage'] != 'none') {
-                                                // if package is splitted or if package is non-splitted and group was excluded - take name of test group
-                                                if (newOptions['isPackageSplitted'] || (!newOptions['testsPackage'].endsWith(':') && newOptions['testsPackage'].split(':')[1].contains(newOptions['tests']))) {
-                                                    testsOrTestPackage = newOptions['tests']
-                                                } else {
-                                                    testsOrTestPackage = newOptions['testsPackage']
-                                                }
-                                            } else {
-                                                testsOrTestPackage = newOptions['tests']
-                                            }
+                                            testsOrTestPackage = newOptions['tests']
                                         } else {
                                             //all non splitTestsExecution and non regression builds (e.g. any build of core)
                                             testsOrTestPackage = 'DefaultExecution'
