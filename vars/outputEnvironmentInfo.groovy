@@ -1,5 +1,5 @@
 
-def call(String osName, String logName="", Integer currentTry="")
+def call(String osName, String logName="", def currentTry="")
 {
     // logName null - use STAGE_NAME
     logName =  logName ?: "${STAGE_NAME}"
