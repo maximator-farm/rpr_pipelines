@@ -124,7 +124,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts')
                 {
                     bat"""
-                    run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ../${options.stageName}.log  2>&1
+                    run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ../${options.stageName}_${options.currentTry}.log  2>&1
                     """
                 }
             }
@@ -185,7 +185,7 @@ def executeTests(String osName, String asicName, Map options)
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
-        outputEnvironmentInfo(osName, options.stageName)
+        outputEnvironmentInfo(osName, options.stageName, options.currentTry)
 
         try {
             if(options['updateRefs'].contains('Update'))

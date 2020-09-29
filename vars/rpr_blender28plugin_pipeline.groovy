@@ -187,16 +187,16 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
     }
 }
 
-def buildRenderCache(String osName, String toolVersion, String log_name)
+def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry)
 {
     dir("scripts") {
         switch(osName)
         {
             case 'Windows':
-                bat "build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}.cb.log  2>&1"
+                bat "build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}_${currentTry}.cb.log  2>&1"
                 break;
             default:
-                sh "./build_rpr_cache.sh ${toolVersion} >> ../${log_name}.cb.log 2>&1"        
+                sh "./build_rpr_cache.sh ${toolVersion} >> ../${log_name}_${currentTry}.cb.log 2>&1"        
         }
     }
 }
@@ -239,7 +239,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir('scripts')
                     {
                         bat """
-                        run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion} ${options.testCaseRetries} 1>> ..\\${options.stageName}.log  2>&1
+                        run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine}  ${options.toolVersion} ${options.testCaseRetries} 1>> ..\\${options.stageName}_${options.currentTry}.log  2>&1
                         """
                     }
                     break;
@@ -248,7 +248,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir("scripts")
                     {
                         sh """
-                        ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion} ${options.testCaseRetries} 1>> ../${options.stageName}.log 2>&1
+                        ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.engine} ${options.toolVersion} ${options.testCaseRetries} 1>> ../${options.stageName}_${options.currentTry}.log 2>&1
                         """
                     }
                 }
@@ -326,7 +326,7 @@ def executeTests(String osName, String asicName, Map options)
                 if (newPluginInstalled) {
                     timeout(time: "3", unit: 'MINUTES') {
                         GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Building cache.", "${BUILD_URL}")
-                        buildRenderCache(osName, options.toolVersion, options.stageName)
+                        buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
                             println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
                             throw new ExpectedExceptionWrapper("No output image after cache building.", new Exception("No output image after cache building."))
@@ -369,7 +369,7 @@ def executeTests(String osName, String asicName, Map options)
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
-        outputEnvironmentInfo(osName, options.stageName)
+        outputEnvironmentInfo(osName, options.stageName, options.currentTry)
 
         try {
             if (options['updateRefs'].contains('Update')) {
