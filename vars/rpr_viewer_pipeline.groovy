@@ -137,7 +137,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     {
                         bat """
                         set CIS_RENDER_DEVICE=%CIS_RENDER_DEVICE%${driverPostfix}
-                        run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} 1>> ../${options.stageName}_${options.currentTry}.log  2>&1
+                        run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> ../${options.stageName}_${options.currentTry}.log  2>&1
                         """
                     }
                     break;
@@ -153,7 +153,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                             sh """
                             chmod +x ../RprViewer/RadeonProViewer
                             chmod +x run.sh
-                            ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} 1>> ../${options.stageName}_${options.currentTry}.log  2>&1
+                            ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> ../${options.stageName}_${options.currentTry}.log  2>&1
                             """
                         }
                     }
@@ -205,7 +205,15 @@ def executeTests(String osName, String asicName, Map options)
             if(options['updateRefs'].contains('Update')) {
                 executeTestCommand(osName, asicName, options)
                 executeGenTestRefCommand(osName, options, options['updateRefs'].contains('clean'))
-                sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
+                sendFiles('./Work/GeneratedBaselines/', REF_PATH_PROFILE)
+                // delete generated baselines when they're sent 
+                switch(osName) {
+                    case 'Windows':
+                        bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
+                        break;
+                    default:
+                        sh "rm -rf ./Work/GeneratedBaselines"        
+                }
             } else {
                 try {
                     GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")

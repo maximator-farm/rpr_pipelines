@@ -197,7 +197,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         dir('scripts')
                         {
                             bat """
-                                run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} 1>> ../${options.stageName}_${options.currentTry}.log  2>&1
+                                run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> ../${options.stageName}_${options.currentTry}.log  2>&1
                             """
                         }
                         break;
@@ -205,7 +205,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         dir('scripts')
                         {
                             sh """
-                                ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} 1>> ../${options.stageName}_${options.currentTry}.log 2>&1
+                                ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> ../${options.stageName}_${options.currentTry}.log 2>&1
                             """
                         }
                         break;
@@ -334,7 +334,15 @@ def executeTests(String osName, String asicName, Map options)
             {
                 executeTestCommand(osName, asicName, options)
                 executeGenTestRefCommand(osName, options, options['updateRefs'].contains('clean'))
-                sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
+                sendFiles('./Work/GeneratedBaselines/', REF_PATH_PROFILE)
+                // delete generated baselines when they're sent 
+                switch(osName) {
+                    case 'Windows':
+                        bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
+                        break;
+                    default:
+                        sh "rm -rf ./Work/GeneratedBaselines"        
+                }
             }
             else
             {

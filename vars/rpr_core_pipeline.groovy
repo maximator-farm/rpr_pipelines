@@ -138,7 +138,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir('scripts')
                     {
                         bat """
-                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}_${options.currentTry}.log 2>&1
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> ../${STAGE_NAME}_${options.currentTry}.log 2>&1
                         """
                     }
                     break;
@@ -147,7 +147,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     {
                         withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                             sh """
-                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}_${options.currentTry}.log 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> ../${STAGE_NAME}_${options.currentTry}.log 2>&1
                             """
                         }
                     }
@@ -157,7 +157,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     {
                         withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                             sh """
-                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} >> ../${STAGE_NAME}_${options.currentTry}.log 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> ../${STAGE_NAME}_${options.currentTry}.log 2>&1
                             """
                         }
                     }
@@ -216,7 +216,15 @@ def executeTests(String osName, String asicName, Map options)
             {
                 executeTestCommand(osName, asicName, options)
                 executeGenTestRefCommand(osName, options, options['updateRefs'].contains('clean'))
-                sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
+                sendFiles('./Work/GeneratedBaselines/', REF_PATH_PROFILE)
+                // delete generated baselines when they're sent 
+                switch(osName) {
+                    case 'Windows':
+                        bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
+                        break;
+                    default:
+                        sh "rm -rf ./Work/GeneratedBaselines"        
+                }
             }
             else
             {

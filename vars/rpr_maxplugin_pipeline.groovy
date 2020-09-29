@@ -124,7 +124,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts')
                 {
                     bat"""
-                    run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} >> ../${options.stageName}_${options.currentTry}.log  2>&1
+                    run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.updateRefs} >> ../${options.stageName}_${options.currentTry}.log  2>&1
                     """
                 }
             }
@@ -192,7 +192,15 @@ def executeTests(String osName, String asicName, Map options)
             {
                 executeTestCommand(osName, asicName, options)
                 executeGenTestRefCommand(osName, options, options['updateRefs'].contains('clean'))
-                sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
+                sendFiles('./Work/GeneratedBaselines/', REF_PATH_PROFILE)
+                // delete generated baselines when they're sent 
+                switch(osName) {
+                    case 'Windows':
+                        bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
+                        break;
+                    default:
+                        sh "rm -rf ./Work/GeneratedBaselines"        
+                }
             }
             else
             {
