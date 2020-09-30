@@ -338,7 +338,7 @@ def call(String projectBranch = "",
         Boolean splitTestsExectuion = false,
         Boolean enableHoudini = true,
         Boolean rebuildUSD = false,
-        String houdiniVersion = "18.0.532")
+        String houdiniVersion = "18.0.566")
 {
     try
     {
