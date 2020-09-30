@@ -148,7 +148,7 @@ def executeBuildOSX(Map options)
 }
 
 
-def executeBuildLinux(Map options) 
+def executeBuildUnix(Map options) 
 {
     clearBinariesUnix()
 
@@ -173,43 +173,7 @@ def executeBuildLinux(Map options)
         if (options.enableHoudini) {
             sh """
                 mkdir build
-                export HFS=/opt/hfs${options.houdiniVersion}
-                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
-            """
-        } else {
-            sh """
-                mkdir build
-                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options "-Dpxr_DIR=USDinst" >> ../${STAGE_NAME}.log 2>&1
-            """
-        }
-    }
-}
-
-
-def executeBuildCentOS(Map options) {
-
-    if (options.rebuildUSD) {
-        sh """
-            if [ -d "./USDgen" ]; then
-                rm -fdr ./USDgen
-            fi
-
-            if [ -d "./USDinst" ]; then
-                rm -fdr ./USDinst
-            fi
-
-            mkdir -p USDgen
-            mkdir -p USDinst
-
-            python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
-        """
-    }
-
-    dir ("RadeonProRenderUSD") {
-        if (options.enableHoudini) {
-            sh """
-                mkdir build
-                export HFS=/opt/hfs${options.houdiniVersion}
+                export HFS=/home/admin/Houdini/hfs${options.houdiniVersion}
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
@@ -225,14 +189,15 @@ def executeBuildCentOS(Map options) {
 def executeBuild(String osName, Map options) {
 
     // autoupdate houdini license
-    try {
-        withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'sidefxCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-            print(python3("${CIS_TOOLS}/download_houdini.py --username \"$USERNAME\" --password \"$PASSWORD\" --version \"${options.houdiniVersion}\""))
+    timeout(time: "15", unit: 'MINUTES') {
+        try {
+            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'sidefxCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+                print(python3("${CIS_TOOLS}/download_houdini.py --username \"$USERNAME\" --password \"$PASSWORD\" --version \"${options.houdiniVersion}\""))
+            }
+        } catch (e) {
+            print e
         }
-    } catch (e) {
-        print e
     }
-
 
     try {
         dir('RadeonProRenderUSD') {
@@ -253,14 +218,8 @@ def executeBuild(String osName, Map options) {
             case 'OSX':
                 executeBuildOSX(options);
                 break;
-            case 'CentOS':
-                executeBuildCentOS(options);
-                break;
-            case 'CentOS7_6':
-                executeBuildCentOS(options);
-                break;
             default:
-                executeBuildLinux(options);
+                executeBuildUnix(options);
         }
         archiveArtifacts "RadeonProRenderUSD/build/hdRpr-*.tar.gz"
     }
@@ -404,7 +363,7 @@ def call(String projectBranch = "",
                                 enableHoudini:enableHoudini,
                                 rebuildUSD:rebuildUSD,
                                 houdiniVersion:houdiniVersion,
-                                BUILDER_TAG:'Builder6'
+                                BUILDER_TAG:'BuilderHoudini'
                                 ])
     }
     catch(e) {
