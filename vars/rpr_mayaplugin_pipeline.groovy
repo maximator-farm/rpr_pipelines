@@ -945,8 +945,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         tests = options.tests
                     }
                     options.engines.split(",").each {
+                        // \\\\ - prevent escape sequence '\N'
                         bat """
-                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\"
+                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\"
                         """
                     }
                 }
