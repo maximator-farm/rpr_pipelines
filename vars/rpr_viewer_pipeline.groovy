@@ -137,7 +137,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     {
                         bat """
                         set CIS_RENDER_DEVICE=%CIS_RENDER_DEVICE%${driverPostfix}
-                        run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> ../${options.stageName}_${options.currentTry}.log  2>&1
+                        run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                         """
                     }
                     break;
@@ -153,7 +153,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                             sh """
                             chmod +x ../RprViewer/RadeonProViewer
                             chmod +x run.sh
-                            ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> ../${options.stageName}_${options.currentTry}.log  2>&1
+                            ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                             """
                         }
                     }
@@ -580,7 +580,7 @@ def executePreBuild(Map options)
                             options.groupsUMS << it.key
                         } else {
                             // add duplicated group name in name of package group name for exclude it
-                            modifiedPackageName = "${modifiedPackageName};${it.key}"
+                            modifiedPackageName = "${modifiedPackageName},${it.key}"
                         }
                     }
                 }
@@ -588,7 +588,7 @@ def executePreBuild(Map options)
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
-                modifiedPackageName = modifiedPackageName.replace('~;', '~')
+                modifiedPackageName = modifiedPackageName.replace('~,', '~')
 
                 if (options.isPackageSplitted) {
                     options.testsPackage = "none"

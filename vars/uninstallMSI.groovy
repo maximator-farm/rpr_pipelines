@@ -7,7 +7,7 @@ def call(String name, String log, Integer currentTry)
             if (\$rpr_plugin) {
                 Write "Uninstalling..."
                 \$rpr_plugin_id = \$rpr_plugin.IdentifyingNumber
-                start-process "msiexec.exe" -arg "/X \$rpr_plugin_id /qn /quiet /L+ie ${env.WORKSPACE}\\${log}_${currentTry}.msi.uninstall.log /norestart" -Wait
+                start-process "msiexec.exe" -arg "/X \$rpr_plugin_id /qn /quiet /L+ie \"${env.WORKSPACE}\\${log}_${currentTry}.msi.uninstall.log\" /norestart" -Wait
             }else{
                 Write "Plugin not found"
             }

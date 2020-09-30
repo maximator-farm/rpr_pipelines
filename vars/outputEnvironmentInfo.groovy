@@ -7,12 +7,12 @@ def call(String osName, String logName="", def currentTry="")
 
     if(osName == 'Windows')
     {
-         bat "HOSTNAME  >  ${logName}${currentTry}.log"
-         bat "set       >> ${logName}${currentTry}.log"
+         bat "HOSTNAME  >  \"${logName}${currentTry}.log\""
+         bat "set       >> \"${logName}${currentTry}.log\""
     }
     else
     {
-         sh "uname -a   >  ${logName}${currentTry}.log"
-         sh "env        >> ${logName}${currentTry}.log"
+         sh "uname -a   >  \"${logName}${currentTry}.log\""
+         sh "env        >> \"${logName}${currentTry}.log\""
     }
 }

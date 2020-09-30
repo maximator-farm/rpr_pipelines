@@ -138,7 +138,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir('scripts')
                     {
                         bat """
-                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> ../${STAGE_NAME}_${options.currentTry}.log 2>&1
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                         """
                     }
                     break;
@@ -147,7 +147,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     {
                         withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                             sh """
-                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> ../${STAGE_NAME}_${options.currentTry}.log 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         }
                     }
@@ -157,7 +157,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     {
                         withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
                             sh """
-                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> ../${STAGE_NAME}_${options.currentTry}.log 2>&1
+                            ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                             """
                         }
                     }

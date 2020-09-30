@@ -124,7 +124,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 dir('scripts')
                 {
                     bat"""
-                    run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.updateRefs} >> ../${options.stageName}_${options.currentTry}.log  2>&1
+                    run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.updateRefs} >> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                     """
                 }
             }
@@ -601,7 +601,7 @@ def executePreBuild(Map options)
                             options.groupsUMS << it.key
                         } else {
                             // add duplicated group name in name of package group name for exclude it
-                            modifiedPackageName = "${modifiedPackageName};${it.key}"
+                            modifiedPackageName = "${modifiedPackageName},${it.key}"
                         }
                     }
                 }
@@ -609,7 +609,7 @@ def executePreBuild(Map options)
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
-                modifiedPackageName = modifiedPackageName.replace('~;', '~')
+                modifiedPackageName = modifiedPackageName.replace('~,', '~')
 
                 if (options.isPackageSplitted) {
                     options.testsPackage = "none"

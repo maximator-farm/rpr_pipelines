@@ -20,7 +20,7 @@ def call(String osName, Map options)
             echo '[INFO] Installing Material Library'
             sh """
                 #!/bin/bash
-                ${CIS_TOOLS}/../TestResources/RadeonProRenderMaterialLibraryInstaller_2.0.run --nox11 --just-do-it >> ${options.stageName}_${options.currentTry}.matlib.install.log 2>&1
+                ${CIS_TOOLS}/../TestResources/RadeonProRenderMaterialLibraryInstaller_2.0.run --nox11 --just-do-it >> \"${options.stageName}_${options.currentTry}.matlib.install.log\" 2>&1
             """
     }
 }

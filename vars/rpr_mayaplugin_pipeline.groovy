@@ -148,10 +148,10 @@ def buildRenderCache(String osName, String toolVersion, String log_name, Integer
     dir("scripts") {
         switch(osName) {
             case 'Windows':
-                bat "build_rpr_cache.bat ${toolVersion} >> ..\\${log_name}_${currentTry}.cb.log  2>&1"
+                bat "build_rpr_cache.bat ${toolVersion} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
                 break;
             case 'OSX':
-                sh "./build_rpr_cache.sh ${toolVersion} >> ../${log_name}_${currentTry}.cb.log 2>&1"
+                sh "./build_rpr_cache.sh ${toolVersion} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"
                 break;
             default:
                 echo "[WARNING] ${osName} is not supported"
@@ -197,7 +197,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         dir('scripts')
                         {
                             bat """
-                                run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> ../${options.stageName}_${options.currentTry}.log  2>&1
+                                run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                             """
                         }
                         break;
@@ -205,7 +205,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         dir('scripts')
                         {
                             sh """
-                                ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> ../${options.stageName}_${options.currentTry}.log 2>&1
+                                ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\" 2>&1
                             """
                         }
                         break;
@@ -781,7 +781,7 @@ def executePreBuild(Map options)
                     } else {
                         if (tempTests.contains(it.key)) {
                             // add duplicated group name in name of package group name for exclude it
-                            modifiedPackageName = "${modifiedPackageName};${it.key}"
+                            modifiedPackageName = "${modifiedPackageName},${it.key}"
                         }
                     }
                 }
@@ -800,7 +800,7 @@ def executePreBuild(Map options)
                 }
                 options.groupsUMS = tests
 
-                modifiedPackageName = modifiedPackageName.replace('~;', '~')
+                modifiedPackageName = modifiedPackageName.replace('~,', '~')
 
                 if (options.isPackageSplitted) {
                     options.testsPackage = "none"
