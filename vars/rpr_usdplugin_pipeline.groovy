@@ -188,14 +188,16 @@ def executeBuildUnix(Map options)
 
 def executeBuild(String osName, Map options) {
 
-    // autoupdate houdini license
-    timeout(time: "15", unit: 'MINUTES') {
-        try {
-            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'sidefxCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-                print(python3("${CIS_TOOLS}/download_houdini.py --username \"$USERNAME\" --password \"$PASSWORD\" --version \"${options.houdiniVersion}\""))
+    if (options.enableHoudini) {
+        // autoupdate houdini license
+        timeout(time: "15", unit: 'MINUTES') {
+            try {
+                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'sidefxCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+                    print(python3("${CIS_TOOLS}/download_houdini.py --username \"$USERNAME\" --password \"$PASSWORD\" --version \"${options.houdiniVersion}\""))
+                }
+            } catch (e) {
+                print e
             }
-        } catch (e) {
-            print e
         }
     }
 
