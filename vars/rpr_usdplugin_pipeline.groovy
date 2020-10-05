@@ -86,7 +86,7 @@ def executeBuildWindows(Map options)
             if exist USDgen rmdir /s/q USDgen
             if exist USDinst rmdir /s/q USDinst
             call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}_USD.log 2>&1
-            C:\\Python27\\python.exe USD\\build_scripts\\build_usd.py -v --build ${WORKSPACE}/USDgen/build --src ${WORKSPACE}/USDgen/src ${WORKSPACE}/USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+            python USD\\build_scripts\\build_usd.py -v --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
         """
     }
     
@@ -127,7 +127,7 @@ def executeBuildOSX(Map options)
             mkdir -p USDgen
             mkdir -p USDinst
 
-            python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+            python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
         """
     }
 
@@ -165,7 +165,7 @@ def executeBuildUnix(Map options)
             mkdir -p USDgen
             mkdir -p USDinst
 
-            python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > USD/${STAGE_NAME}_USD.log 2>&1
+            python USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
         """
     }
 
@@ -239,9 +239,6 @@ def executeBuild(String osName, Map options) {
     }
     finally {
         archiveArtifacts "*.log"
-        if (options.rebuildUSD) {
-            archiveArtifacts "USD/*.log"
-        }
     }
 }
 
