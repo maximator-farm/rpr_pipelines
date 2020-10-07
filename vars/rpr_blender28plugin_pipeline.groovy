@@ -926,6 +926,48 @@ def executePreBuild(Map options)
                 options.groupsUMS = tests
             }
             options.tests = tests
+
+            options.skippedTests = []
+            platforms.split(';').each()
+            {
+                if (it)
+                {
+                    List tokens = it.tokenize(':')
+                    String osName = tokens.get(0)
+                    String gpuNames = ""
+                    if (tokens.size() > 1)
+                    {
+                        gpuNames = tokens.get(1)
+                    }
+
+                    if (gpuNames)
+                    {
+                        gpuNames.split(',').each()
+                        {
+                            for (test in options.tests) 
+                            {
+                                if (!test.contains(".json")) {
+                                    String testName = ""
+                                    String engine = ""
+                                    if (options.engines.count(",") > 0) {
+                                        String[] testNameParts = test.split("-")
+                                        testName = testNameParts[0]
+                                        engine = testNameParts[1]
+                                    } else {
+                                        testName = test
+                                        engine = options.engines
+                                    }
+                                    String testResultItem = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
+                                    String output = bat(script: "jobs_launcher\\is_group_skipped.bat ${asicName} ${osName} ${engine} \"..\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim().split('\n')
+                                    print(output)
+                                }
+                            }
+                        }
+                    }
+
+                    tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
+                }
+            }
         }
     } catch (e) {
         String errorMessage = "Failed to configurate tests."
