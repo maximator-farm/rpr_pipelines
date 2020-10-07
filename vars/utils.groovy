@@ -136,6 +136,9 @@ class utils {
                 case -4:
                     return "Failed to build local reports."
                     break
+                case -5:
+                    return "Several plugin versions"
+                    break
             }
         }
         return "Failed to build report."
