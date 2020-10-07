@@ -1,67 +1,59 @@
-def executeTestCommand(String osName, Boolean testPerformance)
+def executeTestCommand(String osName, String libType, Boolean testPerformance)
 {
     switch(osName)
     {
-    case 'Windows':
-        try
-        {
-        }catch(e){}
-        dir("unittest")
-        {
-            bat "mkdir testSave"
-            if (testPerformance) {
-                bat """
-                set RIF_AI_FP16_ENABLED=1
-                ..\\bin\\UnitTest.exe --mode p --gtest_filter=\"Performance.*\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ..\\${STAGE_NAME}.log  2>&1
-                """
-            } else {
-                bat """
-                set RIF_AI_FP16_ENABLED=1
-                ..\\bin\\UnitTest.exe -t .\\testSave -r .\\referenceImages --models ..\\models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ..\\${STAGE_NAME}.log  2>&1
-                """
+        case 'Windows':
+            dir("unittest")
+            {
+                bat "mkdir testSave"
+                if (testPerformance) {
+                    bat """
+                    set RIF_AI_FP16_ENABLED=1
+                    ..\\bin\\UnitTest.exe --mode p --gtest_filter=\"Performance.*\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ..\\${STAGE_NAME}.${libType}.log  2>&1
+                    """
+                } else {
+                    bat """
+                    set RIF_AI_FP16_ENABLED=1
+                    ..\\bin\\UnitTest.exe -t .\\testSave -r .\\referenceImages --models ..\\models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ..\\${STAGE_NAME}.${libType}.log  2>&1
+                    """
+                }
             }
-        }
-        break;
-    case 'OSX':
-        try
-        {
-        }catch(e){}
-        dir("unittest")
-        {
-            sh "mkdir testSave"
-            if (testPerformance) {
-                sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest --mode p --gtest_filter=\"Performance.*\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
-            } else {
-                sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            break;
+        case 'OSX':
+            dir("unittest")
+            {
+                sh "mkdir testSave"
+                if (testPerformance) {
+                    sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest --mode p --gtest_filter=\"Performance.*\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ../${STAGE_NAME}.${libType}.log  2>&1"
+                } else {
+                    sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ../${STAGE_NAME}.${libType}.log  2>&1"
+                }
             }
-        }
-        break;
-    default:
-        try
-        {
-        }catch(e){}
-        dir("unittest")
-        {
-            sh "mkdir testSave"
-            if (testPerformance) {
-                sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest --mode p --gtest_filter=\"Performance.*\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
-            } else {
-                sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.gtest.xml >> ../${STAGE_NAME}.log  2>&1"
+            break;
+        default:
+            dir("unittest")
+            {
+                sh "mkdir testSave"
+                if (testPerformance) {
+                    sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest --mode p --gtest_filter=\"Performance.*\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ../${STAGE_NAME}.${libType}.log  2>&1"
+                } else {
+                    sh "RIF_AI_FP16_ENABLED=1 ../bin/UnitTest  -t ./testSave -r ./referenceImages --models ../models --gtest_filter=\"*.*/0\" --gtest_output=xml:../${STAGE_NAME}.${libType}.gtest.xml >> ../${STAGE_NAME}.${libType}.log  2>&1"
+                }
             }
-        }
     }
 }
 
-def executeTests(String osName, String asicName, Map options)
+
+def executeTestsForCustomLib(String osName, String libType, Map options)
 {
     try
     {
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git')
+        checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git')
 
         outputEnvironmentInfo(osName)
-        unstash "app${osName}"
+        unstash "app_${libType}_${osName}"
 
-        executeTestCommand(osName, options.testPerformance)
+        executeTestCommand(osName, libType, options.testPerformance)
     }
     catch (e)
     {
@@ -77,185 +69,217 @@ def executeTests(String osName, String asicName, Map options)
             switch(osName) {
                 case 'Windows':
                     bat """
-                    move unittest\\rif_performance_*.csv .
-                    rename rif_performance_*.csv ${STAGE_NAME}.csv
+                        move unittest\\rif_performance_*.csv .
+                        rename rif_performance_*.csv ${STAGE_NAME}.${libType}.csv
                     """
                     break;
                 case 'OSX':
                     sh """
-                    mv unittest/rif_performance_*.csv ./${STAGE_NAME}.csv
+                        mv unittest/rif_performance_*.csv ./${STAGE_NAME}.${libType}.csv
                     """
                     break;
                 default:
                     sh """
-                    mv unittest/rif_performance_*.csv ./${STAGE_NAME}.csv
+                        mv unittest/rif_performance_*.csv ./${STAGE_NAME}.${libType}.csv
                     """
                     break;
             }
 
-            stash includes: "${STAGE_NAME}.gtest.xml, ${STAGE_NAME}.csv", name: "${options.testResultsName}", allowEmpty: true
+            stash includes: "${STAGE_NAME}.${libType}.gtest.xml, ${STAGE_NAME}.${libType}.csv", name: "${options.testResultsName}.${libType}", allowEmpty: true
         }
         junit "*.gtest.xml"
     }
 }
 
-def executeBuildWindows(String cmakeKeys)
-{
-    String osName = "Windows"
 
-    commit = bat (
+def executeTests(String osName, String asicName, Map options)
+{
+    try {
+        executeTestsForCustomLib(osName, 'dynamic', options)
+    } catch (e) {
+        println("Error during testing dynamic lib")
+        println(e.toString());
+        println(e.getMessage());
+        println(e.getStackTrace());    
+    }
+
+    try {
+        executeTestsForCustomLib(osName, 'static', options)
+    } catch (e) {
+        println("Error during testing static lib")
+        println(e.toString());
+        println(e.getMessage());
+        println(e.getStackTrace());    
+    }
+}
+
+
+def executeBuildWindows(String cmakeKeys, String osName, Map options)
+{
+    bat """
+        set msbuild="C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe" >> ..\\${STAGE_NAME}.log 2>&1
+        mkdir build-${options.packageName}-${osName}-dynamic
+        cd build-${options.packageName}-${osName}-dynamic
+        cmake .. -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-dynamic >> ..\\${STAGE_NAME}.dynamic.log 2>&1
+        %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.dynamic.log 2>&1
+        cd ..
+
+        mkdir build-${options.packageName}-${osName}-static
+        cd build-${options.packageName}-${osName}-static
+        cmake .. -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static -DRIF_STATIC_LIB=ON >> ..\\${STAGE_NAME}.static.log 2>&1
+        %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.static.log 2>&1
+        cd ..
+    """
+
+    dir("${options.packageName}-${osName}-dynamic") {
+        stash includes: "bin/*", name: "app_dynamic_${osName}"
+    }
+
+    dir("${options.packageName}-${osName}-static") {
+        stash includes: "bin/*", name: "app_static_${osName}"
+    }
+
+    bat """
+        xcopy README.md ${options.packageName}-${osName}-dynamic\\README.md* /y
+        xcopy README.md ${options.packageName}-${osName}-static\\README.md* /y
+
+        cd ${options.packageName}-${osName}-dynamic
+        del /S UnitTest*
+        cd ..
+
+        cd ${options.packageName}-${osName}-static
+        del /S UnitTest*
+        cd ..
+    """
+
+    dir("${options.packageName}-${osName}-dynamic/bin") {
+        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}"
+    }
+
+    dir("${options.packageName}-${osName}-static/bin") {
+        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-${osName}"
+    }
+
+    stash includes: "models/**/*", name: "models"
+    stash includes: "samples/**/*", name: "samples"
+    stash includes: "include/**/*", name: "include"
+
+    dir ('src') {
+        stash includes: "License.txt", name: "txtFiles"
+    }
+
+    bat """
+        mkdir RIF_Release
+        mkdir RIF_Debug
+        mkdir RIF_Samples
+        mkdir RIF_Models
+
+        xcopy ${options.packageName}-${osName}-dynamic RIF_Dynamic\\${options.packageName}-${osName}-dynamic /s/y/i
+        xcopy ${options.packageName}-${osName}-static RIF_Static\\${options.packageName}-${osName}-static /s/y/i
+        xcopy samples RIF_Samples\\samples /s/y/i
+        xcopy models RIF_Models\\models /s/y/i
+    """
+
+    zip archive: true, dir: 'RIF_Static', glob: '', zipFile: "${options.packageName}-${osName}-static.zip"
+    zip archive: true, dir: 'RIF_Dynamic', glob: '', zipFile: "${options.packageName}-${osName}-dynamic.zip"
+    zip archive: true, dir: 'RIF_Samples', glob: '', zipFile: "${options.samplesName}.zip"
+    zip archive: true, dir: 'RIF_Models', glob: '', zipFile: "${options.modelsName}.zip"
+
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-dynamic.zip">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static.zip">static</a></h4>"""
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Samples: <a href="${BUILD_URL}/artifact/${options.samplesName}.zip">${options.samplesName}.zip</a></h4>"""
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Models: <a href="${BUILD_URL}/artifact/${options.modelsName}.zip">${options.modelsName}.zip</a></h4>"""
+}
+
+def executeBuildUnix(String cmakeKeys, String osName, Map options, String compilerName="gcc")
+{
+    String EXPORT_CXX = compilerName == "clang-5.0" ? "export CXX=clang-5.0" : ""
+    String SRC_BUILD = compilerName == "clang-5.0" ? "RadeonImageFilters" : "all"
+
+    sh """
+        ${EXPORT_CXX}
+        mkdir build-${options.packageName}-${osName}-dynamic
+        cd build-${options.packageName}-${osName}-dynamic
+        cmake .. ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-dynamic >> ../${STAGE_NAME}.dynamic.log 2>&1
+        make ${SRC_BUILD} >> ../${STAGE_NAME}.dynamic.log 2>&1
+        make install >> ../${STAGE_NAME}.dynamic.log 2>&1
+        cd ..
+
+        mkdir build-${options.packageName}-${osName}-static
+        cd build-${options.packageName}-${osName}-static
+        cmake .. ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static -DRIF_STATIC_LIB=ON >> ../${STAGE_NAME}.static.log 2>&1
+        make ${SRC_BUILD} >> ../${STAGE_NAME}.static.log 2>&1
+        make install >> ../${STAGE_NAME}.static.log 2>&1
+        cd ..
+    """
+
+    dir("${options.packageName}-${osName}-dynamic") {
+        stash includes: "bin/*", name: "app_dynamic_${osName}"
+    }
+
+    dir("${options.packageName}-${osName}-static") {
+        stash includes: "bin/*", name: "app_static_${osName}"
+    }
+
+    sh """
+        cp README.md ${options.packageName}-${osName}-dynamic
+        cp README.md ${options.packageName}-${osName}-static
+    """
+
+    if (compilerName != "clang-5.0") {
+        sh """
+            rm ${options.packageName}-${osName}-dynamic/bin/UnitTest*
+            rm ${options.packageName}-${osName}-static/bin/UnitTest*
+        """
+    }
+
+    sh """
+        tar cf ${options.packageName}-${osName}-static.tar ${options.packageName}-${osName}-static
+        tar cf ${options.packageName}-${osName}-dynamic.tar ${options.packageName}-${osName}-dynamic
+    """
+
+    archiveArtifacts "${options.packageName}-${osName}*.tar"
+
+    dir("${options.packageName}-${osName}-dynamic/bin/") {
+        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}"
+    }
+
+    dir("${options.packageName}-${osName}-static/bin/") {
+        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-${osName}"
+    }
+
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-dynamic.tar">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static.tar">static</a></h4>"""
+}
+
+
+def getArtifactName(String name, String branch, String commit) {
+    String return_name = name + (branch ? '-' + branch : '') + (commit ? '-' + commit : '')
+    return return_name.replaceAll('[^a-zA-Z0-9-_.]+','')
+}
+
+
+def executePreBuild(Map options)
+{
+    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git', true)
+
+    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
+    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    println "The last commit was written by ${options.commitAuthor}."
+    println "Commit message: ${options.commitMessage}"
+    println "Commit SHA: ${options.commitSHA}"
+
+    options.commit = bat (
         script: '''@echo off
                    git rev-parse --short=6 HEAD''',
         returnStdout: true
     ).trim()
 
     String branch = env.BRANCH_NAME ? env.BRANCH_NAME : env.Branch
-    branch = branch.replace('origin/', '')
+    options.branch = branch.replace('origin/', '')
 
-    String packageName = 'radeonimagefilters' + (branch ? '-' + branch : '') + (commit ? '-' + commit : '') + '-' + osName
-    packageName = packageName.replaceAll('[^a-zA-Z0-9-_.]+','')
-
-    String modelsName = 'models' + (branch ? '-' + branch : '') + (commit ? '-' + commit : '')
-    modelsName = modelsName.replaceAll('[^a-zA-Z0-9-_.]+','')
-
-    String samplesName = 'samples' + (branch ? '-' + branch : '') + (commit ? '-' + commit : '')
-    samplesName = samplesName.replaceAll('[^a-zA-Z0-9-_.]+','')
-
-    bat """
-    set msbuild="C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe" >> ..\\${STAGE_NAME}.log 2>&1
-    mkdir build-${packageName}-rel
-    cd build-${packageName}-rel
-    cmake .. -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${packageName}-rel >> ..\\${STAGE_NAME}.log 2>&1
-    %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.log 2>&1
-    cd ..
-    mkdir build-${packageName}-dbg
-    cd build-${packageName}-dbg
-    cmake .. -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${packageName}-dbg >> ..\\${STAGE_NAME}.log 2>&1
-    %msbuild% INSTALL.vcxproj -property:Configuration=Debug >> ..\\${STAGE_NAME}.log 2>&1
-    cd ..
-    """
-
-    dir("${packageName}-rel") {
-        stash includes: "bin/*", name: "app${osName}"
-    }
-
-    bat """
-    xcopy README.md ${packageName}-rel\\README.md* /y
-    xcopy README.md ${packageName}-dbg\\README.md* /y
-
-    cd ${packageName}-rel
-    del /S UnitTest*
-    cd ..\\${packageName}-dbg
-    del /S UnitTest*
-    """
-
-    dir("${packageName}-rel/bin") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy${osName}"
-    }
-    stash includes: "models/**/*", name: "models"
-    stash includes: "samples/**/*", name: "samples"
-    stash includes: "include/**/*", name: "include"
-    dir ('src') {
-        stash includes: "License.txt", name: "txtFiles"
-    }
-
-    bat """
-    mkdir RIF_Release
-    mkdir RIF_Debug
-    mkdir RIF_Samples
-    mkdir RIF_Models
-
-    xcopy ${packageName}-rel RIF_Release\\${packageName}-rel /s/y/i
-    xcopy ${packageName}-dbg RIF_Debug\\${packageName}-dbg /s/y/i
-    xcopy samples RIF_Samples\\samples /s/y/i
-    xcopy models RIF_Models\\models /s/y/i
-    """
-
-    zip archive: true, dir: 'RIF_Debug', glob: '', zipFile: "${packageName}-dbg.zip"
-    zip archive: true, dir: 'RIF_Release', glob: '', zipFile: "${packageName}-rel.zip"
-    zip archive: true, dir: 'RIF_Samples', glob: '', zipFile: "${samplesName}.zip"
-    zip archive: true, dir: 'RIF_Models', glob: '', zipFile: "${modelsName}.zip"
-
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}/artifact/${packageName}-rel.zip">release</a> / <a href="${BUILD_URL}/artifact/${packageName}-dbg.zip">debug</a></h4>"""
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Samples: <a href="${BUILD_URL}/artifact/${samplesName}.zip">${samplesName}.zip</a></h4>"""
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Models: <a href="${BUILD_URL}/artifact/${modelsName}.zip">${modelsName}.zip</a></h4>"""
-}
-
-def executeBuildUnix(String cmakeKeys, String osName, String premakeDir, String copyKeys, String compilerName="gcc")
-{
-    commit = sh (
-        script: 'git rev-parse --short=6 HEAD',
-        returnStdout: true
-    ).trim()
-
-    String branch = env.BRANCH_NAME ? env.BRANCH_NAME : env.Branch
-    branch = branch.replace('origin/', '')
-
-    String packageName = 'radeonimagefilters' + (branch ? '-' + branch : '') + (commit ? '-' + commit : '') + '-' + osName
-    packageName = packageName.replaceAll('[^a-zA-Z0-9-_.]+','')
-
-    String EXPORT_CXX = compilerName == "clang-5.0" ? "export CXX=clang-5.0" : ""
-    String SRC_BUILD = compilerName == "clang-5.0" ? "RadeonImageFilters" : "all"
-    sh """
-    ${EXPORT_CXX}
-    mkdir build-${packageName}-rel
-    cd build-${packageName}-rel
-    cmake .. ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${packageName}-rel >> ../${STAGE_NAME}.log 2>&1
-    make ${SRC_BUILD} >> ../${STAGE_NAME}.log 2>&1
-    make install >> ../${STAGE_NAME}.log 2>&1
-    cd ..
-    mkdir build-${packageName}-dbg
-    cd build-${packageName}-dbg
-    cmake .. ${cmakeKeys} -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=../${packageName}-dbg >> ../${STAGE_NAME}.log 2>&1
-    make ${SRC_BUILD} >> ../${STAGE_NAME}.log 2>&1
-    make install >> ../${STAGE_NAME}.log 2>&1
-    cd ..
-    """
-
-    dir("${packageName}-rel") {
-        stash includes: "bin/*", name: "app${osName}"
-    }
-
-    sh """
-    cp README.md ${packageName}-rel
-    cp README.md ${packageName}-dbg
-    """
-
-    if (compilerName != "clang-5.0") {
-        sh """
-        rm ${packageName}-rel/bin/UnitTest*
-        rm ${packageName}-dbg/bin/UnitTest*
-        """
-    }
-
-    sh """
-    tar cf ${packageName}-dbg.tar ${packageName}-dbg
-    tar cf ${packageName}-rel.tar ${packageName}-rel
-    """
-
-    archiveArtifacts "${packageName}*.tar"
-    dir("${packageName}-rel/bin/") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy${osName}"
-    }
-
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}/artifact/${packageName}-rel.tar">release</a> / <a href="${BUILD_URL}/artifact/${packageName}-dbg.tar">debug</a></h4>"""
-}
-
-def executePreBuild(Map options)
-{
-    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git', true)
-
-    AUTHOR_NAME = bat (
-            script: "git show -s --format=%%an HEAD ",
-            returnStdout: true
-            ).split('\r\n')[2].trim()
-
-    echo "The last commit was written by ${AUTHOR_NAME}."
-    options.AUTHOR_NAME = AUTHOR_NAME
-
-    commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true ).split('\r\n')[2].trim()
-    echo "Commit message: ${commitMessage}"
-    options.commitMessage = commitMessage
+    options.packageName = getArtifactName('radeonimagefilters', options.branch, options.commit)
+    options.modelsName = getArtifactName('models', options.branch, options.commit)
+    options.samplesName = getArtifactName('samples', options.branch, options.commit)
 
     if (env.CHANGE_URL) {
         echo "branch was detected as Pull Request"
@@ -272,6 +296,7 @@ def executePreBuild(Map options)
     }
 }
 
+
 def executeBuild(String osName, Map options)
 {
     try {
@@ -281,22 +306,19 @@ def executeBuild(String osName, Map options)
         switch(osName)
         {
         case 'Windows':
-            executeBuildWindows(options.cmakeKeys);
+            executeBuildWindows(options.cmakeKeys, osName, options);
             break;
         case 'OSX':
-            executeBuildUnix(options.cmakeKeys, osName, 'osx', '-R', 'clang');
+            executeBuildUnix(options.cmakeKeys, osName, options, 'clang');
             break;
         case 'CentOS7':
-            executeBuildUnix(options.cmakeKeys, osName, 'centos7', '-r');
-            break;
-        case 'Ubuntu':
-            executeBuildUnix(options.cmakeKeys, 'Ubuntu16', 'linux64', '-r');
+            executeBuildUnix(options.cmakeKeys, osName, options);
             break;
         case 'Ubuntu18':
-            executeBuildUnix(options.cmakeKeys, osName, 'linux64', '-r');
+            executeBuildUnix(options.cmakeKeys, osName, options);
             break;
         case 'Ubuntu18-Clang':
-            executeBuildUnix("${options.cmakeKeys} -DRIF_UNITTEST=OFF -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, 'linux64', '-r', 'clang-5.0');
+            executeBuildUnix("${options.cmakeKeys} -DRIF_UNITTEST=OFF -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, options, 'clang-5.0');
             break;
         default:
             error('Unsupported OS');
@@ -307,7 +329,7 @@ def executeBuild(String osName, Map options)
         throw e
     }
     finally {
-        archiveArtifacts "${STAGE_NAME}.log"
+        archiveArtifacts "*.log"
     }
 }
 
@@ -321,7 +343,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             testResultList.each() {
 
                 try {
-                    unstash "$it"
+                    unstash "${it}.dynamic"
+                    unstash "${it}.static"
                 } catch(e) {
                     echo "[ERROR] Failed to unstash ${it}"
                     println(e.toString());
@@ -342,28 +365,36 @@ def executeDeploy(Map options, List platformList, List testResultList)
         }
 
         utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report")
+
     } else {
+
         checkOutBranchOrScm("master", "git@github.com:Radeon-Pro/RadeonProImageProcessingSDK.git")
 
         bat """
-        git rm -r *
+            git rm -r *
         """
 
         platformList.each() {
             dir("${it}") {
-                unstash "deploy${it}"
+                dir("Dynamic"){
+                    unstash "deploy-dynamic-${it}"
+                }
+                dir("Static"){
+                    unstash "deploy-static-${it}"
+                }
             }
         }
+
         unstash "models"
         unstash "samples"
         unstash "txtFiles"
         unstash "include"
 
         bat """
-        git add --all
-        git commit -m "buildmaster: SDK release v${env.TAG_NAME}"
-        git tag -a rif_sdk_${env.TAG_NAME} -m "rif_sdk_${env.TAG_NAME}"
-        git push --tag origin HEAD:master
+            git add --all
+            git commit -m "buildmaster: SDK release v${env.TAG_NAME}"
+            git tag -a rif_sdk_${env.TAG_NAME} -m "rif_sdk_${env.TAG_NAME}"
+            git push --tag origin HEAD:master
         """
     }
 }
@@ -374,9 +405,8 @@ def call(String projectBranch = "",
          Boolean enableNotifications = true,
          String cmakeKeys = '',
          Boolean testPerformance = false) {
-    //TOOD: Ubuntu AMD_RadeonVII
-    String PRJ_NAME="RadeonProImageProcessor"
-    String PRJ_ROOT="rpr-core"
+
+    println "TAG_NAME: ${env.TAG_NAME}"
 
     def deployStage = env.TAG_NAME || testPerformance ? this.&executeDeploy : null
     platforms = env.TAG_NAME ? "Windows;Ubuntu18;OSX;CentOS7;" : platforms
@@ -392,8 +422,8 @@ def call(String projectBranch = "",
                             TEST_TIMEOUT:'30',
                             executeBuild:true,
                             executeTests:true,
-                            PRJ_NAME:PRJ_NAME,
-                            PRJ_ROOT:PRJ_ROOT,
+                            PRJ_NAME:"RadeonProImageProcessor",
+                            PRJ_ROOT:"rpr-core",
                             cmakeKeys:cmakeKeys,
                             testPerformance:testPerformance,
                             nodeRetry: nodeRetry,
