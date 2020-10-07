@@ -927,8 +927,8 @@ def executePreBuild(Map options)
             }
             options.tests = tests
 
-            options.skippedTests = []
-            platforms.split(';').each()
+            options.skippedTests = [:]
+            options.platforms.split(';').each()
             {
                 if (it)
                 {
@@ -957,17 +957,23 @@ def executePreBuild(Map options)
                                         testName = test
                                         engine = options.engines
                                     }
-                                    String testResultItem = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
-                                    String output = bat(script: "jobs_launcher\\is_group_skipped.bat ${asicName} ${osName} ${engine} \"..\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim().split('\n')
-                                    print(output)
+                                    dir ("jobs_launcher") {
+                                        String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
+                                        if (output.contains("True")) {
+                                            if (!options.skippedTests.containsKey(test)) {
+                                                options.skippedTests[test] = []
+                                            }
+                                            options.skippedTests[test].add("${it}-${osName}")
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-
-                    tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
                 }
             }
+            println "Skipped test groups:"
+            println options.skippedTests.inspect()
         }
     } catch (e) {
         String errorMessage = "Failed to configurate tests."
