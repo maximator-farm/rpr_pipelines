@@ -144,4 +144,15 @@ class utils {
         return "Failed to build report."
     }
 
+    static def isReportFailCritical(String exceptionMessage) {
+        if (!exceptionMessage) {
+            return true
+        }
+        String[] messageParts = exceptionMessage.split(" ")
+        Integer exitCode = messageParts[messageParts.length - 1].isInteger() ? messageParts[messageParts.length - 1].toInteger() : null
+
+        // Failed to build summary report and unexpected fails
+        return exitCode >= -1
+    }
+
 }
