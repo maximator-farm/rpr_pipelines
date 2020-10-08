@@ -726,6 +726,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 dir("jobs_launcher") {
+                    def skippedTests = JsonOutput.toJson(options.skippedTests)
                     bat """
                     count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"${escapeCharsByUnicode(skippedTests.toString())}\"
                     """
