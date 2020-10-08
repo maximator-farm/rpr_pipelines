@@ -1089,8 +1089,15 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         tests = options.tests
                     }
                     options.engines.split(",").each {
+                        String engine
+                        if (options.engines.count(",") > 0) {
+                            engine = "${it}"
+                        } else {
+                            engine = ""
+                        }
+                        def skippedTests = JsonOutput.toJson(options.skippedTests)
                         bat """
-                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\"
+                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${escapeCharsByUnicode(skippedTests.toString())}\"
                         """
                     }
                 }
