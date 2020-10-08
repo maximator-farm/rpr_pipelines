@@ -992,6 +992,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     } else {
                         tests = options.tests
                     }
+                    tests = tests.toString().replace(" ", "")
                     options.engines.split(",").each {
                         String engine
                         if (options.engines.count(",") > 0) {
