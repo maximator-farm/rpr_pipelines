@@ -632,14 +632,20 @@ def executePreBuild(Map options)
                         {
                             for (test in options.tests) 
                             {
-                                dir ("jobs_launcher") {
-                                    String output = bat(script: "is_group_skipped.bat ${it} ${osName} \"\" \"..\\jobs\\Tests\\${test}\\test.cases.json\"", returnStdout: true).trim()
-                                    if (output.contains("True")) {
-                                        if (!options.skippedTests.containsKey(test)) {
-                                            options.skippedTests[test] = []
+                                try {
+                                    dir ("jobs_launcher") {
+                                        String output = bat(script: "is_group_skipped.bat ${it} ${osName} \"\" \"..\\jobs\\Tests\\${test}\\test.cases.json\"", returnStdout: true).trim()
+                                        if (output.contains("True")) {
+                                            if (!options.skippedTests.containsKey(test)) {
+                                                options.skippedTests[test] = []
+                                            }
+                                            options.skippedTests[test].add("${it}-${osName}")
                                         }
-                                        options.skippedTests[test].add("${it}-${osName}")
                                     }
+                                }
+                                catch(Exception e) {
+                                    println(e.toString())
+                                    println(e.getMessage())
                                 }
                             }
                         }
