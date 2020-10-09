@@ -221,25 +221,26 @@ def executeTestCommand(String osName, String asicName, Map options)
 
     timeout(time: test_timeout, unit: 'MINUTES') { 
 
-        build_id = "none"
-        job_id = "none"
+        String buildIdProd, buildIdDev, jobIdProd, jobIdDev, isUrl = "none"
         if (options.sendToUMS && universeClientProd.build != null){
-            build_id_prod = universeClientProd.build["id"]
-            job_id_prod = universeClientProd.build["job_id"]
+            buildIdProd = universeClientProd.build["id"]
+            jobIdProd = universeClientProd.build["job_id"]
+            isUrl = universeClientProd.is_url
         }
         if (options.sendToUMS && universeClientDev.build != null){
-            build_id_dev = universeClientDev.build["id"]
-            job_id_dev = universeClientDev.build["job_id"]
+            buildIdDev = universeClientDev.build["id"]
+            jobIdDev = universeClientDev.build["job_id"]
+            isUrl = universeClientDev.is_url
         }
         withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
             usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')])
         {
             withEnv(["UMS_USE=${options.sendToUMS}", "UMS_ENV_LABEL=${osName}-${asicName}",
-                "UMS_BUILD_ID_PROD=${build_id_prod}", "UMS_JOB_ID_PROD=${job_id_prod}", "UMS_URL_PROD=${universeClientProd.url}", 
-                "IS_URL_PROD=${universeClientProd.is_url}", "UMS_LOGIN_PROD=${UMS_USER}", "UMS_PASSWORD_PROD=${UMS_PASSWORD}",
-                "UMS_BUILD_ID_DEV=${build_id_dev}", "UMS_JOB_ID_DEV=${job_id_dev}", "UMS_URL_DEV=${universeClientDev.url}",
-                "IS_URL_DEV=${universeClientDev.is_url}", "UMS_LOGIN_DEV=${UMS_USER}", "UMS_PASSWORD_DEV=${UMS_PASSWORD}",
-                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}"])
+                "UMS_BUILD_ID_PROD=${buildIdProd}", "UMS_JOB_ID_PROD=${jobIdProd}", "UMS_URL_PROD=${universeClientProd.url}", 
+                "UMS_LOGIN_PROD=${UMS_USER}", "UMS_PASSWORD_PROD=${UMS_PASSWORD}",
+                "UMS_BUILD_ID_DEV=${buildIdDev}", "UMS_JOB_ID_DEV=${jobIdDev}", "UMS_URL_DEV=${universeClientDev.url}",
+                "UMS_LOGIN_DEV=${UMS_USER}", "UMS_PASSWORD_DEV=${UMS_PASSWORD}",
+                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${isUrl}"])
             {
                 switch(osName)
                 {
