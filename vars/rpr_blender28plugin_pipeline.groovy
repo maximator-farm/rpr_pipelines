@@ -7,7 +7,8 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field UniverseClient universeClient = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Blender")
+@Field UniverseClient universeClientProd = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Blender")
+@Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5001", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Blender")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
@@ -222,16 +223,23 @@ def executeTestCommand(String osName, String asicName, Map options)
 
         build_id = "none"
         job_id = "none"
-        if (options.sendToUMS && universeClient.build != null){
-            build_id = universeClient.build["id"]
-            job_id = universeClient.build["job_id"]
+        if (options.sendToUMS && universeClientProd.build != null){
+            build_id_prod = universeClientProd.build["id"]
+            job_id_prod = universeClientProd.build["job_id"]
+        }
+        if (options.sendToUMS && universeClientDev.build != null){
+            build_id_dev = universeClientDev.build["id"]
+            job_id_dev = universeClientDev.build["job_id"]
         }
         withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
             usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')])
         {
-            withEnv(["UMS_USE=${options.sendToUMS}", "UMS_BUILD_ID=${build_id}", "UMS_JOB_ID=${job_id}",
-                "UMS_URL=${universeClient.url}", "UMS_ENV_LABEL=${osName}-${asicName}", "IS_URL=${universeClient.is_url}",
-                "UMS_LOGIN=${UMS_USER}", "UMS_PASSWORD=${UMS_PASSWORD}", "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}"])
+            withEnv(["UMS_USE=${options.sendToUMS}", "UMS_ENV_LABEL=${osName}-${asicName}",
+                "UMS_BUILD_ID_PROD=${build_id_prod}", "UMS_JOB_ID_PROD=${job_id_prod}", "UMS_URL_PROD=${universeClientProd.url}", 
+                "IS_URL_PROD=${universeClientProd.is_url}", "UMS_LOGIN_PROD=${UMS_USER}", "UMS_PASSWORD_PROD=${UMS_PASSWORD}",
+                "UMS_BUILD_ID_DEV=${build_id_dev}", "UMS_JOB_ID_DEV=${job_id_dev}", "UMS_URL_DEV=${universeClientDev.url}",
+                "IS_URL_DEV=${universeClientDev.is_url}", "UMS_LOGIN_DEV=${UMS_USER}", "UMS_PASSWORD_DEV=${UMS_PASSWORD}",
+                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}"])
             {
                 switch(osName)
                 {
@@ -261,7 +269,8 @@ def executeTests(String osName, String asicName, Map options)
 {
     // TODO: improve envs, now working on Windows testers only
     if (options.sendToUMS){
-        universeClient.stage("Tests-${osName}-${asicName}", "begin")
+        universeClientProd.stage("Tests-${osName}-${asicName}", "begin")
+        universeClientDev.stage("Tests-${osName}-${asicName}", "begin")
     }
 
     // get engine from test group name if there are more than one engines
@@ -436,7 +445,8 @@ def executeTests(String osName, String asicName, Map options)
 
                         if (options.sendToUMS)
                         {
-                            universeClient.stage("Tests-${osName}-${asicName}", "end")
+                            universeClientProd.stage("Tests-${osName}-${asicName}", "end")
+                            universeClientDev.stage("Tests-${osName}-${asicName}", "end")
                         }
 
                         if (sessionReport.summary.error > 0) {
@@ -605,7 +615,8 @@ def executeBuildLinux(String osName, Map options)
 def executeBuild(String osName, Map options)
 {
     if (options.sendToUMS){
-        universeClient.stage("Build-" + osName , "begin")
+        universeClientProd.stage("Build-" + osName , "begin")
+        universeClientDev.stage("Build-" + osName , "begin")
     }
     try {
         dir('RadeonProRenderBlenderAddon')
@@ -668,7 +679,8 @@ def executeBuild(String osName, Map options)
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
     if (options.sendToUMS){
-        universeClient.stage("Build-" + osName, "end")
+        universeClientProd.stage("Build-" + osName, "end")
+        universeClientDev.stage("Build-" + osName, "end")
     }
 }
 
@@ -948,10 +960,12 @@ def executePreBuild(Map options)
         {
             // Universe : auth because now we in node
             // If use httpRequest in master slave will catch 408 error
-            universeClient.tokenSetup()
+            universeClientProd.tokenSetup()
+            universeClientDev.tokenSetup()
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            universeClient.createBuild(options.universePlatforms, options.groupsUMS)
+            universeClientProd.createBuild(options.universePlatforms, options.groupsUMS)
+            universeClientDev.createBuild(options.universePlatforms, options.groupsUMS)
         }
         catch (e)
         {
@@ -1211,7 +1225,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             if (options.sendToUMS) {
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
-                    universeClient.changeStatus(status)
+                    universeClientProd.changeStatus(status)
+                    universeClientDev.changeStatus(status)
                 }
                 catch (e){
                     println(e.getMessage())
@@ -1432,7 +1447,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     {
         currentBuild.result = "FAILURE"
         if (sendToUMS){
-            universeClient.changeStatus(currentBuild.result)
+            universeClientProd.changeStatus(currentBuild.result)
+            universeClientDev.changeStatus(currentBuild.result)
         }
         println(e.toString());
         println(e.getMessage());
