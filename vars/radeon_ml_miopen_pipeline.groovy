@@ -260,7 +260,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080;Ubuntu18:AMD_RadeonVII,NVIDIA_GTX980;CentOS7_6',
+         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7_6',
          String PRJ_ROOT='rpr-ml',
          String PRJ_NAME='MIOpen',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',

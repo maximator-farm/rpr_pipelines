@@ -245,7 +245,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
                 if (jobsViews.contains('Autojobs')) {
                     currentBuild.displayName = "${currentBuild.displayName} (Priority: 20)"
-                } else if (jobsViews.contains('Large_autojobs')) {
+                } else if (jobsViews.contains('Large_autojobs') || jobsViews.contains('Plugins Weekly')) {
                     currentBuild.displayName = "${currentBuild.displayName} (Priority: 30)"
                 } else {
                     currentBuild.displayName = "${currentBuild.displayName} (Priority: 40)"

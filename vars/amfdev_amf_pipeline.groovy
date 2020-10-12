@@ -1,4 +1,8 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+import static groovy.io.FileType.FILES
+import net.sf.json.JSON
+import net.sf.json.JSONSerializer
+import net.sf.json.JsonConfig
 
 def getAmfTool(String osName, String build_name, Map options)
 {
@@ -72,7 +76,7 @@ def executeTestCommand(String osName, String build_name, Map options)
             dir('AMF')
             {
                 bat """
-                    autotests.exe --gtest_filter=\"${options.testsFilter}\" >> ../${STAGE_NAME}.${build_name}.log 2>&1
+                    autotests.exe --gtest_output=json:../${STAGE_NAME}.${build_name}.json --gtest_filter=\"${options.testsFilter}\" >> ../${STAGE_NAME}.${build_name}.log 2>&1
                 """
             }
             break;
@@ -81,7 +85,7 @@ def executeTestCommand(String osName, String build_name, Map options)
             {
                 sh """
                     chmod u+x autotests
-                    ./autotests --gtest_filter=\"${options.testsFilter}\" >> ../${STAGE_NAME}.${build_name}.log 2>&1
+                    ./autotests --gtest_output=json:../${STAGE_NAME}.${build_name}.json --gtest_filter=\"${options.testsFilter}\" >> ../${STAGE_NAME}.${build_name}.log 2>&1
                 """
             }
             break;
@@ -118,23 +122,33 @@ def renameLog(String osName, String build_name)
 
 
 def executeTests(String osName, String asicName, Map options) {
-    switch(osName) {
-        case 'Windows':
-            executeTestsWindows(osName, asicName, options)
-            break;
-        case 'OSX':
-            executeTestsOSX(osName, asicName, options)
-            break;
-        default:
-            
-            // TODO implement tests for Linux
+    try {
+        switch(osName) {
+            case 'Windows':
+                executeTestsWindows(osName, asicName, options)
+                break;
+            case 'OSX':
+                executeTestsOSX(osName, asicName, options)
+                break;
+            default:
+                
+                // TODO implement tests for Linux
 
-            break;
+                break;
+        }
+    } catch (e) {
+        println(e.toString());
+        println(e.getMessage());
+        throw e
+    } finally {
+        archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+        stash includes: "${STAGE_NAME}.*.json, *.log", name: "${options.testResultsName}", allowEmpty: true
     }
 }
 
 
 def executeTestsWindows(String osName, String asicName, Map options) {
+    cleanWS(osName)
     options.buildConfiguration.each() { win_build_conf ->
         options.winVisualStudioVersion.each() { win_vs_ver ->
             options.winLibraryType.each() { win_lib_type ->
@@ -143,7 +157,7 @@ def executeTestsWindows(String osName, String asicName, Map options) {
                 println "Current VS version: ${win_vs_ver}."
                 println "Current library type: ${win_lib_type}."
 
-                win_build_name = generateBuildNameWindows(win_build_conf, win_vs_ver, win_lib_type)
+                String win_build_name = generateBuildNameWindows(win_build_conf, win_vs_ver, win_lib_type)
 
                 try {
                     if (!options[win_build_name + 'sha']) {
@@ -153,7 +167,6 @@ def executeTestsWindows(String osName, String asicName, Map options) {
 
                     timeout(time: "5", unit: 'MINUTES') {
                         try {
-                            cleanWS(osName)
                             getAmfTool(osName, win_build_name, options)
                         } catch(e) {
                             println("[ERROR] Failed to prepare tests on ${env.NODE_NAME}")
@@ -173,24 +186,35 @@ def executeTestsWindows(String osName, String asicName, Map options) {
                 } finally {
                     try {
                         renameLog(osName, win_build_name)
-                        archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
                     } catch (e) {
                         println("[ERROR] Failed to copy logs")
                         println(e.toString())
                     }
+                    try {
+                        String outputJsonName = "${STAGE_NAME}.${win_build_name}.json"
+                        def outputJson = readJSON file: outputJsonName
+                        outputJson["platform"] = env.STAGE_NAME.replace("Test-", "")
+                        outputJson["configuration"] = win_build_name
+                        outputJson["hostname"] = env.NODE_NAME
+                        JSON serializedJson = JSONSerializer.toJSON(outputJson, new JsonConfig());
+                        writeJSON file: outputJsonName, json: serializedJson, pretty: 4
+                    } catch (e) {
+                        println("[ERROR] Failed to save additional information")
+                        println(e.toString())
+                    }
                     bat """
                         if exist AMF rmdir /Q /S AMF
+                        if exist binWindows.zip del binWindows.zip
                     """
                 }
-
             }
         }
     }
-    
 }
 
 
 def executeTestsOSX(String osName, String asicName, Map options) {
+    cleanWS(osName)
     options.buildConfiguration.each() { osx_build_conf ->
         options.osxTool.each() { osx_tool ->
             options.osxLibraryType.each() { osx_lib_type ->
@@ -199,7 +223,7 @@ def executeTestsOSX(String osName, String asicName, Map options) {
                 println "Current tool: ${osx_tool}."
                 println "Current library type: ${osx_lib_type}."
 
-                osx_build_name = generateBuildNameOSX(osx_build_conf, osx_tool, osx_lib_type)
+                String osx_build_name = generateBuildNameOSX(osx_build_conf, osx_tool, osx_lib_type)
 
                 try {
                     if (!options[osx_build_name + 'sha']) {
@@ -209,7 +233,6 @@ def executeTestsOSX(String osName, String asicName, Map options) {
 
                     timeout(time: "5", unit: 'MINUTES') {
                         try {
-                            cleanWS(osName)
                             getAmfTool(osName, osx_build_name, options)
                         } catch(e) {
                             println("[ERROR] Failed to prepare tests on ${env.NODE_NAME}")
@@ -229,16 +252,27 @@ def executeTestsOSX(String osName, String asicName, Map options) {
                 } finally {
                     try {
                         renameLog(osName, osx_build_name)
-                        archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
                     } catch (e) {
                         println("[ERROR] Failed to copy logs")
                         println(e.toString())
                     }
+                    try {
+                        String outputJsonName = "${STAGE_NAME}.${osx_build_name}.json"
+                        def outputJson = readJSON file: outputJsonName
+                        outputJson["platform"] = env.STAGE_NAME.replace("Test-", "")
+                        outputJson["configuration"] = osx_build_name
+                        outputJson["hostname"] = env.NODE_NAME
+                        JSON serializedJson = JSONSerializer.toJSON(outputJson, new JsonConfig());
+                        writeJSON file: outputJsonName, json: serializedJson, pretty: 4
+                    } catch (e) {
+                        println("[ERROR] Failed to save additional information")
+                        println(e.toString())
+                    }
                     sh """
                         rm -rf AMF
+                        rm -rf binOSX.zip
                     """
                 }
-
             }
         }
     }
@@ -613,7 +647,36 @@ def executePreBuild(Map options) {
 
 
 def executeDeploy(Map options, List platformList, List testResultList) {
-    // TODO: implement deploy stage
+    cleanWS()
+
+    dir("testResults") {
+        testResultList.each() {
+
+            try {
+                unstash "$it"
+            } catch(e) {
+                echo "[ERROR] Failed to unstash ${it}"
+                println(e.toString());
+                println(e.getMessage());
+            }
+
+        }
+    }
+
+    dir("amf-report") {
+        String branchName = env.BRANCH_NAME ?: options.projectBranch
+        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+
+        dir("amf/public/proj/OpenAMF_Autotests/Reports") {
+            bat """
+            set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
+            pip install -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
+            python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
+            """
+        }
+    }
+
+    utils.publishReport(this, "${BUILD_URL}", "testResults", "mainPage.html", "Test Report", "Summary Report")
 }
 
 
