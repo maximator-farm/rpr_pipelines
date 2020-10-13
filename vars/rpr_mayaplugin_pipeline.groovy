@@ -179,28 +179,17 @@ def executeTestCommand(String osName, String asicName, Map options)
 
     timeout(time: test_timeout, unit: 'MINUTES') { 
 
-        String buildIdProd, buildIdDev, jobIdProd, jobIdDev, isUrl = "none"
-        if (options.sendToUMS && universeClientProd.build != null){
-            buildIdProd = universeClientProd.build["id"]
-            jobIdProd = universeClientProd.build["job_id"]
-            isUrl = universeClientProd.is_url
-        }
-        if (options.sendToUMS && universeClientDev.build != null){
-            buildIdDev = universeClientDev.build["id"]
-            jobIdDev = universeClientDev.build["job_id"]
-            isUrl = universeClientDev.is_url
-        }
         withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
             usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD'),
             string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
             usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
         {
             withEnv(["UMS_USE=${options.sendToUMS}", "UMS_ENV_LABEL=${osName}-${asicName}",
-                "UMS_BUILD_ID_PROD=${buildIdProd}", "UMS_JOB_ID_PROD=${jobIdProd}", "UMS_URL_PROD=${universeClientProd.url}", 
+                "UMS_BUILD_ID_PROD=${options.buildIdProd}", "UMS_JOB_ID_PROD=${options.jobIdProd}", "UMS_URL_PROD=${universeClientProd.url}", 
                 "UMS_LOGIN_PROD=${UMS_USER}", "UMS_PASSWORD_PROD=${UMS_PASSWORD}",
-                "UMS_BUILD_ID_DEV=${buildIdDev}", "UMS_JOB_ID_DEV=${jobIdDev}", "UMS_URL_DEV=${universeClientDev.url}",
+                "UMS_BUILD_ID_DEV=${options.buildIdDev}", "UMS_JOB_ID_DEV=${options.jobIdDev}", "UMS_URL_DEV=${universeClientDev.url}",
                 "UMS_LOGIN_DEV=${UMS_USER}", "UMS_PASSWORD_DEV=${UMS_PASSWORD}",
-                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${isUrl}",
+                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${options.isUrl}",
                 "MINIO_ENDPOINT=${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY=${MINIO_SECRET_KEY}"])
             {
                 switch(osName)
@@ -399,6 +388,15 @@ def executeTests(String osName, String asicName, Map options)
     } finally {
         try {
             archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+            if (options.sendToUMS) {
+                dir("jobs_launcher") {
+                    withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
+                        usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
+                    {
+                        utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], osName, "..", "*.log")
+                    }
+                }
+            }
             if (stashResults) {
                 dir('Work')
                 {
@@ -481,6 +479,16 @@ def executeBuildWindows(Map options)
         String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
         rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
+        if (options.sendToUMS) {
+            dir("../../jobs_test_maya/jobs_launcher") {
+                withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
+                    usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
+                {
+                    utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], "Windows", "..\\..\\RadeonProRenderBlenderAddon\\MayaPkg", BUILD_NAME)                            
+                }
+            }
+        }
+
         bat """
             rename RadeonProRender*.msi RadeonProRenderMaya.msi
         """
@@ -529,6 +537,16 @@ def executeBuildOSX(Map options)
             String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
+            if (options.sendToUMS) {
+                dir("../../jobs_test_maya/jobs_launcher") {
+                    withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
+                        usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
+                    {
+                        utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], "OSX", "../../RadeonProRenderBlenderAddon/MayaPkg", BUILD_NAME)                            
+                    }
+                }
+            }
+
             sh "cp RadeonProRender*.dmg RadeonProRenderMaya.dmg"
             stash includes: 'RadeonProRenderMaya.dmg', name: "appOSX"
 
@@ -568,6 +586,18 @@ def executeBuild(String osName, Map options)
             }
         }
 
+        if (options.sendToUMS) {
+            dir('jobs_test_maya') {
+                try {
+                    checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
+                } catch (e) {
+                    println("[WARNING] Failed to download tests repository")
+                    println(e.toString())
+                    println(e.getMessage())
+                }
+            }
+        }
+
         outputEnvironmentInfo(osName)
 
         try {
@@ -593,6 +623,15 @@ def executeBuild(String osName, Map options)
     }
     finally {
         archiveArtifacts "*.log"
+        if (options.sendToUMS) {
+            dir("jobs_test_maya/jobs_launcher") {
+                withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
+                    usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
+                {
+                    utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], osName, "..\\..", "*.log")                            
+                }
+            }
+        }
     }
     if (options.sendToUMS){
         universeClientProd.stage("Build-" + osName, "end")
@@ -878,6 +917,17 @@ def executePreBuild(Map options)
         catch (e)
         {
             println(e.toString())
+        }
+
+        if (universeClientProd.build != null){
+            options.buildIdProd = universeClientProd.build["id"]
+            options.jobIdProd = universeClientProd.build["job_id"]
+            options.isUrl = universeClientProd.is_url
+        }
+        if (universeClientDev.build != null){
+            options.buildIdDev = universeClientDev.build["id"]
+            options.jobIdDev = universeClientDev.build["job_id"]
+            options.isUrl = universeClientDev.is_url
         }
     }
 
