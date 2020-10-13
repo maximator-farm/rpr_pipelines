@@ -390,11 +390,7 @@ def executeTests(String osName, String asicName, Map options)
             archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
             if (options.sendToUMS) {
                 dir("jobs_launcher") {
-                    withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
-                        usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
-                    {
-                        utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], osName, "..", "*.log")
-                    }
+                    sendToMINIO(options, osName, "..", "*.log")
                 }
             }
             if (stashResults) {
@@ -481,11 +477,7 @@ def executeBuildWindows(Map options)
 
         if (options.sendToUMS) {
             dir("../../jobs_test_maya/jobs_launcher") {
-                withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
-                    usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
-                {
-                    utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], "Windows", "..\\..\\RadeonProRenderBlenderAddon\\MayaPkg", BUILD_NAME)                            
-                }
+                sendToMINIO(options, "Windows", "..\\..\\RadeonProRenderBlenderAddon\\MayaPkg", BUILD_NAME)
             }
         }
 
@@ -539,11 +531,7 @@ def executeBuildOSX(Map options)
 
             if (options.sendToUMS) {
                 dir("../../jobs_test_maya/jobs_launcher") {
-                    withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
-                        usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
-                    {
-                        utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], "OSX", "../../RadeonProRenderBlenderAddon/MayaPkg", BUILD_NAME)                            
-                    }
+                    sendToMINIO(options, "OSX", "../../RadeonProRenderBlenderAddon/MayaPkg", BUILD_NAME)                            
                 }
             }
 
@@ -625,11 +613,13 @@ def executeBuild(String osName, Map options)
         archiveArtifacts "*.log"
         if (options.sendToUMS) {
             dir("jobs_test_maya/jobs_launcher") {
-                withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
-                    usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
-                {
-                    utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], osName, "..\\..", "*.log")                            
-                }
+                switch(osName) {
+                    case 'Windows':
+                        sendToMINIO(options, osName, "..\\..", "*.log")
+                        break;
+                    default:
+                        sendToMINIO(options, osName, "../..", "*.log")
+                }                          
             }
         }
     }

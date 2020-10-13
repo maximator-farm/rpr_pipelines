@@ -707,7 +707,13 @@ def executeBuild(String osName, Map options)
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
         if (options.sendToUMS) {
             dir("jobs_test_blender/jobs_launcher") {
-                sendToMINIO(options, osName, "..\\..", "*.log")
+                switch(osName) {
+                    case 'Windows':
+                        sendToMINIO(options, osName, "..\\..", "*.log")
+                        break;
+                    default:
+                        sendToMINIO(options, osName, "../..", "*.log")
+                }
             }
         }
     }
