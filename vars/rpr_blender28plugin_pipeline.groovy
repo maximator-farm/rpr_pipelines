@@ -526,7 +526,7 @@ def executeBuildWindows(Map options)
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             if (options.sendToUMS) {
-                dir("../jobs_test_blender/jobs_launcher") {
+                dir("../../../jobs_test_blender/jobs_launcher") {
                     withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
                         usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
                     {
@@ -574,7 +574,7 @@ def executeBuildOSX(Map options)
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             if (options.sendToUMS) {
-                dir("../jobs_test_blender/jobs_launcher") {
+                dir("../../../jobs_test_blender/jobs_launcher") {
                     withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
                         usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
                     {
@@ -623,7 +623,7 @@ def executeBuildLinux(String osName, Map options)
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             if (options.sendToUMS) {
-                dir("../jobs_test_blender/jobs_launcher") {
+                dir("../../../jobs_test_blender/jobs_launcher") {
                     withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
                         usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
                     {
