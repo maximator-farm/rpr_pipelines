@@ -477,7 +477,7 @@ def executeBuildWindows(Map options)
 
         if (options.sendToUMS) {
             dir("../../jobs_test_maya/jobs_launcher") {
-                sendToMINIO(options, "Windows", "..\\..\\RadeonProRenderBlenderAddon\\MayaPkg", BUILD_NAME)
+                sendToMINIO(options, "Windows", "..\\..\\RadeonProRenderMayaPlugin\\MayaPkg", BUILD_NAME)
             }
         }
 
@@ -531,7 +531,7 @@ def executeBuildOSX(Map options)
 
             if (options.sendToUMS) {
                 dir("../../jobs_test_maya/jobs_launcher") {
-                    sendToMINIO(options, "OSX", "../../RadeonProRenderBlenderAddon/MayaPkg", BUILD_NAME)                            
+                    sendToMINIO(options, "OSX", "../../RadeonProRenderMayaAddon/MayaPkg", BUILD_NAME)                            
                 }
             }
 
