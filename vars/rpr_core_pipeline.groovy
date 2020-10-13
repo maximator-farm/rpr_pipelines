@@ -120,28 +120,17 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
-    String buildIdProd, buildIdDev, jobIdProd, jobIdDev, isUrl = "none"
-    if (options.sendToUMS && universeClientProd.build != null){
-        buildIdProd = universeClientProd.build["id"]
-        jobIdProd = universeClientProd.build["job_id"]
-        isUrl = universeClientProd.is_url
-    }
-    if (options.sendToUMS && universeClientDev.build != null){
-        buildIdDev = universeClientDev.build["id"]
-        jobIdDev = universeClientDev.build["job_id"]
-        isUrl = universeClientDev.is_url
-    }
     withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
         usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD'),
         string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
         usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
     {
         withEnv(["UMS_USE=${options.sendToUMS}", "UMS_ENV_LABEL=${osName}-${asicName}",
-            "UMS_BUILD_ID_PROD=${buildIdProd}", "UMS_JOB_ID_PROD=${jobIdProd}", "UMS_URL_PROD=${universeClientProd.url}", 
+            "UMS_BUILD_ID_PROD=${options.buildIdProd}", "UMS_JOB_ID_PROD=${options.jobIdProd}", "UMS_URL_PROD=${universeClientProd.url}", 
             "UMS_LOGIN_PROD=${UMS_USER}", "UMS_PASSWORD_PROD=${UMS_PASSWORD}",
-            "UMS_BUILD_ID_DEV=${buildIdDev}", "UMS_JOB_ID_DEV=${jobIdDev}", "UMS_URL_DEV=${universeClientDev.url}",
+            "UMS_BUILD_ID_DEV=${options.buildIdDev}", "UMS_JOB_ID_DEV=${options.jobIdDev}", "UMS_URL_DEV=${universeClientDev.url}",
             "UMS_LOGIN_DEV=${UMS_USER}", "UMS_PASSWORD_DEV=${UMS_PASSWORD}",
-            "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${isUrl}",
+            "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${options.isUrl}",
             "MINIO_ENDPOINT=${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY=${MINIO_SECRET_KEY}"])
         {
             switch(osName) {
@@ -276,6 +265,11 @@ def executeTests(String osName, String asicName, Map options)
     finally {
         try {
             archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+            if (options.sendToUMS) {
+                dir("jobs_launcher") {
+                    sendToMINIO(options, osName, "..", "*.log")
+                }
+            }
             if (stashResults) {
                 dir('Work')
                 {
@@ -350,6 +344,11 @@ def executeBuildWindows(Map options)
         stash includes: 'binWin64.zip', name: 'WindowsSDK'
         options.pluginWinSha = sha1 'binWin64.zip'
     }
+    if (options.sendToUMS) {
+        dir("jobs_test_core/jobs_launcher") {
+            sendToMINIO(options, "Windows", "..\\..\\RadeonProRenderSDK\\RadeonProRender\\binWin64", "binWin64.zip")                            
+        }
+    }
     GithubNotificator.updateStatus("Build", "Windows", "success", env, options, "RadeonProRenderSDK package was successfully created.", "${BUILD_URL}/artifact/binWin64.zip")
 }
 
@@ -362,6 +361,11 @@ def executeBuildOSX(Map options)
         stash includes: 'binMacOS.zip', name: 'OSXSDK'
         options.pluginOSXSha = sha1 'binMacOS.zip'
     }
+    if (options.sendToUMS) {
+        dir("jobs_test_core/jobs_launcher") {
+            sendToMINIO(options, "OSX", "../../RadeonProRenderSDK/RadeonProRender/binWin64", "binMacOS.zip")                            
+        }
+    }
     GithubNotificator.updateStatus("Build", "OSX", "success", env, options, "RadeonProRenderSDK package was successfully created.", "${BUILD_URL}/artifact/binMacOS.zip")
 }
 
@@ -373,6 +377,11 @@ def executeBuildLinux(Map options)
         zip archive: true, dir: '.', glob: '', zipFile: 'binUbuntu18.zip'
         stash includes: 'binUbuntu18.zip', name: 'Ubuntu18SDK'
         options.pluginUbuntuSha = sha1 'binUbuntu18.zip'
+    }
+    if (options.sendToUMS) {
+        dir("jobs_test_core/jobs_launcher") {
+            sendToMINIO(options, "Ubuntu18", "../../RadeonProRenderSDK/RadeonProRender/binWin64", "binUbuntu18.zip")                            
+        }
     }
     GithubNotificator.updateStatus("Build", "Ubuntu18", "success", env, options, "RadeonProRenderSDK package was successfully created.", "${BUILD_URL}/artifact/binUbuntu18.zip")
 }
@@ -403,6 +412,18 @@ def executeBuild(String osName, Map options)
             }
         }
 
+        if (options.sendToUMS) {
+            dir('jobs_test_core') {
+                try {
+                    checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
+                } catch (e) {
+                    println("[WARNING] Failed to download tests repository")
+                    println(e.toString())
+                    println(e.getMessage())
+                }
+            }
+        }
+
         outputEnvironmentInfo(osName)
 
         try {
@@ -428,6 +449,17 @@ def executeBuild(String osName, Map options)
         throw e
     }
     finally {
+        if (options.sendToUMS) {
+            dir("jobs_test_core/jobs_launcher") {
+                switch(osName) {
+                    case 'Windows':
+                        sendToMINIO(options, osName, "..\\..", "*.log")
+                        break;
+                    default:
+                        sendToMINIO(options, osName, "../..", "*.log")
+                }
+            }
+        }
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
     if (options.sendToUMS){
@@ -543,6 +575,17 @@ def executePreBuild(Map options)
             catch (e)
             {
                 println(e.toString())
+            }
+
+            if (universeClientProd.build != null){
+                options.buildIdProd = universeClientProd.build["id"]
+                options.jobIdProd = universeClientProd.build["job_id"]
+                options.isUrl = universeClientProd.is_url
+            }
+            if (universeClientDev.build != null){
+                options.buildIdDev = universeClientDev.build["id"]
+                options.jobIdDev = universeClientDev.build["job_id"]
+                options.isUrl = universeClientDev.is_url
             }
         }
     } catch (e) {
