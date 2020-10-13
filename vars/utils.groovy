@@ -154,29 +154,4 @@ class utils {
         // Failed to build summary report and unexpected fails
         return exitCode >= -1
     }
-
-    static def sendToMINIO(Object self, Map options, Map minioData, String osName, String filesPath, String pattern) {
-        try {
-            self.withEnv(["UMS_BUILD_ID_PROD=${options.buildIdProd}", "UMS_JOB_ID_PROD=${options.jobIdProd}",
-                "UMS_BUILD_ID_DEV=${options.buildIdDev}", "UMS_JOB_ID_DEV=${options.jobIdDev}",
-                "MINIO_ENDPOINT=${minioData.MINIO_ENDPOINT}", "MINIO_ACCESS_KEY=${minioData.MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY=${minioData.MINIO_SECRET_KEY}"])
-            {
-                switch(osName) {
-                    case "Windows":
-                        self.bat "send_to_minio.bat \"${filesPath}\" \"${pattern}\""
-                        break;
-                    default:
-                        self.sh """
-                            chmod u+x send_to_minio.sh
-                            ./send_to_minio.sh ${filesPath} \"${pattern}\"
-                        """
-                }
-            }
-        } catch (e) {
-            self.println("[WARNING] Failed to send files to MINIO")
-            self.println(e.toString())
-            self.println(e.getMessage())
-        }
-    }
-
 }
