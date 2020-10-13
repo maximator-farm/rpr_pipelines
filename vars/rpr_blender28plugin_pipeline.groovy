@@ -530,7 +530,7 @@ def executeBuildWindows(Map options)
                     withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
                         usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
                     {
-                        utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], "Windows", "..\\..\\RadeonProRenderBlenderAddon", BUILD_NAME)                            
+                        utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], "Windows", "..\\..\\RadeonProRenderBlenderAddon\\BlenderPkg\\.build", BUILD_NAME)                            
                     }
                 }
             }
@@ -578,7 +578,7 @@ def executeBuildOSX(Map options)
                     withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
                         usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
                     {
-                        utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], "OSX", "../../RadeonProRenderBlenderAddon", BUILD_NAME)                            
+                        utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], "OSX", "../../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME)                            
                     }
                 }
             }
@@ -627,7 +627,7 @@ def executeBuildLinux(String osName, Map options)
                     withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
                         usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
                     {
-                        utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], osName, "../../RadeonProRenderBlenderAddon", BUILD_NAME)                            
+                        utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], osName, "../../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME)                            
                     }
                 }
             }
