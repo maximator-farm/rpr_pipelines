@@ -173,7 +173,7 @@ class utils {
                 }
             }
         } catch (e) {
-            self.println("[WARNING] Failed to send logs to MINIO")
+            self.println("[WARNING] Failed to send files to MINIO")
             self.println(e.toString())
             self.println(e.getMessage())
         }

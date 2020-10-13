@@ -726,7 +726,7 @@ def executeBuild(String osName, Map options)
                 withCredentials([string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
                     usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
                 {
-                    utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], "Windows", "..\\..", "*.log")                            
+                    utils.sendToMINIO(this, options, ["MINIO_ENDPOINT": "${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY": "${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY": "${MINIO_SECRET_KEY}"], osName, "..\\..", "*.log")                            
                 }
             }
         }
