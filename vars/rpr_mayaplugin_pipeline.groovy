@@ -376,7 +376,11 @@ def executeTests(String osName, String asicName, Map options)
             }
             options.executeTestsFinished = true
         } catch (e) {
-            throw new ExpectedExceptionWrapper("An error occurred while executing tests. Please contact support.", e)
+            if (utils.isTimeoutExceeded(e)) {
+                throw new ExpectedExceptionWrapper("Failed to execute tests due to timeout.", e)
+            } else {
+                throw new ExpectedExceptionWrapper("An error occurred while executing tests. Please contact support.", e)
+            }
         }
 
     } catch (e) {
