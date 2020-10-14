@@ -144,6 +144,19 @@ class utils {
         return "Failed to build report."
     }
 
+    static def getTestsFromCommitMessage(String commitMessage) {
+        String[] messageParts = commitMessage.split("\n")
+        for (part in messageParts) {
+            if (part.contains("CIS TESTS:")) {
+                String testsRow = part.replace("CIS TESTS:", "").trim()
+                // split by ';', ',' or space characters
+                String[] tests = testsRow.split("\\s*\\;\\s*|\\s*\\,\\s*|\\s+")
+                return tests.join(" ")
+            }
+        }
+        return ""
+    }
+
     static def isReportFailCritical(String exceptionMessage) {
         if (!exceptionMessage) {
             return true

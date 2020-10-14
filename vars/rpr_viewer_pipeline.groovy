@@ -514,7 +514,7 @@ def executePreBuild(Map options)
     }
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-    options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
+    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
     options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
     println "The last commit was written by ${options.commitAuthor}."
@@ -530,6 +530,15 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+    if (options['incrementVersion']) {
+        String testsFromCommit = utils.getTestsFromCommitMessage(options.commitMessage)
+        if(env.BRANCH_NAME != "develop" && testsFromCommit) {
+            // get a list of tests from commit message for auto builds
+            options.tests = testsFromCommit
+            println "[INFO] Test groups mentioned in commit message: ${options.tests}"
+        }
+    }
 
     if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
         properties([[$class: 'BuildDiscarderProperty', strategy:
@@ -858,6 +867,7 @@ def call(String projectBranch = "",
          String platforms = 'Windows:AMD_RadeonVII,AMD_RadeonVII_Beta,NVIDIA_RTX2080TI;Ubuntu18:AMD_RadeonVII',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
+         Boolean incrementVersion = true,
          String testsPackage = "",
          String tests = "",
          Boolean splitTestsExecution = true,
@@ -891,6 +901,7 @@ def call(String projectBranch = "",
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
+                        incrementVersion:incrementVersion,
                         PRJ_NAME:PRJ_NAME,
                         PRJ_ROOT:PRJ_ROOT,
                         projectRepo:projectRepo,
