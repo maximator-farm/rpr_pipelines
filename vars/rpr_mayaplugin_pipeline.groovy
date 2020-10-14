@@ -530,8 +530,8 @@ def executeBuildOSX(Map options)
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             if (options.sendToUMS) {
-                dir("../../jobs_test_maya/jobs_launcher") {
-                    sendToMINIO(options, "OSX", "../../RadeonProRenderMayaAddon/MayaPkg", BUILD_NAME)                            
+                dir("../../../jobs_test_maya/jobs_launcher") {
+                    sendToMINIO(options, "OSX", "../../RadeonProRenderMayaAddon/MayaPkg/.installer_build", BUILD_NAME)                            
                 }
             }
 
