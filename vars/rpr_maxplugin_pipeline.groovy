@@ -333,8 +333,8 @@ def executeBuildWindows(Map options)
         rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
         if (options.sendToUMS) {
-            dir("../../jobs_test_max/jobs_launcher") {
-                sendToMINIO(options, "Windows", "..\\..\\RadeonProRenderMaxPlugin\\Package", BUILD_NAME)                            
+            dir("../../jobs_launcher") {
+                sendToMINIO(options, "Windows", "..\\RadeonProRenderMaxPlugin\\Package", BUILD_NAME)                            
             }
         }
 
@@ -386,13 +386,19 @@ def executeBuild(String osName, Map options)
         }
 
         if (options.sendToUMS) {
-            dir('jobs_test_max') {
-                try {
-                    checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_max.git')
-                } catch (e) {
-                    println("[WARNING] Failed to download tests repository")
-                    println(e.toString())
-                    println(e.getMessage())
+            timeout(time: "5", unit: 'MINUTES') {
+                dir('jobs_launcher') {
+                    try {
+                        checkOutBranchOrScm(options['jobsLauncherBranch'], 'git@github.com:luxteam/jobs_launcher.git')
+                    } catch (e) {
+                        if (utils.isTimeoutExceeded(e)) {
+                            println("[WARNING] Failed to download jobs launcher due to timeout")
+                        } else {
+                            println("[WARNING] Failed to download jobs launcher")
+                        }
+                        println(e.toString())
+                        println(e.getMessage())
+                    }
                 }
             }
         }
@@ -423,10 +429,10 @@ def executeBuild(String osName, Map options)
     }
     finally {
         if (options.sendToUMS) {
-            dir("jobs_test_max/jobs_launcher") {
+            dir("jobs_launcher") {
                 switch(osName) {
                     case 'Windows':
-                        sendToMINIO(options, osName, "..\\..", "*.log")
+                        sendToMINIO(options, osName, "..", "*.log")
                         break;
                 }
             }
@@ -598,7 +604,9 @@ def executePreBuild(Map options)
         dir('jobs_test_max')
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_max.git')
-
+            dir ('jobs_launcher') {
+                options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            }
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             println "[INFO] Test branch hash: ${options['testsBranch']}"
 
