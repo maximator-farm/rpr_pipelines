@@ -638,6 +638,48 @@ def executePreBuild(Map options)
                 }
             }
             options.tests = tests
+
+            options.skippedTests = [:]
+            options.platforms.split(';').each()
+            {
+                if (it)
+                {
+                    List tokens = it.tokenize(':')
+                    String osName = tokens.get(0)
+                    String gpuNames = ""
+                    if (tokens.size() > 1)
+                    {
+                        gpuNames = tokens.get(1)
+                    }
+
+                    if (gpuNames)
+                    {
+                        gpuNames.split(',').each()
+                        {
+                            for (test in options.tests) 
+                            {
+                                try {
+                                    dir ("jobs_launcher") {
+                                        String output = bat(script: "is_group_skipped.bat ${it} ${osName} \"\" \"..\\jobs\\Tests\\${test}\\test.cases.json\"", returnStdout: true).trim()
+                                        if (output.contains("True")) {
+                                            if (!options.skippedTests.containsKey(test)) {
+                                                options.skippedTests[test] = []
+                                            }
+                                            options.skippedTests[test].add("${it}-${osName}")
+                                        }
+                                    }
+                                }
+                                catch(Exception e) {
+                                    println(e.toString())
+                                    println(e.getMessage())
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            println "Skipped test groups:"
+            println options.skippedTests.inspect()
         }
     } catch (e) {
         String errorMessage = "Failed to configurate tests."
@@ -718,8 +760,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 dir("jobs_launcher") {
+                    def skippedTests = JsonOutput.toJson(options.skippedTests)
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests}\"
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"${escapeCharsByUnicode(skippedTests.toString())}\"
                     """
                 }
             } catch (e) {
