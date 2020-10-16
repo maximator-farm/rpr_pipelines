@@ -1007,12 +1007,12 @@ def executePreBuild(Map options)
         {
             // Universe : auth because now we in node
             // If use httpRequest in master slave will catch 408 error
-            universeClientParentProd.createBuild()
-            universeClientParentDev.createBuild()
-
-            // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
             universeClientParentProd.tokenSetup()
             universeClientParentDev.tokenSetup()
+
+            // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+            universeClientParentProd.createBuild()
+            universeClientParentDev.createBuild()
             options.enginesNames.split(',').each {
                 universeClientsProd[it] = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName, it, universeClientParentProd)
                 universeClientsDev[it] = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteNameit, it, universeClientParentDev)
