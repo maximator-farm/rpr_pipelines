@@ -14,9 +14,10 @@ class UniverseClient {
     def build;
     def env;
     def is_url;
+    def is_parent;
 
     /**
-     * Main constructor
+     * Main constructor for builds without engine
      *
      * @param context
      * @param url Universal Monitoring System API  url (example: "https://umsapi.cis.luxoft.com" )
@@ -30,6 +31,43 @@ class UniverseClient {
         this.env = env;
         this.is_url = is_url;
         this.product = product;
+        this.is_parent = false;
+    }
+
+    /**
+     * Constructor for creation of parent build
+     *
+     * @param context
+     * @param url Universal Monitoring System API  url (example: "https://umsapi.cis.luxoft.com" )
+     * @param env Jenkins environment variables object
+     * @param product Name of product (example: "RPR_Maya")
+     * @param is_parent Is that build a parent of some other build or not
+     */
+    UniverseClient(context, url, env, product) {
+        this.url = url;
+        this.context = context;
+        this.env = env;
+        this.product = product;
+        this.is_parent = true;
+    }
+
+    /**
+     * Constructor for creation of child build
+     *
+     * @param context
+     * @param url Universal Monitoring System API  url (example: "https://umsapi.cis.luxoft.com" )
+     * @param env Jenkins environment variables object
+     * @param is_url Image Service API url (example: "https://imgs.cis.luxoft.com")
+     * @param product Name of product (example: "RPR_Maya")
+     * @param engine Is that build a parent of some other build or not
+     * @param child_of UniverseClient which is a parent of creating build
+     */
+    UniverseClient(context, url, env, is_url, product, engine, child_of) {
+        UniverseClient(context, url, env, is_url, product)
+        this.is_parent = false;
+        this.engine = engine;
+        this.child_of = child_of.build;
+        this.token = child_of.token;
     }
 
     /**
@@ -93,7 +131,7 @@ class UniverseClient {
      * @param envs environment list in format: ["OS-1:GPU-1", ..."OS-N:GPU-N"]
      * @param suites suites names list ["Suite1", "Suite2", ..., "SuiteN"]
      */
-    def createBuild(envs, suites) {
+    def createBuild(envs = '', suites = '') {
         def request = {
             def splittedJobName = []
             splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/", 2)))
@@ -118,12 +156,25 @@ class UniverseClient {
                 tags << "${it}"
             }
 
-            def buildBody = [
-                'name': env.BUILD_NUMBER,
-                'envs': envs,
-                'tags': tags,
-                'suites': suites
-            ]
+            def buildBody
+
+            if (is_parent) {
+                buildBody = [
+                    'name': env.BUILD_NUMBER,
+                    'is_parent': true,
+                ]
+            } else {
+                buildBody = [
+                    'name': env.BUILD_NUMBER,
+                    'envs': envs,
+                    'tags': tags,
+                    'suites': suites
+                ]
+                if (engine) {
+                    buildBody['engine'] = this.engine
+                    buildBody['child_of'] = this.child_of
+                }
+            }
 
             def res = this.context.httpRequest(
                 consoleLogResponseBody: true,
