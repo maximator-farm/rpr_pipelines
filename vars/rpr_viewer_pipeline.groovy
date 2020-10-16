@@ -270,7 +270,12 @@ def executeTests(String osName, String asicName, Map options)
     }
     finally {
         try {
-            archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+            dir("${options.stageName}") {
+                utils.moveFiles(this, osName, "../*.log", ".")
+                utils.moveFiles(this, osName, "../scripts/*.log", ".")
+                utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
+            }
+            archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             if (stashResults) {
                 dir('Work')
                 {
