@@ -854,6 +854,60 @@ def executePreBuild(Map options)
                 options.groupsUMS = tests
             }
             options.tests = tests
+
+            options.skippedTests = [:]
+            options.platforms.split(';').each()
+            {
+                if (it)
+                {
+                    List tokens = it.tokenize(':')
+                    String osName = tokens.get(0)
+                    String gpuNames = ""
+                    if (tokens.size() > 1)
+                    {
+                        gpuNames = tokens.get(1)
+                    }
+
+                    if (gpuNames)
+                    {
+                        gpuNames.split(',').each()
+                        {
+                            for (test in options.tests) 
+                            {
+                                if (!test.contains(".json")) {
+                                    String testName = ""
+                                    String engine = ""
+                                    if (options.engines.count(",") > 0) {
+                                        String[] testNameParts = test.split("-")
+                                        testName = testNameParts[0]
+                                        engine = testNameParts[1]
+                                    } else {
+                                        testName = test
+                                        engine = options.engines
+                                    }
+                                    try {
+                                        dir ("jobs_launcher") {
+                                            String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
+                                            if (output.contains("True")) {
+                                                if (!options.skippedTests.containsKey(test)) {
+                                                    options.skippedTests[test] = []
+                                                }
+                                                options.skippedTests[test].add("${it}-${osName}")
+                                            }
+                                        }
+                                    }
+                                    catch(Exception e) {
+                                        println(e.toString())
+                                        println(e.getMessage())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            println "Skipped test groups:"
+            println options.skippedTests.inspect()
         }
     } catch (e) {
         String errorMessage = "Failed to configurate tests."
@@ -966,10 +1020,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     } else {
                         tests = options.tests
                     }
+                    tests = tests.toString().replace(" ", "")
                     options.engines.split(",").each {
+                        String engine
+                        if (options.engines.count(",") > 0) {
+                            engine = "${it}"
+                        } else {
+                            engine = ""
+                        }
+                        def skippedTests = JsonOutput.toJson(options.skippedTests)
                         // \\\\ - prevent escape sequence '\N'
                         bat """
-                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\"
+                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${escapeCharsByUnicode(skippedTests.toString())}\"
                         """
                     }
                 }
@@ -1315,7 +1377,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         gpusCount:gpusCount,
                         TEST_TIMEOUT:120,
                         ADDITIONAL_XML_TIMEOUT:30,
-                        NON_SPLITTED_PACKAGE_TIMEOUT:120,
+                        NON_SPLITTED_PACKAGE_TIMEOUT:60,
                         DEPLOY_TIMEOUT:deployTimeout,
                         TESTER_TAG:tester_tag,
                         universePlatforms: universePlatforms,
