@@ -9,6 +9,7 @@ import TestsExecutionType
 
 @Field String UniverseURLProd = "http://172.26.157.233:5002"
 @Field String UniverseURLDev = "http://172.26.157.233:5002"
+@Field String ImageServiceURL = "https://imgs.cis.luxoft.com"
 @Field String ProducteName = "AMD%20Radeon™%20ProRender%20for%20Blender"
 @Field UniverseClient universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
 @Field UniverseClient universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
@@ -226,26 +227,24 @@ def executeTestCommand(String osName, String asicName, Map options)
 
     timeout(time: test_timeout, unit: 'MINUTES') { 
 
-        String buildIdProd, buildIdDev, jobIdProd, jobIdDev, isUrl = "none"
-        if (options.sendToUMS && universeClientProd.build != null){
+        String buildIdProd, buildIdDev, jobIdProd, jobIdDev = "none"
+        if (options.sendToUMS && universeClientsProd[options.engine].build != null){
             buildIdProd = universeClientsProd[options.engine].build["id"]
             jobIdProd = universeClientsProd[options.engine].build["job_id"]
-            isUrl = universeClientsProd[options.engine].is_url
         }
-        if (options.sendToUMS && universeClientDev.build != null){
-            buildIdDev = universeClientDev[options.engine].build["id"]
-            jobIdDev = universeClientDev[options.engine].build["job_id"]
-            isUrl = universeClientDev[options.engine].is_url
+        if (options.sendToUMS && universeClientsDev[options.engine].build != null){
+            buildIdDev = universeClientsDev[options.engine].build["id"]
+            jobIdDev = universeClientsDev[options.engine].build["job_id"]
         }
         withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
             usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')])
         {
             withEnv(["UMS_USE=${options.sendToUMS}", "UMS_ENV_LABEL=${osName}-${asicName}",
-                "UMS_BUILD_ID_PROD=${buildIdProd}", "UMS_JOB_ID_PROD=${jobIdProd}", "UMS_URL_PROD=${universeClientProd.url}", 
+                "UMS_BUILD_ID_PROD=${buildIdProd}", "UMS_JOB_ID_PROD=${jobIdProd}", "UMS_URL_PROD=${UniverseURLProd}", 
                 "UMS_LOGIN_PROD=${UMS_USER}", "UMS_PASSWORD_PROD=${UMS_PASSWORD}",
-                "UMS_BUILD_ID_DEV=${buildIdDev}", "UMS_JOB_ID_DEV=${jobIdDev}", "UMS_URL_DEV=${universeClientDev.url}",
+                "UMS_BUILD_ID_DEV=${buildIdDev}", "UMS_JOB_ID_DEV=${jobIdDev}", "UMS_URL_DEV=${UniverseURLDev}",
                 "UMS_LOGIN_DEV=${UMS_USER}", "UMS_PASSWORD_DEV=${UMS_PASSWORD}",
-                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${isUrl}"])
+                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${ImageServiceURL}"])
             {
                 switch(osName)
                 {
