@@ -448,6 +448,7 @@ def executeBuild(String osName, Map options)
 
     try {
         try {
+            cleanWS(osName)
             GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading RPRViewer repository.")
             checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
         } catch (e) {
