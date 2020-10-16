@@ -13,6 +13,7 @@ def call(Map options, String osName, String filesPath, String pattern)
                 {
                     switch(osName) {
                         case "Windows":
+                            filesPath = filesPath.replace('/', '\\\\')
                             bat "send_to_minio.bat \"${filesPath}\" \"${pattern}\""
                             break;
                         default:

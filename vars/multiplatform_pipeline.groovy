@@ -63,6 +63,11 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                         testsExecutors["Test-${asicName}-${osName}-${i}"] = {
                             String testName = getNextTest(testsIterator)
                             while (testName != null) {
+                                if (options.skippedTests && options.skippedTests.containsKey(testName) && options.skippedTests[testName].contains("${asicName}-${osName}")) {
+                                    println("Test group ${testName} on ${asicName}-${osName} fully skipped")
+                                    testName = getNextTest(testsIterator)
+                                    continue
+                                }
                                 println("Scheduling ${osName}:${asicName} ${testName}")
 
                                 Map newOptions = options.clone()

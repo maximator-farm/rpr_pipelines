@@ -144,6 +144,19 @@ class utils {
         return "Failed to build report."
     }
 
+    static def getTestsFromCommitMessage(String commitMessage) {
+        String[] messageParts = commitMessage.split("\n")
+        for (part in messageParts) {
+            if (part.contains("CIS TESTS:")) {
+                String testsRow = part.replace("CIS TESTS:", "").trim()
+                // split by ';', ',' or space characters
+                String[] tests = testsRow.split("\\s*\\;\\s*|\\s*\\,\\s*|\\s+")
+                return tests.join(" ")
+            }
+        }
+        return ""
+    }
+
     static def isReportFailCritical(String exceptionMessage) {
         if (!exceptionMessage) {
             return true
@@ -151,7 +164,55 @@ class utils {
         String[] messageParts = exceptionMessage.split(" ")
         Integer exitCode = messageParts[messageParts.length - 1].isInteger() ? messageParts[messageParts.length - 1].toInteger() : null
 
-        // Failed to build summary report and unexpected fails
-        return exitCode >= -1
+        // Unexpected fails
+        return exitCode >= 0
+    }
+
+    static def renameFile(Object self, String osName, String oldName, String newName) {
+        try {
+            switch(osName)
+            {
+            case 'Windows':
+                self.bat """
+                    rename \"${oldName}\" \"${newName}\"
+                """
+                break;
+            // OSX & Ubuntu18
+            default:
+                self.sh """
+                    mv \"${oldName}\" \"${newName}\"
+                """
+            }
+        }
+        catch(Exception e) {
+            self.println("[ERROR] Can't rename file")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    }
+
+    static def moveFiles(Object self, String osName, String source, String destination) {
+        try {
+            switch(osName)
+            {
+            case 'Windows':
+                source = source.replace('/', '\\\\')
+                destination = destination.replace('/', '\\\\')
+                self.bat """
+                    move \"${source}\" \"${destination}\"
+                """
+                break;
+            // OSX & Ubuntu18
+            default:
+                self.sh """
+                    mv \"${source}\" \"${destination}\"
+                """
+            }
+        }
+        catch(Exception e) {
+            self.println("[ERROR] Can't move files")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
     }
 }

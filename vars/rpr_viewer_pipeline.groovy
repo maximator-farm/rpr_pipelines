@@ -238,7 +238,11 @@ def executeTests(String osName, String asicName, Map options)
             }
             options.executeTestsFinished = true
         } catch (e) {
-            throw new ExpectedExceptionWrapper("An error occurred while running tests. Please contact support.", e)
+            if (utils.isTimeoutExceeded(e)) {
+                throw new ExpectedExceptionWrapper("Failed to execute tests due to timeout.", e)
+            } else {
+                throw new ExpectedExceptionWrapper("An error occurred while executing tests. Please contact support.", e)
+            }
         }
 
     } catch (e) {
@@ -258,10 +262,15 @@ def executeTests(String osName, String asicName, Map options)
     }
     finally {
         try {
-            archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+            dir("${options.stageName}") {
+                utils.moveFiles(this, osName, "../*.log", ".")
+                utils.moveFiles(this, osName, "../scripts/*.log", ".")
+                utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
+            }
+            archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             if (options.sendToUMS) {
                 dir("jobs_launcher") {
-                    sendToMINIO(options, osName, "..", "*.log")
+                    sendToMINIO(options, osName, "../${options.stageName}", "*.log")
                 }
             }
             if (stashResults) {
@@ -453,6 +462,7 @@ def executeBuild(String osName, Map options)
 
     try {
         try {
+            cleanWS(osName)
             GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading RPRViewer repository.")
             checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
         } catch (e) {
@@ -548,7 +558,7 @@ def executePreBuild(Map options)
     }
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-    options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
+    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
     options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
     println "The last commit was written by ${options.commitAuthor}."
@@ -564,6 +574,15 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+    if (options['incrementVersion']) {
+        String testsFromCommit = utils.getTestsFromCommitMessage(options.commitMessage)
+        if(env.BRANCH_NAME != "develop" && testsFromCommit) {
+            // get a list of tests from commit message for auto builds
+            options.tests = testsFromCommit
+            println "[INFO] Test groups mentioned in commit message: ${options.tests}"
+        }
+    }
 
     if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
         properties([[$class: 'BuildDiscarderProperty', strategy:
@@ -665,6 +684,48 @@ def executePreBuild(Map options)
                 }
             }
             options.tests = tests
+
+            options.skippedTests = [:]
+            options.platforms.split(';').each()
+            {
+                if (it)
+                {
+                    List tokens = it.tokenize(':')
+                    String osName = tokens.get(0)
+                    String gpuNames = ""
+                    if (tokens.size() > 1)
+                    {
+                        gpuNames = tokens.get(1)
+                    }
+
+                    if (gpuNames)
+                    {
+                        gpuNames.split(',').each()
+                        {
+                            for (test in options.tests) 
+                            {
+                                try {
+                                    dir ("jobs_launcher") {
+                                        String output = bat(script: "is_group_skipped.bat ${it} ${osName} \"\" \"..\\jobs\\Tests\\${test}\\test.cases.json\"", returnStdout: true).trim()
+                                        if (output.contains("True")) {
+                                            if (!options.skippedTests.containsKey(test)) {
+                                                options.skippedTests[test] = []
+                                            }
+                                            options.skippedTests[test].add("${it}-${osName}")
+                                        }
+                                    }
+                                }
+                                catch(Exception e) {
+                                    println(e.toString())
+                                    println(e.getMessage())
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            println "Skipped test groups:"
+            println options.skippedTests.inspect()
         }
     } catch (e) {
         String errorMessage = "Failed to configurate tests."
@@ -756,8 +817,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 dir("jobs_launcher") {
+                    def skippedTests = JsonOutput.toJson(options.skippedTests)
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests}\"
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"${escapeCharsByUnicode(skippedTests.toString())}\"
                     """
                 }
             } catch (e) {
@@ -789,6 +851,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[ERROR] Failed to build test report.")
                     println(e.toString())
                     println(e.getMessage())
+                    if (!options.testDataSaved) {
+                        try {
+                            // Save test data for access it manually anyway
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                                "Test Report", "Summary Report, Performance Report, Compare Report")
+                            options.testDataSaved = true 
+                        } catch(e1) {
+                            println("[WARNING] Failed to publish test data.")
+                            println(e.toString())
+                            println(e.getMessage())
+                        }
+                    }
                     throw e
                 } else {
                     currentBuild.result = "FAILURE"
@@ -905,6 +979,7 @@ def call(String projectBranch = "",
          String platforms = 'Windows:AMD_RadeonVII,AMD_RadeonVII_Beta,NVIDIA_RTX2080TI;Ubuntu18:AMD_RadeonVII',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
+         Boolean incrementVersion = true,
          String testsPackage = "",
          String tests = "",
          Boolean splitTestsExecution = true,
@@ -938,6 +1013,7 @@ def call(String projectBranch = "",
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
+                        incrementVersion:incrementVersion,
                         PRJ_NAME:PRJ_NAME,
                         PRJ_ROOT:PRJ_ROOT,
                         projectRepo:projectRepo,

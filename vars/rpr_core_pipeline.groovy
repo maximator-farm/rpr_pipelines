@@ -244,7 +244,11 @@ def executeTests(String osName, String asicName, Map options)
             }
             options.executeTestsFinished = true
         } catch (e) {
-            throw new ExpectedExceptionWrapper("An error occurred while executing tests. Please contact support.", e)
+            if (utils.isTimeoutExceeded(e)) {
+                throw new ExpectedExceptionWrapper("Failed to execute tests due to timeout.", e)
+            } else {
+                throw new ExpectedExceptionWrapper("An error occurred while executing tests. Please contact support.", e)
+            }
         }
 
     } catch (e) {
@@ -264,10 +268,15 @@ def executeTests(String osName, String asicName, Map options)
     }
     finally {
         try {
-            archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+            dir("${options.stageName}") {
+                utils.moveFiles(this, osName, "../*.log", ".")
+                utils.moveFiles(this, osName, "../scripts/*.log", ".")
+                utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
+            }
+            archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             if (options.sendToUMS) {
                 dir("jobs_launcher") {
-                    sendToMINIO(options, osName, "..", "*.log")
+                    sendToMINIO(options, osName, "../${options.stageName}", "*.log")
                 }
             }
             if (stashResults) {
@@ -661,7 +670,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 dir("jobs_launcher") {
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests}\"
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -703,6 +712,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[ERROR] Failed to build test report.")
                     println(e.toString())
                     println(e.getMessage())
+                    if (!options.testDataSaved) {
+                        try {
+                            // Save test data for access it manually anyway
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                                "Test Report", "Summary Report, Performance Report, Compare Report")
+                            options.testDataSaved = true 
+                        } catch(e1) {
+                            println("[WARNING] Failed to publish test data.")
+                            println(e.toString())
+                            println(e.getMessage())
+                        }
+                    }
                     throw e
                 } else {
                     currentBuild.result = "FAILURE"
