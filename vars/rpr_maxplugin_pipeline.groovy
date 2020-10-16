@@ -775,6 +775,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[ERROR] Failed to build test report.")
                     println(e.toString())
                     println(e.getMessage())
+                    if (!options.testDataSaved) {
+                        try {
+                            // Save test data for access it manually anyway
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                                "Test Report", "Summary Report, Performance Report, Compare Report")
+                            options.testDataSaved = true 
+                        } catch(e1) {
+                            println("[WARNING] Failed to publish test data.")
+                            println(e.toString())
+                            println(e.getMessage())
+                        }
+                    }
                     throw e
                 } else {
                     currentBuild.result = "FAILURE"

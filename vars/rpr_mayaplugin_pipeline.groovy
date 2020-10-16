@@ -1040,10 +1040,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
+            List reports = []
+            List reportsNames = []
 
             try
             {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report.", "${BUILD_URL}")
+                options.engines.split(",").each { engine ->
+                    reports.add("${engine}/summary_report.html")
+                }
+                options.enginesNames.split(",").each { engine ->
+                    reportsNames.add("Summary Report (${engine})")
+                }
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
                     dir("jobs_launcher") {
@@ -1100,6 +1108,17 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[ERROR] Failed to build test report.")
                     println(e.toString())
                     println(e.getMessage())
+                    if (!options.testDataSaved) {
+                        try {
+                            // Save test data for access it manually anyway
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
+                            options.testDataSaved = true 
+                        } catch(e1) {
+                            println("[WARNING] Failed to publish test data.")
+                            println(e.toString())
+                            println(e.getMessage())
+                        }
+                    }
                     throw e
                 } else {
                     currentBuild.result = "FAILURE"
@@ -1175,15 +1194,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Publishing test report.", "${BUILD_URL}")
-
-                List reports = []
-                List reportsNames = []
-                options.engines.split(",").each { engine ->
-                    reports.add("${engine}/summary_report.html")
-                }
-                options.enginesNames.split(",").each { engine ->
-                    reportsNames.add("Summary Report (${engine})")
-                }
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
 
                 if (summaryTestResults) {

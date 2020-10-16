@@ -164,8 +164,8 @@ class utils {
         String[] messageParts = exceptionMessage.split(" ")
         Integer exitCode = messageParts[messageParts.length - 1].isInteger() ? messageParts[messageParts.length - 1].toInteger() : null
 
-        // Failed to build summary report and unexpected fails
-        return exitCode >= -1
+        // Unexpected fails
+        return exitCode >= 0
     }
 
 }
