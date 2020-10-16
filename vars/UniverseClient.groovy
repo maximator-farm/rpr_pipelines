@@ -15,6 +15,7 @@ class UniverseClient {
     def env;
     def is_url;
     def is_parent;
+    def engine;
 
     /**
      * Main constructor for builds without engine
@@ -170,7 +171,7 @@ class UniverseClient {
                     'tags': tags,
                     'suites': suites
                 ]
-                if (engine) {
+                if (this.engine) {
                     buildBody['engine'] = this.engine
                     buildBody['child_of'] = this.child_of
                 }
