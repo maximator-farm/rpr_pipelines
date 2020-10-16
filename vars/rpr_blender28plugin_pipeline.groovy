@@ -7,8 +7,8 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field String UniverseURLProd = "https://umsapi.cis.luxoft.com"
-@Field String UniverseURLDev = "http://172.26.157.233:5001"
+@Field String UniverseURLProd = "http://172.26.157.233:5002"
+@Field String UniverseURLDev = "http://172.26.157.233:5002"
 @Field String ProducteName = "AMD%20Radeon™%20ProRender%20for%20Blender"
 @Field UniverseClient universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
 @Field UniverseClient universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
