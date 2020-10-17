@@ -42,7 +42,6 @@ class UniverseClient {
      * @param url Universal Monitoring System API  url (example: "https://umsapi.cis.luxoft.com" )
      * @param env Jenkins environment variables object
      * @param product Name of product (example: "RPR_Maya")
-     * @param is_parent Is that build a parent of some other build or not
      */
     UniverseClient(context, url, env, product) {
         this.url = url;

@@ -888,6 +888,7 @@ def executePreBuild(Map options)
                     }
                     println("[INFO] Tests package '${options.testsPackage}' can't be splitted")
                 }
+                options.groupsUMS = tempTests
 
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
                 String modifiedPackageName = "${options.testsPackage}~"
@@ -909,7 +910,6 @@ def executePreBuild(Map options)
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
-                options.groupsUMS = tests
 
                 modifiedPackageName = modifiedPackageName.replace('~,', '~')
 
@@ -925,6 +925,7 @@ def executePreBuild(Map options)
             } 
             else 
             {
+                options.groupsUMS = options.tests
                 options.tests.split(" ").each()
                 {
                     options.engines.split(",").each { engine ->
@@ -933,7 +934,6 @@ def executePreBuild(Map options)
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
-                options.groupsUMS = tests
             }
             options.tests = tests
 
