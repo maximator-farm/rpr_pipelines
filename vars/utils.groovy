@@ -180,7 +180,7 @@ class utils {
             // OSX & Ubuntu18
             default:
                 self.sh """
-                    mv \"${oldName}\" \"${newName}\"
+                    mv ${oldName} ${newName}
                 """
             }
         }
@@ -205,7 +205,7 @@ class utils {
             // OSX & Ubuntu18
             default:
                 self.sh """
-                    mv \"${source}\" \"${destination}\"
+                    mv ${source} ${destination}
                 """
             }
         }
