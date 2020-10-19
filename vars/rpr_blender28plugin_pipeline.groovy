@@ -886,10 +886,10 @@ def executePreBuild(Map options)
                     }
                     println("[INFO] Tests package '${options.testsPackage}' can't be splitted")
                 }
-                options.groupsUMS = tempTests
 
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
                 String modifiedPackageName = "${options.testsPackage}~"
+                options.groupsUMS = tempTests.clone()
                 packageInfo["groups"].each() {
                     if (options.isPackageSplitted) {
                         tempTests << it.key
@@ -897,9 +897,12 @@ def executePreBuild(Map options)
                         if (tempTests.contains(it.key)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName},${it.key}"
+                        } else {
+                        	options.groupsUMS << it.key
                         }
                     }
                 }
+
                 tempTests.each()
                 {
                     options.engines.each { engine ->
