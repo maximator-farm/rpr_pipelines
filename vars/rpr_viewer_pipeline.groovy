@@ -270,7 +270,12 @@ def executeTests(String osName, String asicName, Map options)
     }
     finally {
         try {
-            archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+            dir("${options.stageName}") {
+                utils.moveFiles(this, osName, "../*.log", ".")
+                utils.moveFiles(this, osName, "../scripts/*.log", ".")
+                utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
+            }
+            archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             if (stashResults) {
                 dir('Work')
                 {
@@ -795,6 +800,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[ERROR] Failed to build test report.")
                     println(e.toString())
                     println(e.getMessage())
+                    if (!options.testDataSaved) {
+                        try {
+                            // Save test data for access it manually anyway
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                                "Test Report", "Summary Report, Performance Report, Compare Report")
+                            options.testDataSaved = true 
+                        } catch(e1) {
+                            println("[WARNING] Failed to publish test data.")
+                            println(e.toString())
+                            println(e.getMessage())
+                        }
+                    }
                     throw e
                 } else {
                     currentBuild.result = "FAILURE"

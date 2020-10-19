@@ -1,15 +1,23 @@
 def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLastNode, def stageName, def options, List allowedExceptions = [], Integer maxNumberOfRetries = -1, String osName = "", Boolean setBuildStatus = false) {
-    List nodesListAll = nodesByLabel label: labels, offline: true
-    List nodesListOnline = nodesByLabel label: labels, offline: false
-    println "[INFO] Found ${nodesListOnline.size()} suitable online nodes (total suitable nodes: ${nodesListAll.size()})"
-    // if less than 2 suitable online nodes are found and some nodes are offline - sleep and retry search
-    if (nodesListOnline.size() < 2 && nodesListAll.size() != nodesListOnline.size()) {
-        println "[INFO] Too few nodes found. Search will be retried after pause"
-        sleep(time: 10, unit: 'MINUTES')
-        nodesListOnline = nodesByLabel label: labels, offline: false
+    List nodesList = nodesByLabel label: labels, offline: true
+    println "[INFO] Found ${nodesList.size()} suitable nodes"
+    // if 0 suitable nodes are found - wait some node in loop
+    while (nodesList.size() == 0) {
+        println "[INFO] Couldn't find suitable nodes. Search will be retried after pause"
+        if (!options.nodeNotFoundMessageSent) {
+            node ("master") {
+                withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
+                    utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "Failed to find any node with labels '${labels}'")
+                    options.nodeNotFoundMessageSent = true
+                }
+            }
+        }
+        sleep(time: 5, unit: 'MINUTES')
+        nodesList = nodesByLabel label: labels, offline: true
     }
-    println "Found the following PCs: ${nodesListOnline}"
-    def nodesCount = nodesListOnline.size()
+    options.nodeNotFoundMessageSent = false
+    println "Found the following PCs: ${nodesList}"
+    def nodesCount = nodesList.size()
     def tries = nodesCount
     def closedChannelRetries = 0
 
@@ -52,7 +60,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                     ws("WS/${options.PRJ_NAME}_${stageName}") 
                     {
                         nodeName = env.NODE_NAME
-                        retringFunction(nodesListOnline, i)
+                        retringFunction(nodesList, i)
                         successCurrentNode = true
                         if (GithubNotificator.getCurrentStatus(stageName, title, env, options) == "failure") {
                             GithubNotificator.updateStatus(stageName, title, "error", env, options)
