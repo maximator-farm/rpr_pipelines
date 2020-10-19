@@ -6,8 +6,14 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field UniverseClient universeClientProd = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Maya")
-@Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5001", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Maya")
+@Field String UniverseURLProd = "http://172.26.157.233:5002"
+@Field String UniverseURLDev = "http://172.26.157.233:5002"
+@Field String ImageServiceURL = "https://imgs.cis.luxoft.com"
+@Field String ProducteName = "AMD%20Radeon™%20ProRender%20for%20Maya"
+@Field UniverseClient universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
+@Field UniverseClient universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
+@Field Map universeClientsProd = [:]
+@Field Map universeClientsDev = [:]
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
@@ -179,26 +185,24 @@ def executeTestCommand(String osName, String asicName, Map options)
 
     timeout(time: test_timeout, unit: 'MINUTES') { 
 
-        String buildIdProd, buildIdDev, jobIdProd, jobIdDev, isUrl = "none"
-        if (options.sendToUMS && universeClientProd.build != null){
-            buildIdProd = universeClientProd.build["id"]
-            jobIdProd = universeClientProd.build["job_id"]
-            isUrl = universeClientProd.is_url
+        String buildIdProd, buildIdDev, jobIdProd, jobIdDev = "none"
+        if (options.sendToUMS && universeClientsProd[options.engine].build != null){
+            buildIdProd = universeClientsProd[options.engine].build["id"]
+            jobIdProd = universeClientsProd[options.engine].build["job_id"]
         }
-        if (options.sendToUMS && universeClientDev.build != null){
-            buildIdDev = universeClientDev.build["id"]
-            jobIdDev = universeClientDev.build["job_id"]
-            isUrl = universeClientDev.is_url
+        if (options.sendToUMS && universeClientsDev[options.engine].build != null){
+            buildIdDev = universeClientsDev[options.engine].build["id"]
+            jobIdDev = universeClientsDev[options.engine].build["job_id"]
         }
         withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
             usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')])
         {
             withEnv(["UMS_USE=${options.sendToUMS}", "UMS_ENV_LABEL=${osName}-${asicName}",
-                "UMS_BUILD_ID_PROD=${buildIdProd}", "UMS_JOB_ID_PROD=${jobIdProd}", "UMS_URL_PROD=${universeClientProd.url}", 
+                "UMS_BUILD_ID_PROD=${buildIdProd}", "UMS_JOB_ID_PROD=${jobIdProd}", "UMS_URL_PROD=${UniverseURLProd}", 
                 "UMS_LOGIN_PROD=${UMS_USER}", "UMS_PASSWORD_PROD=${UMS_PASSWORD}",
-                "UMS_BUILD_ID_DEV=${buildIdDev}", "UMS_JOB_ID_DEV=${jobIdDev}", "UMS_URL_DEV=${universeClientDev.url}",
+                "UMS_BUILD_ID_DEV=${buildIdDev}", "UMS_JOB_ID_DEV=${jobIdDev}", "UMS_URL_DEV=${UniverseURLDev}",
                 "UMS_LOGIN_DEV=${UMS_USER}", "UMS_PASSWORD_DEV=${UMS_PASSWORD}",
-                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${isUrl}"])
+                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${ImageServiceURL}"])
             {
                 switch(osName)
                 {
@@ -228,23 +232,17 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    if (options.sendToUMS){
-        universeClientProd.stage("Tests-${osName}-${asicName}", "begin")
-        universeClientDev.stage("Tests-${osName}-${asicName}", "begin")
+    options.engine = options.tests.split("-")[-1]
+    List parsedTestNames = []
+    options.tests.split().each { test ->
+        List testNameParts = test.split("-") as List
+        parsedTestNames.add(testNameParts.subList(0, testNameParts.size() - 1).join("-"))
     }
+    options.parsedTests = parsedTestNames.join(" ")
 
-    // get engine from test group name if there are more than one engines
-    if (options.engines.count(",") > 0) {
-        options.engine = options.tests.split("-")[-1]
-        List parsedTestNames = []
-        options.tests.split().each { test ->
-            List testNameParts = test.split("-") as List
-            parsedTestNames.add(testNameParts.subList(0, testNameParts.size() - 1).join("-"))
-        }
-        options.parsedTests = parsedTestNames.join(" ")
-    } else {
-        options.engine = options.engines
-        options.parsedTests = options.tests
+    if (options.sendToUMS){
+        universeClientsProd[options.engine].stage("Tests-${osName}-${asicName}", "begin")
+        universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "begin")
     }
 
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
@@ -410,8 +408,8 @@ def executeTests(String osName, String asicName, Map options)
 
                         if (options.sendToUMS)
                         {
-                            universeClientProd.stage("Tests-${osName}-${asicName}", "end")
-                            universeClientDev.stage("Tests-${osName}-${asicName}", "end")
+                            universeClientsProd[options.engine].stage("Tests-${osName}-${asicName}", "begin")
+                            universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "begin")
                         }
 
                         if (sessionReport.summary.error > 0) {
@@ -546,8 +544,10 @@ def executeBuildOSX(Map options)
 def executeBuild(String osName, Map options)
 {
     if (options.sendToUMS){
-        universeClientProd.stage("Build-" + osName , "begin")
-        universeClientDev.stage("Build-" + osName , "begin")
+        options.engines.each { engine ->
+            universeClientsProd[engine].stage("Build-" + osName , "begin")
+            universeClientsDev[engine].stage("Build-" + osName , "begin")
+        }
     }
 
     try {
@@ -596,8 +596,10 @@ def executeBuild(String osName, Map options)
         archiveArtifacts "*.log"
     }
     if (options.sendToUMS){
-        universeClientProd.stage("Build-" + osName, "end")
-        universeClientDev.stage("Build-" + osName, "end")
+        options.engines.each { engine ->
+            universeClientsProd[engine].stage("Build-" + osName , "end")
+            universeClientsDev[engine].stage("Build-" + osName , "end")
+        }
     }
 }
 
@@ -795,6 +797,7 @@ def executePreBuild(Map options)
 
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
                 String modifiedPackageName = "${options.testsPackage}~"
+                options.groupsUMS = tempTests.clone()
                 packageInfo["groups"].each() {
                     if (options.isPackageSplitted) {
                         tempTests << it.key
@@ -802,18 +805,15 @@ def executePreBuild(Map options)
                         if (tempTests.contains(it.key)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName},${it.key}"
+                        } else {
+                            options.groupsUMS << it.key
                         }
                     }
                 }
                 tempTests.each()
                 {
-                    // if there are more than one engines - generate set of tests for each engine
-                    if (options.engines.count(",") > 0) {
-                        options.engines.split(",").each { engine ->
-                            tests << "${it}-${engine}"
-                        }
-                    } else {
-                        tests << "${it}"
+                    options.engines.each { engine ->
+                        tests << "${it}-${engine}"
                     }
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
@@ -826,32 +826,23 @@ def executePreBuild(Map options)
                     options.testsPackage = "none"
                 } else {
                     options.testsPackage = modifiedPackageName
-                    if (options.engines.count(",") > 0) {
-                        options.engines.split(",").each { engine ->
-                            tests << "${modifiedPackageName}-${engine}"
-                        }
-                    } else {
-                        tests << modifiedPackageName
+                    options.engines.each { engine ->
+                        tests << "${modifiedPackageName}-${engine}"
                     }
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
             }
             else 
             {
+                options.groupsUMS = options.tests.split(" ") as List
                 options.tests.split(" ").each()
                 {
-                    // if there are more than one engines - generate set of tests for each engine
-                    if (options.engines.count(",") > 0) {
-                        options.engines.split(",").each { engine ->
-                            tests << "${it}-${engine}"
-                        }
-                    } else {
-                        tests << "${it}"
+                    options.engines.each { engine ->
+                        tests << "${it}-${engine}"
                     }
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
-                options.groupsUMS = tests
             }
             options.tests = tests
 
@@ -875,16 +866,9 @@ def executePreBuild(Map options)
                             for (test in options.tests) 
                             {
                                 if (!test.contains(".json")) {
-                                    String testName = ""
-                                    String engine = ""
-                                    if (options.engines.count(",") > 0) {
-                                        String[] testNameParts = test.split("-")
-                                        testName = testNameParts[0]
-                                        engine = testNameParts[1]
-                                    } else {
-                                        testName = test
-                                        engine = options.engines
-                                    }
+                                    String[] testNameParts = test.split("-")
+                                    testName = testNameParts[0]
+                                    engine = testNameParts[1]
                                     try {
                                         dir ("jobs_launcher") {
                                             String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
@@ -928,10 +912,22 @@ def executePreBuild(Map options)
     {
         try
         {
-            universeClientProd.tokenSetup()
-            universeClientDev.tokenSetup()
-            universeClientProd.createBuild(options.universePlatforms, options.groupsUMS)
-            universeClientDev.createBuild(options.universePlatforms, options.groupsUMS)
+            // Universe : auth because now we in node
+            // If use httpRequest in master slave will catch 408 error
+            universeClientParentProd.tokenSetup()
+            universeClientParentDev.tokenSetup()
+
+            // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+            universeClientParentProd.createBuild()
+            universeClientParentDev.createBuild()
+            for (int i = 0; i < options.engines.size(); i++) {
+                String engine = options.engines[i]
+                String engineName = options.enginesNames[i]
+                universeClientsProd[engine] = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName, engineName, universeClientParentProd)
+                universeClientsDev[engine] = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName, engineName, universeClientParentDev)
+                universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS)
+                universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS)
+            }
         }
         catch (e)
         {
@@ -959,7 +955,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             Map lostStashes = [:]
-            options.engines.split(",").each { engine ->
+            options.engines.each { engine ->
                 lostStashes[engine] = []
             }
 
@@ -969,22 +965,14 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 {
                     String engine
                     String testName
-                    if (options.engines.count(",") > 0) {
-                        options.engines.split(",").each { currentEngine ->
-                            dir(currentEngine) {
-                                unstashCrashInfo(options['nodeRetry'], currentEngine)
-                            }
-                        }
-                        List testNameParts = it.split("-") as List
-                        engine = testNameParts[-1]
-                        testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                    } else {
-                        testName = it
-                        engine = options.engines
-                        dir(engine) {
-                            unstashCrashInfo(options['nodeRetry'])
+                    options.engines.each { currentEngine ->
+                        dir(currentEngine) {
+                            unstashCrashInfo(options['nodeRetry'], currentEngine)
                         }
                     }
+                    List testNameParts = it.split("-") as List
+                    engine = testNameParts[-1]
+                    testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                     dir(engine)
                     {
                         dir(testName.replace("testResult-", ""))
@@ -1009,25 +997,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 dir("jobs_launcher") {
                     // delete engine name from names of test groups
                     def tests = []
-                    if (options.engines.count(",") > 0) {
-                        options.tests.each { group ->
-                            List testNameParts = group.split("-") as List
-                            String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                            if (!tests.contains(parsedTestName)) {
-                                tests.add(parsedTestName)
-                            }
+                    options.tests.each { group ->
+                        List testNameParts = group.split("-") as List
+                        String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                        if (!tests.contains(parsedTestName)) {
+                            tests.add(parsedTestName)
                         }
-                    } else {
-                        tests = options.tests
                     }
                     tests = tests.toString().replace(" ", "")
-                    options.engines.split(",").each {
-                        String engine
-                        if (options.engines.count(",") > 0) {
-                            engine = "${it}"
-                        } else {
-                            engine = ""
-                        }
+                    options.engines.each {
+                        String engine = "${it}"
                         def skippedTests = JsonOutput.toJson(options.skippedTests)
                         // \\\\ - prevent escape sequence '\N'
                         bat """
@@ -1047,29 +1026,22 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
                     dir("jobs_launcher") {
-                        String[] engines = options.engines.split(",")
-                        String[] enginesNames = options.enginesNames.split(",")
-                        for (int i = 0; i < engines.length; i++) {
-                            String engine = engines[i]
-                            String engineName = enginesNames[i]
-                            List retryInfoList
-                            if (options.engines.count(",") > 0) {
-                                retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
-                                retryInfoList.each{ gpu ->
-                                    gpu['Tries'].each{ group ->
-                                        group.each{ groupKey, retries ->
-                                            if (groupKey.endsWith(engine)) {
-                                                List testNameParts = groupKey.split("-") as List
-                                                String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                                                group[parsedName] = retries
-                                            }
-                                            group.remove(groupKey)
+                        for (int i = 0; i < options.engines.size(); i++) {
+                            String engine = options.engines[i]
+                            String engineName = options.enginesNames[i]
+                            List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
+                            retryInfoList.each{ gpu ->
+                                gpu['Tries'].each{ group ->
+                                    group.each{ groupKey, retries ->
+                                        if (groupKey.endsWith(engine)) {
+                                            List testNameParts = groupKey.split("-") as List
+                                            String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                                            group[parsedName] = retries
                                         }
+                                        group.remove(groupKey)
                                     }
-                                    gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
                                 }
-                            } else {
-                                retryInfoList = options.nodeRetry
+                                gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
                             }
                             def retryInfo = JsonOutput.toJson(retryInfoList)
                             dir("..\\summaryTestResults\\${engine}") {
@@ -1178,10 +1150,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                 List reports = []
                 List reportsNames = []
-                options.engines.split(",").each { engine ->
+                options.engines.each { engine ->
                     reports.add("${engine}/summary_report.html")
                 }
-                options.enginesNames.split(",").each { engine ->
+                options.enginesNames.each { engine ->
                     reportsNames.add("Summary Report (${engine})")
                 }
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
@@ -1203,8 +1175,12 @@ def executeDeploy(Map options, List platformList, List testResultList)
             if (options.sendToUMS) {
                 try {
                     String status = currentBuild.result ?: 'SUCCESSFUL'
-                    universeClientProd.changeStatus(status)
-                    universeClientDev.changeStatus(status)
+                    universeClientParentProd.changeStatus(status)
+                    universeClientParentDev.changeStatus(status)
+                    options.engines.each { engine ->
+                        universeClientsProd[engine].changeStatus(status)
+                        universeClientsDev[engine].changeStatus(status)
+                    }
                 }
                 catch (e){
                     println(e.getMessage())
@@ -1277,11 +1253,11 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Init")
                 throw new Exception(errorMessage)
             }
+            enginesNames = enginesNames.split(',') as List
             def formattedEngines = []
-            enginesNames.split(',').each {
+            enginesNames.each {
                 formattedEngines.add(it.replace(' ', '_'))
             }
-            formattedEngines = formattedEngines.join(',')
 
             Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX
 
@@ -1352,7 +1328,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 prBranchName = prInfo[1]
             }
 
-            Integer deployTimeout = 150 * enginesNames.split(',').length
+            Integer deployTimeout = 150 * enginesNames.size()
             println "Calculated deploy timeout: ${deployTimeout}"
 
             options << [projectRepo:projectRepo,
@@ -1410,8 +1386,16 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     {
         currentBuild.result = "FAILURE"
         if (sendToUMS){
-            universeClientProd.changeStatus(currentBuild.result)
-            universeClientDev.changeStatus(currentBuild.result)
+            universeClientParentProd.changeStatus(currentBuild.result)
+            universeClientParentDev.changeStatus(currentBuild.result)
+            if (universeClientsProd) {
+                for (client in universeClientsProd) {
+                    client.value.changeStatus(currentBuild.result)
+                }
+                for (client in universeClientsDev) {
+                    client.value.changeStatus(currentBuild.result)
+                }
+            } 
         }
         println(e.toString());
         println(e.getMessage());
