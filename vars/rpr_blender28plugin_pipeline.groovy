@@ -448,10 +448,8 @@ def executeTests(String osName, String asicName, Map options)
 
                         if (options.sendToUMS)
                         {
-                            if (options.sendToUMS){
-                                universeClientsProd[options.engine].stage("Tests-${osName}-${asicName}", "begin")
-                                universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "begin")
-                            }
+                            universeClientsProd[options.engine].stage("Tests-${osName}-${asicName}", "begin")
+                            universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "begin")
                         }
 
                         if (sessionReport.summary.error > 0) {
@@ -620,7 +618,7 @@ def executeBuildLinux(String osName, Map options)
 def executeBuild(String osName, Map options)
 {
     if (options.sendToUMS){
-        for (engine in universeClientsProd) {
+        options.engines.each { engine ->
             universeClientsProd[engine].stage("Build-" + osName , "begin")
             universeClientsDev[engine].stage("Build-" + osName , "begin")
         }
@@ -686,7 +684,7 @@ def executeBuild(String osName, Map options)
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
     if (options.sendToUMS){
-        for (engine in universeClientsProd) {
+        options.engines.each { engine ->
             universeClientsProd[engine].stage("Build-" + osName , "end")
             universeClientsDev[engine].stage("Build-" + osName , "end")
         }
@@ -904,7 +902,7 @@ def executePreBuild(Map options)
                 }
                 tempTests.each()
                 {
-                    options.engines.split(",").each { engine ->
+                    options.engines.each { engine ->
                         tests << "${it}-${engine}"
                     }
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
@@ -917,7 +915,7 @@ def executePreBuild(Map options)
                     options.testsPackage = "none"
                 } else {
                     options.testsPackage = modifiedPackageName
-                    options.engines.split(",").each { engine ->
+                    options.engines.each { engine ->
                         tests << "${modifiedPackageName}-${engine}"
                     }
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
@@ -925,10 +923,10 @@ def executePreBuild(Map options)
             } 
             else 
             {
-                options.groupsUMS = options.tests
+                options.groupsUMS = options.tests.split(" ") as List
                 options.tests.split(" ").each()
                 {
-                    options.engines.split(",").each { engine ->
+                    options.engines.each { engine ->
                         tests << "${it}-${engine}"
                     }
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
@@ -1013,9 +1011,11 @@ def executePreBuild(Map options)
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
             universeClientParentProd.createBuild()
             universeClientParentDev.createBuild()
-            options.enginesNames.split(',').each {
-                universeClientsProd[it] = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName, it, universeClientParentProd)
-                universeClientsDev[it] = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteNameit, it, universeClientParentDev)
+            for (int i = 0; i < options.engines.size(); i++) {
+                String engine = options.engines[i]
+                String engineName = options.enginesNames[i]
+                universeClientsProd[engine] = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName, engineName, universeClientParentProd)
+                universeClientsDev[engine] = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName, engineName, universeClientParentDev)
                 universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS)
                 universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS)
             }
@@ -1046,7 +1046,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             Map lostStashes = [:]
-            options.engines.split(",").each { engine ->
+            options.engines.each { engine ->
                 lostStashes[engine] = []
             }
 
@@ -1056,7 +1056,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 {
                     String engine
                     String testName
-                    options.engines.split(",").each { currentEngine ->
+                    options.engines.each { currentEngine ->
                         dir(currentEngine) {
                             unstashCrashInfo(options['nodeRetry'], currentEngine)
                         }
@@ -1096,7 +1096,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         }
                     }
                     tests = tests.toString().replace(" ", "")
-                    options.engines.split(",").each {
+                    options.engines.each {
                         String engine = "${it}"
                         def skippedTests = JsonOutput.toJson(options.skippedTests)
                         bat """
@@ -1114,11 +1114,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
                     dir("jobs_launcher") {
-                        String[] engines = options.engines.split(",")
-                        String[] enginesNames = options.enginesNames.split(",")
-                        for (int i = 0; i < engines.length; i++) {
-                            String engine = engines[i]
-                            String engineName = enginesNames[i]
+                        for (int i = 0; i < options.engines.size(); i++) {
+                            String engine = options.engines[i]
+                            String engineName = options.enginesNames[i]
                             List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
                             retryInfoList.each{ gpu ->
                                 gpu['Tries'].each{ group ->
@@ -1239,10 +1237,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                 List reports = []
                 List reportsNames = []
-                options.engines.split(",").each { engine ->
+                options.engines.each { engine ->
                     reports.add("${engine}/summary_report.html")
                 }
-                options.enginesNames.split(",").each { engine ->
+                options.enginesNames.each { engine ->
                     reportsNames.add("Summary Report (${engine})")
                 }
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
@@ -1266,7 +1264,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     String status = currentBuild.result ?: 'SUCCESSFUL'
                     universeClientParentProd.changeStatus(status)
                     universeClientParentDev.changeStatus(status)
-                    for (engine in universeClientsProd) {
+                    options.engines.each { engine ->
                         universeClientsProd[engine].changeStatus(status)
                         universeClientsDev[engine].changeStatus(status)
                     }
@@ -1346,15 +1344,15 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Init")
                 throw new Exception(errorMessage)
             }
+            enginesNames = enginesNames.split(',') as List
             def formattedEngines = []
-            enginesNames.split(',').each {
+            enginesNames.each {
                  if (it.contains('Hybrid')) {
                     formattedEngines.add(it.split()[1].toUpperCase())
                 } else {
                     formattedEngines.add((it == 'Northstar') ? 'FULL2' : 'FULL')
                 }
             }
-            formattedEngines = formattedEngines.join(',')
 
             Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkLinux
 
@@ -1430,7 +1428,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 prBranchName = prInfo[1]
             }
 
-            Integer deployTimeout = 150 * enginesNames.split(',').length
+            Integer deployTimeout = 150 * enginesNames.size()
             println "Calculated deploy timeout: ${deployTimeout}"
 
             options << [projectRepo:projectRepo,
@@ -1492,9 +1490,13 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         if (sendToUMS){
             universeClientParentProd.changeStatus(currentBuild.result)
             universeClientParentDev.changeStatus(currentBuild.result)
-            for (engine in universeClientsProd) {
-                universeClientsProd[engine].changeStatus(currentBuild.result)
-                universeClientsDev[engine].changeStatus(currentBuild.result)
+            if (universeClientsProd) {
+                for (client in universeClientsProd) {
+                    client.value.changeStatus(currentBuild.result)
+                }
+                for (client in universeClientsDev) {
+                    client.value.changeStatus(currentBuild.result)
+                }
             } 
         }
         println(e.toString());

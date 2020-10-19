@@ -16,6 +16,7 @@ class UniverseClient {
     def is_url;
     def is_parent;
     def engine;
+    def child_of;
 
     /**
      * Main constructor for builds without engine
@@ -63,10 +64,10 @@ class UniverseClient {
      * @param child_of UniverseClient which is a parent of creating build
      */
     UniverseClient(context, url, env, is_url, product, engine, child_of) {
-        UniverseClient(context, url, env, is_url, product)
+        this(context, url, env, is_url, product)
         this.is_parent = false;
         this.engine = engine;
-        this.child_of = child_of.build;
+        this.child_of = child_of.build.id;
         this.token = child_of.token;
     }
 
@@ -158,10 +159,10 @@ class UniverseClient {
 
             def buildBody
 
-            if (is_parent) {
+            if (this.is_parent) {
                 buildBody = [
                     'name': env.BUILD_NUMBER,
-                    'is_parent': true,
+                    'parent': true,
                 ]
             } else {
                 buildBody = [
