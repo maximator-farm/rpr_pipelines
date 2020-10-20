@@ -1116,6 +1116,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 println("[ERROR] Can't generate number of lost tests")
             }
 
+            String branchName = env.BRANCH_NAME ?: options.projectBranch
             List reports = []
             List reportsNames = []
 
