@@ -20,7 +20,7 @@ def executeBuildWindows(String osName, Map options)
         xcopy /s/y/i include\\miopen\\*.h release\\miopen
     """
 
-    zip archive: true, dir: 'release', zipFile: "${options.packageName}-${osName}.zip"
+    zip archive: true, dir: '', glob: 'release\\*', zipFile: "${options.packageName}-${osName}.zip"
 }
 
 
@@ -48,7 +48,7 @@ def executeBuildUbuntu(String osName, Map options)
     """
  
     sh """
-        tar cf ${options.packageName}-${osName}.tar release
+        tar cf ${options.packageName}-${osName}.tar release/*
     """
 
     archiveArtifacts "${options.packageName}-${osName}.tar"
@@ -74,7 +74,7 @@ def executeBuildCentOS(String osName, Map options)
     """
  
     sh """
-        tar cf ${options.packageName}-${osName}.tar release
+        tar cf ${options.packageName}-${osName}.tar release/*
     """
 
     archiveArtifacts "${options.packageName}-${osName}.tar"
