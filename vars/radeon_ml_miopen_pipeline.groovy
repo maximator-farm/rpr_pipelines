@@ -16,11 +16,11 @@ def executeBuildWindows(String osName, Map options)
     bat """
         mkdir release\\miopen
         xcopy /s/y/i build\\bin\\Release\\MIOpen.dll release
-        xcopy /s/y/i build\\include\\miopen\\*.h release/miopen
+        xcopy /s/y/i build\\include\\miopen\\*.h release\\miopen
         xcopy /s/y/i include\\miopen\\*.h release\\miopen
     """
 
-    zip archive: true, dir: '', glob: 'build\\bin\\Release\\MIOpen.dll, build\\include\\miopen\\*.h, include\\miopen\\*.h', zipFile: "${options.packageName}-${osName}.zip"
+    zip archive: true, dir: 'release', zipFile: "${options.packageName}-${osName}.zip"
 }
 
 
@@ -40,6 +40,7 @@ def executeBuildUbuntu(String osName, Map options)
     """
  
     sh """
+        mkdir release
         mkdir release/miopen
         cp build/lib/libMIOpen.so* release
         cp build/include/miopen/*.h release/miopen
@@ -65,6 +66,7 @@ def executeBuildCentOS(String osName, Map options)
     """
 
     sh """
+        mkdir release
         mkdir release/miopen
         cp build/lib/libMIOpen.so* release
         cp build/include/miopen/*.h release/miopen
