@@ -229,17 +229,22 @@ def executePreBuild(Map options)
 {
     checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
-    AUTHOR_NAME = bat (
-            script: "git show -s --format=%%an HEAD ",
-            returnStdout: true
-    ).split('\r\n')[2].trim()
+    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
+    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    println "The last commit was written by ${options.commitAuthor}."
+    println "Commit message: ${options.commitMessage}"
+    println "Commit SHA: ${options.commitSHA}"
 
-    echo "The last commit was written by ${AUTHOR_NAME}."
-    options.AUTHOR_NAME = AUTHOR_NAME
+    if (options.projectBranch){
+        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+    } else {
+        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+    }
 
-    commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true ).split('\r\n')[2].trim()
-    echo "Commit message: ${commitMessage}"
-    options.commitMessage = commitMessage
+    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
     def commitContexts = []
     // set pending status for all
@@ -268,6 +273,7 @@ def executePreBuild(Map options)
     }
 }
 
+
 def executeBuild(String osName, Map options)
 {
     String error_message = ""
@@ -277,7 +283,7 @@ def executeBuild(String osName, Map options)
     {
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
-        receiveFiles("rpr-ml/MIOpen/*", "../RML_thirdparty/MIOpen")
+        receiveFiles("rpr-ml/MIOpen/${osName}", "../RML_thirdparty/MIOpen")
         receiveFiles("rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
 
         outputEnvironmentInfo(osName)
@@ -298,22 +304,17 @@ def executeBuild(String osName, Map options)
         dir('build/Release') {
             stash includes: '*', name: "app${osName}"
         }
-    }
-    catch (e)
-    {
+    } catch (e) {
         println(e.getMessage())
         error_message = e.getMessage()
         currentBuild.result = "FAILED"
         throw e
-    }
-    finally
-    {
+    } finally {
         if (env.CHANGE_ID) {
             String status = error_message ? "failure" : "success"
             pullRequest.createStatus("${status}", context, "Build finished as '${status}'", "${env.BUILD_URL}/artifact/${STAGE_NAME}.log")
             options['commitContexts'].remove(context)
         }
-
         archiveArtifacts "*.log"
     }
 }
