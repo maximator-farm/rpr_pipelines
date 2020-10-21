@@ -13,6 +13,13 @@ def executeBuildWindows(String osName, Map options)
         %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.log 2>&1
     """
 
+    bat """
+        mkdir release\\miopen
+        xcopy /s/y/i build\\bin\\Release\\MIOpen.dll release
+        xcopy /s/y/i build\\include\\miopen\\*.h release/miopen
+        xcopy /s/y/i include\\miopen\\*.h release\\miopen
+    """
+
     zip archive: true, dir: '', glob: 'build\\bin\\Release\\MIOpen.dll, build\\include\\miopen\\*.h, include\\miopen\\*.h', zipFile: "${options.packageName}-${osName}.zip"
 }
 
@@ -33,7 +40,14 @@ def executeBuildUbuntu(String osName, Map options)
     """
  
     sh """
-        tar cf ${options.packageName}-${osName}.tar build/lib/libMIOpen.so* build/include/miopen/*.h include/miopen/*.h
+        mkdir release/miopen
+        cp build/lib/libMIOpen.so* release
+        cp build/include/miopen/*.h release/miopen
+        cp include/miopen/*.h release/miopen
+    """
+ 
+    sh """
+        tar cf ${options.packageName}-${osName}.tar release
     """
 
     archiveArtifacts "${options.packageName}-${osName}.tar"
@@ -49,9 +63,16 @@ def executeBuildCentOS(String osName, Map options)
         cmake -DRIF_BUILD=1 -DMIOPEN_BACKEND=OpenCL -DBoost_INCLUDE_DIR=/opt/boost/include -DBoost_LIB_DIR=/opt/boost/lib -DCMAKE_CXX_FLAGS="-fPIC" .. >> ../${STAGE_NAME}.log 2>&1
         cmake --build . --config Release >> ../${STAGE_NAME}.log 2>&1
     """
+
+    sh """
+        mkdir release/miopen
+        cp build/lib/libMIOpen.so* release
+        cp build/include/miopen/*.h release/miopen
+        cp include/miopen/*.h release/miopen
+    """
  
     sh """
-        tar cf ${options.packageName}-${osName}.tar build/lib/libMIOpen.so* build/include/miopen/*.h include/miopen/*.h
+        tar cf ${options.packageName}-${osName}.tar release
     """
 
     archiveArtifacts "${options.packageName}-${osName}.tar"
