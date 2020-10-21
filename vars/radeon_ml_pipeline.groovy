@@ -283,7 +283,7 @@ def executeBuild(String osName, Map options)
     {
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
-        receiveFiles("rpr-ml/MIOpen/${osName}", "../RML_thirdparty/MIOpen")
+        receiveFiles("rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
         receiveFiles("rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
 
         outputEnvironmentInfo(osName)
