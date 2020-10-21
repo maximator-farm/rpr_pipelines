@@ -20,7 +20,7 @@ def executeBuildWindows(String osName, Map options)
         xcopy /s/y/i include\\miopen\\*.h release\\miopen
     """
 
-    zip archive: true, dir: '', glob: 'release', zipFile: "${options.packageName}-${osName}.zip"
+    zip archive: true, dir: 'release', zipFile: "${options.packageName}-${osName}.zip"
 }
 
 
@@ -156,6 +156,11 @@ def executeBuild(String osName, Map options)
             default:
                 executeBuildCentOS(osName, options);
         }
+
+        if (options.updateBinaries) {
+            sendFiles("release/*", "${options.PRJ_ROOT}/${options.PRJ_NAME}/${osName}")
+        }
+
     }
     catch (e)
     {
@@ -180,6 +185,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectRepo='git@github.com:BenjaminCoquelle/MIOpen.git',
          String projectBranch = "master",
          String platforms = 'Windows;Ubuntu18;CentOS7_6',
+         String updateBinaries = 'false',
          String PRJ_ROOT='rpr-ml',
          String PRJ_NAME='MIOpen'
          )
@@ -191,6 +197,7 @@ def call(String projectRepo='git@github.com:BenjaminCoquelle/MIOpen.git',
                             projectBranch:projectBranch,
                             PRJ_NAME:PRJ_NAME,
                             PRJ_ROOT:PRJ_ROOT,
+                            updateBinaries:updateBinaries,
                             executeBuild:true,
                             executeTests:false,
                             projectRepo:projectRepo,
