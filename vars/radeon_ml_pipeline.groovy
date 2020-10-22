@@ -271,6 +271,21 @@ def executePreBuild(Map options)
                 }
         options['commitContexts'] = commitContexts
     }
+
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    }
+    
 }
 
 

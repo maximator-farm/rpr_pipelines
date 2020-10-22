@@ -125,10 +125,14 @@ def executePreBuild(Map options)
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
-    } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
     }
 
 }
@@ -172,7 +176,6 @@ def executeBuild(String osName, Map options)
     finally
     {
         archiveArtifacts "*.log"
-        //zip archive: true, dir: 'build-direct/Release', glob: '', zipFile: "${osName}_Release.zip"
     }
 }
 
