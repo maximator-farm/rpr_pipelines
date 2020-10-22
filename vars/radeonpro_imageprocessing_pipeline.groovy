@@ -316,7 +316,7 @@ def executeBuild(String osName, Map options)
         case 'OSX':
             executeBuildUnix(options.cmakeKeys, osName, options, 'clang');
             break;
-        case 'CentOS7':
+        case 'CentOS7_6':
             executeBuildUnix(options.cmakeKeys, osName, options);
             break;
         case 'Ubuntu18':
