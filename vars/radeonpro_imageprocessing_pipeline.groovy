@@ -120,13 +120,13 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
         set msbuild="C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe" >> ..\\${STAGE_NAME}.log 2>&1
         mkdir build-${options.packageName}-${osName}-dynamic
         cd build-${options.packageName}-${osName}-dynamic
-        cmake .. -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-dynamic >> ..\\${STAGE_NAME}.dynamic.log 2>&1
+        cmake .. -DADL_PROFILING=ON -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-dynamic >> ..\\${STAGE_NAME}.dynamic.log 2>&1
         %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.dynamic.log 2>&1
         cd ..
 
         mkdir build-${options.packageName}-${osName}-static
         cd build-${options.packageName}-${osName}-static
-        cmake .. -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static -DRIF_STATIC_LIB=ON >> ..\\${STAGE_NAME}.static.log 2>&1
+        cmake .. -DADL_PROFILING=ON -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static -DRIF_STATIC_LIB=ON >> ..\\${STAGE_NAME}.static.log 2>&1
         %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.static.log 2>&1
         cd ..
     """
@@ -199,14 +199,14 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
         ${EXPORT_CXX}
         mkdir build-${options.packageName}-${osName}-dynamic
         cd build-${options.packageName}-${osName}-dynamic
-        cmake .. ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-dynamic >> ../${STAGE_NAME}.dynamic.log 2>&1
+        cmake .. -DADL_PROFILING=ON ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-dynamic >> ../${STAGE_NAME}.dynamic.log 2>&1
         make ${SRC_BUILD} >> ../${STAGE_NAME}.dynamic.log 2>&1
         make install >> ../${STAGE_NAME}.dynamic.log 2>&1
         cd ..
 
         mkdir build-${options.packageName}-${osName}-static
         cd build-${options.packageName}-${osName}-static
-        cmake .. ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static -DRIF_STATIC_LIB=ON >> ../${STAGE_NAME}.static.log 2>&1
+        cmake .. -DADL_PROFILING=ON ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static -DRIF_STATIC_LIB=ON >> ../${STAGE_NAME}.static.log 2>&1
         make ${SRC_BUILD} >> ../${STAGE_NAME}.static.log 2>&1
         make install >> ../${STAGE_NAME}.static.log 2>&1
         cd ..
