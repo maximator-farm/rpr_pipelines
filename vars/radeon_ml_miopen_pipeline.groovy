@@ -1,231 +1,170 @@
- def executeGenTestRefCommand(String osName, Map options)
-{
-}
-
-def executeTestCommand(String osName, Map options)
-{
-    dir('build-direct/Release') {
-        switch(osName) {
-            case 'Windows':
-                bat """
-                tests.exe --gtest_output=xml:..\\..\\${STAGE_NAME}.gtest.xml >> ..\\..\\${STAGE_NAME}.log 2>&1
-                """
-                break;
-            case 'OSX':
-                sh """
-                echo "skip"
-                """
-                break;
-            default:
-                sh """
-                chmod +x tests
-                export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
-                ./tests --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ../../${STAGE_NAME}.log 2>&1
-                """
-        }
-    }
-}
-
-
 def executeTests(String osName, String asicName, Map options)
 {
-    cleanWS(osName)
-    String error_message = ""
-
-    try {
-        String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
-
-        outputEnvironmentInfo(osName)
-        unstash "app${osName}"
-
-        executeTestCommand(osName, options)
-    }
-    catch (e) {
-        println(e.toString());
-        println(e.getMessage());
-        error_message = e.getMessage()
-        throw e
-    }
-    finally {
-        archiveArtifacts "*.log"
-        junit "*gtest.xml"
-
-        if (env.CHANGE_ID) {
-            String context = "[${options.PRJ_NAME}] [TEST] ${osName}-${asicName}"
-            String description = error_message ? "Testing finished with error message: ${error_message}" : "Testing finished"
-            String status = error_message ? "failure" : "success"
-            String url = "${env.BUILD_URL}/artifact/${STAGE_NAME}.log"
-            pullRequest.createStatus(status, context, description, url)
-            options['commitContexts'].remove(context)
-        }
-    }
 }
 
 
-def executeBuildWindows(Map options)
+def executeBuildWindows(String osName, Map options)
 {
     bat """
-    mkdir build-direct
-    cd build-direct
-    cmake -G "Visual Studio 15 2017 Win64" ${options.cmakeKeys(env.WORKSPACE)} .. >> ..\\${STAGE_NAME}.Release.log 2>&1
-    set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-    %msbuild% RadeonML.sln -property:Configuration=Release >> ..\\${STAGE_NAME}.Release.log 2>&1
+        set msbuild="C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe" >> ..\\${STAGE_NAME}.log 2>&1
+        mkdir build
+        cd build
+        cmake -G "Visual Studio 15 2017 Win64" -DRIF_BUILD=1 -DMIOPEN_BACKEND=OpenCL -DBoost_INCLUDE_DIR=C:/local/boost_1_69_0 -DBoost_LIB_DIR=C:/local/boost_1_69_0/lib64-msvc-14.1 .. >> ..\\${STAGE_NAME}.log 2>&1
+        %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.log 2>&1
     """
 
     bat """
-    cd build-direct
-    xcopy ..\\third_party\\miopen\\MIOpen.dll .\\Release\\MIOpen.dll*
+        mkdir release\\miopen
+        xcopy /s/y/i build\\bin\\Release\\MIOpen.dll release
+        xcopy /s/y/i build\\include\\miopen\\*.h release\\miopen
+        xcopy /s/y/i include\\miopen\\*.h release\\miopen
     """
 
-    if (env.TAG_NAME) {
-        dir("rml-deploy") {
-            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, null, null, false, true, "radeonprorender-gitlab")
-            bat """
-                MD "miopen\\${CIS_OS}"
-                RMDIR /S/Q "miopen\\${CIS_OS}"
-                MD "miopen\\${CIS_OS}"
-                xcopy ..\\build-direct\\Release "miopen\\${CIS_OS}" /s/y/i
-                git config --local user.name "radeonbuildmaster"
-                git config --local user.email "radeonprorender.buildmaster@gmail.com"
-                git add --all
-                git commit -m "${CIS_OS} release ${env.TAG_NAME}"
-                git push origin HEAD:master
-            """
-        }
-    }
-
-    bat """
-    mkdir build-direct-debug
-    cd build-direct-debug
-    cmake -G "Visual Studio 15 2017 Win64" ${options.cmakeKeys(env.WORKSPACE)} -DRML_LOG_LEVEL=Debug .. >> ..\\${STAGE_NAME}.Debug.log 2>&1
-    set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-    %msbuild% RadeonML.sln -property:Configuration=Debug >> ..\\${STAGE_NAME}.Debug.log 2>&1
-    """
+    zip archive: true, dir: 'release', zipFile: "${options.packageName}-${osName}.zip"
 }
 
-def executeBuildOSX(Map options)
+
+def executeBuildOSX(String osName, Map options)
 {
+    println "OSX build is not supported"
 }
 
-def executeBuildLinux(Map options)
+
+def executeBuildUbuntu(String osName, Map options)
 {
     sh """
-    mkdir build-direct
-    cd build-direct
-    cmake ${options.cmakeKeys(env.WORKSPACE)} .. >> ../${STAGE_NAME}.Release.log 2>&1
-    make -j >> ../${STAGE_NAME}.Release.log 2>&1
+        mkdir build
+        cd build
+        cmake -DRIF_BUILD=1 -DMIOPEN_BACKEND=OpenCL .. >> ../${STAGE_NAME}.log 2>&1
+        cmake --build . --config Release >> ../${STAGE_NAME}.log 2>&1
     """
  
     sh """
-    cd build-direct
-    mv bin Release
-    cp ../third_party/miopen/libMIOpen.so* ./Release
-    
-    tar cf ${CIS_OS}_Release.tar Release
-    """
-
-    archiveArtifacts "build-direct/${CIS_OS}_Release.tar"
-
-    if (env.TAG_NAME) {
-        dir("rml-deploy") {
-            checkOutBranchOrScm("master", "ssh://git@gitlab.cts.luxoft.com:30122/servants/rml-deploy.git", true, null, null, false, true, "radeonprorender-gitlab")
-            sh """
-                mkdir -p miopen/${CIS_OS}
-                rm -fdr miopen/${CIS_OS}
-                mkdir -p miopen/${CIS_OS}
-                cp -r ../build-direct/Release/* ./miopen/${CIS_OS}
-                git config --local user.name "radeonbuildmaster"
-                git config --local user.email "radeonprorender.buildmaster@gmail.com"
-                git add --all
-                git commit -m "${CIS_OS} release ${env.TAG_NAME}"
-                git push origin HEAD:master
-            """
-        }
-    }
-
-    sh """
-    mkdir build-direct-debug
-    cd build-direct-debug
-    cmake ${options.cmakeKeys(env.WORKSPACE)} -DRML_LOG_LEVEL=Debug .. >> ../${STAGE_NAME}.Debug.log 2>&1
-    make -j >> ../${STAGE_NAME}.Debug.log 2>&1
+        mkdir release
+        mkdir release/miopen
+        cp build/lib/libMIOpen.so* release
+        cp build/include/miopen/*.h release/miopen
+        cp include/miopen/*.h release/miopen
     """
  
     sh """
-    cd build-direct-debug
-    mv bin Debug
+        tar cf ${options.packageName}-${osName}.tar release
     """
+
+    archiveArtifacts "${options.packageName}-${osName}.tar"
+
 }
+
+
+def executeBuildCentOS(String osName, Map options)
+{
+    sh """
+        mkdir build
+        cd build
+        cmake -DRIF_BUILD=1 -DMIOPEN_BACKEND=OpenCL -DBoost_INCLUDE_DIR=/opt/boost/include -DBoost_LIB_DIR=/opt/boost/lib -DCMAKE_CXX_FLAGS="-fPIC" .. >> ../${STAGE_NAME}.log 2>&1
+        cmake --build . --config Release >> ../${STAGE_NAME}.log 2>&1
+    """
+
+    sh """
+        mkdir release
+        mkdir release/miopen
+        cp build/lib/libMIOpen.so* release
+        cp build/include/miopen/*.h release/miopen
+        cp include/miopen/*.h release/miopen
+    """
+ 
+    sh """
+        tar cf ${options.packageName}-${osName}.tar release
+    """
+
+    archiveArtifacts "${options.packageName}-${osName}.tar"
+
+}
+
 
 def executePreBuild(Map options)
 {
-    checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+    checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
 
-    AUTHOR_NAME = bat (
-            script: "git show -s --format=%%an HEAD ",
-            returnStdout: true
-            ).split('\r\n')[2].trim()
+    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    println "The last commit was written by ${options.commitAuthor}."
+    println "Commit message: ${options.commitMessage}"
+    println "Commit SHA: ${options.commitSHA}"
 
-    echo "The last commit was written by ${AUTHOR_NAME}."
-    options.AUTHOR_NAME = AUTHOR_NAME
+    currentBuild.description = "<b>GitHub repo:</b> ${options.projectRepo}<br/>"
 
-    commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true ).split('\r\n')[2].trim()
-    echo "Commit message: ${commitMessage}"
-    options.commitMessage = commitMessage
-
-    def commitContexts = []
-    // set pending status for all
-    if(env.CHANGE_ID) {
-
-        options['platforms'].split(';').each()
-        { platform ->
-            List tokens = platform.tokenize(':')
-            String osName = tokens.get(0)
-            // Statuses for builds
-            String context = "[${options.PRJ_NAME}] [BUILD] ${osName}"
-            commitContexts << context
-            pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
-            if (tokens.size() > 1) {
-                gpuNames = tokens.get(1)
-                gpuNames.split(',').each()
-                { gpuName ->
-                    // Statuses for tests
-                    context = "[${options.PRJ_NAME}] [TEST] ${osName}-${gpuName}"
-                    commitContexts << context
-                    pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
-                }
-            }
-        }
-        options['commitContexts'] = commitContexts
+    if (options.projectBranch){
+        currentBuild.description += "<b>Project branch:</b> ${options.projectBranch}<br/>"
+    } else {
+        currentBuild.description += "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
     }
+
+    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+    options.commit = bat (
+        script: '''@echo off
+                   git rev-parse --short=6 HEAD''',
+        returnStdout: true
+    ).trim()
+
+    String branch = env.BRANCH_NAME ? env.BRANCH_NAME : env.Branch
+    options.branch = branch.replace('origin/', '')
+
+    String packageName = "miopen" + (options.branch ? '-' + options.branch : '') + (options.commit ? '-' + options.commit : '')
+    options.packageName = packageName.replaceAll('[^a-zA-Z0-9-_.]+','')
+
+    if (env.CHANGE_URL) {
+        echo "branch was detected as Pull Request"
+    }
+
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    }
+
 }
+
 
 def executeBuild(String osName, Map options)
 {
-    String error_message = ""
-    String context = "[${options.PRJ_NAME}] [BUILD] ${osName}"
+    cleanWS(osName)
 
     try
     {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
-        receiveFiles("rpr-ml/MIOpen/*", './third_party/miopen')
-        outputEnvironmentInfo(osName, "${STAGE_NAME}.Release")
-        outputEnvironmentInfo(osName, "${STAGE_NAME}.Debug")
+        checkOutBranchOrScm(options.projectBranch, options.projectRepo)
+        outputEnvironmentInfo(osName)
 
-        withEnv(["CIS_OS=${osName}"]) {
-            switch (osName) {
-                case 'Windows':
-                    executeBuildWindows(options);
-                    break;
-                case 'OSX':
-                    executeBuildOSX(options);
-                    break;
-                default:
-                    executeBuildLinux(options);
-            }
+        switch (osName) {
+            case 'Windows':
+                executeBuildWindows(osName, options);
+                break;
+            case 'OSX':
+                executeBuildOSX(osName, options);
+                break;
+            case 'Ubuntu18':
+                executeBuildUbuntu(osName, options);
+                break;
+            default:
+                executeBuildCentOS(osName, options);
         }
 
-        stash includes: 'build-direct/Release/**/*', name: "app${osName}"
+        if (options.updateBinaries) {
+            sendFiles("release/*", "${options.PRJ_ROOT}/${options.PRJ_NAME}/${osName}")
+        }
+
     }
     catch (e)
     {
@@ -236,55 +175,36 @@ def executeBuild(String osName, Map options)
     }
     finally
     {
-        if (env.CHANGE_ID) {
-            String status = error_message ? "failure" : "success"
-            pullRequest.createStatus("${status}", context, "Build finished as '${status}'", "${env.BUILD_URL}/artifact/${STAGE_NAME}.log")
-            options['commitContexts'].remove(context)
-        }
-
         archiveArtifacts "*.log"
-        zip archive: true, dir: 'build-direct/Release', glob: '', zipFile: "${osName}_Release.zip"
-        zip archive: true, dir: 'build-direct-debug/Debug', glob: '', zipFile: "${osName}_Debug.zip"
     }
 }
+
 
 def executeDeploy(Map options, List platformList, List testResultList)
 {
-    // set error statuses for PR, except if current build has been superseded by new execution
-    if (env.CHANGE_ID && !currentBuild.nextBuild) {
-        // if jobs was aborted or crushed remove pending status for unfinished stages
-        options['commitContexts'].each() {
-            pullRequest.createStatus("error", it, "Build has been terminated unexpectedly", "${env.BUILD_URL}")
-        }
-    }
 }
 
-def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7_6',
+
+def call(String projectRepo='git@github.com:BenjaminCoquelle/MIOpen.git',
+         String projectBranch = "master",
+         String platforms = 'Windows;Ubuntu18;CentOS7_6',
+         String updateBinaries = 'false',
          String PRJ_ROOT='rpr-ml',
-         String PRJ_NAME='MIOpen',
-         String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
-         Boolean updateRefs = false,
-         Boolean enableNotifications = true,
-         def cmakeKeys = { cdws -> "-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=OFF -DRML_TENSORFLOW_CUDA=OFF -DMIOpen_INCLUDE_DIR=${cdws}/third_party/miopen -DMIOpen_LIBRARY_DIR=${cdws}/third_party/miopen"})
+         String PRJ_NAME='MIOpen'
+         )
 {
 
 
-    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
+    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                            [platforms:platforms,
                             projectBranch:projectBranch,
-                            updateRefs:updateRefs,
-                            enableNotifications:enableNotifications,
                             PRJ_NAME:PRJ_NAME,
                             PRJ_ROOT:PRJ_ROOT,
-                            projectRepo:projectRepo,
-                            BUILDER_TAG:'BuilderML',
+                            updateBinaries:updateBinaries,
                             executeBuild:true,
-                            executeTests:true,
-                            cmakeKeys:cmakeKeys,
-                            slackChannel:"${SLACK_ML_CHANNEL}",
-                            slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
-                            slackTocken:"slack-ml-channel",
-                            retriesForTestStage:1])
+                            executeTests:false,
+                            projectRepo:projectRepo,
+                            BUILDER_TAG:'BuilderMIOpen'
+                            ])
 
 }

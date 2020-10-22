@@ -226,25 +226,18 @@ def executeTestCommand(String osName, String asicName, Map options)
     println "Set timeout to ${test_timeout}"
 
     timeout(time: test_timeout, unit: 'MINUTES') { 
-
-        String buildIdProd, buildIdDev, jobIdProd, jobIdDev = "none"
-        if (options.sendToUMS && universeClientsProd[options.engine].build != null){
-            buildIdProd = universeClientsProd[options.engine].build["id"]
-            jobIdProd = universeClientsProd[options.engine].build["job_id"]
-        }
-        if (options.sendToUMS && universeClientsDev[options.engine].build != null){
-            buildIdDev = universeClientsDev[options.engine].build["id"]
-            jobIdDev = universeClientsDev[options.engine].build["job_id"]
-        }
         withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
-            usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')])
+            usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD'),
+            string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
+            usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
         {
             withEnv(["UMS_USE=${options.sendToUMS}", "UMS_ENV_LABEL=${osName}-${asicName}",
-                "UMS_BUILD_ID_PROD=${buildIdProd}", "UMS_JOB_ID_PROD=${jobIdProd}", "UMS_URL_PROD=${UniverseURLProd}", 
+                "UMS_BUILD_ID_PROD=${options.buildIdProd}", "UMS_JOB_ID_PROD=${options.jobIdProd}", "UMS_URL_PROD=${UniverseURLProd}", 
                 "UMS_LOGIN_PROD=${UMS_USER}", "UMS_PASSWORD_PROD=${UMS_PASSWORD}",
-                "UMS_BUILD_ID_DEV=${buildIdDev}", "UMS_JOB_ID_DEV=${jobIdDev}", "UMS_URL_DEV=${UniverseURLDev}",
+                "UMS_BUILD_ID_DEV=${options.buildIdDev}", "UMS_JOB_ID_DEV=${options.jobIdDev}", "UMS_URL_DEV=${UniverseURLDev}",
                 "UMS_LOGIN_DEV=${UMS_USER}", "UMS_PASSWORD_DEV=${UMS_PASSWORD}",
-                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${ImageServiceURL}"])
+                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${ImageServiceURL}",
+                "MINIO_ENDPOINT=${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY=${MINIO_SECRET_KEY}"])
             {
                 switch(osName)
                 {
@@ -284,6 +277,15 @@ def executeTests(String osName, String asicName, Map options)
     if (options.sendToUMS){
         universeClientsProd[options.engine].stage("Tests-${osName}-${asicName}", "begin")
         universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "begin")
+
+        if (universeClientsProd[options.engine].build != null){
+            buildIdProd = universeClientsProd[options.engine].build["id"]
+            jobIdProd = universeClientsProd[options.engine].build["job_id"]
+        }
+        if (universeClientsDev[options.engine].build != null){
+            buildIdDev = universeClientsDev[options.engine].build["id"]
+            jobIdDev = universeClientsDev[options.engine].build["job_id"]
+        }
     }
 
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
@@ -443,6 +445,11 @@ def executeTests(String osName, String asicName, Map options)
                 utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
+            if (options.sendToUMS) {
+                dir("jobs_launcher") {
+                    sendToMINIO(options, osName, "../${options.stageName}", "*.log")
+                }
+            }
             if (stashResults) {
                 dir('Work')
                 {
@@ -531,6 +538,12 @@ def executeBuildWindows(Map options)
             String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
+            if (options.sendToUMS) {
+                dir("../../../jobs_launcher") {
+                    sendToMINIO(options, "Windows", "..\\RadeonProRenderBlenderAddon\\BlenderPkg\\.build", BUILD_NAME)                            
+                }
+            }
+
             bat """
                 rename RadeonProRender*.zip RadeonProRenderBlender_Windows.zip
             """
@@ -568,6 +581,12 @@ def executeBuildOSX(Map options)
             String BUILD_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_OSX.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_OSX.zip"
             String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
+            if (options.sendToUMS) {
+                dir("../../../jobs_launcher") {
+                    sendToMINIO(options, "OSX", "../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME)                            
+                }
+            }
 
             sh """
                 mv RadeonProRender*zip RadeonProRenderBlender_OSX.zip
@@ -608,6 +627,12 @@ def executeBuildLinux(String osName, Map options)
             String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
+            if (options.sendToUMS) {
+                dir("../../../jobs_launcher") {
+                    sendToMINIO( options, osName, "../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME)                            
+                }
+            }
+
             sh """
                 mv RadeonProRender*zip RadeonProRenderBlender_${osName}.zip
             """
@@ -644,6 +669,24 @@ def executeBuild(String osName, Map options)
                 GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
                 throw e
+            }
+        }
+
+        if (options.sendToUMS) {
+            timeout(time: "5", unit: 'MINUTES') {
+                dir('jobs_launcher') {
+                    try {
+                        checkOutBranchOrScm(options['jobsLauncherBranch'], 'git@github.com:luxteam/jobs_launcher.git')
+                    } catch (e) {
+                        if (utils.isTimeoutExceeded(e)) {
+                            println("[WARNING] Failed to download jobs launcher due to timeout")
+                        } else {
+                            println("[WARNING] Failed to download jobs launcher")
+                        }
+                        println(e.toString())
+                        println(e.getMessage())
+                    }
+                }
             }
         }
 
@@ -687,6 +730,17 @@ def executeBuild(String osName, Map options)
     }
     finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+        if (options.sendToUMS) {
+            dir("jobs_launcher") {
+                switch(osName) {
+                    case 'Windows':
+                        sendToMINIO(options, osName, "..", "*.log")
+                        break;
+                    default:
+                        sendToMINIO(options, osName, "..", "*.log")
+                }
+            }
+        }
     }
     if (options.sendToUMS){
         options.engines.each { engine ->
@@ -864,6 +918,9 @@ def executePreBuild(Map options)
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
 
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            dir ('jobs_launcher') {
+                options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            }
             println "[INFO] Test branch hash: ${options['testsBranch']}"
 
             def packageInfo
@@ -1031,6 +1088,17 @@ def executePreBuild(Map options)
         catch (e)
         {
             println(e.toString())
+        }
+
+        if (universeClientProd.build != null){
+            options.buildIdProd = universeClientParentProd.build["id"]
+            options.jobIdProd = universeClientParentProd.build["job_id"]
+            options.isUrl = ImageServiceURL
+        }
+        if (universeClientDev.build != null){
+            options.buildIdDev = universeClientParentDev.build["id"]
+            options.jobIdDev = universeClientParentDev.build["job_id"]
+            options.isUrl = ImageServiceURL
         }
     }
 
