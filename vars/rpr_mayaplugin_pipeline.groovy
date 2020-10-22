@@ -989,12 +989,12 @@ def executePreBuild(Map options)
             println(e.toString())
         }
 
-        if (universeClientProd.build != null){
+        if (universeClientParentProd.build != null){
             options.buildIdProd = universeClientParentProd.build["id"]
             options.jobIdProd = universeClientParentProd.build["job_id"]
             options.isUrl = ImageServiceURL
         }
-        if (universeClientDev.build != null){
+        if (universeClientParentDev.build != null){
             options.buildIdDev = universeClientParentDev.build["id"]
             options.jobIdDev = universeClientParentDev.build["job_id"]
             options.isUrl = ImageServiceURL
