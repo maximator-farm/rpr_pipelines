@@ -279,12 +279,12 @@ def executeTests(String osName, String asicName, Map options)
         universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "begin")
 
         if (universeClientsProd[options.engine].build != null){
-            buildIdProd = universeClientsProd[options.engine].build["id"]
-            jobIdProd = universeClientsProd[options.engine].build["job_id"]
+            options.buildIdProd = universeClientsProd[options.engine].build["id"]
+            options.jobIdProd = universeClientsProd[options.engine].build["job_id"]
         }
         if (universeClientsDev[options.engine].build != null){
-            buildIdDev = universeClientsDev[options.engine].build["id"]
-            jobIdDev = universeClientsDev[options.engine].build["job_id"]
+            options.buildIdDev = universeClientsDev[options.engine].build["id"]
+            options.jobIdDev = universeClientsDev[options.engine].build["job_id"]
         }
     }
 
