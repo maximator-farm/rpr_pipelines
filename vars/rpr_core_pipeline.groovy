@@ -682,7 +682,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report.", "${BUILD_URL}")
                 if (options.collectTrackedMetrics) {
                     try {
-                        receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}", "${env.WORKSPACE}/summaryTestResults/tracked_metrics")
+                        dir("summaryTestResults/tracked_metrics") {
+                            receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}/", ".")
+                        }
                     } catch (e) {
                         println("[WARNING] Failed to download history of tracked metrics.")
                         println(e.toString())
@@ -717,7 +719,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 } 
                 if (options.collectTrackedMetrics) {
                     try {
-                        sendFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}", "${env.WORKSPACE}/summaryTestResults/tracked_metrics")
+                        dir("summaryTestResults/tracked_metrics") {
+                            sendFiles(".", "${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}")
+                        }
                     } catch (e) {
                         println("[WARNING] Failed to update history of tracked metrics.")
                         println(e.toString())
