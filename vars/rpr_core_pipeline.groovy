@@ -490,6 +490,7 @@ def executePreBuild(Map options)
         GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
         options.githubNotificator = githubNotificator
         githubNotificator.initPreBuild("${BUILD_URL}")
+        options.collectTrackedMetrics = false
     }
 
     try {
@@ -679,6 +680,15 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report.", "${BUILD_URL}")
+                if (options.collectTrackedMetrics) {
+                    try {
+                        receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}", "${env.WORKSPACE}/summaryTestResults/tracked_metrics")
+                    } catch (e) {
+                        println("[WARNING] Failed to download history of tracked metrics.")
+                        println(e.toString())
+                        println(e.getMessage())
+                    }
+                }
                 dir("jobs_launcher")
                 {
                     if(options.projectBranch != "") {
@@ -698,12 +708,22 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                         writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                     }
+
                     bat """
                     build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
                     """
 
                     bat "get_status.bat ..\\summaryTestResults"
-                }    
+                } 
+                if (options.collectTrackedMetrics) {
+                    try {
+                        sendFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}", "${env.WORKSPACE}/summaryTestResults/tracked_metrics")
+                    } catch (e) {
+                        println("[WARNING] Failed to update history of tracked metrics.")
+                        println(e.toString())
+                        println(e.getMessage())
+                    }
+                }  
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
                 GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
@@ -908,7 +928,8 @@ def call(String projectBranch = "",
                         platforms:platforms,
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
-                        parallelExecutionType:parallelExecutionType
+                        parallelExecutionType:parallelExecutionType,
+                        collectTrackedMetrics:true
                         ]
         }
         catch(e)
