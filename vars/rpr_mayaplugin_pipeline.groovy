@@ -6,8 +6,8 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field UniverseClient universeClientProd = new UniverseClient(this, "https://umsapi.stvcis.luxoft.com", env, "https://imgs.stvcis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Maya")
-@Field UniverseClient universeClientDev = new UniverseClient(this, "https://umsapi.cistest.luxoft.com", env, "https://imgs.stvcis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Maya")
+@Field UniverseClient universeClientProd = new UniverseClient(this, "http://172.26.157.248:5001", env, "https://imgs.stvcis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Maya")
+@Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5001", env, "https://imgs.stvcis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Maya")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
