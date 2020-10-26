@@ -490,7 +490,6 @@ def executePreBuild(Map options)
         GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
         options.githubNotificator = githubNotificator
         githubNotificator.initPreBuild("${BUILD_URL}")
-        options.collectTrackedMetrics = false
     }
 
     try {
@@ -680,7 +679,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report.", "${BUILD_URL}")
+                def buildNumber = ""
                 if (options.collectTrackedMetrics) {
+                    buildNumber = env.BUILD_NUMBER
                     try {
                         dir("summaryTestResults/tracked_metrics") {
                             receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}/", ".")
@@ -709,10 +710,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     dir("..\\summaryTestResults") {
                         JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                         writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
-                    }
+                    }                    
 
                     bat """
-                    build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                    build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
                     """
 
                     bat "get_status.bat ..\\summaryTestResults"
@@ -860,7 +861,8 @@ def call(String projectBranch = "",
          Boolean sendToUMS = false,
          String tester_tag = 'Core',
          String mergeablePR = "",
-         String parallelExecutionTypeString = "TakeOneNodePerGPU")
+         String parallelExecutionTypeString = "TakeOneNodePerGPU",
+         Boolean collectTrackedMetrics = false)
 {
     
     def nodeRetry = []
@@ -933,7 +935,7 @@ def call(String projectBranch = "",
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
-                        collectTrackedMetrics:true
+                        collectTrackedMetrics:collectTrackedMetrics
                         ]
         }
         catch(e)
