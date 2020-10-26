@@ -329,7 +329,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectBranch = "",
         String usdBranch = "master",
         String testsBranch = "master",
-        String platforms = 'Windows;Ubuntu18;OSX;CentOS7_6',
+        String platforms = 'Windows;Ubuntu18;OSX',
         Boolean updateRefs = false,
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,
