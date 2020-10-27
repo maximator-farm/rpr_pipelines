@@ -692,32 +692,35 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         println(e.getMessage())
                     }
                 }
-                dir("jobs_launcher")
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
-                    if(options.projectBranch != "") {
-                        options.branchName = options.projectBranch
-                    } else {
-                        options.branchName = env.BRANCH_NAME
+                    dir("jobs_launcher")
+                    {
+                        if(options.projectBranch != "") {
+                            options.branchName = options.projectBranch
+                        } else {
+                            options.branchName = env.BRANCH_NAME
+                        }
+                        if(options.incrementVersion) {
+                            options.branchName = "master"
+                        }
+
+                        options.commitMessage = options.commitMessage.replace("'", "")
+                        options.commitMessage = options.commitMessage.replace('"', '')
+
+                        def retryInfo = JsonOutput.toJson(options.nodeRetry)
+                        dir("..\\summaryTestResults") {
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                        }                    
+
+                        bat """
+                        build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
+                        """
+
+                        bat "get_status.bat ..\\summaryTestResults"
                     }
-                    if(options.incrementVersion) {
-                        options.branchName = "master"
-                    }
-
-                    options.commitMessage = options.commitMessage.replace("'", "")
-                    options.commitMessage = options.commitMessage.replace('"', '')
-
-                    def retryInfo = JsonOutput.toJson(options.nodeRetry)
-                    dir("..\\summaryTestResults") {
-                        JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
-                        writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
-                    }                    
-
-                    bat """
-                    build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
-                    """
-
-                    bat "get_status.bat ..\\summaryTestResults"
-                } 
+                }
                 if (options.collectTrackedMetrics) {
                     try {
                         dir("summaryTestResults/tracked_metrics") {
