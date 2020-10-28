@@ -223,6 +223,11 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
             println "Exception cause: ${e.getCause()}"
             println "Exception stack trace: ${e.getStackTrace()}"
 
+            String exceptionClassName = e.getClass().toString()
+            if (exceptionClassName.contains("FlowInterruptedException")) {
+                options.buildWasAborted = true
+            }
+
             currentBuild.result = "FAILURE"
             options.FAILED_STAGES.add(e.toString())
             throw e
