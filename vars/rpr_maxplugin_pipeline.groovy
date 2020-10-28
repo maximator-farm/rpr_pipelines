@@ -925,16 +925,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 throw e
             }
-
-            if (options.sendToUMS) {
-                try {
-                    String status = currentBuild.result ?: 'SUCCESSFUL'
-                    universeClientProd.changeStatus(status)
-                    universeClientDev.changeStatus(status)
-                } catch (e) {
-                    println(e.getMessage())
-                }
-            }
         }
     }
     catch (e) {
@@ -1106,10 +1096,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     catch(e)
     {
         currentBuild.result = "FAILURE"
-        if (sendToUMS){
-            universeClientProd.changeStatus(currentBuild.result)
-            universeClientDev.changeStatus(currentBuild.result)
-        }
         println(e.toString());
         println(e.getMessage());
 
@@ -1117,6 +1103,18 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     }
     finally
     {
+        if (options.sendToUMS) {
+            node("Windows && PreBuild") {
+                try {
+                    String status = options.buildWasAborted ? "ABORTED" : currentBuild.result
+                    universeClientProd.changeStatus(status)
+                    universeClientDev.changeStatus(status)
+                }
+                catch (e){
+                    println(e.getMessage())
+                }
+            }
+        }
         problemMessageManager.publishMessages()
     }
 
