@@ -159,6 +159,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                     Integer retries_count = options.retriesForTestStage ?: -1
                                     run_with_retries(testerLabels, options.TEST_TIMEOUT, retringFunction, true, "Test", newOptions, [], retries_count, osName)
                                 } catch(FlowInterruptedException e) {
+                                    options.buildWasAborted = true
                                     e.getCauses().each(){
                                         String causeClassName = it.getClass().toString()
                                         if (causeClassName.contains("CancelledCause") || causeClassName.contains("UserInterruption")) {
@@ -394,6 +395,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 currentBuild.result = "FAILURE"
                 String exceptionClassName = e.getClass().toString()
                 if (exceptionClassName.contains("FlowInterruptedException")) {
+                    options.buildWasAborted = true
                     e.getCauses().each(){
                         // UserInterruption aborting by user
                         // ExceededTimeout aborting by timeout
@@ -437,6 +439,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
     {
         println(e.toString());
         println(e.getMessage());
+        options.buildWasAborted = true
         echo "Job was ABORTED by user. Job status: ${currentBuild.result}"
     }
     catch (e)
