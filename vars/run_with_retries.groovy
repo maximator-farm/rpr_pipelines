@@ -1,6 +1,6 @@
 def shoudBreakRetries(labels) {
     // retries should be broken if it isn't first try (some other nodes are excluded) and there isn't any suitable online node
-    return labels.contains('!') && (nodesByLabel label: labels, offline: false).size == 0
+    return labels.contains('!') && nodesByLabel(label: labels, offline: false).size() == 0
 }
 
 
