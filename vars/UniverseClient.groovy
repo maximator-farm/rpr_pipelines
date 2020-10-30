@@ -163,6 +163,7 @@ class UniverseClient {
                 buildBody = [
                     'name': env.BUILD_NUMBER,
                     'parent': true,
+                    'tags': tags
                 ]
             } else {
                 buildBody = [
