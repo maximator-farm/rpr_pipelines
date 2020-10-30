@@ -490,6 +490,9 @@ def executePreBuild(Map options)
         GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
         options.githubNotificator = githubNotificator
         githubNotificator.initPreBuild("${BUILD_URL}")
+    } else if (env.BRANCH_NAME == "master") {
+        println "[INFO] ${env.BRANCH_NAME} branch was detected"
+        options.collectTrackedMetrics = true
     }
 
     try {
