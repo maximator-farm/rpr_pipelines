@@ -42,7 +42,6 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
     }
 
     Boolean successCurrentNode = false
-    options['nodeReallocateTries'] = tries
 
     String title = ""
     if (stageName == "Build") {
@@ -57,6 +56,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
     {
         String nodeName = ""
         options['currentTry'] = i
+        options['nodeReallocateTries'] = tries
 
         try {
             // check that there is at least one suitable online node and break retries if not (except waiting of first node)
@@ -64,7 +64,12 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                 // if some nodes were rebooted - they should be up in 10 minutes
                 sleep(time: 10, unit: 'MINUTES')
                 if (shoudBreakRetries(labels)) {
-                    break
+                    // no one node was found. Try to do last retry with previous set of labels
+                    def labelsParts = labels.split("&&") as List
+                    labelsParts.removeAt(labelsParts.size() - 1)
+                    labels = labelsParts.join("&&")
+                    tries = i + 2
+                    continue
                 }
             }
             node(labels)
