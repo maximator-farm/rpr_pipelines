@@ -37,7 +37,7 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
                 case 'Windows':
                     withEnv(["PATH=C:\\Python38;C:\\Python38\\Scripts;${PATH}"]) {
                         bat """
-                        pip install -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
+                        pip install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                         python -V >> ${STAGE_NAME}.ft.log 2>&1
                         python run_tests.py -t ../${options.PRJ_NAME}-TestAssets -e rml_release/test_app.exe -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
                         rename ft-executor.log ${STAGE_NAME}.engine.log

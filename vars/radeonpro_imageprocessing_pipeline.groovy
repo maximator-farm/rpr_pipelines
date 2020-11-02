@@ -364,7 +364,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             bat """
             set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
-            pip install -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
+            pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
             python build_report.py --test_results ..\\testResults --output_dir ..\\results
             """
         }
