@@ -132,7 +132,7 @@ class UniverseClient {
      * @param envs environment list in format: ["OS-1:GPU-1", ..."OS-N:GPU-N"]
      * @param suites suites names list ["Suite1", "Suite2", ..., "SuiteN"]
      */
-    def createBuild(envs = '', suites = '', options = [], updRefs = false) {
+    def createBuild(envs = '', suites = '', updRefs = false, options = [:], info = [:]) {
         def request = {
             def splittedJobName = []
             splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/", 2)))
@@ -180,9 +180,8 @@ class UniverseClient {
 
             
             buildBody['upd_baselines'] = updRefs
-            buildBody['parameters'] = [
-                "projectRepo": options.projectRepo
-            ]
+            buildBody['parameters'] = parameters
+            buildBody['info'] = info
             
             
 
