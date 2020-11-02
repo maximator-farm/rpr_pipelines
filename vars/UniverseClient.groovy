@@ -132,7 +132,9 @@ class UniverseClient {
      * @param envs environment list in format: ["OS-1:GPU-1", ..."OS-N:GPU-N"]
      * @param suites suites names list ["Suite1", "Suite2", ..., "SuiteN"]
      */
-    def createBuild(envs = '', suites = '', upd_refs = false) {
+    def createBuild(envs = '', suites = '', updRefs = false) {
+        println("Build created with upd refs:", updRefs)
+        
         def request = {
             def splittedJobName = []
             splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/", 2)))
@@ -178,8 +180,8 @@ class UniverseClient {
                 }
             }
 
-            if (upd_refs) {
-                buildBody['upd_baselines'] = upd_refs
+            if (updRefs) {
+                buildBody['upd_baselines'] = updRefs
             }
 
             def res = this.context.httpRequest(
