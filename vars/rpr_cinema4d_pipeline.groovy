@@ -33,12 +33,12 @@ def executeBuildOSX(Map options)
     """
     
     // TODO: filter files for archive
-    sh """
-        tar cf Cinema4D_Release_MacOS.tar plugins/gpurenderer
-    """
+    //sh """
+    //    tar cf Cinema4D_Release_MacOS.tar plugins/gpurenderer
+    //"""
 
-    archiveArtifacts "Cinema4D_Release_MacOS.tar"
-    // zip archive: true, glob: 'plugins/gpurenderer', zipFile: "Cinema4D_Release_MacOS.zip"
+    //archiveArtifacts "Cinema4D_Release_MacOS.tar"
+    zip archive: true, dir: "plugins/gpurenderer", glob: '', zipFile: "Cinema4D_Release_MacOS.zip"
     
 }
 
