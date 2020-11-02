@@ -1,3 +1,9 @@
+def shoudBreakRetries(labels) {
+    // retries should be broken if it isn't first try (some other nodes are excluded) and there isn't any suitable online node
+    return labels.contains('!') && nodesByLabel(label: labels, offline: false).size() == 0
+}
+
+
 def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLastNode, def stageName, def options, List allowedExceptions = [], Integer maxNumberOfRetries = -1, String osName = "", Boolean setBuildStatus = false) {
     List nodesList = nodesByLabel label: labels, offline: true
     println "[INFO] Found ${nodesList.size()} suitable nodes"
@@ -36,7 +42,6 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
     }
 
     Boolean successCurrentNode = false
-    options['nodeReallocateTries'] = tries
 
     String title = ""
     if (stageName == "Build") {
@@ -51,8 +56,22 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
     {
         String nodeName = ""
         options['currentTry'] = i
+        options['nodeReallocateTries'] = tries
 
         try {
+            // check that there is at least one suitable online node and break retries if not (except waiting of first node)
+            if (shoudBreakRetries(labels)) {
+                // if some nodes were rebooted - they should be up in 10 minutes
+                sleep(time: 10, unit: 'MINUTES')
+                if (shoudBreakRetries(labels)) {
+                    // no one node was found. Try to do last retry with previous set of labels
+                    def labelsParts = labels.split("&&") as List
+                    labelsParts.removeAt(labelsParts.size() - 1)
+                    labels = labelsParts.join("&&")
+                    tries = i + 2
+                    continue
+                }
+            }
             node(labels)
             {
                 timeout(time: "${stageTimeout}", unit: 'MINUTES')
