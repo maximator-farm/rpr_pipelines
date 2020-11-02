@@ -181,7 +181,7 @@ class UniverseClient {
             
             buildBody['upd_baselines'] = updRefs
             buildBody['parameters'] = [
-                "branch": options.branch
+                "projectRepo": options.projectRepo
             ]
             
             
