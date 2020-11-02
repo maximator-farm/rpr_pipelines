@@ -15,7 +15,7 @@ def executeBuildWindows(Map options)
     """
     
     // TODO: filter files for archive
-    zip archive: true, glob: '', zipFile: "Cinema4D_Release_Windows.zip"
+    zip archive: true, glob: 'plugins\\gpurenderer', zipFile: "Cinema4D_Release_Windows.zip"
     
 }
 
@@ -33,7 +33,7 @@ def executeBuildOSX(Map options)
     """
     
     // TODO: filter files for archive
-    zip archive: true, glob: '', zipFile: "Cinema4D_Release_MacOS.zip"
+    zip archive: true, glob: 'plugins/gpurenderer', zipFile: "Cinema4D_Release_MacOS.zip"
     
 }
 
