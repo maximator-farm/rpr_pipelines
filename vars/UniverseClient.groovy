@@ -180,7 +180,9 @@ class UniverseClient {
 
             
             buildBody['upd_baselines'] = updRefs
-            buildBody['parameters'] = options
+            buildBody['parameters'] = [
+                "branch": options.branch
+            ]
             
             
 
