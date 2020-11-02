@@ -133,8 +133,8 @@ class UniverseClient {
      * @param suites suites names list ["Suite1", "Suite2", ..., "SuiteN"]
      */
     def createBuild(envs = '', suites = '', updRefs = false) {
-        println("Build created with upd refs:", updRefs)
-        
+        this.context.println("Build created with upd refs:", updRefs)
+
         def request = {
             def splittedJobName = []
             splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/", 2)))
