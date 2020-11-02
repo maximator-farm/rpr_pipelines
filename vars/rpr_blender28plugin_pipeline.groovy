@@ -7,6 +7,53 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
+  
+
+
+    //                     incrementVersion:incrementVersion,
+    //                     renderDevice:renderDevice,
+    //                     testsPackage:testsPackage,
+    //                     tests:tests,
+    //                     toolVersion:toolVersion,
+    //                     isPreBuilt:isPreBuilt,
+    //                     forceBuild:forceBuild,
+    //                     reportName:'Test_20Report',
+    //                     splitTestsExecution:splitTestsExecution,
+    //                     gpusCount:gpusCount,
+    //                     TEST_TIMEOUT:180,
+    //                     ADDITIONAL_XML_TIMEOUT:30,
+    //                     NON_SPLITTED_PACKAGE_TIMEOUT:60,
+    //                     DEPLOY_TIMEOUT:deployTimeout,
+    //                     TESTER_TAG:tester_tag,
+    //                     BUILDER_TAG:"BuildBlender2.8",
+    //                     universePlatforms: universePlatforms,
+    //                     resX: resX,
+    //                     resY: resY,
+    //                     SPU: SPU,
+    //                     iter: iter,
+    //                     theshold: theshold,
+    //                     customBuildLinkWindows: customBuildLinkWindows,
+    //                     customBuildLinkLinux: customBuildLinkLinux,
+    //                     customBuildLinkOSX: customBuildLinkOSX,
+    //                     engines: formattedEngines,
+    //                     enginesNames:enginesNames,
+    //                     nodeRetry: nodeRetry,
+    //                     problemMessageManager: problemMessageManager,
+    //                     platforms:platforms,
+    //                     prRepoName:prRepoName,
+    //                     prBranchName:prBranchName,
+    //                     parallelExecutionType:parallelExecutionType,
+    //                     testCaseRetries:testCaseRetries
+@Field String[] UMSPrarmetersKeys = [
+    "projectRepo",
+    "projectBranch",
+    "testsBranch",
+    "enableNotifications",
+    "PRJ_NAME",
+    "PRJ_ROOT",
+    "gpusCountx"
+    ]
+@Field String[] UMSBuildInfoKeys = ["commitSHA"]
 @Field String UniverseURLProd = "http://172.26.157.233:5002"
 @Field String UniverseURLDev = "http://172.26.157.233:5002"
 @Field String ImageServiceURL = "https://imgs.cis.luxoft.com"
@@ -1074,6 +1121,8 @@ def executePreBuild(Map options)
             universeClientParentDev.tokenSetup()
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+            parameters =
+            
             universeClientParentProd.createBuild('', '', options)
             universeClientParentDev.createBuild('', '', options)
             for (int i = 0; i < options.engines.size(); i++) {
@@ -1081,8 +1130,8 @@ def executePreBuild(Map options)
                 String engineName = options.enginesNames[i]
                 universeClientsProd[engine] = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName, engineName, universeClientParentProd)
                 universeClientsDev[engine] = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName, engineName, universeClientParentDev)
-                universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
-                universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
+                universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, parameters, options.updateRefs)
+                universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, parameters, options.updateRefs)
             }
         }
         catch (e)
@@ -1594,6 +1643,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     finally
     {
         problemMessageManager.publishMessages()
+        
     }
 
 }
