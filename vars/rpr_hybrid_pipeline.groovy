@@ -486,7 +486,7 @@ def call(String projectBranch = "",
     }
 
     if ((env.BRANCH_NAME && env.BRANCH_NAME == 'master') || (env.CHANGE_TARGET && env.CHANGE_TARGET == 'master')) {
-        platforms = 'Windows:AMD_RXVEGA,NVIDIA_RTX2070S;Ubuntu18:AMD_RadeonVII' 
+        platforms = 'Windows:NVIDIA_RTX2070S;Ubuntu18:NVIDIA_RTX2070' 
         testsQuality = ''
     }
 
