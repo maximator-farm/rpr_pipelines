@@ -1074,8 +1074,8 @@ def executePreBuild(Map options)
             universeClientParentDev.tokenSetup()
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            universeClientParentProd.createBuild()
-            universeClientParentDev.createBuild()
+            universeClientParentProd.createBuild('', '', options)
+            universeClientParentDev.createBuild('', '', options)
             for (int i = 0; i < options.engines.size(); i++) {
                 String engine = options.engines[i]
                 String engineName = options.enginesNames[i]
