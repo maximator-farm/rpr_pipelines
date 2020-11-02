@@ -1136,8 +1136,8 @@ def executePreBuild(Map options)
                 String engineName = options.enginesNames[i]
                 universeClientsProd[engine] = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName, engineName, universeClientParentProd)
                 universeClientsDev[engine] = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName, engineName, universeClientParentDev)
-                universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, parameters, options.updateRefs)
-                universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, parameters, options.updateRefs)
+                universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
+                universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
             }
         }
         catch (e)
