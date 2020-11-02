@@ -448,7 +448,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
     {}
 }
 
-def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_storage/RadeonProRenderMaya_2.9.8.msi",
+def call(String customBuildLinkWindows = "",
          String projectBranch = "",
          String testsBranch = "master",
          String platforms = 'Windows:NVIDIA_RTX2080TI',
@@ -463,6 +463,13 @@ def call(String customBuildLinkWindows = "https://builds.rpr.cis.luxoft.com/bin_
          Boolean forceBuild = false) {
     try
     {
+        if (!customBuildLinkWindows) {
+            withCredentials([string(credentialsId: 'buildsURL', variable: 'BUILDS_URL')])
+            {
+                customBuildLinkWindows = "${BUILDS_URL}/bin_storage/RadeonProRenderMaya_2.9.8.msi"
+            }
+        }
+
         String PRJ_NAME="RS2RPRConvertTool-Maya"
         String PRJ_ROOT="rpr-tools"
 

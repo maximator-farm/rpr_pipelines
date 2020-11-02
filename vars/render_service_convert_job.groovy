@@ -147,15 +147,21 @@ def main(String PCs, Map options) {
 		boolean PRODUCTION = true
 
 		if (PRODUCTION) {
-			options['django_url'] = "https://render.cis.luxoft.com/convert/jenkins/"
-			options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
-			options['scripts_branch'] = "master"
-			options['convert_branch'] = "master"
+			withCredentials([string(credentialsId: 'prodRSURL', variable: 'PROD_RS_URL')])
+			{
+				options['django_url'] = "${PROD_RS_URL}/convert/jenkins/"
+				options['plugin_storage'] = "${PROD_RS_URL}/media/plugins/"
+				options['scripts_branch'] = "master"
+				options['convert_branch'] = "master"
+			}
 		} else {
-			options['django_url'] = "https://testrender.cis.luxoft.com/convert/jenkins/"
-			options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
-			options['scripts_branch'] = "master"
-			options['convert_branch'] = "master"
+			withCredentials([string(credentialsId: 'devRSURL', variable: 'DEV_RS_URL')])
+			{
+				options['django_url'] = "${DEV_RS_URL}/convert/jenkins/"
+				options['plugin_storage'] = "${DEV_RS_URL}/media/plugins/"
+				options['scripts_branch'] = "master"
+				options['convert_branch'] = "master"
+			}
 		}
 
 		List tokens = PCs.tokenize(':')

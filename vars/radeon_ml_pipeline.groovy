@@ -24,10 +24,10 @@ def executeUnitTestsCommand(String osName, Map options)
 
 def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
     ws("WS/${options.PRJ_NAME}-TestAssets") {
-        checkOutBranchOrScm(options['assetsBranch'], "https://gitlab.cts.luxoft.com/rml/models.git", true, null, null, false, true, "radeonprorender-gitlab", true)
+        checkOutBranchOrScm(options['assetsBranch'], "${options.gitlabURL}/rml/models.git", true, null, null, false, true, "radeonprorender-gitlab", true)
     }
     ws("WS/${options.PRJ_NAME}-FT") {
-        checkOutBranchOrScm(options['testsBranch'], "https://gitlab.cts.luxoft.com/rml/ft_engine.git", true, null, null, false, true, "radeonprorender-gitlab", false)
+        checkOutBranchOrScm(options['testsBranch'], "${options.gitlabURL}/rml/ft_engine.git", true, null, null, false, true, "radeonprorender-gitlab", false)
         try {
             dir("rml_release") {
                 unstash "app${osName}"
@@ -389,6 +389,12 @@ def call(String projectBranch = "",
     String PRJ_ROOT='rpr-ml'
     String PRJ_NAME='RadeonML'
 
+    def gitlabURL
+    withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')])
+    {
+        gitlabURL = GITLAB_URL
+    }
+
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
             [platforms:platforms,
              projectBranch:projectBranch,
@@ -408,5 +414,6 @@ def call(String projectBranch = "",
              slackChannel:"${SLACK_ML_CHANNEL}",
              slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
              slackTocken:"slack-ml-channel",
-             retriesForTestStage:1])
+             retriesForTestStage:1,
+             gitlabURL:gitlabURL])
 }

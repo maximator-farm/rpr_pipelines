@@ -157,19 +157,6 @@ def executeTests(String osName, String asicName, Map options)
                 {
                     options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
                 }
-
-                if (options.sendToRBS)
-                {
-                    writeJSON file: 'temp_machine_info.json', json: sessionReport.machine_info
-                    String token = rbs_get_token("https://rbsdbdev.cis.luxoft.com/api/login", "847a5a5d-700d-439b-ace1-518f415eb8d8")
-                    String branchTag = env.JOB_NAME == "RadeonProRenderMayaPlugin-WeeklyFull" ? "weekly" : "master"
-                    rbs_push_group_results("https://rbsdbdev.cis.luxoft.com/report/group", token, branchTag, "Maya", options)
-
-                    bat "del temp_group_report.json"
-
-                    token = rbs_get_token("https://rbsdb.cis.luxoft.com/api/login", "ddd49290-412d-45c3-9ae4-65dba573b4c0")
-                    rbs_push_group_results("https://rbsdb.cis.luxoft.com/report/group", token, branchTag, "Maya", options)
-                }
             }
             catch (e)
             {
@@ -298,15 +285,6 @@ def executeBuild(String osName, Map options)
         }
     }
     catch (e) {
-        if (options.sendToRBS)
-        {
-            String token = rbs_get_token("https://rbsdbdev.cis.luxoft.com/api/login", "847a5a5d-700d-439b-ace1-518f415eb8d8")
-            String branchTag = env.JOB_NAME == "RadeonProRenderMayaPlugin-WeeklyFull" ? "weekly" : "master"
-            rbs_push_builder_failure("https://rbsdbdev.cis.luxoft.com/report/jobStatus", token, branchTag, "Maya")
-
-            // token = rbs_get_token("https://rbsdb.cis.luxoft.com/api/login", "ddd49290-412d-45c3-9ae4-65dba573b4c0")
-            // rbs_push_builder_failure("https://rbsdb.cis.luxoft.com/report/jobStatus", token, branchTag, "Maya")
-        }
         throw e
     }
     finally {
@@ -472,27 +450,10 @@ def executePreBuild(Map options)
             }
             options.testsList = tests
         }
-
-        // for autojobs - push only weekly job and master branch
-        if (env.BRANCH_NAME && env.BRANCH_NAME == "master" || env.JOB_NAME == "RadeonProRenderMayaPlugin-WeeklyFull")
-        {
-            options.sendToRBS = false
-        }
     }
     else
     {
         options.testsList = ['']
-    }
-
-    if (options.sendToRBS)
-    {
-        String token = rbs_get_token("https://rbsdbdev.cis.luxoft.com/api/login", "847a5a5d-700d-439b-ace1-518f415eb8d8")
-        String branchTag = env.JOB_NAME == "RadeonProRenderMayaPlugin-WeeklyFull" ? "weekly" : "master"
-
-        rbs_push_job_start("https://rbsdbdev.cis.luxoft.com/report/job", token, branchTag, "Maya", options)
-
-        token = rbs_get_token("https://rbsdb.cis.luxoft.com/api/login", "ddd49290-412d-45c3-9ae4-65dba573b4c0")
-        rbs_push_job_start("https://rbsdb.cis.luxoft.com/report/job", token, branchTag, "Maya", options)
     }
 }
 
@@ -587,16 +548,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                 "Test Report", "Summary Report, Performance Report, Compare Report")
-
-            if (options.sendToRBS)
-            {
-                String token = rbs_get_token("https://rbsdbdev.cis.luxoft.com/api/login", "847a5a5d-700d-439b-ace1-518f415eb8d8")
-                String branchTag = env.JOB_NAME == "RadeonProRenderMayaPlugin-WeeklyFull" ? "weekly" : "master"
-                rbs_push_job_status("https://rbsdbdev.cis.luxoft.com/report/end", token, branchTag, "Maya")
-
-                token = rbs_get_token("https://rbsdb.cis.luxoft.com/api/login", "ddd49290-412d-45c3-9ae4-65dba573b4c0")
-                rbs_push_job_status("https://rbsdb.cis.luxoft.com/report/end", token, branchTag, "Maya")
-            }
         }
     }
     catch (e) {
@@ -619,8 +570,7 @@ def call(String projectBranch = "master", String thirdpartyBranch = "master",
          String testsPackage = "",
          String tests = "",
          Boolean forceBuild = false,
-         Boolean splitTestsExectuion = false,
-         Boolean sendToRBS = false)
+         Boolean splitTestsExectuion = false)
 {
     try
     {
@@ -659,7 +609,6 @@ def call(String projectBranch = "master", String thirdpartyBranch = "master",
                                 forceBuild:forceBuild,
                                 reportName:'Test_20Report',
                                 splitTestsExectuion:splitTestsExectuion,
-                                sendToRBS:sendToRBS,
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:270])
     }
