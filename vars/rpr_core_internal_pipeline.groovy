@@ -347,7 +347,7 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     GithubNotificator.updateStatus("Build", "Windows", "pending", env, options, "Creating RadeonProRenderSDK package.", "${BUILD_URL}/artifact/Build-Windows.log")
-    dir('RadeonProRenderSDK/RadeonProRender/binWin64')
+    dir('RadeonProRenderSDK/RPR/RadeonProRender/lib/x64')
     {
         zip archive: true, dir: '.', glob: '', zipFile: 'binWin64.zip'
         stash includes: 'binWin64.zip', name: 'WindowsSDK'
@@ -355,7 +355,7 @@ def executeBuildWindows(Map options)
     }
     if (options.sendToUMS) {
         dir("jobs_launcher") {
-            sendToMINIO(options, "Windows", "..\\RadeonProRenderSDK\\RadeonProRender\\binWin64", "binWin64.zip")                            
+            sendToMINIO(options, "Windows", "..\\RadeonProRenderSDK\\RPR\\RadeonProRender\\lib\\x64", "binWin64.zip")                            
         }
     }
     GithubNotificator.updateStatus("Build", "Windows", "success", env, options, "RadeonProRenderSDK package was successfully created.", "${BUILD_URL}/artifact/binWin64.zip")
