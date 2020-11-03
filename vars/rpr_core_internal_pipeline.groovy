@@ -487,9 +487,6 @@ def executePreBuild(Map options)
 {
     if (env.CHANGE_URL) {
         println "Branch was detected as Pull Request"
-    } else if (env.BRANCH_NAME == "master") {
-        println "[INFO] ${env.BRANCH_NAME} branch was detected"
-        options.collectTrackedMetrics = true
     }
 
     try {
@@ -861,7 +858,7 @@ def call(String projectBranch = "",
          String tester_tag = 'Core',
          String mergeablePR = "",
          String parallelExecutionTypeString = "TakeOneNodePerGPU",
-         Boolean collectTrackedMetrics = false)
+         Boolean collectTrackedMetrics = true)
 {
     
     def nodeRetry = []
