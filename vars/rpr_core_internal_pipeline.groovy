@@ -487,6 +487,9 @@ def executePreBuild(Map options)
 {
     if (env.CHANGE_URL) {
         println "Branch was detected as Pull Request"
+        GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
+        options.githubNotificator = githubNotificator
+        githubNotificator.initPreBuild("${BUILD_URL}")
     }
 
     try {
@@ -607,6 +610,10 @@ def executePreBuild(Map options)
         GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
         problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
         throw e
+    }
+
+    if (env.CHANGE_URL) {
+        options.githubNotificator.initPR(options, "${BUILD_URL}")
     }
 
     GithubNotificator.updateStatus("PreBuild", "Version increment", "success", env, options, "PreBuild stage was successfully finished.")
@@ -844,7 +851,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 
 def call(String projectBranch = "",
-         String testsBranch = "inemankov/performance_history_internal_dev",
+         String testsBranch = "master",
          String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI',
          String updateRefs = 'No',
          Boolean enableNotifications = false,
