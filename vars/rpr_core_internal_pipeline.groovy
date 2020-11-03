@@ -847,12 +847,12 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 
 def call(String projectBranch = "",
-         String testsBranch = "inemankov/performance_history_dev",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070',
+         String testsBranch = "inemankov/performance_history_internal_dev",
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI',
          String updateRefs = 'No',
          Boolean enableNotifications = false,
          String renderDevice = "gpu",
-         String testsPackage = "Full.json",
+         String testsPackage = "Full-Internal.json",
          String tests = "",
          String width = "0",
          String height = "0",
