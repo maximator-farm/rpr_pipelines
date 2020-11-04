@@ -6,9 +6,53 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
+@Field String[] UMSPrarmetersKeys = [
+    "projectRepo",
+    "projectBranch",
+    "testsBranch",
+    "enableNotifications",
+    "PRJ_NAME",
+    "PRJ_ROOT",
+    "gpusCount",
+    "incrementVersion",
+    "renderDevice",
+    "testsPackage",
+    "tests",
+    "toolVersion",
+    "isPreBuilt",
+    "forceBuild",
+    "splitTestsExecution",
+    "gpusCount",
+    "TEST_TIMEOUT",
+    "ADDITIONAL_XML_TIMEOUT",
+    "NON_SPLITTED_PACKAGE_TIMEOUT",
+    "DEPLOY_TIMEOUT",
+    "TESTER_TAG",
+    "resX",
+    "resY",
+    "SPU",
+    "iter",
+    "theshold",
+    "customBuildLinkWindows",
+    "customBuildLinkOSX",
+    "enginesNames",
+    "nodeRetry",
+    "prRepoName",
+    "prBranchName",
+    "testCaseRetries"
+]
+
+@Field String[] UMSBuildInfoKeys = [
+    "pluginVersion",
+    "commitAuthor",
+    "commitMessage",
+    "commitSHA"
+]
+
+
 @Field String UniverseURLProd = "http://172.26.157.233:5002"
 @Field String UniverseURLDev = "http://172.26.157.233:5002"
-@Field String ImageServiceURL = "https://imgs.cis.luxoft.com"
+@Field String ImageServiceURL = "http://172.26.157.248:8001"
 @Field String ProducteName = "AMD%20Radeon™%20ProRender%20for%20Maya"
 @Field UniverseClient universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
 @Field UniverseClient universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
@@ -972,9 +1016,17 @@ def executePreBuild(Map options)
             universeClientParentProd.tokenSetup()
             universeClientParentDev.tokenSetup()
 
+            // prepare build parameters
+            parameters = [:]
+            for (key in UMSPrarmetersKeys) {parameters[key] = options[key]}
+            
+            // prepare build info
+            info = [:]
+            for (key in UMSBuildInfoKeys) {info[key] = options[key]}
+
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            universeClientParentProd.createBuild()
-            universeClientParentDev.createBuild()
+            universeClientParentProd.createBuild('', '', false, parameters, info)
+            universeClientParentDev.createBuild('', '', false, parameters, info)
             for (int i = 0; i < options.engines.size(); i++) {
                 String engine = options.engines[i]
                 String engineName = options.enginesNames[i]
