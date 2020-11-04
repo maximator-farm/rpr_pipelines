@@ -15,7 +15,7 @@ import TestsExecutionType
     "enableNotifications",
     "PRJ_NAME",
     "PRJ_ROOT",
-    "gpusCountx",
+    "gpusCount",
     "incrementVersion",
     "renderDevice",
     "testsPackage",
