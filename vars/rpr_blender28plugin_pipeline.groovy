@@ -55,7 +55,7 @@ import TestsExecutionType
 
 @Field String UniverseURLProd = "http://172.26.157.233:5002"
 @Field String UniverseURLDev = "http://172.26.157.233:5002"
-@Field String ImageServiceURL = "https://imgs.cis.luxoft.com"
+@Field String ImageServiceURL = "http://172.26.157.248:8001"
 @Field String ProducteName = "AMD%20Radeon™%20ProRender%20for%20Blender"
 @Field UniverseClient universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
 @Field UniverseClient universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
