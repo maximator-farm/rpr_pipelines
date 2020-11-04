@@ -34,7 +34,7 @@ import TestsExecutionType
     "commitSHA"
 ]
 
-@Field UniverseClient universeClientProd = new UniverseClient(this, "http://172.26.157.233:5002:", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20Core")
+@Field UniverseClient universeClientProd = new UniverseClient(this, "http://172.26.157.233:5002", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20Core")
 @Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5002", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20Core")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
