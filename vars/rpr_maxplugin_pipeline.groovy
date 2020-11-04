@@ -6,8 +6,48 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field UniverseClient universeClientProd = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%203ds%20Max")
-@Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5001", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%203ds%20Max")
+
+@Field String[] UMSPrarmetersKeys = [
+    "projectRepo",
+    "projectBranch",
+    "testsBranch",
+    "enableNotifications",
+    "PRJ_NAME",
+    "PRJ_ROOT",
+    "gpusCount",
+    "incrementVersion",
+    "renderDevice",
+    "testsPackage",
+    "tests",
+    "toolVersion",
+    "isPreBuilt",
+    "forceBuild",
+    "splitTestsExecution",
+    "gpusCount",
+    "TEST_TIMEOUT",
+    "ADDITIONAL_XML_TIMEOUT",
+    "NON_SPLITTED_PACKAGE_TIMEOUT",
+    "TESTER_TAG",
+    "resX",
+    "resY",
+    "SPU",
+    "iter",
+    "theshold",
+    "nodeRetry",
+    "prRepoName",
+    "prBranchName"
+]
+
+@Field String[] UMSBuildInfoKeys = [
+    "pluginVersion",
+    "commitAuthor",
+    "commitMessage",
+    "commitSHA"
+]
+
+
+@Field UniverseClient universeClientProd = new UniverseClient(this, "http://172.26.157.233:5002", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20for%203ds%20Max")
+@Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5002", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20for%203ds%20Max")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
@@ -716,8 +756,15 @@ def executePreBuild(Map options)
             universeClientDev.tokenSetup()
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
-            universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
+            parameters = [:]
+            for (key in UMSPrarmetersKeys) {parameters[key] = options[key]}
+            
+            // prepare build info
+            info = [:]
+            for (key in UMSBuildInfoKeys) {info[key] = options[key]}
+
+            universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, parameters, info)
+            universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, parameters, info)
         }
         catch (e)
         {
