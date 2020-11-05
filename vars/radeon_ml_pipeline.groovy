@@ -24,10 +24,10 @@ def executeUnitTestsCommand(String osName, Map options)
 
 def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
     ws("WS/${options.PRJ_NAME}-TestAssets") {
-        checkOutBranchOrScm(options['assetsBranch'], "https://gitlab.cts.luxoft.com/rml/models.git", true, null, null, false, true, "radeonprorender-gitlab", true)
+        checkOutBranchOrScm(options['assetsBranch'], "${options.gitlabURL}/rml/models.git", true, null, null, false, true, "radeonprorender-gitlab", true)
     }
     ws("WS/${options.PRJ_NAME}-FT") {
-        checkOutBranchOrScm(options['testsBranch'], "https://gitlab.cts.luxoft.com/rml/ft_engine.git", true, null, null, false, true, "radeonprorender-gitlab", false)
+        checkOutBranchOrScm(options['testsBranch'], "${options.gitlabURL}/rml/ft_engine.git", true, null, null, false, true, "radeonprorender-gitlab", false)
         try {
             dir("rml_release") {
                 unstash "app${osName}"
@@ -37,7 +37,7 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
                 case 'Windows':
                     withEnv(["PATH=C:\\Python38;C:\\Python38\\Scripts;${PATH}"]) {
                         bat """
-                        pip install -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
+                        pip install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                         python -V >> ${STAGE_NAME}.ft.log 2>&1
                         python run_tests.py -t ../${options.PRJ_NAME}-TestAssets -e rml_release/test_app.exe -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
                         rename ft-executor.log ${STAGE_NAME}.engine.log
@@ -389,6 +389,12 @@ def call(String projectBranch = "",
     String PRJ_ROOT='rpr-ml'
     String PRJ_NAME='RadeonML'
 
+    def gitlabURL
+    withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')])
+    {
+        gitlabURL = GITLAB_URL
+    }
+
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
             [platforms:platforms,
              projectBranch:projectBranch,
@@ -408,5 +414,6 @@ def call(String projectBranch = "",
              slackChannel:"${SLACK_ML_CHANNEL}",
              slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
              slackTocken:"slack-ml-channel",
-             retriesForTestStage:1])
+             retriesForTestStage:1,
+             gitlabURL:gitlabURL])
 }

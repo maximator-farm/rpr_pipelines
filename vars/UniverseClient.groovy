@@ -20,9 +20,9 @@ class UniverseClient {
      * Main constructor
      *
      * @param context
-     * @param url Universal Monitoring System API  url (example: "https://umsapi.cis.luxoft.com" )
+     * @param url Universal Monitoring System API  url
      * @param env Jenkins environment variables object
-     * @param is_url Image Service API url (example: "https://imgs.cis.luxoft.com")
+     * @param is_url Image Service API url
      * @param product Name of product (example: "RPR_Maya")
      */
     UniverseClient(context, url, env, is_url, product) {

@@ -670,7 +670,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
         dir("amf/public/proj/OpenAMF_Autotests/Reports") {
             bat """
             set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
-            pip install -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
+            pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
             python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
             """
         }

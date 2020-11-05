@@ -34,8 +34,11 @@ def main(Map options) {
 			println("[INFO] Old RBS compose stack doesn't exist")
 		}
 
-		dir("universe${versionPostfix}") {
-			checkOutBranchOrScm(options['universeBranch'], 'https://gitlab.cts.luxoft.com/dm1tryG/universe.git', false, null, null, false, true, 'radeonprorender-gitlab', false)
+		withCredentials([string(credentialsId: 'gitlabURL', variable: 'GIRLAB_URL')])
+		{
+			dir("universe${versionPostfix}") {
+				checkOutBranchOrScm(options['universeBranch'], "${GIRLAB_URL}/dm1tryG/universe.git", false, null, null, false, true, 'radeonprorender-gitlab', false)
+			}
 		}
 
 		sshagent(credentials : ['FrontendMachineCredentials']) {
@@ -49,11 +52,11 @@ def main(Map options) {
 
 			// run tests
 			if (version=="develop") {
-    		    sh """
-			        ssh ${options.user}@${options.frontendIp} 'chmod +x ${options.RBSServicesRoot}/${version}/universe${versionPostfix}/docker-management/run_tests.sh'
-				    ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe${versionPostfix}/docker-management/run_tests.sh	    
-    			"""    
-		    }
+				sh """
+					ssh ${options.user}@${options.frontendIp} 'chmod +x ${options.RBSServicesRoot}/${version}/universe${versionPostfix}/docker-management/run_tests.sh'
+					ssh ${options.user}@${options.frontendIp} ${options.RBSServicesRoot}/${version}/universe${versionPostfix}/docker-management/run_tests.sh        
+				"""    
+			}
 		}
 	}
 }
@@ -65,7 +68,11 @@ def call(
 	String RBSServicesRoot = "/home/admin/Server/RPRServers/rbs_auto_deploy"
 	String RBSServicesRootRelative = "./Server/RPRServers/rbs_auto_deploy"
 	String user = "admin"
-	String frontendIp = "172.30.23.112"
+	String frontendIp
+	withCredentials([string(credentialsId: 'frontendIp', variable: 'FRONTEND_IP')])
+	{
+		frontendIp = "${FRONTEND_IP}"
+	}
 
 	main([
 		universeBranch:universeBranch.toLowerCase(),

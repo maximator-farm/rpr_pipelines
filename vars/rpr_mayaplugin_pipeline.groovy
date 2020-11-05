@@ -6,8 +6,8 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field UniverseClient universeClientProd = new UniverseClient(this, "https://umsapi.cis.luxoft.com", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Maya")
-@Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5001", env, "https://imgs.cis.luxoft.com", "AMD%20Radeon™%20ProRender%20for%20Maya")
+@Field UniverseClient universeClientProd = new UniverseClient(this, "http://172.26.157.248:5000", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20for%20Maya")
+@Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5001", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20for%20Maya")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
@@ -935,10 +935,10 @@ def executePreBuild(Map options)
                                         dir ("jobs_launcher") {
                                             String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
                                             if (output.contains("True")) {
-                                                if (!options.skippedTests.containsKey(test)) {
-                                                    options.skippedTests[test] = []
+                                                if (!options.skippedTests.containsKey(testName)) {
+                                                    options.skippedTests[testName] = []
                                                 }
-                                                options.skippedTests[test].add("${it}-${osName}")
+                                                options.skippedTests[testName].add("${it}-${osName}")
                                             }
                                         }
                                     }
@@ -1292,7 +1292,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderMayaPlugin.git",
         String projectBranch = "",
         String testsBranch = "master",
-        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;OSX:AMD_RXVEGA',
+        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;OSX',
         String updateRefs = 'No',
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,
