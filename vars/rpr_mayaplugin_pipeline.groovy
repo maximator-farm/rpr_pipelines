@@ -6,12 +6,12 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field String UniverseURLProd = "http://172.26.157.233:5002"
-@Field String UniverseURLDev = "http://172.26.157.233:5002"
-@Field String ImageServiceURL = "https://imgs.cis.luxoft.com"
+@Field String UniverseURLProd
+@Field String UniverseURLDev
+@Field String ImageServiceURL
 @Field String ProducteName = "AMD%20Radeon™%20ProRender%20for%20Maya"
-@Field UniverseClient universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
-@Field UniverseClient universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
+@Field UniverseClient universeClientParentProd
+@Field UniverseClient universeClientParentDev
 @Field Map universeClientsProd = [:]
 @Field Map universeClientsDev = [:]
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -420,8 +420,8 @@ def executeTests(String osName, String asicName, Map options)
 
                         if (options.sendToUMS)
                         {
-                            universeClientsProd[options.engine].stage("Tests-${osName}-${asicName}", "begin")
-                            universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "begin")
+                            universeClientsProd[options.engine].stage("Tests-${osName}-${asicName}", "end")
+                            universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "end")
                         }
 
                         if (sessionReport.summary.error > 0) {
@@ -568,10 +568,8 @@ def executeBuildOSX(Map options)
 def executeBuild(String osName, Map options)
 {
     if (options.sendToUMS){
-        options.engines.each { engine ->
-            universeClientsProd[engine].stage("Build-" + osName , "begin")
-            universeClientsDev[engine].stage("Build-" + osName , "begin")
-        }
+        universeClientParentProd.stage("Build-" + osName , "begin")
+        universeClientParentDev.stage("Build-" + osName , "begin")
     }
 
     try {
@@ -649,10 +647,8 @@ def executeBuild(String osName, Map options)
         }
     }
     if (options.sendToUMS){
-        options.engines.each { engine ->
-            universeClientsProd[engine].stage("Build-" + osName , "end")
-            universeClientsDev[engine].stage("Build-" + osName , "end")
-        }
+        universeClientParentProd.stage("Build-" + osName , "end")
+        universeClientParentDev.stage("Build-" + osName , "end")
     }
 }
 
@@ -928,10 +924,10 @@ def executePreBuild(Map options)
                                         dir ("jobs_launcher") {
                                             String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
                                             if (output.contains("True")) {
-                                                if (!options.skippedTests.containsKey(test)) {
-                                                    options.skippedTests[test] = []
+                                                if (!options.skippedTests.containsKey(testName)) {
+                                                    options.skippedTests[testName] = []
                                                 }
-                                                options.skippedTests[test].add("${it}-${osName}")
+                                                options.skippedTests[testName].add("${it}-${osName}")
                                             }
                                         }
                                     }
@@ -1288,7 +1284,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderMayaPlugin.git",
         String projectBranch = "",
         String testsBranch = "master",
-        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;OSX:AMD_RXVEGA',
+        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;OSX',
         String updateRefs = 'No',
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,
@@ -1329,6 +1325,18 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Init")
                 throw new Exception(errorMessage)
             }
+
+            withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
+                string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
+                string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
+            {
+                UniverseURLProd = "${PROD_UMS_URL}"
+                UniverseURLDev = "${DEV_UMS_URL}"
+                ImageServiceURL = "${IS_URL}"
+                universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
+                universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
+            }
+
             enginesNames = enginesNames.split(',') as List
             def formattedEngines = []
             enginesNames.each {

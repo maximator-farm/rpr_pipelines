@@ -12,12 +12,16 @@ class RBSDevelopment {
     def buildID
     def rbsLogin
     def rbsPassword
-    def instancesConfig = [
-        [
-            "url" : "https://rbsdbdev.cis.luxoft.com",
-            "credentialId": "847a5a5d-700d-439b-ace1-518f415eb8d8"
+    def instancesConfig 
+    withCredentials([string(credentialsId: 'oldRBSURL', variable: 'OLD_RBS_URL')])
+    {
+        instancesConfig = [
+            [
+                "url" : "${OLD_RBS_URL}",
+                "credentialId": "847a5a5d-700d-439b-ace1-518f415eb8d8"
+            ]
         ]
-    ]
+    }
 
     // context from perent pipeline
     RBSDevelopment(context, tool, name, env) {

@@ -24,10 +24,10 @@ def executeUnitTestsCommand(String osName, Map options)
 
 def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
     ws("WS/${options.PRJ_NAME}-TestAssets") {
-        checkOutBranchOrScm(options['assetsBranch'], "https://gitlab.cts.luxoft.com/rml/models.git", true, null, null, false, true, "radeonprorender-gitlab", true)
+        checkOutBranchOrScm(options['assetsBranch'], "${options.gitlabURL}/rml/models.git", true, null, null, false, true, "radeonprorender-gitlab", true)
     }
     ws("WS/${options.PRJ_NAME}-FT") {
-        checkOutBranchOrScm(options['testsBranch'], "https://gitlab.cts.luxoft.com/rml/ft_engine.git", true, null, null, false, true, "radeonprorender-gitlab", false)
+        checkOutBranchOrScm(options['testsBranch'], "${options.gitlabURL}/rml/ft_engine.git", true, null, null, false, true, "radeonprorender-gitlab", false)
         try {
             dir("rml_release") {
                 unstash "app${osName}"
@@ -37,7 +37,7 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
                 case 'Windows':
                     withEnv(["PATH=C:\\Python38;C:\\Python38\\Scripts;${PATH}"]) {
                         bat """
-                        pip install -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
+                        pip install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                         python -V >> ${STAGE_NAME}.ft.log 2>&1
                         python run_tests.py -t ../${options.PRJ_NAME}-TestAssets -e rml_release/test_app.exe -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
                         rename ft-executor.log ${STAGE_NAME}.engine.log
@@ -128,35 +128,74 @@ def executeTests(String osName, String asicName, Map options)
 }
 
 
-def executeBuildWindows(Map options)
-{
-    bat """
-    xcopy ..\\\\RML_thirdparty\\\\MIOpen third_party\\\\miopen /s/y/i
-    xcopy ..\\\\RML_thirdparty\\\\tensorflow third_party\\\\tensorflow /s/y/i
-    """
-
-    cmakeKeysWin ='-G "Visual Studio 15 2017 Win64" -DRML_DIRECTML=ON -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
+def executeWindowsBuildCommand(Map options, String build_type){
 
     bat """
-        mkdir build
-        cd build
-        cmake ${cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}.log 2>&1
+        mkdir build-${build_type}
+        cd build-${build_type}
+        cmake ${options.cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}_${build_type}.log 2>&1
         set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-        %msbuild% RadeonML.sln -property:Configuration=Release >> ..\\${STAGE_NAME}.log 2>&1
+        %msbuild% RadeonML.sln -property:Configuration=${build_type} >> ..\\${STAGE_NAME}_${build_type}.log 2>&1
     """
     
     bat """
-        cd build
-        xcopy ..\\third_party\\miopen\\MIOpen.dll .\\Release\\MIOpen.dll*
-        xcopy ..\\third_party\\tensorflow\\windows\\* .\\Release
-        mkdir .\\Release\\rml
-        mkdir .\\Release\\rml\\rml
-        mkdir .\\Release\\rml\\rml_internal
-        xcopy ..\\rml\\include\\rml\\*.h* .\\Release\\rml\\rml
-        xcopy ..\\rml\\include\\rml_internal\\*.h* .\\Release\\rml\\rml_internal
+        cd build-${build_type}
+        xcopy ..\\third_party\\miopen\\MIOpen.dll ${build_type}
+        xcopy ..\\third_party\\tensorflow\\windows\\* ${build_type}
+        mkdir ${build_type}\\rml
+        mkdir ${build_type}\\rml_internal
+        xcopy ..\\rml\\include\\rml\\*.h* ${build_type}\\rml
+        xcopy ..\\rml\\include\\rml_internal\\*.h* ${build_type}\\rml_internal
     """
-    zip archive: true, dir: 'build/Release', glob: 'RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe', zipFile: "${CIS_OS}_Release.zip"
+
+    zip dir: "build-${build_type}\\${build_type}", zipFile: "build-${build_type}\\${CIS_OS}_${build_type}.zip"
+    archiveArtifacts "build-${build_type}\\${CIS_OS}_${build_type}.zip"
+    
+    zip archive: true, dir: "build-${build_type}\\${build_type}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe", zipFile: "${CIS_OS}_${build_type}.zip"
+
 }
+
+
+def executeBuildWindows(Map options)
+{
+    bat """
+        xcopy ..\\\\RML_thirdparty\\\\MIOpen third_party\\\\miopen /s/y/i
+        xcopy ..\\\\RML_thirdparty\\\\tensorflow third_party\\\\tensorflow /s/y/i
+    """
+
+    options.cmakeKeysWin ='-G "Visual Studio 15 2017 Win64" -DRML_DIRECTML=ON -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
+
+    executeWindowsBuildCommand(options, "Release")
+    executeWindowsBuildCommand(options, "Debug")
+
+}
+
+
+def executeOSXBuildCommand(Map options, String build_type){
+    
+    sh """
+        mkdir build-${build_type}
+        cd build-${build_type}
+        cmake -DCMAKE_BUILD_TYPE=${build_type} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${build_type}.log 2>&1
+        make -j 4 >> ../${STAGE_NAME}_${build_type}.log 2>&1
+    """
+    
+    sh """
+        cd build-${build_type}
+        mv bin ${build_type}
+        rm ${build_type}/*.a
+        mkdir ./${build_type}/rml
+        mkdir ./${build_type}/rml_internal
+        cp ../rml/include/rml/*.h* ./${build_type}/rml
+        cp ../rml/include/rml_internal/*.h* ./${build_type}/rml_internal
+
+        tar cf ${CIS_OS}_${build_type}.tar ${build_type}
+    """
+
+    archiveArtifacts "build-${build_type}/${CIS_OS}_${build_type}.tar"
+    zip archive: true, dir: "build-${build_type}/${build_type}", glob: "libRadeonML*.dylib, test*", zipFile: "${CIS_OS}_${build_type}.zip"
+}
+
 
 def executeBuildOSX(Map options)
 {
@@ -165,29 +204,41 @@ def executeBuildOSX(Map options)
         cp -r ../RML_thirdparty/tensorflow/* ./third_party/tensorflow
     """
 
-    cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
+    options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
+    
+    executeOSXBuildCommand(options, "Release")
+    executeOSXBuildCommand(options, "Debug")
+
+}
+
+
+def executeLinuxBuildCommand(Map options, String build_type){
+    
     sh """
-        mkdir build
-        cd build
-        cmake ${cmakeKeysOSX} .. >> ../${STAGE_NAME}.log 2>&1
-        make -j 4 >> ../${STAGE_NAME}.log 2>&1
+        mkdir build-${build_type}
+        cd build-${build_type}
+        cmake -DCMAKE_BUILD_TYPE=${build_type} ${options.cmakeKeysLinux[CIS_OS]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}_${build_type}.log 2>&1
+        make -j 4 >> ../${STAGE_NAME}_${build_type}.log 2>&1
     """
     
     sh """
-        cd build
-        mv bin Release
-        mkdir ./Release/rml
-        mkdir ./Release/rml/rml
-        mkdir ./Release/rml/rml_internal
-        cp ../rml/include/rml/*.h* ./Release/rml/rml
-        cp ../rml/include/rml_internal/*.h* ./Release/rml/rml_internal
+        cd build-${build_type}
+        mv bin ${build_type}
+        rm ${build_type}/*.a
+        cp ../third_party/miopen/libMIOpen.so* ./${build_type}
+        cp ../third_party/tensorflow/linux/* ./${build_type}
+        mkdir ./${build_type}/rml
+        mkdir ./${build_type}/rml_internal
+        cp ../rml/include/rml/*.h* ./${build_type}/rml
+        cp ../rml/include/rml_internal/*.h* ./${build_type}/rml_internal
 
-        tar cf ${CIS_OS}_Release.tar Release
+        tar cf ${CIS_OS}_${build_type}.tar ${build_type}
     """
 
-    archiveArtifacts "build/${CIS_OS}_Release.tar"
-    zip archive: true, dir: 'build/Release', glob: 'libRadeonML*.dylib, test*', zipFile: "${CIS_OS}_Release.zip"
+    archiveArtifacts "build-${build_type}/${CIS_OS}_${build_type}.tar"
+    zip archive: true, dir: "build-${build_type}/${build_type}", glob: "libRadeonML*.so, libMIOpen*.so, libtensorflow*.so, test*", zipFile: "${CIS_OS}_${build_type}.zip"
 }
+
 
 def executeBuildLinux(Map options)
 {
@@ -195,35 +246,17 @@ def executeBuildLinux(Map options)
         cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
         cp -r ../RML_thirdparty/tensorflow/* ./third_party/tensorflow
     """
-    cmakeKeysLinux = [
+
+    options.cmakeKeysLinux = [
         'Ubuntu18': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=ON -DRML_MPS=OFF',
         'CentOS7_6': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
     ]
 
-    sh """
-        mkdir build
-        cd build
-        cmake ${cmakeKeysLinux[CIS_OS]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}.log 2>&1
-        make -j 4 >> ../${STAGE_NAME}.log 2>&1
-    """
+    executeLinuxBuildCommand(options, "Release")
+    executeLinuxBuildCommand(options, "Debug")
 
-    sh """
-        cd build
-        mv bin Release
-        cp ../third_party/miopen/libMIOpen.so* ./Release
-        cp ../third_party/tensorflow/linux/* ./Release
-
-        mkdir ./Release/rml
-        mkdir ./Release/rml/rml
-        mkdir ./Release/rml/rml_internal
-        cp ../rml/include/rml/*.h* ./Release/rml/rml
-        cp ../rml/include/rml_internal/*.h* ./Release/rml/rml_internal
-
-        tar cf ${CIS_OS}_Release.tar Release
-    """
-    zip archive: true, dir: 'build/Release', glob: 'libRadeonML*.so, libMIOpen*.so, libtensorflow*.so, test*', zipFile: "${CIS_OS}_Release.zip"
-    archiveArtifacts "build/${CIS_OS}_Release.tar"
 }
+
 
 def executePreBuild(Map options)
 {
@@ -285,7 +318,7 @@ def executePreBuild(Map options)
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
     }
-    
+
 }
 
 
@@ -316,7 +349,7 @@ def executeBuild(String osName, Map options)
             }
         }
 
-        dir('build/Release') {
+        dir('build-Release/Release') {
             stash includes: '*', name: "app${osName}"
         }
     } catch (e) {
@@ -356,6 +389,12 @@ def call(String projectBranch = "",
     String PRJ_ROOT='rpr-ml'
     String PRJ_NAME='RadeonML'
 
+    def gitlabURL
+    withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')])
+    {
+        gitlabURL = GITLAB_URL
+    }
+
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
             [platforms:platforms,
              projectBranch:projectBranch,
@@ -367,7 +406,7 @@ def call(String projectBranch = "",
              projectRepo:projectRepo,
              BUILDER_TAG:'BuilderML',
              TESTER_TAG:'ML',
-             BUILD_TIMEOUT:'15',
+             BUILD_TIMEOUT:'30',
              TEST_TIMEOUT:'40',
              executeBuild:true,
              executeTests:true,
@@ -375,5 +414,6 @@ def call(String projectBranch = "",
              slackChannel:"${SLACK_ML_CHANNEL}",
              slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
              slackTocken:"slack-ml-channel",
-             retriesForTestStage:1])
+             retriesForTestStage:1,
+             gitlabURL:gitlabURL])
 }

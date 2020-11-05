@@ -15,7 +15,12 @@ def parseDescriptionRow(String row) {
 def createRelease(String jobName, String repositoryUrl, String branch) {
     List possibleArtifactsExtensions = ['.zip', '.msi', '.dmg'] 
 
-    String jenkinsUrl = 'https://rpr.cis.luxoft.com'
+    String jenkinsUrl
+    withCredentials([string(credentialsId: 'jenkinsURL', variable: 'JENKINS_URL')])
+    {
+        jenkinsUrl = "${JENKINS_URL}"
+    }
+
     String repositoryApiUrl = repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')
     String repositoryUploadUrl = repositoryUrl.replace('https://github.com', 'https://uploads.github.com/repos')
 

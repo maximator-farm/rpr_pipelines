@@ -329,7 +329,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectBranch = "",
         String usdBranch = "master",
         String testsBranch = "master",
-        String platforms = 'Windows;Ubuntu18;OSX;CentOS7_6',
+        String platforms = 'Windows;Ubuntu18;OSX',
         Boolean updateRefs = false,
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,
@@ -339,7 +339,7 @@ def call(String projectBranch = "",
         Boolean splitTestsExectuion = false,
         Boolean enableHoudini = true,
         Boolean rebuildUSD = false,
-        String houdiniVersion = "18.0.566")
+        String houdiniVersion = "18.5.351")
 {
     try
     {

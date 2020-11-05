@@ -15,7 +15,7 @@ class RBSProduction {
     def rbsPassword
     def instancesConfig = [
             [
-                "url": "https://umsapi.cis.luxoft.com",
+                "url": "http://172.26.157.248:5000",
                 "credentialId": 'universeMonitoringSystem'
             ]
     ]
