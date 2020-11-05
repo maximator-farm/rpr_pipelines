@@ -720,8 +720,8 @@ def executePreBuild(Map options)
             universeClientDev.tokenSetup()
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            universeClientProd.createBuild(options.universePlatforms, options.groupsUMS)
-            universeClientDev.createBuild(options.universePlatforms, options.groupsUMS)
+            universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
+            universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
         }
         catch (e)
         {
