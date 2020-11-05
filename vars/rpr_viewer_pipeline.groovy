@@ -6,8 +6,12 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field UniverseClient universeClientProd = new UniverseClient(this, "http://172.26.157.248:5000", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20Viewer")
-@Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5001", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20Viewer")
+@Field String UniverseURLProd
+@Field String UniverseURLDev
+@Field String ImageServiceURL
+@Field String ProducteName = "AMD%20Radeon™%20ProRender%20Viewer"
+@Field UniverseClient universeClientProd
+@Field UniverseClient universeClientDev
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
@@ -983,6 +987,17 @@ def call(String projectBranch = "",
     {
         try 
         {
+            withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
+                string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
+                string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
+            {
+                UniverseURLProd = "${PROD_UMS_URL}"
+                UniverseURLDev = "${DEV_UMS_URL}"
+                ImageServiceURL = "${IS_URL}"
+                universeClientProd = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName)
+                universeClientDev = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName)
+            }
+            
             String PRJ_ROOT='rpr-core'
             String PRJ_NAME='RadeonProViewer'
             String projectRepo='git@github.com:Radeon-Pro/RadeonProViewer.git'

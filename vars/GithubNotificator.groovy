@@ -10,6 +10,7 @@ public class GithubNotificator {
     def pullRequest
     List buildCases = []
     List testCases = []
+    Boolean hasDeployStage
     // this variable is used for prevent multiple closing of status checks in multi thread logic of pipeline
     AtomicBoolean statusesClosed = new AtomicBoolean(false)
 
@@ -47,10 +48,12 @@ public class GithubNotificator {
      *
      * @param options Options map
      * @param url Build url
+     * @param hasDeployStage Specify that status for deploy stage should be created or not
      */
-    def initPR(Map options, String url) {
+    def initPR(Map options, String url, Boolean hasDeployStage = true) {
         try {
             context.println("[INFO] Started initialization of PR notifications")
+            this.hasDeployStage = hasDeployStage
 
             options.platforms.split(';').each() {
                 if (it) {
@@ -101,8 +104,10 @@ public class GithubNotificator {
                 statusTitle = "[TEST] ${testCase}"
                 pullRequest.createStatus("pending", statusTitle, "This stage will be executed later...", url)
             }
-            statusTitle = "[DEPLOY] Building test report"
-            pullRequest.createStatus("pending", statusTitle, "This stage will be executed later...", url)
+            if (hasDeployStage) {
+                statusTitle = "[DEPLOY] Building test report"
+                pullRequest.createStatus("pending", statusTitle, "This stage will be executed later...", url)
+            }
             context.println("[INFO] Finished initialization of PR notifications")
         } catch (e) {
             context.println("[ERROR] Failed to initialize PR notifications")
@@ -224,7 +229,9 @@ public class GithubNotificator {
                 stagesList << "[PREBUILD] Version increment"
                 buildCases.each { stagesList << "[BUILD] " + it }
                 testCases.each { stagesList << "[TEST] " + it }
-                stagesList << "[DEPLOY] Building test report"
+                if (hasDeployStage) {
+                    stagesList << "[DEPLOY] Building test report"
+                }
                 for (prStatus in pullRequest.statuses) {
                     if (stagesList.contains(prStatus.context)) {
                         if (prStatus.state == "pending" || prStatus.state == "failure") {
