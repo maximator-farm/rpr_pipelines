@@ -53,8 +53,8 @@ import TestsExecutionType
     "commitSHA"
 ]
 
-@Field String UniverseURLProd = "http://172.26.157.233:5002"
-@Field String UniverseURLDev = "http://172.26.157.233:5002"
+@Field String UniverseURLProd = "http://172.26.157.233:5001"
+@Field String UniverseURLDev = "http://172.26.157.233:5001"
 @Field String ImageServiceURL = "http://172.26.157.248:8001"
 @Field String ProducteName = "AMD%20Radeon™%20ProRender%20for%20Blender"
 @Field UniverseClient universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
