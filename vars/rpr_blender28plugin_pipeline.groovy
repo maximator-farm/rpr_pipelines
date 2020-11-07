@@ -1127,9 +1127,9 @@ def executePreBuild(Map options)
             
             // prepare build parameters
             minorParameters = [:]
-            for (key in UMSMinorPrarmetersKeys) {parameters[key] = options[key]}
+            for (key in UMSMinorPrarmetersKeys) {minorParameters[key] = options[key]}
             majorParameters = [:]
-            for (key in UMSMajorPrarmetersKeys) {parameters[key] = options[key]}
+            for (key in UMSMajorPrarmetersKeys) {majorParameters[key] = options[key]}
             parameters = [
                 "minor": minorParameters,
                 "major": majorParameters
