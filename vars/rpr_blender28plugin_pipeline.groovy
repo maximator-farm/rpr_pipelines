@@ -1134,7 +1134,7 @@ def executePreBuild(Map options)
                 "minor": minorParameters,
                 "major": majorParameters
             ]
-
+            println(parameters)
             // prepare build info
             info = [:]
             for (key in UMSBuildInfoKeys) {info[key] = options[key]}
