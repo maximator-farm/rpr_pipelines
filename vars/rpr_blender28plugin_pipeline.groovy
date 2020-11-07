@@ -8,19 +8,30 @@ import net.sf.json.JsonConfig
 import TestsExecutionType
 
 
-@Field String[] UMSPrarmetersKeys = [
+@Field String[] UMSMajorPrarmetersKeys = [
     "projectRepo",
     "projectBranch",
     "testsBranch",
     "enableNotifications",
-    "PRJ_NAME",
-    "PRJ_ROOT",
-    "gpusCount",
-    "incrementVersion",
+    "platforms",
+    "customBuildLinkWindows",
+    "customBuildLinkLinux",
+    "customBuildLinkOSX",
+    "toolVersion",
+    "updateRefs",
+    "enginesNames",
     "renderDevice",
     "testsPackage",
     "tests",
-    "toolVersion",
+    "resX",
+    "resY",
+    "SPU",
+    "iter",
+    "theshold",
+    "TESTER_TAG"
+]
+
+@Field String[] UMSMinorPrarmetersKeys = [
     "isPreBuilt",
     "forceBuild",
     "splitTestsExecution",
@@ -29,17 +40,11 @@ import TestsExecutionType
     "ADDITIONAL_XML_TIMEOUT",
     "NON_SPLITTED_PACKAGE_TIMEOUT",
     "DEPLOY_TIMEOUT",
-    "TESTER_TAG",
+    "PRJ_NAME",
+    "PRJ_ROOT",
+    "gpusCount",
+    "incrementVersion",
     "BUILDER_TAG",
-    "resX",
-    "resY",
-    "SPU",
-    "iter",
-    "theshold",
-    "customBuildLinkWindows",
-    "customBuildLinkLinux",
-    "customBuildLinkOSX",
-    "enginesNames",
     "nodeRetry",
     "prRepoName",
     "prBranchName",
@@ -1121,9 +1126,15 @@ def executePreBuild(Map options)
 
             
             // prepare build parameters
-            parameters = [:]
-            for (key in UMSPrarmetersKeys) {parameters[key] = options[key]}
-            
+            minorParameters = [:]
+            for (key in UMSMinorPrarmetersKeys) {parameters[key] = options[key]}
+            majorParameters = [:]
+            for (key in UMSMajorPrarmetersKeys) {parameters[key] = options[key]}
+            parameters = [
+                "minor": minorParameters,
+                "major": majorParameters
+            ]
+
             // prepare build info
             info = [:]
             for (key in UMSBuildInfoKeys) {info[key] = options[key]}
