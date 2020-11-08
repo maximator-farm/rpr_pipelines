@@ -94,10 +94,11 @@ def executeBuildWindows(Map options)
     
     dir ("RadeonProRenderUSD") {
         if (options.enableHoudini) {
+            win_houdini_python3 = options.houdini_python3 ? " Python3" : ""
             bat """
                 mkdir build
                 set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
-                set HFS=C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}
+                set HFS=C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}${win_houdini_python3}
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
             """
 
@@ -135,9 +136,10 @@ def executeBuildOSX(Map options)
 
     dir ("RadeonProRenderUSD") {
         if (options.enableHoudini) {
+            osx_houdini_python3 = options.houdini_python3 ? "-py3" : "-py2"
             sh """
                 mkdir build
-                export HFS=/Applications/Houdini/Houdini${options.houdiniVersion}/Frameworks/Houdini.framework/Versions/Current/Resources
+                export HFS=/Applications/Houdini/Houdini${options.houdiniVersion}${osx_houdini_python3}/Frameworks/Houdini.framework/Versions/Current/Resources
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
@@ -173,9 +175,10 @@ def executeBuildUnix(Map options)
 
     dir ("RadeonProRenderUSD") {
         if (options.enableHoudini) {
+            unix_houdini_python3 = options.houdini_python3 ? "-py3" : "-py2"
             sh """
                 mkdir build
-                export HFS=/home/admin/Houdini/hfs${options.houdiniVersion}
+                export HFS=/home/admin/Houdini/hfs${options.houdiniVersion}${unix_houdini_python3}
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
@@ -194,8 +197,9 @@ def executeBuild(String osName, Map options) {
         // autoupdate houdini license
         timeout(time: "15", unit: 'MINUTES') {
             try {
+                houdini_python3 = options.houdini_python3 ? "--python3" : ''
                 withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'sidefxCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-                    print(python3("${CIS_TOOLS}/download_houdini.py --username \"$USERNAME\" --password \"$PASSWORD\" --version \"${options.houdiniVersion}\""))
+                    print(python3("${CIS_TOOLS}/houdini_api.py --client_id \"$USERNAME\" --client_secret_key \"$PASSWORD\" --version \"${options.houdiniVersion}\" ${houdini_python3}"))
                 }
             } catch (e) {
                 print e
@@ -339,7 +343,8 @@ def call(String projectBranch = "",
         Boolean splitTestsExectuion = false,
         Boolean enableHoudini = true,
         Boolean rebuildUSD = false,
-        String houdiniVersion = "18.5.351")
+        String houdiniVersion = "18.5.351",
+        Boolean houdini_python3 = false)
 {
     try
     {
@@ -364,6 +369,7 @@ def call(String projectBranch = "",
                                 enableHoudini:enableHoudini,
                                 rebuildUSD:rebuildUSD,
                                 houdiniVersion:houdiniVersion,
+                                houdini_python3:houdini_python3,
                                 BUILDER_TAG:'BuilderHoudini'
                                 ])
     }
