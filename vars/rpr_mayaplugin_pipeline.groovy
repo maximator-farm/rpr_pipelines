@@ -853,6 +853,7 @@ def executePreBuild(Map options)
                 packageInfo["groups"].each() {
                     if (options.isPackageSplitted) {
                         tempTests << it.key
+                        options.groupsUMS << it.key
                     } else {
                         if (tempTests.contains(it.key)) {
                             // add duplicated group name in name of package group name for exclude it
