@@ -613,8 +613,16 @@ def executePreBuild(Map options)
                     println(options.groupsUMS)
 
                     // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-                    parameters = [:]
-                    for (key in UMSPrarmetersKeys) {parameters[key] = options[key]}
+                    // prepare build parameters
+                    minorParameters = [:]
+                    for (key in UMSMinorPrarmetersKeys) {minorParameters[key] = options[key]}
+                    majorParameters = [:]
+                    for (key in UMSMajorPrarmetersKeys) {majorParameters[key] = options[key]}
+                    parameters = [
+                        "minor": minorParameters,
+                        "major": majorParameters
+                    ]
+                    println(parameters)
                     
                     // prepare build info
                     info = [:]

@@ -8,7 +8,7 @@ import net.sf.json.JsonConfig
 import TestsExecutionType
 
 
-@Field String[] UMSMajorPrarmetersKeys = [
+@Field Map[] UMSMajorPrarmetersKeys = [
     [
         "key": "projectRepo",
         "name": "project repository"
@@ -103,7 +103,7 @@ import TestsExecutionType
     ]
 ]
 
-@Field String[] UMSMinorPrarmetersKeys = [
+@Field Map[] UMSMinorPrarmetersKeys = [
     [
         "key": "isPreBuilt",
         "name": "is pre built"
