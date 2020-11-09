@@ -6,40 +6,142 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field String[] UMSPrarmetersKeys = [
-    "projectRepo",
-    "projectBranch",
-    "testsBranch",
-    "enableNotifications",
-    "PRJ_NAME",
-    "PRJ_ROOT",
-    "gpusCount",
-    "incrementVersion",
-    "renderDevice",
-    "testsPackage",
-    "tests",
-    "toolVersion",
-    "isPreBuilt",
-    "forceBuild",
-    "splitTestsExecution",
-    "gpusCount",
-    "TEST_TIMEOUT",
-    "ADDITIONAL_XML_TIMEOUT",
-    "NON_SPLITTED_PACKAGE_TIMEOUT",
-    "DEPLOY_TIMEOUT",
-    "TESTER_TAG",
-    "resX",
-    "resY",
-    "SPU",
-    "iter",
-    "theshold",
-    "customBuildLinkWindows",
-    "customBuildLinkOSX",
-    "enginesNames",
-    "nodeRetry",
-    "prRepoName",
-    "prBranchName",
-    "testCaseRetries"
+@Field Map[] UMSMajorPrarmetersKeys = [
+    [
+        "key": "projectRepo",
+        "name": "project repository"
+    ],
+    [
+        "key": "projectBranch",
+        "name": "project branch"
+    ],
+    [
+        "key": "testsBranch",
+        "name": "tests branch"
+    ],
+    [
+        "key": "platforms",
+        "name": "gpu"
+    ],
+    [
+        "key": "parallelExecutionTypeString",
+        "name": "parallel execution type string"
+    ],
+    [
+        "key": "customBuildLinkWindows",
+        "name": "custom build link windows"
+    ],
+    [
+        "key": "customBuildLinkLinux",
+        "name": "custom build link linux"
+    ],
+    [
+        "key": "customBuildLinkOSX",
+        "name": "custom build link osx"
+    ],
+    [
+        "key": "toolVersion",
+        "name": "tool version"
+    ],
+    [
+        "key": "updateRefs",
+        "name": "update references"
+    ],
+    [
+        "key": "enginesNames",
+        "name": "render engines"
+    ],
+    [
+        "key": "renderDevice",
+        "name": "render device"
+    ],
+    [
+        "key": "testsPackage",
+        "name": "tests package"
+    ],
+    [
+        "key": "tests",
+        "name": "tests"
+    ],
+    [
+        "key": "enableNotifications",
+        "name": "enable notification"
+    ],
+    [
+        "key": "resX",
+        "name": "resolution x"
+    ],
+    [
+        "key": "resY",
+        "name": "resolution y"
+    ],
+    [
+        "key": "SPU",
+        "name": "SPU"
+    ],
+    [
+        "key": "iter",
+        "name": "iterations"
+    ],
+    [
+        "key": "theshold",
+        "name": "threshold"
+    ],
+    [
+        "key": "TESTER_TAG",
+        "name": "tester tag"
+    ],
+    [
+        "key": "testCaseRetries",
+        "name": "test case retries"
+    ],
+    [
+        "key": "mergeablePR",
+        "name": "mergeable pr"
+    ]
+]
+
+@Field def UMSMinorPrarmetersKeys = [
+    [
+        "key": "isPreBuilt",
+        "name": "is pre built"
+    ],
+    [
+        "key": "forceBuild",
+        "name": "froce build"
+    ],
+    [
+        "key": "splitTestsExecution",
+        "name": "split tests execution"
+    ],
+    [
+        "key": "TEST_TIMEOUT",
+        "name": "test timeout"
+    ],
+    [
+        "key": "gpusCount",
+        "name": "gpus count"
+    ],
+    [
+        "key": "ADDITIONAL_XML_TIMEOUT",
+        "name": "additional xml timeout"
+    ],
+    [
+        "key": "NON_SPLITTED_PACKAGE_TIMEOUT",
+        "name": "non splitted package timeout"
+    ],
+    [
+        "key": "DEPLOY_TIMEOUT",
+        "name": "deploy timeout"
+    ],
+    [
+        "key": "incrementVersion",
+        "name": "increment version",
+    ],
+    [
+        "key": "BUILDER_TAG",
+        "name": "builder tag"
+    ]
 ]
 
 @Field String[] UMSBuildInfoKeys = [
@@ -1017,8 +1119,18 @@ def executePreBuild(Map options)
             universeClientParentDev.tokenSetup()
 
             // prepare build parameters
-            parameters = [:]
-            for (key in UMSPrarmetersKeys) {parameters[key] = options[key]}
+            for (pType in [UMSMinorPrarmetersKeys, UMSMajorPrarmetersKeys]) {
+                for (p in pType) {
+                    p['value'] = options[p['key']]
+                }
+            }
+
+            parameters = [
+                "minor": UMSMinorPrarmetersKeys,
+                "major": UMSMajorPrarmetersKeys
+            ]
+
+            println(parameters)
             
             // prepare build info
             info = [:]
