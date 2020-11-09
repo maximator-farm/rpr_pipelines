@@ -96,8 +96,6 @@ def executeBuildWindows(Map options)
     options.cmakeKeysWin ='-G "Visual Studio 15 2017 Win64" -DRML_DIRECTML=ON -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
 
     executeWindowsBuildCommand(options, "Release")
-    executeWindowsBuildCommand(options, "Debug")
-
 }
 
 
