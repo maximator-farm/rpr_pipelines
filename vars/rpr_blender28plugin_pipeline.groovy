@@ -50,7 +50,7 @@ import TestsExecutionType
         "name": "update references"
     ],
     [
-        "key": "engineNames",
+        "key": "enginesNames",
         "name": "render engines"
     ],
     [
@@ -74,7 +74,7 @@ import TestsExecutionType
         "name": "resolution x"
     ],
     [
-        "key": "rexY",
+        "key": "resY",
         "name": "resolution y"
     ],
     [
