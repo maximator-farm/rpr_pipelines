@@ -101,7 +101,7 @@ import TestsExecutionType
     ]
 ]
 
-@Field def UMSMinorPrarmetersKeys = [
+@Field Map[] UMSMinorPrarmetersKeys = [
     [
         "key": "isPreBuilt",
         "name": "is pre built"
@@ -152,7 +152,7 @@ import TestsExecutionType
 ]
 
 
-@Field UniverseClient universeClientProd = new UniverseClient(this, "http://172.26.157.233:5002", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20for%203ds%20Max")
+@Field UniverseClient universeClientProd = new UniverseClient(this, "http://172.26.157.233:5001", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20for%203ds%20Max")
 @Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5002", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20for%203ds%20Max")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
