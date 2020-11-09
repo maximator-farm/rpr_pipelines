@@ -50,12 +50,12 @@ import TestsExecutionType
         "name": "update references"
     ],
     [
-        "key": "enginesNames",
-        "name": "render engines"
-    ],
-    [
         "key": "renderDevice",
         "name": "render device"
+    ],
+    [
+        "key": "enginesNames",
+        "name": "render engines"
     ],
     [
         "key": "testsPackage",
@@ -1760,7 +1760,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     finally
     {
         problemMessageManager.publishMessages()
-        
     }
 
 }
