@@ -3,7 +3,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
         dir('scripts')
         {
             bat"""
-            run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" >> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+            run.bat ${options.renderDevice} \"${options.testsPackage}\" \"${options.tests}\" >> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
             """
         }
     }
@@ -208,6 +208,8 @@ def call(String projectBranch = "",
              PRJ_NAME:PRJ_NAME,
              PRJ_ROOT:PRJ_ROOT,
              projectRepo:projectRepo,
+             testsPackage:testsPackage,
+             tests:tests.replace(',', ' '),
              BUILDER_TAG:'BuilderML',
              TESTER_TAG:'MLPerf',
              BUILD_TIMEOUT:'30',
