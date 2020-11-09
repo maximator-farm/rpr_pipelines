@@ -6,26 +6,62 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field String[] UMSPrarmetersKeys = [
-    "projectBranch",
-    "testsBranch",
-    "enableNotifications",
-    "PRJ_NAME",
-    "PRJ_ROOT",
-    "gpusCount",
-    "incrementVersion",
-    "renderDevice",
-    "testsPackage",
-    "tests",
-    "splitTestsExecution",
-    "gpusCount",
-    "TEST_TIMEOUT",
-    "TESTER_TAG",
-    "BUILDER_TAG",
-    "iter",
-    "nodeRetry",
-    "prRepoName",
-    "prBranchName"
+@Field Map[] UMSMajorPrarmetersKeys = [
+    [
+        "key": "projectBranch",
+        "name": "project branch"
+    ],
+    [
+        "key": "testsBranch",
+        "name": "tests branch"
+    ],
+    [
+        "key": "enableNotifications",
+        "name": "enable notification"
+    ],
+    [
+        "key": "renderDevice",
+        "name": "render device"
+    ],
+    [
+        "key": "testsPackage",
+        "name": "tests package"
+    ],
+    [
+        "key": "tests",
+        "name": "tests"
+    ],
+    [
+        "key": "splitTestsExecution",
+        "name": "split tests execution"
+    ],
+    [
+        "key": "iter",
+        "name": "iterations"
+    ],
+    [
+        "key": "TESTER_TAG",
+        "name": "tester tag"
+    ]
+]
+
+@Field Map[] UMSMajorPrarmetersKeys = [
+    [
+        "key": "gpusCount",
+        "name": "gpus count"
+    ],
+    [
+        "key": "BUILDER_TAG", 
+        "name": "builder tag"
+    ],
+    [
+        "key": "incrementVersion",
+        "name": "increment version"
+    ],
+    [
+        "key": "TEST_TIMEOUT",
+        "name": "test timeout"
+    ] 
 ]
 
 @Field String[] UMSBuildInfoKeys = [
@@ -614,16 +650,18 @@ def executePreBuild(Map options)
 
                     // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
                     // prepare build parameters
-                    minorParameters = [:]
-                    for (key in UMSMinorPrarmetersKeys) {minorParameters[key] = options[key]}
-                    majorParameters = [:]
-                    for (key in UMSMajorPrarmetersKeys) {majorParameters[key] = options[key]}
+                    for (pType in [UMSMinorPrarmetersKeys, UMSMajorPrarmetersKeys]) {
+                        for (p in pType) {
+                            p['value'] = options[p['key']]
+                        }
+                    }
+
                     parameters = [
-                        "minor": minorParameters,
-                        "major": majorParameters
+                        "minor": UMSMinorPrarmetersKeys,
+                        "major": UMSMajorPrarmetersKeys
                     ]
+
                     println(parameters)
-                    
                     // prepare build info
                     info = [:]
                     for (key in UMSBuildInfoKeys) {info[key] = options[key]}
