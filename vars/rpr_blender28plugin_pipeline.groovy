@@ -1221,7 +1221,7 @@ def executePreBuild(Map options)
 
             
             // prepare build parameters
-            for pType in [UMSMinorPrarmetersKeys, UMSMajorPrarmetersKeys] {
+            for (pType in [UMSMinorPrarmetersKeys, UMSMajorPrarmetersKeys]) {
                 for (p in pType) {
                     pType['value'] = options[p['key']]
                 }
