@@ -3,7 +3,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
         dir('scripts')
         {
             bat"""
-            run.bat ${options.renderDevice} \"${options.testsPackage}\" \"${options.tests}\" >> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+            run.bat \"${options.testsPackage}\" \"${options.tests}\" >> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
             """
         }
     }
