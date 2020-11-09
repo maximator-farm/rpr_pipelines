@@ -103,7 +103,7 @@ import TestsExecutionType
     ]
 ]
 
-@Field Map[] UMSMinorPrarmetersKeys = [
+@Field def UMSMinorPrarmetersKeys = [
     [
         "key": "isPreBuilt",
         "name": "is pre built"
@@ -146,7 +146,7 @@ import TestsExecutionType
     ]
 ]
 
-@Field String[] UMSBuildInfoKeys = [
+@Field def UMSBuildInfoKeys = [
     "pluginVersion",
     "commitAuthor",
     "commitMessage",
@@ -1223,7 +1223,7 @@ def executePreBuild(Map options)
             // prepare build parameters
             for (pType in [UMSMinorPrarmetersKeys, UMSMajorPrarmetersKeys]) {
                 for (p in pType) {
-                    pType['value'] = options[p['key']]
+                    p['value'] = options[p['key']]
                 }
             }
 
