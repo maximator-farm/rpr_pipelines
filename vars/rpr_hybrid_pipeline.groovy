@@ -372,7 +372,7 @@ def executePreBuild(Map options)
                 gpuNames = tokens.get(1)
                 gpuNames.split(',').each()
                 { gpuName ->
-                    if (options.testsQuality != "none") {
+                    if (options.testsQuality) {
                         options.testsQuality.split(",").each()
                         { testQuality ->
                             // Statuses for tests
