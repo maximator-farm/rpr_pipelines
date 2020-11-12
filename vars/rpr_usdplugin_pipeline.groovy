@@ -89,7 +89,8 @@ def executeBuildWindows(Map options)
                 
                 if exist USDgen rmdir /s/q USDgen
                 if exist USDinst rmdir /s/q USDinst
-                python build_scripts\\build_usd.py -v --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
+                
+                python build_scripts\\build_usd.py -v --build USDgen/build --src USDgen/src USDinst >> ${STAGE_NAME}_USD.log 2>&1
             """
         }
     }
@@ -130,10 +131,7 @@ def executeBuildOSX(Map options)
                     rm -fdr ./USDinst
                 fi
 
-                mkdir -p USDgen
-                mkdir -p USDinst
-
-                python3 build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
+                python3 build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst >> ${STAGE_NAME}_USD.log 2>&1
             """
         }
     }
@@ -171,10 +169,7 @@ def executeBuildUnix(Map options)
                     rm -fdr ./USDinst
                 fi
 
-                mkdir -p USDgen
-                mkdir -p USDinst
-
-                python3 build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
+                python3 build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst >> ${STAGE_NAME}_USD.log 2>&1
             """
         }
     }
