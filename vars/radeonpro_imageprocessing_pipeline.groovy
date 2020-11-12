@@ -94,10 +94,13 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
+    Boolean testsFailed = false
+
     try {
         executeTestsForCustomLib(osName, 'dynamic', options)
     } catch (e) {
         println("Error during testing dynamic lib")
+        testsFailed = true
         println(e.toString());
         println(e.getMessage());
         println(e.getStackTrace());    
@@ -106,11 +109,18 @@ def executeTests(String osName, String asicName, Map options)
     try {
         executeTestsForCustomLib(osName, 'static', options)
     } catch (e) {
+        testsFailed = true
         println("Error during testing static lib")
         println(e.toString());
         println(e.getMessage());
         println(e.getStackTrace());    
     }
+
+    if (testsFailed) {
+        currentBuild.result = "FAILED"
+        error "Error during testing"
+    }
+
 }
 
 
