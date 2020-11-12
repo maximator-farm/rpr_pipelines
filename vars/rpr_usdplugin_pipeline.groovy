@@ -161,20 +161,22 @@ def executeBuildUnix(Map options)
     clearBinariesUnix()
 
     if (options.rebuildUSD) {
-        sh """
-            if [ -d "./USDgen" ]; then
-                rm -fdr ./USDgen
-            fi
+        dir ("USD") {
+            sh """
+                if [ -d "./USDgen" ]; then
+                    rm -fdr ./USDgen
+                fi
 
-            if [ -d "./USDinst" ]; then
-                rm -fdr ./USDinst
-            fi
+                if [ -d "./USDinst" ]; then
+                    rm -fdr ./USDinst
+                fi
 
-            mkdir -p USDgen
-            mkdir -p USDinst
+                mkdir -p USDgen
+                mkdir -p USDinst
 
-            python3 build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
-        """
+                python3 build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
+            """
+        }
     }
 
     dir ("RadeonProRenderUSD") {
