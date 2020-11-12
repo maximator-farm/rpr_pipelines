@@ -188,7 +188,7 @@ def executeBuildUnix(Map options)
         } else {
             sh """
                 mkdir build
-                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USDinst" >> ../${STAGE_NAME}.log 2>&1
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ../${STAGE_NAME}.log 2>&1
             """
         }
     }
