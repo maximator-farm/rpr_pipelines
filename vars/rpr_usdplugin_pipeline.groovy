@@ -173,7 +173,7 @@ def executeBuildUnix(Map options)
             mkdir -p USDgen
             mkdir -p USDinst
 
-            python3 USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
+            python3 build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
         """
     }
 
