@@ -660,9 +660,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-            	dir("core_tests_configuration") {
+                dir("core_tests_configuration") {
                     bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat ${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/ .")
-            	}
+                }
             } catch (e) {
                 println("[ERROR] Can't download json files with core tests configuration")
             }
@@ -852,7 +852,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI',
+         String platforms = 'Windows:AMD_RX5700XT,NVIDIA_RTX2070S',
          String updateRefs = 'No',
          Boolean enableNotifications = false,
          String renderDevice = "gpu",
