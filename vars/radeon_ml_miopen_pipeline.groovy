@@ -16,6 +16,7 @@ def executeBuildWindows(String osName, Map options)
     bat """
         mkdir release\\miopen
         xcopy /s/y/i build\\bin\\Release\\MIOpen.dll release
+        xcopy /s/y/i build\\bin\\Release\\MIOpen.lib release
         xcopy /s/y/i build\\include\\miopen\\*.h release\\miopen
         xcopy /s/y/i include\\miopen\\*.h release\\miopen
     """
