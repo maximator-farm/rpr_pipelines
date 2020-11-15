@@ -131,7 +131,6 @@ def executeBuildOSX(Map options)
                     rm -fdr ./USDinst
                 fi
 
-                export OS=
                 python3 build_scripts/build_usd.py -v --build USDgen/build --src USDgen/src USDinst >> ${STAGE_NAME}_USD.log 2>&1
             """
         }
