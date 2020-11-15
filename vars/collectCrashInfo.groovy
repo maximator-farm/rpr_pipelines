@@ -16,12 +16,12 @@ def call(String osName, Map options, Integer retryNumber){
             """
             break;
         case 'OSX':
+            // sudo fs_usage -f filesys | head -n 200 >> ${logName}
             sh """
                 echo ${env.NODE_NAME} >> ${logName}
                 date >> ${logName}
                 log show --no-info --color always --predicate 'eventMessage CONTAINS[c] "radeon" OR eventMessage CONTAINS[c] "gpu" OR eventMessage CONTAINS[c] "amd"' --last 1h >> ${logName}
                 top -l 1 | head -n 200 >> ${logName}
-                sudo fs_usage -f filesys | head -n 200 >> ${logName}
             """
             break;
         default:
