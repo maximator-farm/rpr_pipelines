@@ -50,7 +50,8 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
     {
         checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git')
 
-        outputEnvironmentInfo(osName)
+        outputEnvironmentInfo(osName, "${STAGE_NAME}.dynamic")
+        outputEnvironmentInfo(osName, "${STAGE_NAME}.static")
         unstash "app_${libType}_${osName}"
 
         executeTestCommand(osName, libType, options.testPerformance)
