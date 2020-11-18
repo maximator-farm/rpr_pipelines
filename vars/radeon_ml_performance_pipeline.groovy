@@ -52,8 +52,23 @@ def executeTests(String osName, String asicName, Map options)
         throw e
     }
     finally {
-        archiveArtifacts "*.log"
-        // TODO implement stashing of results
+        dir("${options.stageName}") {
+            utils.moveFiles(this, osName, "../*.log", ".")
+            utils.moveFiles(this, osName, "../scripts/*.log", ".")
+            utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
+        }
+        archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
+        dir('Work')
+        {
+            if (fileExists("Results/ML/session_report.json")) {
+
+                def sessionReport = null
+                sessionReport = readJSON file: 'Results/ML/session_report.json'
+
+                echo "Stashing test results to : ${options.testResultsName}"
+                stash includes: '**/*', excludes: '**/cache/**', name: "${options.testResultsName}", allowEmpty: true
+            }
+        }
     }
 }
 
@@ -180,7 +195,174 @@ def executeBuild(String osName, Map options)
 
 def executeDeploy(Map options, List platformList, List testResultList)
 {
-    //TODO implement deploy stage
+    try {
+        if(options['executeTests'] && testResultList)
+        {
+            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_ml.git')
+
+            List lostStashes = []
+
+            dir("summaryTestResults")
+            {
+                testResultList.each()
+                {
+                    dir("$it".replace("testResult-", ""))
+                    {
+                        try
+                        {
+                            unstash "$it"
+                        }catch(e)
+                        {
+                            echo "Can't unstash ${it}"
+                            lostStashes.add("'$it'".replace("testResult-", ""))
+                            println(e.toString());
+                            println(e.getMessage());
+                        }
+
+                    }
+                }
+            }
+
+            try {
+                dir("jobs_launcher") {
+                    bat """
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"{}\"
+                    """
+                }
+            } catch (e) {
+                println("[ERROR] Can't generate number of lost tests")
+            }
+
+            try {
+                def buildNumber = ""
+                if (options.collectTrackedMetrics) {
+                    buildNumber = env.BUILD_NUMBER
+                    try {
+                        dir("summaryTestResults/tracked_metrics") {
+                            receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}/", ".")
+                        }
+                    } catch (e) {
+                        println("[WARNING] Failed to download history of tracked metrics.")
+                        println(e.toString())
+                        println(e.getMessage())
+                    }
+                }
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
+                {
+                    dir("jobs_launcher")
+                    {
+                        if(options.projectBranch != "") {
+                            options.branchName = options.projectBranch
+                        } else {
+                            options.branchName = env.BRANCH_NAME
+                        }
+                        if(options.incrementVersion) {
+                            options.branchName = "master"
+                        }
+
+                        options.commitMessage = options.commitMessage.replace("'", "")
+                        options.commitMessage = options.commitMessage.replace('"', '')                  
+
+                        bat """
+                        build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${buildNumber}\"
+                        """
+
+                        bat "get_status.bat ..\\summaryTestResults"
+                    }
+                }
+                if (options.collectTrackedMetrics) {
+                    try {
+                        dir("summaryTestResults/tracked_metrics") {
+                            sendFiles(".", "${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}")
+                        }
+                    } catch (e) {
+                        println("[WARNING] Failed to update history of tracked metrics.")
+                        println(e.toString())
+                        println(e.getMessage())
+                    }
+                }  
+            } catch(e) {
+                if (utils.isReportFailCritical(e.getMessage())) {
+                    println("[ERROR] Failed to build test report.")
+                    println(e.toString())
+                    println(e.getMessage())
+                    if (!options.testDataSaved) {
+                        try {
+                            // Save test data for access it manually anyway
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                                "Test Report", "Summary Report, Performance Report, Compare Report")
+                            options.testDataSaved = true 
+                        } catch(e1) {
+                            println("[WARNING] Failed to publish test data.")
+                            println(e.toString())
+                            println(e.getMessage())
+                        }
+                    }
+                    throw e
+                } else {
+                    currentBuild.result = "FAILURE"
+                }
+            }
+
+            try
+            {
+                dir("jobs_launcher") {
+                    archiveArtifacts "launcher.engine.log"
+                }
+            }
+            catch(e)
+            {
+                println("[ERROR] during archiving launcher.engine.log")
+                println(e.toString())
+                println(e.getMessage())
+            }
+
+            Map summaryTestResults = [:]
+            try
+            {
+                def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
+                summaryTestResults['passed'] = summaryReport.passed
+                summaryTestResults['failed'] = summaryReport.failed
+                summaryTestResults['error'] = summaryReport.error
+                if (summaryReport.error > 0) {
+                    println("[INFO] Some tests marked as error. Build result = FAILURE.")
+                    currentBuild.result = "FAILURE"
+                }
+                else if (summaryReport.failed > 0) {
+                    println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
+                    currentBuild.result = "UNSTABLE"
+                }
+            }
+            catch(e)
+            {
+                println(e.toString())
+                println(e.getMessage())
+                println("[ERROR] CAN'T GET TESTS STATUS")
+                currentBuild.result = "UNSTABLE"
+            }
+
+            try
+            {
+                options.testsStatus = readFile("summaryTestResults/slack_status.json")
+            }
+            catch(e)
+            {
+                println(e.toString())
+                println(e.getMessage())
+                options.testsStatus = ""
+            }
+
+            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                "Test Report", "Summary Report, Performance Report, Compare Report")
+        }
+    }
+    catch (e) {
+        println(e.toString());
+        println(e.getMessage());
+        throw e
+    }
+    finally
+    {}
 }
 
 def call(String projectBranch = "",
@@ -189,7 +371,8 @@ def call(String projectBranch = "",
          String tests = "",
          String platforms = 'Windows:NVIDIA_RTX2080TI',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
-         Boolean enableNotifications = false)
+         Boolean enableNotifications = false,
+         Boolean collectTrackedMetrics = true)
 {
     String PRJ_ROOT='rpr-ml'
     String PRJ_NAME='RadeonML'
@@ -214,5 +397,6 @@ def call(String projectBranch = "",
              TEST_TIMEOUT:'60',
              executeBuild:true,
              executeTests:true,
-             retriesForTestStage:1])
+             retriesForTestStage:1,
+             collectTrackedMetrics:collectTrackedMetrics])
 }
