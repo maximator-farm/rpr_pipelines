@@ -37,7 +37,7 @@ def executeTests(String osName, String asicName, Map options)
     }
 
     try {
-        outputEnvironmentInfo(osName, "${STAGE_NAME}.UnitTests")
+        outputEnvironmentInfo(osName, "${STAGE_NAME}")
         dir("RadeonML") {
             unstash "app${osName}"
         }
@@ -264,7 +264,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         options.commitMessage = options.commitMessage.replace('"', '')                  
 
                         bat """
-                        build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${buildNumber}\"
+                        build_performance_reports.bat ..\\summaryTestResults ML ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${buildNumber}\"
                         """
 
                         bat "get_status.bat ..\\summaryTestResults"
