@@ -334,7 +334,7 @@ def executeTests(String osName, String asicName, Map options)
 
             try {
                 if (newPluginInstalled) {
-                    timeout(time: "3", unit: 'MINUTES') {
+                    timeout(time: "6", unit: 'MINUTES') {
                         GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Building cache.", "${BUILD_URL}")
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
