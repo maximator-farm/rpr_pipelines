@@ -249,7 +249,7 @@ def executeBuildLinux(Map options)
 
     options.cmakeKeysLinux = [
         'Ubuntu18': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=ON -DRML_MPS=OFF',
-        'CentOS7_6': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
+        'CentOS7': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
     ]
 
     executeLinuxBuildCommand(options, "Release")
@@ -381,7 +381,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectBranch = "",
          String testsBranch = "master",
          String assestsBranch = "master",
-         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7_6;OSX:AMD_RXVEGA',
+         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7;OSX:AMD_RXVEGA',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
          Boolean enableNotifications = true,
          Boolean executeFT = true)

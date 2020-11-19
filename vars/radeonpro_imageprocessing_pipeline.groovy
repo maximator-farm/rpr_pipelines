@@ -328,7 +328,7 @@ def executeBuild(String osName, Map options)
         case 'OSX':
             executeBuildUnix(options.cmakeKeys, osName, options, 'clang');
             break;
-        case 'CentOS7_6':
+        case 'CentOS7':
             executeBuildUnix(options.cmakeKeys, osName, options);
             break;
         case 'Ubuntu18':
@@ -417,7 +417,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT;Ubuntu18:NVIDIA_RTX2070;OSX:AMD_RXVEGA;CentOS7_6;Ubuntu18-Clang',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT;Ubuntu18:NVIDIA_RTX2070;OSX:AMD_RXVEGA;CentOS7;Ubuntu18-Clang',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = '',
@@ -426,7 +426,7 @@ def call(String projectBranch = "",
     println "TAG_NAME: ${env.TAG_NAME}"
 
     def deployStage = env.TAG_NAME || testPerformance ? this.&executeDeploy : null
-    platforms = env.TAG_NAME ? "Windows;Ubuntu18;OSX;CentOS7_6;" : platforms
+    platforms = env.TAG_NAME ? "Windows;Ubuntu18;OSX;CentOS7;" : platforms
 
     def nodeRetry = []
 
