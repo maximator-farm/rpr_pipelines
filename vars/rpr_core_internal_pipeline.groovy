@@ -118,6 +118,77 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
     }
 }
 
+def executeTestCommand(String osName)
+{
+    switch(osName)
+    {
+        case 'Windows':
+            dir("RadeonProRenderSDK/Northstar/UnitTest")
+            {
+                bat """
+                ..\\dist\\release\\bin\\x86_64\\UnitTest64.exe -referencePath ..\\..\\frUnittestdata/northstar\\gpu\\ --gtest_filter=*NEXT_* --gtest_output=xml:..\\..\\..\\${STAGE_NAME}.gtest.xml >> ..\\..\\..\\${STAGE_NAME}.log  2>&1
+                """
+            }
+            break;
+        case 'OSX':
+            // Tests for OSX aren't supported now
+            break;
+        default:
+            // Tests for Linux aren't supported now
+            break;
+    }
+}
+
+def executeUnitTests(String osName, String asicName, Map options)
+{
+    dir('RadeonProRenderSDK')
+    {
+        try {
+            GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading RadeonProRenderSDK repository.")
+            timeout(time: "10", unit: 'MINUTES') {
+                cleanWS(osName)
+                checkOutBranchOrScm(options['projectBranch'], 'git@github.com:amdadvtech/RadeonProRenderSDKInternal.git', false, options['prBranchName'], options['prRepoName'])
+            }
+        } catch (e) {
+            if (utils.isTimeoutExceeded(e)) {
+                throw new ExpectedExceptionWrapper("Failed to download RadeonProRenderSDK repository due to timeout.", e)
+            } else {
+                throw new ExpectedExceptionWrapper("Failed to download RadeonProRenderSDK repository.", e)
+            } 
+        }
+    }
+
+    dir('frUnittestdata')
+    {
+        try {
+            GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading unit tests repository.", "${BUILD_URL}")
+            timeout(time: "30", unit: 'MINUTES') {
+                checkOutBranchOrScm(options['unitTestsBranch'], 'git@github.com:amdadvtech/frUnittestdata.git')
+            }
+        } catch (e) {
+            if (utils.isTimeoutExceeded(e)) {
+                throw new ExpectedExceptionWrapper("Failed to download unit tests repository due to timeout.", e)
+            } else {
+                throw new ExpectedExceptionWrapper("Failed to download unit tests repository.", e)
+            }            
+        }
+    }
+
+    try
+    {
+        executeTestCommand(osName)
+    }
+    catch (e)
+    {
+        println(e.toString());
+        println(e.getMessage());
+    }
+    finally {
+        archiveArtifacts "*.log, *.gtest.xml"
+        junit "*.gtest.xml"
+    }
+}
+
 def executeTestCommand(String osName, String asicName, Map options)
 {
     withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
@@ -168,11 +239,20 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
+
+    executeUnitTests(osName, asicName, options)
+
+    // check that current platform is in list of platforms for which render should be executed
+    if (!(options.renderPlatforms.contains(osName) && options.renderPlatforms.contains(asicName))) {
+        return
+    }
+
     // TODO: improve envs, now working on Windows testers only
     if (options.sendToUMS){
         universeClientProd.stage("Tests-${osName}-${asicName}", "begin")
         universeClientDev.stage("Tests-${osName}-${asicName}", "begin")
     }
+
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
@@ -852,7 +932,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RX5700XT,NVIDIA_RTX2070S',
+         String unitTestsBranch = "master",
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI',
+         String renderPlatforms = 'Windows:AMD_RX5700XT,NVIDIA_RTX2070S',
          String updateRefs = 'No',
          Boolean enableNotifications = false,
          String renderDevice = "gpu",
@@ -879,7 +961,7 @@ def call(String projectBranch = "",
             String PRJ_ROOT="rpr-core"
 
             gpusCount = 0
-            platforms.split(';').each()
+            renderPlatforms.split(';').each()
             { platform ->
                 List tokens = platform.tokenize(':')
                 if (tokens.size() > 1)
@@ -892,11 +974,12 @@ def call(String projectBranch = "",
                 }
             }
 
-            def universePlatforms = convertPlatforms(platforms);
+            def universePlatforms = convertPlatforms(renderPlatforms);
 
             def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
-
+ 
             println "Platforms: ${platforms}"
+            println "Render platforms: ${renderPlatforms}"
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
             println "Tests execution type: ${parallelExecutionType}"
@@ -912,6 +995,7 @@ def call(String projectBranch = "",
 
             options << [projectBranch:projectBranch,
                         testsBranch:testsBranch,
+                        unitTestsBranch:unitTestsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
                         PRJ_NAME:PRJ_NAME,
@@ -935,6 +1019,7 @@ def call(String projectBranch = "",
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
+                        renderPlatforms:renderPlatforms,
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
