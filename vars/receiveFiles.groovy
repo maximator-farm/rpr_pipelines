@@ -1,16 +1,19 @@
 
 def call(String remote, String local)
 {
-    if(isUnix())
+    withCredentials([string(credentialsId: 'buildsRemoteHost', variable: 'REMOTE_HOST')])
     {
-        sh """
-            ${CIS_TOOLS}/receiveFiles.sh \"${remote}\" ${local}
-        """
-    }
-    else
-    {
-        bat """
-            %CIS_TOOLS%\\receiveFiles.bat ${remote} ${local}
-        """
+        if(isUnix())
+        {
+            sh """
+                ${CIS_TOOLS}/receiveFiles.sh \"${remote}\" ${local} ${REMOTE_HOST}
+            """
+        }
+        else
+        {
+            bat """
+                %CIS_TOOLS%\\receiveFiles.bat ${remote} ${local} ${REMOTE_HOST}
+            """
+        }
     }
 }

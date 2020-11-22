@@ -667,9 +667,12 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-            	dir("core_tests_configuration") {
-                    bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat ${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/ .")
-            	}
+                withCredentials([string(credentialsId: 'buildsRemoteHost', variable: 'REMOTE_HOST')])
+                {
+                    dir("core_tests_configuration") {
+                        bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat ${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/ . ${REMOTE_HOST}")
+                    }
+                }
             } catch (e) {
                 println("[ERROR] Can't download json files with core tests configuration")
             }

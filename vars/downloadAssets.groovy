@@ -8,15 +8,18 @@ def call(String original_folder, String destination_folder)
     while(retries++ < times){
         print('Try download assets with rsync #' + retries)
         try{
-            if(isUnix())
+            withCredentials([string(credentialsId: 'buildsRemoteHost', variable: 'REMOTE_HOST')])
             {
-                status = sh(returnStatus: true, 
-                    script: "${CIS_TOOLS}/receiveFilesSync.sh ${original_folder} ${CIS_TOOLS}/../TestResources/${destination_folder}")
-            }
-            else
-            {
-                status = bat(returnStatus: true, 
-                    script: "%CIS_TOOLS%\\receiveFilesSync.bat ${original_folder} /mnt/c/TestResources/${destination_folder}")
+                if(isUnix())
+                {
+                    status = sh(returnStatus: true, 
+                        script: "${CIS_TOOLS}/receiveFilesSync.sh ${original_folder} ${CIS_TOOLS}/../TestResources/${destination_folder} ${REMOTE_HOST}")
+                }
+                else
+                {
+                    status = bat(returnStatus: true, 
+                        script: "%CIS_TOOLS%\\receiveFilesSync.bat ${original_folder} /mnt/c/TestResources/${destination_folder} ${REMOTE_HOST}")
+                }
             }
             if (status != 24){
                 return
