@@ -69,13 +69,13 @@ public class GithubNotificator {
                     if(gpuNames) {
                         gpuNames.split(',').each() { asicName ->
                             if (options.splitTestsExecution) {
-                                    options.tests.each() { testsName ->
+                                options.tests.each() { testName ->
                                     // check that group isn't fully skipped
                                     if (options.skippedTests && options.skippedTests.containsKey(testName) && options.skippedTests[testName].contains("${asicName}-${osName}")) {
                                         return
                                     }
-                                    String parsedTestsName = testsName
-                                    if (testsName.contains("~")) {
+                                    String parsedTestsName = testName
+                                    if (testName.contains("~")) {
                                         String[] testsNameParts = parsedTestsName.split("~")
                                         String engine = ""
                                         if (testsNameParts.length == 2 && testsNameParts[1].contains("-")) {
