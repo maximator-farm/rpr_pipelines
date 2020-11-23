@@ -1244,21 +1244,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 throw e
             }
-
-            if (options.sendToUMS) {
-                try {
-                    String status = currentBuild.result ?: 'SUCCESSFUL'
-                    universeClientParentProd.changeStatus(status)
-                    universeClientParentDev.changeStatus(status)
-                    options.engines.each { engine ->
-                        universeClientsProd[engine].changeStatus(status)
-                        universeClientsDev[engine].changeStatus(status)
-                    }
-                }
-                catch (e){
-                    println(e.getMessage())
-                }
-            }
         }
     }
     catch (e) {
@@ -1470,24 +1455,32 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     catch(e) 
     {
         currentBuild.result = "FAILURE"
-        if (sendToUMS){
-            universeClientParentProd.changeStatus(currentBuild.result)
-            universeClientParentDev.changeStatus(currentBuild.result)
-            if (universeClientsProd) {
-                for (client in universeClientsProd) {
-                    client.value.changeStatus(currentBuild.result)
-                }
-                for (client in universeClientsDev) {
-                    client.value.changeStatus(currentBuild.result)
-                }
-            } 
-        }
         println(e.toString());
         println(e.getMessage());
         throw e
     }
     finally
     {
+        if (options.sendToUMS) {
+            node("Windows && PreBuild") {
+                try {
+                    String status = options.buildWasAborted ? "ABORTED" : currentBuild.result
+                    universeClientParentProd.changeStatus(status)
+                    universeClientParentDev.changeStatus(status)
+                    if (universeClientsProd) {
+                        for (client in universeClientsProd) {
+                            client.value.changeStatus(status)
+                        }
+                        for (client in universeClientsDev) {
+                            client.value.changeStatus(status)
+                        }
+                    }
+                }
+                catch (e){
+                    println(e.getMessage())
+                }
+            }
+        }
         problemMessageManager.publishMessages()
     }
 
