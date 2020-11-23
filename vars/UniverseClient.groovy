@@ -296,8 +296,8 @@ class UniverseClient {
     def createBuild(envs = '', suites = '', updRefs = false, options = null) {
         def request = {
             // prepare build parameters
-            parameters = [:]
-            info = [:]
+            def parameters = [:]
+            def info = [:]
             if (options) {
                 for (pType in [this.minor_keys, this.major_keys]) {
                     for (p in pType) {
