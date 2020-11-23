@@ -35,7 +35,7 @@ class UniverseClient {
             "name": "gpu"
         ],
         [
-            "key": "parallelExecutionTypeString",
+            "key": "parallelExecutionType",
             "name": "parallel execution type string"
         ],
         [
@@ -107,8 +107,12 @@ class UniverseClient {
             "name": "test case retries"
         ],
         [
-            "key": "mergeablePR",
-            "name": "mergeable pr"
+            "key": "prRepoName",
+            "name": "PR Repository Name"
+        ],
+        [
+            "key": "prBranchName",
+            "name": "PR Repository Name"
         ]
     ]
 

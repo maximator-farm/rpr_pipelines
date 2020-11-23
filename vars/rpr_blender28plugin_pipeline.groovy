@@ -1553,9 +1553,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
-                        testCaseRetries:testCaseRetries,
-                        parallelExecutionTypeString: parallelExecutionTypeString,
-                        mergeablePR: mergeablePR
+                        testCaseRetries:testCaseRetries
                         ]
         }
         catch(e)
