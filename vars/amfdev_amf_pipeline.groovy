@@ -303,7 +303,7 @@ def executeBuildWindows(Map options) {
                         break;
                     case '2019':
                         options.visualStudio = "Visual Studio 16 2019"
-                        options.msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
+                        options.msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe"
                 }
 
                 dir("amf\\public\\proj\\OpenAMF_Autotests") {
@@ -670,7 +670,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
         dir("amf/public/proj/OpenAMF_Autotests/Reports") {
             bat """
             set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
-            pip install -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
+            pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
             python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
             """
         }

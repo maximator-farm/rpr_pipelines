@@ -50,7 +50,8 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
     {
         checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git')
 
-        outputEnvironmentInfo(osName)
+        outputEnvironmentInfo(osName, "${STAGE_NAME}.dynamic")
+        outputEnvironmentInfo(osName, "${STAGE_NAME}.static")
         unstash "app_${libType}_${osName}"
 
         executeTestCommand(osName, libType, options.testPerformance)
@@ -94,10 +95,13 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
+    Boolean testsFailed = false
+
     try {
         executeTestsForCustomLib(osName, 'dynamic', options)
     } catch (e) {
         println("Error during testing dynamic lib")
+        testsFailed = true
         println(e.toString());
         println(e.getMessage());
         println(e.getStackTrace());    
@@ -106,18 +110,25 @@ def executeTests(String osName, String asicName, Map options)
     try {
         executeTestsForCustomLib(osName, 'static', options)
     } catch (e) {
+        testsFailed = true
         println("Error during testing static lib")
         println(e.toString());
         println(e.getMessage());
         println(e.getStackTrace());    
     }
+
+    if (testsFailed) {
+        currentBuild.result = "FAILED"
+        error "Error during testing"
+    }
+
 }
 
 
 def executeBuildWindows(String cmakeKeys, String osName, Map options)
 {
     bat """
-        set msbuild="C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe" >> ..\\${STAGE_NAME}.log 2>&1
+        set msbuild="C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe" >> ..\\${STAGE_NAME}.dynamic.log 2>&1
         mkdir build-${options.packageName}-${osName}-dynamic
         cd build-${options.packageName}-${osName}-dynamic
         cmake .. -DADL_PROFILING=ON -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-dynamic >> ..\\${STAGE_NAME}.dynamic.log 2>&1
@@ -306,7 +317,8 @@ def executeBuild(String osName, Map options)
 {
     try {
         checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git')
-        outputEnvironmentInfo(osName)
+        outputEnvironmentInfo(osName, "${STAGE_NAME}.dynamic")
+        outputEnvironmentInfo(osName, "${STAGE_NAME}.static")
 
         switch(osName)
         {
@@ -364,7 +376,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             bat """
             set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
-            pip install -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
+            pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
             python build_report.py --test_results ..\\testResults --output_dir ..\\results
             """
         }
@@ -405,7 +417,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT;Ubuntu18:NVIDIA_RTX2070;OSX:AMD_RXVEGA;CentOS7_6;Ubuntu18-Clang',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT;Ubuntu18:NVIDIA_RTX2070;OSX:AMD_RXVEGA;CentOS7;Ubuntu18-Clang',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = '',
@@ -414,7 +426,7 @@ def call(String projectBranch = "",
     println "TAG_NAME: ${env.TAG_NAME}"
 
     def deployStage = env.TAG_NAME || testPerformance ? this.&executeDeploy : null
-    platforms = env.TAG_NAME ? "Windows;Ubuntu18;OSX;CentOS7_6;" : platforms
+    platforms = env.TAG_NAME ? "Windows;Ubuntu18;OSX;CentOS7;" : platforms
 
     def nodeRetry = []
 

@@ -6,6 +6,7 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
+
 @Field Map[] UMSMajorPrarmetersKeys = [
     [
         "key": "projectRepo",
@@ -151,9 +152,13 @@ import TestsExecutionType
     "commitSHA"
 ]
 
+@Field String UniverseURLProd
+@Field String UniverseURLDev
+@Field String ImageServiceURL
+@Field String ProducteName = "AMD%20Radeon™%20ProRender%20for%203ds%20Max"
+@Field UniverseClient universeClientProd
+@Field UniverseClient universeClientDev
 
-@Field UniverseClient universeClientProd = new UniverseClient(this, "http://172.26.157.233:5001", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20for%203ds%20Max")
-@Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5002", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20for%203ds%20Max")
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
@@ -1088,16 +1093,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 throw e
             }
-
-            if (options.sendToUMS) {
-                try {
-                    String status = currentBuild.result ?: 'SUCCESSFUL'
-                    universeClientProd.changeStatus(status)
-                    universeClientDev.changeStatus(status)
-                } catch (e) {
-                    println(e.getMessage())
-                }
-            }
         }
     }
     catch (e) {
@@ -1155,6 +1150,17 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
     try {
         try {
+            withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
+                string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
+                string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
+            {
+                UniverseURLProd = "${PROD_UMS_URL}"
+                UniverseURLDev = "${DEV_UMS_URL}"
+                ImageServiceURL = "${IS_URL}"
+                universeClientProd = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName)
+                universeClientDev = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName)
+            }
+
             Boolean isPreBuilt = customBuildLinkWindows.length() > 0
 
             if (isPreBuilt)
@@ -1269,10 +1275,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     catch(e)
     {
         currentBuild.result = "FAILURE"
-        if (sendToUMS){
-            universeClientProd.changeStatus(currentBuild.result)
-            universeClientDev.changeStatus(currentBuild.result)
-        }
         println(e.toString());
         println(e.getMessage());
 
@@ -1280,6 +1282,18 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     }
     finally
     {
+        if (options.sendToUMS) {
+            node("Windows && PreBuild") {
+                try {
+                    String status = options.buildWasAborted ? "ABORTED" : currentBuild.result
+                    universeClientProd.changeStatus(status)
+                    universeClientDev.changeStatus(status)
+                }
+                catch (e){
+                    println(e.getMessage())
+                }
+            }
+        }
         problemMessageManager.publishMessages()
     }
 

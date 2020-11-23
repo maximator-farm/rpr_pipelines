@@ -106,7 +106,7 @@ def installPlugin(String osName, String tool, Map options){
 
         case 'OSX':
             sh """
-                $CIS_TOOLS/install${tool}Plugin.sh ${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg >> \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
+                sudo $CIS_TOOLS/install${tool}Plugin ${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.dmg >> \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
             break;
 

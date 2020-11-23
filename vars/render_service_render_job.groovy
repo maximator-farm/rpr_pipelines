@@ -241,14 +241,21 @@ def main(String PCs, Map options) {
 		boolean PRODUCTION = true
 
 		if (PRODUCTION) {
-			options['django_url'] = "https://render.cis.luxoft.com/render/jenkins/"
-			options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
-			options['scripts_branch'] = "master"
+			withCredentials([string(credentialsId: 'prodRSURL', variable: 'PROD_RS_URL')])
+			{
+				options['django_url'] = "${PROD_RS_URL}/render/jenkins/"
+				options['plugin_storage'] = "${PROD_RS_URL}/render/plugins/"
+				options['scripts_branch'] = "master"
+			}
 		} else {
-			options['django_url'] = "https://testrender.cis.luxoft.com/render/jenkins/"
-			options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
-			options['scripts_branch'] = "develop"
+			withCredentials([string(credentialsId: 'devRSURL', variable: 'DEV_RS_URL')])
+			{
+				options['django_url'] = "${DEV_RS_URL}/render/jenkins/"
+				options['plugin_storage'] = "${DEV_RS_URL}/render/plugins/"
+				options['scripts_branch'] = "develop"
+			}
 		}
+
 
 		List tokens = PCs.tokenize(':')
 		String osName = tokens.get(0)

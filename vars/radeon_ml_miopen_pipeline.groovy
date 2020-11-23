@@ -16,6 +16,7 @@ def executeBuildWindows(String osName, Map options)
     bat """
         mkdir release\\miopen
         xcopy /s/y/i build\\bin\\Release\\MIOpen.dll release
+        xcopy /s/y/i build\\bin\\Release\\MIOpen.lib release
         xcopy /s/y/i build\\include\\miopen\\*.h release\\miopen
         xcopy /s/y/i include\\miopen\\*.h release\\miopen
     """
@@ -187,7 +188,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectRepo='git@github.com:BenjaminCoquelle/MIOpen.git',
          String projectBranch = "master",
-         String platforms = 'Windows;Ubuntu18;CentOS7_6',
+         String platforms = 'Windows;Ubuntu18;CentOS7',
          String updateBinaries = 'false',
          String PRJ_ROOT='rpr-ml',
          String PRJ_NAME='MIOpen'

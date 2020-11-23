@@ -82,9 +82,12 @@ def call(String pluginBranch = "", String thirdpartyBranch = "master", String pa
                                         )
                                     '''
 
-                                    bat '''
-                                        c:\\JN\\create_refhtml.bat build.html "https://builds.rpr.cis.luxoft.com/%UPLOAD_PATH%"
-                                    '''
+                                    withCredentials([string(credentialsId: 'buildsURL', variable: 'BUILDS_URL')])
+                                    {
+                                        bat '''
+                                            c:\\JN\\create_refhtml.bat build.html "${BUILDS_URL}/%UPLOAD_PATH%"
+                                        '''
+                                    }
 
                                     archiveArtifacts 'build.html'
 

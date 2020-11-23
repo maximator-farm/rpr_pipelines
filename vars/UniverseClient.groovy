@@ -1,6 +1,7 @@
  
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurperClassic;
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 // imports for work with JSONs
 
 /**
@@ -22,9 +23,9 @@ class UniverseClient {
      * Main constructor for builds without engine
      *
      * @param context
-     * @param url Universal Monitoring System API  url (example: "https://umsapi.cis.luxoft.com" )
+     * @param url Universal Monitoring System API  url
      * @param env Jenkins environment variables object
-     * @param is_url Image Service API url (example: "https://imgs.cis.luxoft.com")
+     * @param is_url Image Service API url
      * @param product Name of product (example: "RPR_Maya")
      */
     UniverseClient(context, url, env, is_url, product) {
@@ -77,7 +78,7 @@ class UniverseClient {
      * @param func function to be retried
      * @param validResponseCodes response codes that will be indicated as OK
      */
-    def retryWrapper(func, validResponseCodes = [200]) {
+    def retryWrapper(func, validResponseCodes = [200], allowAborting = true) {
         def attempt = 0
         def attempts = 5
         def timeout = 30 // seconds
@@ -102,8 +103,17 @@ class UniverseClient {
                         break;
                 }
                 return false // continue loop
-
-            } catch(error) {
+            } catch(FlowInterruptedException error) {
+                this.context.println("[INFO] Detected aborting during sending of request to UMS")
+                if (allowAborting) {
+                    this.context.println("[INFO] Aborting sending of request to UMS...")
+                    throw error
+                } else {
+                    this.context.println("[INFO] Aborting was ignored")
+                    attempt--
+                    return false // continue loop
+                }
+            } catch(Exception error) {
                 this.context.println(error)
                 this.context.sleep(timeout)
                 return false // continue loop
@@ -132,6 +142,7 @@ class UniverseClient {
      * @param envs environment list in format: ["OS-1:GPU-1", ..."OS-N:GPU-N"]
      * @param suites suites names list ["Suite1", "Suite2", ..., "SuiteN"]
      */
+
     def createBuild(envs = '', suites = '', updRefs = false, parameters = [:], info = [:]) {
         def request = {
             def splittedJobName = []
@@ -245,7 +256,9 @@ class UniverseClient {
      * @param status String Status name
      */
     def changeStatus(status) {
+        this.context.println("[INFO] START TO CHANGE UMS BUILD STATUS. PLEASE, DO NOT ABORT JOB")
         def request = {
+            status = status ?: "SUCCESS"
             def mapStatuses = [
                 "FAILURE": "error",
                 "FAILED": "error",
@@ -254,6 +267,7 @@ class UniverseClient {
                 "SUCCESS": "passed",
                 "SUCCESSFUL": "passed"
             ]
+            this.context.println("[INFO] Sending build status - \"${mapStatuses[status]}\"")
 
             def buildBody = [
                 'status': mapStatuses[status]
@@ -274,6 +288,6 @@ class UniverseClient {
 
             return res;
         }
-        retryWrapper(request)
+        retryWrapper(request, [200], false)
     }
 }

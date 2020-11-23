@@ -123,13 +123,19 @@ def main(String platforms, Map options) {
 		boolean PRODUCTION = true
 
 		if (PRODUCTION) {
-			options['django_url'] = "https://render.cis.luxoft.com/viewer/jenkins/"
-			options['plugin_storage'] = "https://render.cis.luxoft.com/media/plugins/"
-			options['scripts_branch'] = "master"
+			withCredentials([string(credentialsId: 'prodRSURL', variable: 'PROD_RS_URL')])
+			{
+				options['django_url'] = "${PROD_RS_URL}/viewer/jenkins/"
+				options['plugin_storage'] = "${PROD_RS_URL}/viewer/plugins/"
+				options['scripts_branch'] = "master"
+			}
 		} else {
-			options['django_url'] = "https://testrender.cis.luxoft.com/viewer/jenkins/"
-			options['plugin_storage'] = "https://testrender.cis.luxoft.com/media/plugins/"
-			options['scripts_branch'] = "develop"
+			withCredentials([string(credentialsId: 'devRSURL', variable: 'DEV_RS_URL')])
+			{
+				options['django_url'] = "${DEV_RS_URL}/viewer/jenkins/"
+				options['plugin_storage'] = "${DEV_RS_URL}/viewer/plugins/"
+				options['scripts_branch'] = "develop"
+			}
 		}
 
 		List tokens = platforms.tokenize(':')

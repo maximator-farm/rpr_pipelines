@@ -154,7 +154,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
             try {
                 dir('HTML_Report') {
                     checkOutBranchOrScm('master', 'git@github.com:luxteam/HTMLReportsShared')
-                    python3("-m pip install -r requirements.txt")
+                    python3("-m pip install --user -r requirements.txt")
                     python3("hybrid_report.py --xml_path ../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-${options.RENDER_QUALITY}_failures")
                 }
 
@@ -372,7 +372,7 @@ def executePreBuild(Map options)
                 gpuNames = tokens.get(1)
                 gpuNames.split(',').each()
                 { gpuName ->
-                    if (options.testsQuality != "none") {
+                    if (options.testsQuality) {
                         options.testsQuality.split(",").each()
                         { testQuality ->
                             // Statuses for tests
@@ -486,7 +486,7 @@ def call(String projectBranch = "",
     }
 
     if ((env.BRANCH_NAME && env.BRANCH_NAME == 'master') || (env.CHANGE_TARGET && env.CHANGE_TARGET == 'master')) {
-        platforms = 'Windows:AMD_RXVEGA,NVIDIA_RTX2070S;Ubuntu18:AMD_RadeonVII' 
+        platforms = 'Windows:NVIDIA_RTX2070S;Ubuntu18:NVIDIA_RTX2070' 
         testsQuality = ''
     }
 

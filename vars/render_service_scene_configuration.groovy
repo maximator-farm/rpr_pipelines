@@ -107,13 +107,18 @@ def main(Map options) {
 		options['PRJ_PATH']="${PRJ_PATH}"
 		options['JOB_PATH']="${JOB_PATH}"
 
-		options['django_url'] = "https://render.cis.luxoft.com/project/jenkins/"
+		withCredentials([string(credentialsId: 'prodRSURL', variable: 'PROD_RS_URL')])
+		{
+			options['django_url'] = "${PROD_RS_URL}/project/jenkins/"
+		}
+		
 		options['scripts_branch'] = "master"
+
 
 		String osName = 'Windows'
 		
 		startConfiguration(osName, options)
-	}    
+	}
 	
 }
 

@@ -7,7 +7,6 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-
 @Field Map[] UMSMajorPrarmetersKeys = [
     [
         "key": "projectRepo",
@@ -153,12 +152,12 @@ import TestsExecutionType
     "commitSHA"
 ]
 
-@Field String UniverseURLProd = "http://172.26.157.233:5001"
-@Field String UniverseURLDev = "http://172.26.157.233:5002"
-@Field String ImageServiceURL = "http://172.26.157.248:8001"
+@Field String UniverseURLProd
+@Field String UniverseURLDev
+@Field String ImageServiceURL
 @Field String ProducteName = "AMD%20Radeon™%20ProRender%20for%20Blender"
-@Field UniverseClient universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
-@Field UniverseClient universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
+@Field UniverseClient universeClientParentProd
+@Field UniverseClient universeClientParentDev
 @Field Map universeClientsProd = [:]
 @Field Map universeClientsDev = [:]
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -480,7 +479,7 @@ def executeTests(String osName, String asicName, Map options)
 
             try {
                 if (newPluginInstalled) {
-                    timeout(time: "3", unit: 'MINUTES') {
+                    timeout(time: "6", unit: 'MINUTES') {
                         GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Building cache.", "${BUILD_URL}")
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
@@ -606,8 +605,8 @@ def executeTests(String osName, String asicName, Map options)
 
                         if (options.sendToUMS)
                         {
-                            universeClientsProd[options.engine].stage("Tests-${osName}-${asicName}", "begin")
-                            universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "begin")
+                            universeClientsProd[options.engine].stage("Tests-${osName}-${asicName}", "end")
+                            universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "end")
                         }
 
                         if (sessionReport.summary.error > 0) {
@@ -794,10 +793,8 @@ def executeBuildLinux(String osName, Map options)
 def executeBuild(String osName, Map options)
 {
     if (options.sendToUMS){
-        options.engines.each { engine ->
-            universeClientsProd[engine].stage("Build-" + osName , "begin")
-            universeClientsDev[engine].stage("Build-" + osName , "begin")
-        }
+        universeClientParentProd.stage("Build-" + osName , "begin")
+        universeClientParentDev.stage("Build-" + osName , "begin")
     }
     try {
         dir('RadeonProRenderBlenderAddon')
@@ -889,10 +886,8 @@ def executeBuild(String osName, Map options)
         }
     }
     if (options.sendToUMS){
-        options.engines.each { engine ->
-            universeClientsProd[engine].stage("Build-" + osName , "end")
-            universeClientsDev[engine].stage("Build-" + osName , "end")
-        }
+        universeClientParentProd.stage("Build-" + osName , "end")
+        universeClientParentDev.stage("Build-" + osName , "end")
     }
 }
 
@@ -1101,12 +1096,13 @@ def executePreBuild(Map options)
                 packageInfo["groups"].each() {
                     if (options.isPackageSplitted) {
                         tempTests << it.key
+                        options.groupsUMS << it.key
                     } else {
                         if (tempTests.contains(it.key)) {
                             // add duplicated group name in name of package group name for exclude it
                             modifiedPackageName = "${modifiedPackageName},${it.key}"
                         } else {
-                        	options.groupsUMS << it.key
+                            options.groupsUMS << it.key
                         }
                     }
                 }
@@ -1175,10 +1171,10 @@ def executePreBuild(Map options)
                                         try {
                                             String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
                                             if (output.contains("True")) {
-                                                if (!options.skippedTests.containsKey(test)) {
-                                                    options.skippedTests[test] = []
+                                                if (!options.skippedTests.containsKey(testName)) {
+                                                    options.skippedTests[testName] = []
                                                 }
-                                                options.skippedTests[test].add("${it}-${osName}")
+                                                options.skippedTests[testName].add("${it}-${osName}")
                                             }
                                         }
                                         catch(Exception e) {
@@ -1510,21 +1506,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 throw e
             }
 
-            if (options.sendToUMS) {
-                try {
-                    String status = currentBuild.result ?: 'SUCCESSFUL'
-                    universeClientParentProd.changeStatus(status)
-                    universeClientParentDev.changeStatus(status)
-                    options.engines.each { engine ->
-                        universeClientsProd[engine].changeStatus(status)
-                        universeClientsDev[engine].changeStatus(status)
-                    }
-                }
-                catch (e){
-                    println(e.getMessage())
-                }
-            }
-
             println "BUILD RESULT: ${currentBuild.result}"
             println "BUILD CURRENT RESULT: ${currentBuild.currentResult}"
         }
@@ -1562,7 +1543,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String tests = "",
     Boolean forceBuild = false,
     Boolean splitTestsExecution = true,
-    Boolean sendToUMS = false,
+    Boolean sendToUMS = true,
     String resX = '0',
     String resY = '0',
     String SPU = '25',
@@ -1595,6 +1576,18 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Init")
                 throw new Exception(errorMessage)
             }
+
+            withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
+                string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
+                string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
+            {
+                UniverseURLProd = "${PROD_UMS_URL}"
+                UniverseURLDev = "${DEV_UMS_URL}"
+                ImageServiceURL = "${IS_URL}"
+                universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
+                universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
+            }
+
             enginesNames = enginesNames.split(',') as List
             def formattedEngines = []
             enginesNames.each {
@@ -1740,18 +1733,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     catch(e)
     {
         currentBuild.result = "FAILURE"
-        if (sendToUMS){
-            universeClientParentProd.changeStatus(currentBuild.result)
-            universeClientParentDev.changeStatus(currentBuild.result)
-            if (universeClientsProd) {
-                for (client in universeClientsProd) {
-                    client.value.changeStatus(currentBuild.result)
-                }
-                for (client in universeClientsDev) {
-                    client.value.changeStatus(currentBuild.result)
-                }
-            } 
-        }
         println(e.toString());
         println(e.getMessage());
 
@@ -1759,6 +1740,26 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     }
     finally
     {
+        if (options.sendToUMS) {
+            node("Windows && PreBuild") {
+                try {
+                    String status = options.buildWasAborted ? "ABORTED" : currentBuild.result
+                    universeClientParentProd.changeStatus(status)
+                    universeClientParentDev.changeStatus(status)
+                    if (universeClientsProd) {
+                        for (client in universeClientsProd) {
+                            client.value.changeStatus(status)
+                        }
+                        for (client in universeClientsDev) {
+                            client.value.changeStatus(status)
+                        }
+                    }
+                }
+                catch (e){
+                    println(e.getMessage())
+                }
+            }
+        }
         problemMessageManager.publishMessages()
     }
 

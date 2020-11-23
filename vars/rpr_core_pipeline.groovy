@@ -70,8 +70,13 @@ import TestsExecutionType
     "commitSHA"
 ]
 
-@Field UniverseClient universeClientProd = new UniverseClient(this, "http://172.26.157.233:5001", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20Core")
-@Field UniverseClient universeClientDev = new UniverseClient(this, "http://172.26.157.233:5002", env, "http://172.26.157.248:8001", "AMD%20Radeon™%20ProRender%20Core")
+@Field String UniverseURLProd
+@Field String UniverseURLDev
+@Field String ImageServiceURL
+@Field String ProducteName = "AMD%20Radeon™%20ProRender%20Core"
+@Field UniverseClient universeClientProd
+@Field UniverseClient universeClientDev
+
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
@@ -366,7 +371,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         echo "Stashing test results to : ${options.testResultsName}"
-                        stash includes: '**/*', excludes: '**/cache/*', name: "${options.testResultsName}", allowEmpty: true
+                        stash includes: '**/*', excludes: '**/cache/**', name: "${options.testResultsName}", allowEmpty: true
 
                         // reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
@@ -554,6 +559,9 @@ def executePreBuild(Map options)
         GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
         options.githubNotificator = githubNotificator
         githubNotificator.initPreBuild("${BUILD_URL}")
+    } else if (env.BRANCH_NAME == "master") {
+        println "[INFO] ${env.BRANCH_NAME} branch was detected"
+        options.collectTrackedMetrics = true
     }
 
     try {
@@ -751,7 +759,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 dir("jobs_launcher") {
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"{}\"
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -760,31 +768,59 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report.", "${BUILD_URL}")
-                dir("jobs_launcher")
+                def buildNumber = ""
+                if (options.collectTrackedMetrics) {
+                    buildNumber = env.BUILD_NUMBER
+                    try {
+                        dir("summaryTestResults/tracked_metrics") {
+                            receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}/", ".")
+                        }
+                    } catch (e) {
+                        println("[WARNING] Failed to download history of tracked metrics.")
+                        println(e.toString())
+                        println(e.getMessage())
+                    }
+                }
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
-                    if(options.projectBranch != "") {
-                        options.branchName = options.projectBranch
-                    } else {
-                        options.branchName = env.BRANCH_NAME
-                    }
-                    if(options.incrementVersion) {
-                        options.branchName = "master"
-                    }
+                    dir("jobs_launcher")
+                    {
+                        if(options.projectBranch != "") {
+                            options.branchName = options.projectBranch
+                        } else {
+                            options.branchName = env.BRANCH_NAME
+                        }
+                        if(options.incrementVersion) {
+                            options.branchName = "master"
+                        }
 
-                    options.commitMessage = options.commitMessage.replace("'", "")
-                    options.commitMessage = options.commitMessage.replace('"', '')
+                        options.commitMessage = options.commitMessage.replace("'", "")
+                        options.commitMessage = options.commitMessage.replace('"', '')
 
-                    def retryInfo = JsonOutput.toJson(options.nodeRetry)
-                    dir("..\\summaryTestResults") {
-                        JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
-                        writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                        def retryInfo = JsonOutput.toJson(options.nodeRetry)
+                        dir("..\\summaryTestResults") {
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                        }                    
+
+                        bat """
+                        build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
+                        """
+
+                        bat "get_status.bat ..\\summaryTestResults"
                     }
-                    bat """
-                    build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
-                    """
-
-                    bat "get_status.bat ..\\summaryTestResults"
-                }    
+                }
+                if (options.collectTrackedMetrics) {
+                    try {
+                        dir("summaryTestResults/tracked_metrics") {
+                            sendFiles(".", "${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}")
+                        }
+                    } catch (e) {
+                        println("[WARNING] Failed to update history of tracked metrics.")
+                        println(e.toString())
+                        println(e.getMessage())
+                    }
+                }  
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
                 GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
@@ -880,17 +916,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 throw e
             }
-
-            if (options.sendToUMS) {
-                try {
-                    String status = currentBuild.result ?: 'SUCCESSFUL'
-                    universeClientProd.changeStatus(status)
-                    universeClientDev.changeStatus(status)
-                }
-                catch (e){
-                    println(e.getMessage())
-                }
-            }
         }
     }
     catch (e) {
@@ -905,7 +930,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String renderDevice = "gpu",
@@ -917,7 +942,8 @@ def call(String projectBranch = "",
          Boolean sendToUMS = false,
          String tester_tag = 'Core',
          String mergeablePR = "",
-         String parallelExecutionTypeString = "TakeOneNodePerGPU")
+         String parallelExecutionTypeString = "TakeOneNodePerGPU",
+         Boolean collectTrackedMetrics = false)
 {
     
     def nodeRetry = []
@@ -927,6 +953,17 @@ def call(String projectBranch = "",
     {
         try 
         {
+            withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
+                string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
+                string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
+            {
+                UniverseURLProd = "${PROD_UMS_URL}"
+                UniverseURLDev = "${DEV_UMS_URL}"
+                ImageServiceURL = "${IS_URL}"
+                universeClientProd = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName)
+                universeClientDev = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName)
+            }
+            
             String PRJ_NAME="RadeonProRenderCore"
             String PRJ_ROOT="rpr-core"
 
@@ -977,7 +1014,7 @@ def call(String projectBranch = "",
                         executeBuild:true,
                         executeTests:true,
                         reportName:'Test_20Report',
-                        TEST_TIMEOUT:110,
+                        TEST_TIMEOUT:150,
                         width:width,
                         gpusCount:gpusCount,
                         height:height,
@@ -989,7 +1026,8 @@ def call(String projectBranch = "",
                         platforms:platforms,
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
-                        parallelExecutionType:parallelExecutionType
+                        parallelExecutionType:parallelExecutionType,
+                        collectTrackedMetrics:collectTrackedMetrics
                         ]
         }
         catch(e)
@@ -1004,16 +1042,24 @@ def call(String projectBranch = "",
     catch(e) 
     {
         currentBuild.result = "FAILURE"
-        if (sendToUMS){
-            universeClientProd.changeStatus(currentBuild.result)
-            universeClientDev.changeStatus(currentBuild.result)
-        }
         println(e.toString());
         println(e.getMessage());
         throw e
     }
     finally
     {
+        if (options.sendToUMS) {
+            node("Windows && PreBuild") {
+                try {
+                    String status = options.buildWasAborted ? "ABORTED" : currentBuild.result
+                    universeClientProd.changeStatus(status)
+                    universeClientDev.changeStatus(status)
+                }
+                catch (e){
+                    println(e.getMessage())
+                }
+            }
+        }
         problemMessageManager.publishMessages()
     }
 }

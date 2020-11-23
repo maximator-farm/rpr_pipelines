@@ -82,22 +82,26 @@ def executeBuildWindows(Map options)
     clearBinariesWin()
 
     if (options.rebuildUSD){
-        bat """
-            set PATH=c:\\python36\\;c:\\python36\\scripts\\;%PATH%;
-            call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}_USD.log 2>&1
-            
-            if exist USDgen rmdir /s/q USDgen
-            if exist USDinst rmdir /s/q USDinst
-            python USD\\build_scripts\\build_usd.py -v --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
-        """
+        dir ("USD") {
+            bat """
+                set PATH=c:\\python36\\;c:\\python36\\scripts\\;%PATH%;
+                call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}_USD.log 2>&1
+                
+                if exist USDgen rmdir /s/q USDgen
+                if exist USDinst rmdir /s/q USDinst
+
+                python build_scripts\\build_usd.py -v --build USDgen/build --src USDgen/src USDinst >> ${STAGE_NAME}_USD.log 2>&1
+            """
+        }
     }
     
     dir ("RadeonProRenderUSD") {
         if (options.enableHoudini) {
+            win_houdini_python3 = options.houdini_python3 ? " Python3" : ""
             bat """
                 mkdir build
                 set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
-                set HFS=C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}
+                set HFS=C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}${win_houdini_python3}
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
             """
 
@@ -105,7 +109,7 @@ def executeBuildWindows(Map options)
             bat """
                 mkdir build
                 set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
-                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USDinst" >> ..\\${STAGE_NAME}.log 2>&1
+                python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ..\\${STAGE_NAME}.log 2>&1
             """
         } 
     }
@@ -117,33 +121,34 @@ def executeBuildOSX(Map options)
     clearBinariesUnix()
 
     if (options.rebuildUSD) {
-        sh """
-            if [ -d "./USDgen" ]; then
-                rm -fdr ./USDgen
-            fi
+        dir ("USD") {
+            sh """
+                if [ -d "./USDgen" ]; then
+                    rm -fdr ./USDgen
+                fi
 
-            if [ -d "./USDinst" ]; then
-                rm -fdr ./USDinst
-            fi
+                if [ -d "./USDinst" ]; then
+                    rm -fdr ./USDinst
+                fi
 
-            mkdir -p USDgen
-            mkdir -p USDinst
-
-            python3 USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
-        """
+                export OS=Darwin
+                python3 build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst >> ${STAGE_NAME}_USD.log 2>&1
+            """
+        }
     }
 
     dir ("RadeonProRenderUSD") {
         if (options.enableHoudini) {
+            osx_houdini_python3 = options.houdini_python3 ? "-py3" : "-py2"
             sh """
                 mkdir build
-                export HFS=/Applications/Houdini/Houdini${options.houdiniVersion}/Frameworks/Houdini.framework/Versions/Current/Resources
+                export HFS=/Applications/Houdini/Houdini${options.houdiniVersion}${osx_houdini_python3}/Frameworks/Houdini.framework/Versions/Current/Resources
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
             sh """
                 mkdir build
-                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USDinst" >> ../${STAGE_NAME}.log 2>&1
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ../${STAGE_NAME}.log 2>&1
             """
         }
     }
@@ -155,33 +160,34 @@ def executeBuildUnix(Map options)
     clearBinariesUnix()
 
     if (options.rebuildUSD) {
-        sh """
-            if [ -d "./USDgen" ]; then
-                rm -fdr ./USDgen
-            fi
+        dir ("USD") {
+            sh """
+                if [ -d "./USDgen" ]; then
+                    rm -fdr ./USDgen
+                fi
 
-            if [ -d "./USDinst" ]; then
-                rm -fdr ./USDinst
-            fi
+                if [ -d "./USDinst" ]; then
+                    rm -fdr ./USDinst
+                fi
 
-            mkdir -p USDgen
-            mkdir -p USDinst
-
-            python3 USD/build_scripts/build_usd.py -vvv --build USDgen/build --src USDgen/src USDinst > ${STAGE_NAME}_USD.log 2>&1
-        """
+                export OS=
+                python3 build_scripts/build_usd.py -v --build USDgen/build --src USDgen/src USDinst >> ${STAGE_NAME}_USD.log 2>&1
+            """
+        }
     }
 
     dir ("RadeonProRenderUSD") {
         if (options.enableHoudini) {
+            unix_houdini_python3 = options.houdini_python3 ? "-py3" : "-py2"
             sh """
                 mkdir build
-                export HFS=/home/admin/Houdini/hfs${options.houdiniVersion}
+                export HFS=/home/admin/Houdini/hfs${options.houdiniVersion}${unix_houdini_python3}
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
             sh """
                 mkdir build
-                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options "-Dpxr_DIR=../USDinst" >> ../${STAGE_NAME}.log 2>&1
+                python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ../${STAGE_NAME}.log 2>&1
             """
         }
     }
@@ -194,8 +200,9 @@ def executeBuild(String osName, Map options) {
         // autoupdate houdini license
         timeout(time: "15", unit: 'MINUTES') {
             try {
+                houdini_python3 = options.houdini_python3 ? "--python3" : ''
                 withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'sidefxCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-                    print(python3("${CIS_TOOLS}/download_houdini.py --username \"$USERNAME\" --password \"$PASSWORD\" --version \"${options.houdiniVersion}\""))
+                    print(python3("${CIS_TOOLS}/houdini_api.py --client_id \"$USERNAME\" --client_secret_key \"$PASSWORD\" --version \"${options.houdiniVersion}\" ${houdini_python3}"))
                 }
             } catch (e) {
                 print e
@@ -241,6 +248,9 @@ def executeBuild(String osName, Map options) {
     }
     finally {
         archiveArtifacts "*.log"
+        if (options.rebuildUSD){
+            archiveArtifacts "USD/*.log"
+        }
     }
 }
 
@@ -320,6 +330,21 @@ def executePreBuild(Map options) {
             }
         }
     }
+
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master" && env.BRANCH_NAME == "develop") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    }
+
 }
 
 def executeDeploy(Map options, List platformList, List testResultList)
@@ -329,7 +354,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectBranch = "",
         String usdBranch = "master",
         String testsBranch = "master",
-        String platforms = 'Windows;Ubuntu18;OSX;CentOS7_6',
+        String platforms = 'Windows;Ubuntu18;OSX',
         Boolean updateRefs = false,
         Boolean enableNotifications = true,
         Boolean incrementVersion = true,
@@ -339,7 +364,8 @@ def call(String projectBranch = "",
         Boolean splitTestsExectuion = false,
         Boolean enableHoudini = true,
         Boolean rebuildUSD = false,
-        String houdiniVersion = "18.0.566")
+        String houdiniVersion = "18.5.351",
+        Boolean houdini_python3 = false)
 {
     try
     {
@@ -360,10 +386,12 @@ def call(String projectBranch = "",
                                 forceBuild:forceBuild,
                                 reportName:'Test_20Report',
                                 splitTestsExectuion:splitTestsExectuion,
+                                BUILD_TIMEOUT:90,
                                 TEST_TIMEOUT:30,
                                 enableHoudini:enableHoudini,
                                 rebuildUSD:rebuildUSD,
                                 houdiniVersion:houdiniVersion,
+                                houdini_python3:houdini_python3,
                                 BUILDER_TAG:'BuilderHoudini'
                                 ])
     }
