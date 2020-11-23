@@ -35,7 +35,7 @@ class UniverseClient {
             "name": "gpu"
         ],
         [
-            "key": "parallelExecutionType",
+            "key": "parallelExecutionTypeString",
             "name": "parallel execution type string"
         ],
         [
