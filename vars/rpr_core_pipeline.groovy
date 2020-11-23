@@ -6,70 +6,6 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field Map[] UMSMajorPrarmetersKeys = [
-    [
-        "key": "projectBranch",
-        "name": "project branch"
-    ],
-    [
-        "key": "testsBranch",
-        "name": "tests branch"
-    ],
-    [
-        "key": "enableNotifications",
-        "name": "enable notification"
-    ],
-    [
-        "key": "renderDevice",
-        "name": "render device"
-    ],
-    [
-        "key": "testsPackage",
-        "name": "tests package"
-    ],
-    [
-        "key": "tests",
-        "name": "tests"
-    ],
-    [
-        "key": "splitTestsExecution",
-        "name": "split tests execution"
-    ],
-    [
-        "key": "iter",
-        "name": "iterations"
-    ],
-    [
-        "key": "TESTER_TAG",
-        "name": "tester tag"
-    ]
-]
-
-@Field Map[] UMSMinorPrarmetersKeys = [
-    [
-        "key": "gpusCount",
-        "name": "gpus count"
-    ],
-    [
-        "key": "BUILDER_TAG", 
-        "name": "builder tag"
-    ],
-    [
-        "key": "incrementVersion",
-        "name": "increment version"
-    ],
-    [
-        "key": "TEST_TIMEOUT",
-        "name": "test timeout"
-    ] 
-]
-
-@Field String[] UMSBuildInfoKeys = [
-    "commitAuthor",
-    "commitMessage",
-    "commitSHA"
-]
-
 @Field String UniverseURLProd
 @Field String UniverseURLDev
 @Field String ImageServiceURL
@@ -674,8 +610,8 @@ def executePreBuild(Map options)
                     info = [:]
                     for (key in UMSBuildInfoKeys) {info[key] = options[key]}
 
-                    universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, parameters, info)
-                    universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, parameters, info)
+                    universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
+                    universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
                 }
                 catch (e)
                 {

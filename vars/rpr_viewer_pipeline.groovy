@@ -6,69 +6,6 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field Map[] UMSMajorPrarmetersKeys = [
-    [
-        "key": "projectBranch",
-        "name": "project branch"
-    ],
-    [
-        "key": "testsBranch",
-        "name": "tests branch"
-    ],
-    [
-        "key": "enableNotifications",
-        "name": "enable notification"
-    ],
-    [
-        "key": "renderDevice",
-        "name": "render device"
-    ],
-    [
-        "key": "testsPackage",
-        "name": "tests package"
-    ],
-    [
-        "key": "tests",
-        "name": "tests"
-    ],
-    [
-        "key": "splitTestsExecution",
-        "name": "split tests execution"
-    ],
-    [
-        "key": "iter",
-        "name": "iterations"
-    ],
-    [
-        "key": "TESTER_TAG",
-        "name": "tester tag"
-    ]
-]
-
-@Field Map[] UMSMinorPrarmetersKeys = [
-    [
-        "key": "gpusCount",
-        "name": "gpus count"
-    ],
-    [
-        "key": "BUILDER_TAG", 
-        "name": "builder tag"
-    ],
-    [
-        "key": "incrementVersion",
-        "name": "increment version"
-    ],
-    [
-        "key": "TEST_TIMEOUT",
-        "name": "test timeout"
-    ] 
-]
-
-@Field String[] UMSBuildInfoKeys = [
-    "commitAuthor",
-    "commitMessage",
-    "commitSHA"
-]
 
 @Field String UniverseURLProd
 @Field String UniverseURLDev
@@ -819,25 +756,9 @@ def executePreBuild(Map options)
             universeClientProd.tokenSetup()
             universeClientDev.tokenSetup()
 
-
-            for (pType in [UMSMinorPrarmetersKeys, UMSMajorPrarmetersKeys]) {
-                for (p in pType) {
-                    p['value'] = options[p['key']]
-                }
-            }
-
-            parameters = [
-                "minor": UMSMinorPrarmetersKeys,
-                "major": UMSMajorPrarmetersKeys
-            ]
-            
-            // prepare build info
-            info = [:]
-            for (key in UMSBuildInfoKeys) {info[key] = options[key]}
-
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, parameters, info)
-            universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, parameters, info)
+            universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
+            universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
         }
         catch (e)
         {
