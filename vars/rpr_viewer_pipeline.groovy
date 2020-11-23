@@ -1040,6 +1040,7 @@ def call(String projectBranch = "",
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
                         parallelExecutionType:parallelExecutionType,
+                        parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries
                         ]
         } 

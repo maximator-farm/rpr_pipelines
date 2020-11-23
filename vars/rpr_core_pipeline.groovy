@@ -945,6 +945,7 @@ def call(String projectBranch = "",
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
+                        parallelExecutionTypeString: parallelExecutionTypeString,
                         collectTrackedMetrics:collectTrackedMetrics
                         ]
         }
