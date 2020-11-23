@@ -115,11 +115,11 @@ class UniverseClient {
     def minor_keys = [
         [
             "key": "isPreBuilt",
-            "name": "is pre built"
+            "name": "is prebuilt"
         ],
         [
             "key": "forceBuild",
-            "name": "froce build"
+            "name": "force build"
         ],
         [
             "key": "splitTestsExecution",
