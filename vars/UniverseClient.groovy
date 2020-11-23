@@ -1,8 +1,155 @@
- 
-import groovy.json.JsonOutput
+import groovy.json.JsonOutput;
 import groovy.json.JsonSlurperClassic;
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
+import groovy.transform.Field;
 // imports for work with JSONs
+
+
+@Field Map[] UMSMajorPrarmetersKeys = [
+    [
+        "key": "projectRepo",
+        "name": "project repository"
+    ],
+    [
+        "key": "projectBranch",
+        "name": "project branch"
+    ],
+    [
+        "key": "testsBranch",
+        "name": "tests branch"
+    ],
+    [
+        "key": "platforms",
+        "name": "gpu"
+    ],
+    [
+        "key": "parallelExecutionTypeString",
+        "name": "parallel execution type string"
+    ],
+    [
+        "key": "customBuildLinkWindows",
+        "name": "custom build link windows"
+    ],
+    [
+        "key": "customBuildLinkLinux",
+        "name": "custom build link linux"
+    ],
+    [
+        "key": "customBuildLinkOSX",
+        "name": "custom build link osx"
+    ],
+    [
+        "key": "toolVersion",
+        "name": "tool version"
+    ],
+    [
+        "key": "updateRefs",
+        "name": "update references"
+    ],
+    [
+        "key": "renderDevice",
+        "name": "render device"
+    ],
+    [
+        "key": "enginesNames",
+        "name": "render engines"
+    ],
+    [
+        "key": "testsPackage",
+        "name": "tests package"
+    ],
+    [
+        "key": "tests",
+        "name": "tests"
+    ],
+    [
+        "key": "enableNotifications",
+        "name": "enable notification"
+    ],
+    [
+        "key": "resX",
+        "name": "resolution x"
+    ],
+    [
+        "key": "resY",
+        "name": "resolution y"
+    ],
+    [
+        "key": "SPU",
+        "name": "SPU"
+    ],
+    [
+        "key": "iter",
+        "name": "iterations"
+    ],
+    [
+        "key": "theshold",
+        "name": "threshold"
+    ],
+    [
+        "key": "TESTER_TAG",
+        "name": "tester tag"
+    ],
+    [
+        "key": "testCaseRetries",
+        "name": "test case retries"
+    ],
+    [
+        "key": "mergeablePR",
+        "name": "mergeable pr"
+    ]
+]
+
+@Field def UMSMinorPrarmetersKeys = [
+    [
+        "key": "isPreBuilt",
+        "name": "is pre built"
+    ],
+    [
+        "key": "forceBuild",
+        "name": "froce build"
+    ],
+    [
+        "key": "splitTestsExecution",
+        "name": "split tests execution"
+    ],
+    [
+        "key": "TEST_TIMEOUT",
+        "name": "test timeout"
+    ],
+    [
+        "key": "gpusCount",
+        "name": "gpus count"
+    ],
+    [
+        "key": "ADDITIONAL_XML_TIMEOUT",
+        "name": "additional xml timeout"
+    ],
+    [
+        "key": "NON_SPLITTED_PACKAGE_TIMEOUT",
+        "name": "non splitted package timeout"
+    ],
+    [
+        "key": "DEPLOY_TIMEOUT",
+        "name": "deploy timeout"
+    ],
+    [
+        "key": "incrementVersion",
+        "name": "increment version",
+    ],
+    [
+        "key": "BUILDER_TAG",
+        "name": "builder tag"
+    ]
+]
+
+@Field def UMSBuildInfoKeys = [
+    "pluginVersion",
+    "commitAuthor",
+    "commitMessage",
+    "commitSHA"
+]
+
 
 /**
  * Client for Universal Monitoring System
@@ -149,8 +296,26 @@ class UniverseClient {
      * @param info info map ["key1": "value1", ... , "keyN": "valueN"]
      */
 
-    def createBuild(envs = '', suites = '', updRefs = false, parameters = [:], info = [:]) {
+    def createBuild(envs = '', suites = '', updRefs = false, options = [:]) {
         def request = {
+            
+            // prepare build parameters
+            for (pType in [UMSMinorPrarmetersKeys, UMSMajorPrarmetersKeys]) {
+                for (p in pType) {
+                    p['value'] = options[p['key']]
+                }
+            }
+
+            parameters = [
+                "minor": UMSMinorPrarmetersKeys,
+                "major": UMSMajorPrarmetersKeys
+            ]
+
+            println(parameters)
+            // prepare build info
+            info = [:]
+            for (key in UMSBuildInfoKeys) {info[key] = options[key]}
+
             def splittedJobName = []
             splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/", 2)))
             this.context.echo "SPLITTED JOB NAME = ${splittedJobName}"
