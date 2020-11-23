@@ -35,7 +35,23 @@ class UniverseClient {
         this.is_url = is_url;
         this.product = product;
         this.is_parent = false;
-        this.major_keys = [
+}
+
+    /**
+     * Constructor for creation of parent build
+     *
+     * @param context
+     * @param url Universal Monitoring System API  url (example: "https://umsapi.cis.luxoft.com" )
+     * @param env Jenkins environment variables object
+     * @param product Name of product (example: "RPR_Maya")
+     */
+    UniverseClient(context, url, env, product) {
+        this.url = url;
+        this.context = context;
+        this.env = env;
+        this.product = product;
+        this.is_parent = true;
+                this.major_keys = [
             [
                 "key": "projectRepo",
                 "name": "project repository"
@@ -179,22 +195,6 @@ class UniverseClient {
             "commitMessage",
             "commitSHA"
         ]
-}
-
-    /**
-     * Constructor for creation of parent build
-     *
-     * @param context
-     * @param url Universal Monitoring System API  url (example: "https://umsapi.cis.luxoft.com" )
-     * @param env Jenkins environment variables object
-     * @param product Name of product (example: "RPR_Maya")
-     */
-    UniverseClient(context, url, env, product) {
-        this.url = url;
-        this.context = context;
-        this.env = env;
-        this.product = product;
-        this.is_parent = true;
     }
 
     /**
@@ -311,7 +311,7 @@ class UniverseClient {
             println(parameters)
             // prepare build info
             info = [:]
-            for (key in UMSBuildInfoKeys) {info[key] = options[key]}
+            for (key in this.info_keys) {info[key] = options[key]}
 
             def splittedJobName = []
             splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/", 2)))
