@@ -296,7 +296,7 @@ class UniverseClient {
     def createBuild(envs = '', suites = '', updRefs = false, options = null) {
         def request = {
             // prepare build parameters
-            if options:
+            if (options) {
                 for (pType in [this.minor_keys, this.major_keys]) {
                     for (p in pType) {
                         p['value'] = options[p['key']]
@@ -312,6 +312,7 @@ class UniverseClient {
                 // prepare build info
                 info = [:]
                 for (key in this.info_keys) {info[key] = options[key]}
+            }
 
             def splittedJobName = []
             splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/", 2)))
