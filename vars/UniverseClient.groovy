@@ -17,6 +17,150 @@ class UniverseClient {
     def is_parent;
     def engine;
     def child_of;
+    def major_keys = [
+        [
+            "key": "projectRepo",
+            "name": "project repository"
+        ],
+        [
+            "key": "projectBranch",
+            "name": "project branch"
+        ],
+        [
+            "key": "testsBranch",
+            "name": "tests branch"
+        ],
+        [
+            "key": "platforms",
+            "name": "gpu"
+        ],
+        [
+            "key": "parallelExecutionTypeString",
+            "name": "parallel execution type string"
+        ],
+        [
+            "key": "customBuildLinkWindows",
+            "name": "custom build link windows"
+        ],
+        [
+            "key": "customBuildLinkLinux",
+            "name": "custom build link linux"
+        ],
+        [
+            "key": "customBuildLinkOSX",
+            "name": "custom build link osx"
+        ],
+        [
+            "key": "toolVersion",
+            "name": "tool version"
+        ],
+        [
+            "key": "updateRefs",
+            "name": "update references"
+        ],
+        [
+            "key": "renderDevice",
+            "name": "render device"
+        ],
+        [
+            "key": "enginesNames",
+            "name": "render engines"
+        ],
+        [
+            "key": "testsPackage",
+            "name": "tests package"
+        ],
+        [
+            "key": "tests",
+            "name": "tests"
+        ],
+        [
+            "key": "enableNotifications",
+            "name": "enable notification"
+        ],
+        [
+            "key": "resX",
+            "name": "resolution x"
+        ],
+        [
+            "key": "resY",
+            "name": "resolution y"
+        ],
+        [
+            "key": "SPU",
+            "name": "SPU"
+        ],
+        [
+            "key": "iter",
+            "name": "iterations"
+        ],
+        [
+            "key": "theshold",
+            "name": "threshold"
+        ],
+        [
+            "key": "TESTER_TAG",
+            "name": "tester tag"
+        ],
+        [
+            "key": "testCaseRetries",
+            "name": "test case retries"
+        ],
+        [
+            "key": "mergeablePR",
+            "name": "mergeable pr"
+        ]
+    ]
+
+    def minor_keys = [
+        [
+            "key": "isPreBuilt",
+            "name": "is pre built"
+        ],
+        [
+            "key": "forceBuild",
+            "name": "froce build"
+        ],
+        [
+            "key": "splitTestsExecution",
+            "name": "split tests execution"
+        ],
+        [
+            "key": "TEST_TIMEOUT",
+            "name": "test timeout"
+        ],
+        [
+            "key": "gpusCount",
+            "name": "gpus count"
+        ],
+        [
+            "key": "ADDITIONAL_XML_TIMEOUT",
+            "name": "additional xml timeout"
+        ],
+        [
+            "key": "NON_SPLITTED_PACKAGE_TIMEOUT",
+            "name": "non splitted package timeout"
+        ],
+        [
+            "key": "DEPLOY_TIMEOUT",
+            "name": "deploy timeout"
+        ],
+        [
+            "key": "incrementVersion",
+            "name": "increment version",
+        ],
+        [
+            "key": "BUILDER_TAG",
+            "name": "builder tag"
+        ]
+    ]
+
+    def info_keys = [
+        "pluginVersion",
+        "commitAuthor",
+        "commitMessage",
+        "commitSHA"
+    ]
     
 
     /**
@@ -51,150 +195,6 @@ class UniverseClient {
         this.env = env;
         this.product = product;
         this.is_parent = true;
-                this.major_keys = [
-            [
-                "key": "projectRepo",
-                "name": "project repository"
-            ],
-            [
-                "key": "projectBranch",
-                "name": "project branch"
-            ],
-            [
-                "key": "testsBranch",
-                "name": "tests branch"
-            ],
-            [
-                "key": "platforms",
-                "name": "gpu"
-            ],
-            [
-                "key": "parallelExecutionTypeString",
-                "name": "parallel execution type string"
-            ],
-            [
-                "key": "customBuildLinkWindows",
-                "name": "custom build link windows"
-            ],
-            [
-                "key": "customBuildLinkLinux",
-                "name": "custom build link linux"
-            ],
-            [
-                "key": "customBuildLinkOSX",
-                "name": "custom build link osx"
-            ],
-            [
-                "key": "toolVersion",
-                "name": "tool version"
-            ],
-            [
-                "key": "updateRefs",
-                "name": "update references"
-            ],
-            [
-                "key": "renderDevice",
-                "name": "render device"
-            ],
-            [
-                "key": "enginesNames",
-                "name": "render engines"
-            ],
-            [
-                "key": "testsPackage",
-                "name": "tests package"
-            ],
-            [
-                "key": "tests",
-                "name": "tests"
-            ],
-            [
-                "key": "enableNotifications",
-                "name": "enable notification"
-            ],
-            [
-                "key": "resX",
-                "name": "resolution x"
-            ],
-            [
-                "key": "resY",
-                "name": "resolution y"
-            ],
-            [
-                "key": "SPU",
-                "name": "SPU"
-            ],
-            [
-                "key": "iter",
-                "name": "iterations"
-            ],
-            [
-                "key": "theshold",
-                "name": "threshold"
-            ],
-            [
-                "key": "TESTER_TAG",
-                "name": "tester tag"
-            ],
-            [
-                "key": "testCaseRetries",
-                "name": "test case retries"
-            ],
-            [
-                "key": "mergeablePR",
-                "name": "mergeable pr"
-            ]
-        ]
-
-        this.minor_keys = [
-            [
-                "key": "isPreBuilt",
-                "name": "is pre built"
-            ],
-            [
-                "key": "forceBuild",
-                "name": "froce build"
-            ],
-            [
-                "key": "splitTestsExecution",
-                "name": "split tests execution"
-            ],
-            [
-                "key": "TEST_TIMEOUT",
-                "name": "test timeout"
-            ],
-            [
-                "key": "gpusCount",
-                "name": "gpus count"
-            ],
-            [
-                "key": "ADDITIONAL_XML_TIMEOUT",
-                "name": "additional xml timeout"
-            ],
-            [
-                "key": "NON_SPLITTED_PACKAGE_TIMEOUT",
-                "name": "non splitted package timeout"
-            ],
-            [
-                "key": "DEPLOY_TIMEOUT",
-                "name": "deploy timeout"
-            ],
-            [
-                "key": "incrementVersion",
-                "name": "increment version",
-            ],
-            [
-                "key": "BUILDER_TAG",
-                "name": "builder tag"
-            ]
-        ]
-
-        this.info_keys = [
-            "pluginVersion",
-            "commitAuthor",
-            "commitMessage",
-            "commitSHA"
-        ]
     }
 
     /**
@@ -293,25 +293,25 @@ class UniverseClient {
      * @param info info map ["key1": "value1", ... , "keyN": "valueN"]
      */
 
-    def createBuild(envs = '', suites = '', updRefs = false, options = [:]) {
+    def createBuild(envs = '', suites = '', updRefs = false, options = null) {
         def request = {
-            
             // prepare build parameters
-            for (pType in [this.minor_keys, this.major_keys]) {
-                for (p in pType) {
-                    p['value'] = options[p['key']]
+            if options:
+                for (pType in [this.minor_keys, this.major_keys]) {
+                    for (p in pType) {
+                        p['value'] = options[p['key']]
+                    }
                 }
-            }
 
-            parameters = [
-                "minor": this.minor_keys,
-                "major": this.major_keys
-            ]
+                parameters = [
+                    "minor": this.minor_keys,
+                    "major": this.major_keys
+                ]
 
-            println(parameters)
-            // prepare build info
-            info = [:]
-            for (key in this.info_keys) {info[key] = options[key]}
+                println(parameters)
+                // prepare build info
+                info = [:]
+                for (key in this.info_keys) {info[key] = options[key]}
 
             def splittedJobName = []
             splittedJobName = new ArrayList<>(Arrays.asList(env.JOB_NAME.split("/", 2)))
