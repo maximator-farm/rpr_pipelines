@@ -12,6 +12,7 @@ import TestsExecutionType
 @Field String ProducteName = "AMD%20Radeon™%20ProRender%20Core"
 @Field UniverseClient universeClientProd
 @Field UniverseClient universeClientDev
+
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
@@ -591,9 +592,8 @@ def executePreBuild(Map options)
                     println("Test groups:")
                     println(options.groupsUMS)
 
-                    // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-                    universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
-                    universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
+                    universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
+                    universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
                 }
                 catch (e)
                 {
@@ -945,6 +945,7 @@ def call(String projectBranch = "",
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
+                        parallelExecutionTypeString: parallelExecutionTypeString,
                         collectTrackedMetrics:collectTrackedMetrics
                         ]
         }

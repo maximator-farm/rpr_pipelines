@@ -1071,8 +1071,8 @@ def executePreBuild(Map options)
             universeClientParentDev.tokenSetup()
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            universeClientParentProd.createBuild()
-            universeClientParentDev.createBuild()
+            universeClientParentProd.createBuild('', '', false, options)
+            universeClientParentDev.createBuild('', '', false, options)
             for (int i = 0; i < options.engines.size(); i++) {
                 String engine = options.engines[i]
                 String engineName = options.enginesNames[i]
@@ -1553,6 +1553,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
+                        parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries
                         ]
         }

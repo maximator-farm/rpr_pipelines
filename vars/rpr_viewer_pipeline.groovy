@@ -6,12 +6,14 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
+
 @Field String UniverseURLProd
 @Field String UniverseURLDev
 @Field String ImageServiceURL
 @Field String ProducteName = "AMD%20Radeon™%20ProRender%20Viewer"
 @Field UniverseClient universeClientProd
 @Field UniverseClient universeClientDev
+
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
@@ -755,8 +757,8 @@ def executePreBuild(Map options)
             universeClientDev.tokenSetup()
 
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
-            universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
+            universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
+            universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
         }
         catch (e)
         {
@@ -1038,6 +1040,7 @@ def call(String projectBranch = "",
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
                         parallelExecutionType:parallelExecutionType,
+                        parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries
                         ]
         } 
