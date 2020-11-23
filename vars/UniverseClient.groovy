@@ -141,6 +141,12 @@ class UniverseClient {
      *
      * @param envs environment list in format: ["OS-1:GPU-1", ..."OS-N:GPU-N"]
      * @param suites suites names list ["Suite1", "Suite2", ..., "SuiteN"]
+     * @param updRefs boolean value for update baselines on UMS side after build finish
+     * @param parameters parameters map: [
+        "major": ["parameter1": "value1", ... , "parameterN": "valueN"],
+        "minor": ["parameter1": "value1", ... , "parameterN": "valueN"]
+     ]
+     * @param info info map ["key1": "value1", ... , "keyN": "valueN"]
      */
 
     def createBuild(envs = '', suites = '', updRefs = false, parameters = [:], info = [:]) {
