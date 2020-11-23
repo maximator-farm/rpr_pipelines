@@ -1,11 +1,10 @@
 import groovy.json.JsonOutput;
 import groovy.json.JsonSlurperClassic;
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
-import groovy.transform.Field;
 // imports for work with JSONs
 
 
-@Field Map[] UMSMajorPrarmetersKeys = [
+def UMSMajorPrarmetersKeys = [
     [
         "key": "projectRepo",
         "name": "project repository"
@@ -100,7 +99,7 @@ import groovy.transform.Field;
     ]
 ]
 
-@Field def UMSMinorPrarmetersKeys = [
+def UMSMinorPrarmetersKeys = [
     [
         "key": "isPreBuilt",
         "name": "is pre built"
@@ -143,7 +142,7 @@ import groovy.transform.Field;
     ]
 ]
 
-@Field def UMSBuildInfoKeys = [
+def UMSBuildInfoKeys = [
     "pluginVersion",
     "commitAuthor",
     "commitMessage",
