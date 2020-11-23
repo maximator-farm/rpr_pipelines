@@ -204,5 +204,7 @@ public class ProblemMessageManager {
                 currentBuild.description = statusMessage
             }
         }
+
+        return statusMessage
     }
 }

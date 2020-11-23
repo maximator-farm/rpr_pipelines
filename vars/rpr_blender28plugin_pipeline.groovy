@@ -1343,6 +1343,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 throw e
             }
 
+
             println "BUILD RESULT: ${currentBuild.result}"
             println "BUILD CURRENT RESULT: ${currentBuild.currentResult}"
         }
@@ -1576,9 +1577,14 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     }
     finally
     {
+
+        msg = problemMessageManager.publishMessages()
         if (options.sendToUMS) {
             node("Windows && PreBuild") {
                 try {
+                    universeClientParentProd.problemMessage(msg)
+                    universeClientParentDev.problemMessage(msg)
+                    
                     String status = options.buildWasAborted ? "ABORTED" : currentBuild.result
                     universeClientParentProd.changeStatus(status)
                     universeClientParentDev.changeStatus(status)
@@ -1596,7 +1602,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 }
             }
         }
-        problemMessageManager.publishMessages()
-    }
 
+
+    }
 }

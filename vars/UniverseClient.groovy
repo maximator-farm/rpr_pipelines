@@ -465,4 +465,28 @@ class UniverseClient {
         }
         retryWrapper(request, [200], false)
     }
+
+
+    def problemMessage(msg) {
+        def request = {
+            def buildBody = [
+                'problem_message': msg
+            ]
+
+            def res = this.context.httpRequest(
+                consoleLogResponseBody: true,
+                contentType: 'APPLICATION_JSON',
+                customHeaders: [
+                    [name: 'Authorization', value: "Token ${this.token}"]
+                ],
+                httpMode: 'PUT',
+                requestBody: JsonOutput.toJson(buildBody),
+                ignoreSslErrors: true,
+                url: "${this.url}/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
+                validResponseCodes: '0:599'
+            )
+            return res;
+        }
+        retryWrapper(request)
+    }
 }

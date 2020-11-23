@@ -1121,9 +1121,14 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     }
     finally
     {
+
+        msg = problemMessageManager.publishMessages()
         if (options.sendToUMS) {
             node("Windows && PreBuild") {
                 try {
+                    universeClientProd.problemMessage(msg)
+                    universeClientDev.problemMessage(msg)
+
                     String status = options.buildWasAborted ? "ABORTED" : currentBuild.result
                     universeClientProd.changeStatus(status)
                     universeClientDev.changeStatus(status)
@@ -1133,7 +1138,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 }
             }
         }
-        problemMessageManager.publishMessages()
+
     }
 
 }
