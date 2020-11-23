@@ -179,7 +179,7 @@ class UniverseClient {
         this.is_url = is_url;
         this.product = product;
         this.is_parent = false;
-}
+    }
 
     /**
      * Constructor for creation of parent build

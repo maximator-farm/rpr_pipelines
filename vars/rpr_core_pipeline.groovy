@@ -592,24 +592,6 @@ def executePreBuild(Map options)
                     println("Test groups:")
                     println(options.groupsUMS)
 
-                    // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-                    // prepare build parameters
-                    for (pType in [UMSMinorPrarmetersKeys, UMSMajorPrarmetersKeys]) {
-                        for (p in pType) {
-                            p['value'] = options[p['key']]
-                        }
-                    }
-
-                    parameters = [
-                        "minor": UMSMinorPrarmetersKeys,
-                        "major": UMSMajorPrarmetersKeys
-                    ]
-
-                    println(parameters)
-                    // prepare build info
-                    info = [:]
-                    for (key in UMSBuildInfoKeys) {info[key] = options[key]}
-
                     universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
                     universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
                 }
