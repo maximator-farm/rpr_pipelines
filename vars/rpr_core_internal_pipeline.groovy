@@ -715,19 +715,20 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report for unit tests.", "${BUILD_URL}")
                 String reportFiles = ""
                 dir("SummaryReport") {
-                    testResultList.replace("testResult", "unitTestFailures").each() {
+                    testResultList.each() {
+                        String stashName = it.replace("testResult", "unitTestFailures")
                         try {
-                            unstash "${it}"
-                            reportFiles += ", ${it}-Failures/report.html".replace("unitTestFailures-", "")
+                            unstash "${stashName}"
+                            reportFiles += ", ${stashName}-Failures/report.html".replace("unitTestFailures-", "")
                         }
                         catch(e) {
-                            echo "[ERROR] Can't unstash ${it}"
+                            echo "[ERROR] Can't unstash ${stashName}"
                             println(e.toString());
                             println(e.getMessage());
                         }
                     }
                 }
-                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles}", "HTML Failures", "${STAGE_NAME}_failures")
+                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles}", "Failures Report", "${STAGE_NAME}_failures")
             } catch(e) {
                 String errorMessage = "Failed to build test report for unit tests."
                 GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
