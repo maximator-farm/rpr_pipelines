@@ -177,7 +177,7 @@ def executeUnitTests(String osName, String asicName, Map options)
     try {
         GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Executing unit tests.", "${BUILD_URL}")
         executeUnitTestCommand(osName)
-
+    } catch (e) {
         dir('HTML_Report') {
             checkOutBranchOrScm('inemankov/core_unit_tests', 'git@github.com:luxteam/HTMLReportsShared')
             python3("-m pip install --user -r requirements.txt")
@@ -187,9 +187,6 @@ def executeUnitTests(String osName, String asicName, Map options)
         stash includes: "${asicName}-${osName}_failures/**/*", name: "unitTestFailures-${asicName}-${osName}", allowEmpty: true
 
         utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}_failures", "report.html", "${STAGE_NAME}_failures", "${STAGE_NAME}_failures")
-    } catch (e) {
-        println(e.toString());
-        println(e.getMessage());
     } finally {
         archiveArtifacts "*.log, *.gtest.xml"
         junit "*.gtest.xml"
