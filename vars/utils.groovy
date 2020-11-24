@@ -82,16 +82,19 @@ class utils {
         }
     }
 
-    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles)
+    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "")
     {
-        self.publishHTML([allowMissing: false,
+        Map params = [allowMissing: false,
                      alwaysLinkToLastBuild: false,
                      keepAll: true,
                      reportDir: reportDir,
                      reportFiles: reportFiles,
                      // TODO: custom reportName (issues with escaping)
-                     reportName: reportName,
-                     reportTitles: reportTitles])
+                     reportName: reportName]
+        if (reportTitles) {
+            params['reportTitles'] = reportTitles
+        }
+        self.publishHTML(params)
         try {
             self.httpRequest(
                 url: "${buildUrl}/${reportName.replace('_', '_5f').replace(' ', '_20')}/",

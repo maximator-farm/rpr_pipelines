@@ -118,7 +118,7 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
     }
 }
 
-def executeTestCommand(String osName)
+def executeUnitTestCommand(String osName)
 {
     switch(osName)
     {
@@ -126,7 +126,7 @@ def executeTestCommand(String osName)
             dir("RadeonProRenderSDK/Northstar/UnitTest")
             {
                 bat """
-                ..\\dist\\release\\bin\\x86_64\\UnitTest64.exe -referencePath ..\\..\\frUnittestdata/northstar\\gpu\\ --gtest_filter=*NEXT_* --gtest_output=xml:..\\..\\..\\${STAGE_NAME}.gtest.xml >> ..\\..\\..\\${STAGE_NAME}.log  2>&1
+                ..\\dist\\release\\bin\\x86_64\\UnitTest64.exe -referencePath ..\\..\\frUnittestdata\\northstar\\gpu\\ --gtest_filter=*NEXT_* --gtest_output=xml:..\\..\\..\\${STAGE_NAME}.gtest.xml >> ..\\..\\..\\${STAGE_NAME}.log  2>&1
                 """
             }
             break;
@@ -174,16 +174,23 @@ def executeUnitTests(String osName, String asicName, Map options)
         }
     }
 
-    try
-    {
-        executeTestCommand(osName)
-    }
-    catch (e)
-    {
+    try {
+        GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Executing unit tests.", "${BUILD_URL}")
+        executeUnitTestCommand(osName)
+
+        dir('HTML_Report') {
+            checkOutBranchOrScm('master', 'git@github.com:luxteam/HTMLReportsShared')
+            python3("-m pip install --user -r requirements.txt")
+            python3("hybrid_report.py --xml_path ../${STAGE_NAME}.gtest.xml --images_basedir ../RadeonProRenderSDK/Northstar/UnitTest/result  --report_path ../${asicName}-${osName}_failures --tool_name \"Core Internal\" --compare_with_refs=False")
+        }
+
+        stash includes: "${asicName}-${osName}_failures/**/*", name: "unitTestFailures-${asicName}-${osName}", allowEmpty: true
+
+        utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}_failures", "report.html", "${STAGE_NAME}_failures", "${STAGE_NAME}_failures")
+    } catch (e) {
         println(e.toString());
         println(e.getMessage());
-    }
-    finally {
+    } finally {
         archiveArtifacts "*.log, *.gtest.xml"
         junit "*.gtest.xml"
     }
@@ -703,8 +710,34 @@ def executePreBuild(Map options)
 def executeDeploy(Map options, List platformList, List testResultList)
 {
     try {
+        cleanWS()
+
         if(options['executeTests'] && testResultList)
         {
+            try {
+                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report for unit tests.", "${BUILD_URL}")
+                String reportFiles = ""
+                dir("SummaryReport") {
+                    testResultList.replace("testResult", "unitTestFailures").each() {
+                        try {
+                            unstash "${it}"
+                            reportFiles += ", ${it}-Failures/report.html".replace("unitTestFailures-", "")
+                        }
+                        catch(e) {
+                            echo "[ERROR] Can't unstash ${it}"
+                            println(e.toString());
+                            println(e.getMessage());
+                        }
+                    }
+                }
+                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles}", "HTML Failures", "${STAGE_NAME}_failures")
+            } catch(e) {
+                String errorMessage = "Failed to build test report for unit tests."
+                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
+                throw e
+            }
+
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Preparing tests results.", "${BUILD_URL}")
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
