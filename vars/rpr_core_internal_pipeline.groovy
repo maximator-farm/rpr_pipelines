@@ -719,7 +719,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         String stashName = it.replace("testResult", "unitTestFailures")
                         try {
                             unstash "${stashName}"
-                            reportFiles += ", ${stashName}-Failures/report.html".replace("unitTestFailures-", "")
+                            reportFiles += ", ${stashName}_failures/report.html".replace("unitTestFailures-", "")
                         }
                         catch(e) {
                             echo "[ERROR] Can't unstash ${stashName}"
