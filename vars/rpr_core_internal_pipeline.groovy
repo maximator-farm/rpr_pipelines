@@ -179,7 +179,7 @@ def executeUnitTests(String osName, String asicName, Map options)
         executeUnitTestCommand(osName)
     } catch (e) {
         dir('HTML_Report') {
-            checkOutBranchOrScm('inemankov/core_unit_tests', 'git@github.com:luxteam/HTMLReportsShared')
+            checkOutBranchOrScm('master', 'git@github.com:luxteam/HTMLReportsShared')
             python3("-m pip install --user -r requirements.txt")
             python3("hybrid_report.py --xml_path ../${STAGE_NAME}.gtest.xml --images_basedir ../RadeonProRenderSDK/Northstar/UnitTest/result  --report_path ../${asicName}-${osName}_failures --tool_name \"Core Internal\" --compare_with_refs=False")
         }
