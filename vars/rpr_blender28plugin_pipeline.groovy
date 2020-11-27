@@ -567,7 +567,7 @@ def executeBuildOSX(Map options)
         dir('.build')
         {
             sh """
-                mv rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_OSX.zip
+                mv rprblender*.zip RadeonProRenderForBlender_${options.pluginVersion}_MacOS.zip
             """
 
             if(options.branch_postfix)
@@ -578,7 +578,7 @@ def executeBuildOSX(Map options)
             }
 
             archiveArtifacts "RadeonProRender*.zip"
-            String BUILD_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_OSX.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_OSX.zip"
+            String BUILD_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_MacOS.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_MacOS.zip"
             String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
@@ -589,10 +589,10 @@ def executeBuildOSX(Map options)
             }
 
             sh """
-                mv RadeonProRender*zip RadeonProRenderBlender_OSX.zip
+                mv RadeonProRender*zip RadeonProRenderBlender_MacOS.zip
             """
 
-            stash includes: "RadeonProRenderBlender_OSX.zip", name: "appOSX"
+            stash includes: "RadeonProRenderBlender_MacOS.zip", name: "appOSX"
 
             GithubNotificator.updateStatus("Build", "OSX", "success", env, options, "The plugin was successfully built and published.", pluginUrl)
         }
