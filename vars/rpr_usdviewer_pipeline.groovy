@@ -46,7 +46,24 @@ def executeBuildWindows(Map options)
             del RPRViewer\\binary\\inst\\lib\\*.pdb
             del RPRViewer\\binary\\inst\\plugin\\usd\\*.lib
         """
-        
+
+        // build USD Viewer installer
+        // TODO: remove try-catch when it will be merged in master
+        try {
+            dir("RPRViewer") {
+                bat """
+                    "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log
+                """
+                archiveArtifacts artifacts: "RPRViewer_Setup.exe", allowEmptyArchive: false
+            }
+        } catch (e) {
+            println(e.toString())
+            println(e.getMessage())
+            println(e.getStackTrace())
+            //currentBuild.result = "FAILURE"
+            println "[ERROR] Failed to build USD Viewer installer"
+        }
+
         // TODO: filter files for archive
         zip archive: true, dir: "RPRViewer\\binary\\inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
         
@@ -135,7 +152,7 @@ def call(String projectBranch = "",
              PRJ_NAME:PRJ_NAME,
              PRJ_ROOT:PRJ_ROOT,
              projectRepo:projectRepo,
-             BUILDER_TAG:'RPRUSDVIEWER',
+             BUILDER_TAG:'BuilderUSDViewer',
              executeBuild:true,
              executeTests:false,
              BUILD_TIMEOUT:90,
