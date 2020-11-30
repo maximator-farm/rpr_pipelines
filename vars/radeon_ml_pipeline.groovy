@@ -130,6 +130,8 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeWindowsBuildCommand(Map options, String build_type){
 
+    outputEnvironmentInfo("Windows", "${STAGE_NAME}_${build_type}")
+
     bat """
         mkdir build-${build_type}
         cd build-${build_type}
@@ -173,6 +175,8 @@ def executeBuildWindows(Map options)
 
 def executeOSXBuildCommand(Map options, String build_type){
     
+    outputEnvironmentInfo("OSX", "${STAGE_NAME}_${build_type}")
+
     sh """
         mkdir build-${build_type}
         cd build-${build_type}
@@ -214,6 +218,8 @@ def executeBuildOSX(Map options)
 
 def executeLinuxBuildCommand(Map options, String build_type){
     
+    outputEnvironmentInfo("Linux", "${STAGE_NAME}_${build_type}")
+
     sh """
         mkdir build-${build_type}
         cd build-${build_type}
@@ -333,8 +339,6 @@ def executeBuild(String osName, Map options)
 
         receiveFiles("rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
         receiveFiles("rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
-
-        outputEnvironmentInfo(osName)
 
         withEnv(["CIS_OS=${osName}"]) {
             switch (osName) {
