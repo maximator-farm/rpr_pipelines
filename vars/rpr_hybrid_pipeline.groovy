@@ -260,7 +260,7 @@ def executeBuildOSX(Map options)
     mkdir Build
     cd Build
     cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
-    make >> ../${STAGE_NAME}.log 2>&1
+    make -j 4 >> ../${STAGE_NAME}.log 2>&1
     make package >> ../${STAGE_NAME}.log 2>&1
     mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
     """
@@ -272,7 +272,7 @@ def executeBuildLinux(Map options)
     mkdir Build
     cd Build
     cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
-    make >> ../${STAGE_NAME}.log 2>&1
+    make -j 8 >> ../${STAGE_NAME}.log 2>&1
     make package >> ../${STAGE_NAME}.log 2>&1
     mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
     """

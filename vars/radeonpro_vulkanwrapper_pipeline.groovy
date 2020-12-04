@@ -106,7 +106,7 @@ def executeBuildOSX(Map options)
         mkdir Build
         cd Build
         cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
-        make >> ../${STAGE_NAME}.log 2>&1
+        make -j 4 >> ../${STAGE_NAME}.log 2>&1
     """
 }
 
@@ -120,7 +120,7 @@ def executeBuildLinux(Map options, String osName="linux")
             mkdir build
             cd build
             cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
-            make >> ../${STAGE_NAME}.log 2>&1
+            make -j 8 >> ../${STAGE_NAME}.log 2>&1
         """  
     } catch(e) {
         println("Error during build on ${osName}")
@@ -138,7 +138,7 @@ def executeBuildLinux(Map options, String osName="linux")
             mkdir build
             cd build
             cmake ${options['cmakeKeys']} -DVW_ENABLE_RRNEXT=OFF .. >> ../${STAGE_NAME}-RRNEXT_OFF.log 2>&1
-            make >> ../${STAGE_NAME}-RRNEXT_OFF.log 2>&1
+            make -j 8 >> ../${STAGE_NAME}-RRNEXT_OFF.log 2>&1
         """
 
         // Release Package

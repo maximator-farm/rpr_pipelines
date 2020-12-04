@@ -60,30 +60,30 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     bat """
-    mkdir Build
-    cd Build
-    cmake ${options['cmakeKeys']} -G "Visual Studio 15 2017 Win64" .. >> ..\\${STAGE_NAME}.log 2>&1
-    cmake --build . --config Release >> ..\\${STAGE_NAME}.log 2>&1
+        mkdir Build
+        cd Build
+        cmake ${options['cmakeKeys']} -G "Visual Studio 15 2017 Win64" .. >> ..\\${STAGE_NAME}.log 2>&1
+        cmake --build . --config Release >> ..\\${STAGE_NAME}.log 2>&1
     """
 }
 
 def executeBuildOSX(Map options)
 {
     sh """
-    mkdir Build
-    cd Build
-    cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
-    make >> ../${STAGE_NAME}.log 2>&1
+        mkdir Build
+        cd Build
+        cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
+        make -j 4 >> ../${STAGE_NAME}.log 2>&1
     """
 }
 
 def executeBuildLinux(Map options)
 {
     sh """
-    mkdir Build
-    cd Build
-    cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
-    make >> ../${STAGE_NAME}.log 2>&1
+        mkdir Build
+        cd Build
+        cmake ${options['cmakeKeys']} .. >> ../${STAGE_NAME}.log 2>&1
+        make -j 8 >> ../${STAGE_NAME}.log 2>&1
     """
 }
 

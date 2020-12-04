@@ -417,7 +417,7 @@ def executeBuildLinux(Map options)
             mkdir build
             cd build
             cmake .. >> ../${STAGE_NAME}.log 2>&1
-            make >> ../${STAGE_NAME}.log 2>&1
+            make -j 8 >> ../${STAGE_NAME}.log 2>&1
         """
     } catch (e) {
         String errorMessage = "Failed during RPRViewer building."

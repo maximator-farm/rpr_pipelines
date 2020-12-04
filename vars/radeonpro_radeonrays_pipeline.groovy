@@ -100,7 +100,7 @@ def executeBuildLinux()
     mkdir Build
     cd Build
     cmake -DENABLE_VULKAN=ON -DENABLE_TESTING=ON -DEMBEDDED_KERNELS=ON -DCMAKE_CXX_FLAGS="-std=gnu++17" -DCMAKE_BUILD_TYPE=Release .. >> ../${STAGE_NAME}.log 2>&1
-    make -j 4 >> ../${STAGE_NAME}.log 2>&1
+    make -j 8 >> ../${STAGE_NAME}.log 2>&1
     """
 }
 

@@ -224,7 +224,7 @@ def executeLinuxBuildCommand(Map options, String build_type){
         mkdir build-${build_type}
         cd build-${build_type}
         cmake -DCMAKE_BUILD_TYPE=${build_type} ${options.cmakeKeysLinux[CIS_OS]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}_${build_type}.log 2>&1
-        make -j 4 >> ../${STAGE_NAME}_${build_type}.log 2>&1
+        make -j 8 >> ../${STAGE_NAME}_${build_type}.log 2>&1
     """
     
     sh """
@@ -410,7 +410,7 @@ def call(String projectBranch = "",
              projectRepo:projectRepo,
              BUILDER_TAG:'BuilderML',
              TESTER_TAG:'ML',
-             BUILD_TIMEOUT:'45',
+             BUILD_TIMEOUT:'30',
              TEST_TIMEOUT:'40',
              executeBuild:true,
              executeTests:true,

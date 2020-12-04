@@ -49,35 +49,31 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows()
 {
-    /*set msbuild=\"C:\\Program Files (x86)\\MSBuild\\14.0\\Bin\\MSBuild.exe\"
-    if not exist %msbuild% (
-        set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-    )*/
     bat """
-    mkdir build
-    cd build
-    cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 15 2017 Win64" .. >> ..\\${STAGE_NAME}.log 2>&1
-    cmake --build . --config Release >> ..\\${STAGE_NAME}.log 2>&1
+        mkdir build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 15 2017 Win64" .. >> ..\\${STAGE_NAME}.log 2>&1
+        cmake --build . --config Release >> ..\\${STAGE_NAME}.log 2>&1
     """
 }
 
 def executeBuildOSX()
 {
     sh """
-    mkdir build
-    cd build
-    cmake -DCMAKE_BUILD_TYPE=Release .. >> ../${STAGE_NAME}.log 2>&1
-    make >> ../${STAGE_NAME}.log 2>&1
+        mkdir build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release .. >> ../${STAGE_NAME}.log 2>&1
+        make -j 4 >> ../${STAGE_NAME}.log 2>&1
     """
 }
 
 def executeBuildLinux()
 {
     sh """
-    mkdir build
-    cd build
-    cmake -DCMAKE_BUILD_TYPE=Release -DRR_NEXT_ENABLE_EXAMPLES=OFF .. >> ../${STAGE_NAME}.log 2>&1
-    make >> ../${STAGE_NAME}.log 2>&1
+        mkdir build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DRR_NEXT_ENABLE_EXAMPLES=OFF .. >> ../${STAGE_NAME}.log 2>&1
+        make -j 8 >> ../${STAGE_NAME}.log 2>&1
     """
 }
 
@@ -97,6 +93,7 @@ def executePreBuild(Map options)
     echo "Commit message: ${commitMessage}"
     options.commitMessage = commitMessage
 }
+
 def executeBuild(String osName, Map options)
 {
     try {
