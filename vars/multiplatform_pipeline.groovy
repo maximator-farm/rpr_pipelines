@@ -63,8 +63,20 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                         testsExecutors["Test-${asicName}-${osName}-${i}"] = {
                             String testName = getNextTest(testsIterator)
                             while (testName != null) {
+                                String engine = null
+                                if (options.engines) {
+                                    engine = testName.split("-")[-1]
+                                }
                                 if (options.skippedTests && options.skippedTests.containsKey(testName) && options.skippedTests[testName].contains("${asicName}-${osName}")) {
                                     println("Test group ${testName} on ${asicName}-${osName} fully skipped")
+                                    testName = getNextTest(testsIterator)
+                                    continue
+                                } 
+                                // if there number of errored groups in succession is more than 
+                                if (options["errorsInSuccession"] && 
+                                        ((engine && options["errorsInSuccession"]["${osName}-${asicName}-${engine}"] && options["errorsInSuccession"]["${osName}-${asicName}-${engine}"].intValue() >= 3)
+                                        || (options["errorsInSuccession"]["${osName}-${asicName}"] && options["errorsInSuccession"]["${osName}-${asicName}"].intValue() >= 3))) {
+                                    println("Test group ${testName} on ${asicName}-${osName} aborted due to exceeded number of errored groups in succession")
                                     testName = getNextTest(testsIterator)
                                     continue
                                 }

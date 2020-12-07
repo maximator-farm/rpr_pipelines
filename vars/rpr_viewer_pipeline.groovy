@@ -5,6 +5,7 @@ import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
+import java.util.concurrent.atomic.AtomicInteger
 
 
 @Field String UniverseURLProd
@@ -243,6 +244,11 @@ def executeTests(String osName, String asicName, Map options)
                 executeTestCommand(osName, asicName, options)
             }
             options.executeTestsFinished = true
+
+            if (options["errorsInSuccession"]["${osName}-${asicName}"]) {
+                // mark that one group was finished and counting of errored groups in succession must be stopped
+                options["errorsInSuccession"]["${osName}-${asicName}"] = new AtomicInteger(-1)
+            }
         } catch (e) {
             if (utils.isTimeoutExceeded(e)) {
                 throw new ExpectedExceptionWrapper("Failed to execute tests due to timeout.", e)
@@ -252,18 +258,33 @@ def executeTests(String osName, String asicName, Map options)
         }
 
     } catch (e) {
-        if (options.currentTry < options.nodeReallocateTries) {
+        String additionalDescription = ""
+        if (options.currentTry + 1 < options.nodeReallocateTries) {
             stashResults = false
-        } 
+        } else {
+            if (!options["errorsInSuccession"]["${osName}-${asicName}"]) {
+                options["errorsInSuccession"]["${osName}-${asicName}"] = new AtomicInteger(0)
+            }
+            Integer errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}"]
+            // if counting of errored groups in succession must isn't stopped
+            if (errorsInSuccession >= 0) {
+                errorsInSuccession = options["errorsInSuccession"]["${osName}-${asicName}"].addAndGet(1)
+            
+                if (errorsInSuccession >= 3) {
+                    additionalDescription = "Number of errored groups in succession exceeded (max - 3). Next groups for this platform will be aborted"
+                }
+            }
+        }
         println(e.toString())
         println(e.getMessage())
+        
         if (e instanceof ExpectedExceptionWrapper) {
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, e.getMessage(), "${BUILD_URL}")
-            throw e
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "${e.getMessage()} ${additionalDescription}", "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper("${e.getMessage()}\n${additionalDescription}", e.getCause())
         } else {
             String errorMessage = "The reason is not automatically identified. Please contact support."
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, errorMessage, "${BUILD_URL}")
-            throw new ExpectedExceptionWrapper(errorMessage, e)
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "${errorMessage} ${additionalDescription}", "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper("${errorMessage}\n${additionalDescription}", e)
         }
     }
     finally {
@@ -985,6 +1006,7 @@ def call(String projectBranch = "",
          Integer testCaseRetries = 2)
 {
     def nodeRetry = []
+    Map errorsInSuccession = [:]
     Map options = [:]
 
     try 
@@ -1037,6 +1059,7 @@ def call(String projectBranch = "",
                         DEPLOY_TIMEOUT:45,
                         tests:tests,
                         nodeRetry: nodeRetry,
+                        errorsInSuccession: errorsInSuccession,
                         sendToUMS:sendToUMS,
                         universePlatforms: universePlatforms,
                         problemMessageManager: problemMessageManager,
