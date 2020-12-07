@@ -1,6 +1,6 @@
 import utils
 
-def call(Map options, String osName, String filesPath, String pattern)
+def call(Map options, String osName, String filesPath, String pattern, Boolean saveLog = true)
 {
     timeout(time: "3", unit: 'MINUTES') {
         try {
@@ -24,6 +24,14 @@ def call(Map options, String osName, String filesPath, String pattern)
                     }
                 }
             }
+            if (saveLog) {
+                String stageName = options.stageName ?: "${STAGE_NAME}"
+                dir("${stageName}") {
+                    utils.moveFiles(this, osName, "../*.log", ".")
+                    utils.renameFile(this, osName, "launcher.engine.log", options.currentTry ? "${stageName}_minio_${options.currentTry}.log" : "${stageName}_minio.log")
+                }
+                archiveArtifacts artifacts: "${stageName}/*.log", allowEmptyArchive: true
+            }
         } catch (e) {
             if (utils.isTimeoutExceeded(e)) {
                 println("[WARNING] Failed to send files to MINIO due to timeout")
@@ -32,6 +40,7 @@ def call(Map options, String osName, String filesPath, String pattern)
             }
             println(e.toString())
             println(e.getMessage())
+            println(e.getStackTrace())
         }
     }
 }

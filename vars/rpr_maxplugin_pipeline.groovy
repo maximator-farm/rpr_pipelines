@@ -372,7 +372,7 @@ def executeBuildWindows(Map options)
 
         if (options.sendToUMS) {
             dir("../../jobs_launcher") {
-                sendToMINIO(options, "Windows", "..\\RadeonProRenderMaxPlugin\\Package", BUILD_NAME)                            
+                sendToMINIO(options, "Windows", "..\\RadeonProRenderMaxPlugin\\Package", BUILD_NAME, false)                            
             }
         }
 

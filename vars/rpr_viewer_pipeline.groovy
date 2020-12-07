@@ -422,7 +422,7 @@ def executeBuildWindows(Map options)
 
     if (options.sendToUMS) {
         dir("jobs_launcher") {
-            sendToMINIO(options, "Windows", "..", "RprViewer_Windows.zip")                            
+            sendToMINIO(options, "Windows", "..", "RprViewer_Windows.zip", false)                            
         }
     }
 
@@ -475,7 +475,7 @@ def executeBuildLinux(Map options)
 
     if (options.sendToUMS) {
         dir("jobs_launcher") {
-            sendToMINIO(options, "Ubuntu18", "..", "RprViewer_Ubuntu18.zip")                            
+            sendToMINIO(options, "Ubuntu18", "..", "RprViewer_Ubuntu18.zip", false)                            
         }
     }
 

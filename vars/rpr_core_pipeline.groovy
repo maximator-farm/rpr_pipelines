@@ -383,7 +383,7 @@ def executeBuildWindows(Map options)
     }
     if (options.sendToUMS) {
         dir("jobs_launcher") {
-            sendToMINIO(options, "Windows", "..\\RadeonProRenderSDK\\RadeonProRender\\binWin64", "binWin64.zip")                            
+            sendToMINIO(options, "Windows", "..\\RadeonProRenderSDK\\RadeonProRender\\binWin64", "binWin64.zip", false)                            
         }
     }
     GithubNotificator.updateStatus("Build", "Windows", "success", env, options, "RadeonProRenderSDK package was successfully created.", "${BUILD_URL}/artifact/binWin64.zip")
@@ -400,7 +400,7 @@ def executeBuildOSX(Map options)
     }
     if (options.sendToUMS) {
         dir("jobs_launcher") {
-            sendToMINIO(options, "OSX", "../RadeonProRenderSDK/RadeonProRender/binWin64", "binMacOS.zip")                            
+            sendToMINIO(options, "OSX", "../RadeonProRenderSDK/RadeonProRender/binWin64", "binMacOS.zip", false)                            
         }
     }
     GithubNotificator.updateStatus("Build", "OSX", "success", env, options, "RadeonProRenderSDK package was successfully created.", "${BUILD_URL}/artifact/binMacOS.zip")
@@ -417,7 +417,7 @@ def executeBuildLinux(Map options)
     }
     if (options.sendToUMS) {
         dir("jobs_launcher") {
-            sendToMINIO(options, "Ubuntu18", "../RadeonProRenderSDK/RadeonProRender/binWin64", "binUbuntu18.zip")                            
+            sendToMINIO(options, "Ubuntu18", "../RadeonProRenderSDK/RadeonProRender/binWin64", "binUbuntu18.zip", false)                            
         }
     }
     GithubNotificator.updateStatus("Build", "Ubuntu18", "success", env, options, "RadeonProRenderSDK package was successfully created.", "${BUILD_URL}/artifact/binUbuntu18.zip")

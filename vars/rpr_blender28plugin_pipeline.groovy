@@ -563,7 +563,7 @@ def executeBuildWindows(Map options)
 
             if (options.sendToUMS) {
                 dir("../../../jobs_launcher") {
-                    sendToMINIO(options, "Windows", "..\\RadeonProRenderBlenderAddon\\BlenderPkg\\.build", BUILD_NAME)                            
+                    sendToMINIO(options, "Windows", "..\\RadeonProRenderBlenderAddon\\BlenderPkg\\.build", BUILD_NAME, false)                            
                 }
             }
 
@@ -607,7 +607,7 @@ def executeBuildOSX(Map options)
 
             if (options.sendToUMS) {
                 dir("../../../jobs_launcher") {
-                    sendToMINIO(options, "OSX", "../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME)                            
+                    sendToMINIO(options, "OSX", "../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME, false)                            
                 }
             }
 
@@ -652,7 +652,7 @@ def executeBuildLinux(String osName, Map options)
 
             if (options.sendToUMS) {
                 dir("../../../jobs_launcher") {
-                    sendToMINIO( options, osName, "../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME)                            
+                    sendToMINIO( options, osName, "../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME, false)                            
                 }
             }
 
