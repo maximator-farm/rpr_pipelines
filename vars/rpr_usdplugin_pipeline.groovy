@@ -468,7 +468,7 @@ def executeBuildOSX(String osName, Map options)
             if(options.branch_postfix)
             {
                 sh """
-                    for i in hdRpr*; do name="\${i%.*}"; mv "\$i" "\${name}.(${options.branch_postfix})\${i#\$name}"; done
+                    mv ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
                 """
             }
 
@@ -549,7 +549,7 @@ def executeBuildUnix(String osName, Map options)
             if(options.branch_postfix)
             {
                 sh """
-                    for i in hdRpr*; do name="\${i%.*}"; mv "\$i" "\${name}.(${options.branch_postfix})\${i#\$name}"; done
+                    mv ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
                 """
             }
 
