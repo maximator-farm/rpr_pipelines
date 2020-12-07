@@ -392,12 +392,12 @@ def executeBuildWindows(String osName, Map options)
                 """
             }
 
-            if(options.branch_postfix)
-            {
-                bat """
-                    rename ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
-                """
-            }
+            //if(options.branch_postfix)
+            //{
+            //    bat """
+            //        rename ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
+            //   """
+            //}
 
             archiveArtifacts "hdRpr*.tar.gz"
             options.win_build_name = options.branch_postfix ? "${pluginName}.(${options.branch_postfix})" : "${pluginName}"
@@ -465,12 +465,12 @@ def executeBuildOSX(String osName, Map options)
                 pluginName = "hdRpr-${options.pluginVersion}-USD-macOS"
             }
 
-            if(options.branch_postfix)
-            {
-                sh """
-                    mv ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
-                """
-            }
+            //if(options.branch_postfix)
+            //{
+            //    sh """
+            //        mv ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
+            //    """
+            //}
 
             archiveArtifacts "hdRpr*.tar.gz"
             options.osx_build_name = options.branch_postfix ? "${pluginName}.(${options.branch_postfix})" : "${pluginName}"
@@ -546,12 +546,12 @@ def executeBuildUnix(String osName, Map options)
                 }
             }
 
-            if(options.branch_postfix)
-            {
-                sh """
-                    mv ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
-                """
-            }
+            //if(options.branch_postfix)
+            //{
+            //    sh """
+            //        mv ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
+            //    """
+            //}
 
             archiveArtifacts "hdRpr*.tar.gz"
             options.unix_build_name = options.branch_postfix ? "${pluginName}.(${options.branch_postfix})" : "${pluginName}"
