@@ -9,7 +9,7 @@ class utils {
         try {
             String xml = self.readFile("jobs/Tests/${test}/test.job-manifest.xml")
             for (xml_string in xml.split("<")) {
-                if (xml_string.contains("${keyword}")) {
+                if (xml_string.contains("${keyword}") && xml_string.contains("timeout")) {
                     Integer xml_timeout = (Math.round((xml_string.findAll(/\d+/)[0] as Double).div(60)) + additional_xml_timeout)
                     return xml_timeout
                 }
@@ -18,7 +18,7 @@ class utils {
             self.println(e)
             return -1
         }
-        
+        return -1
     }
 
     static def setForciblyBuildResult(RunWrapper currentBuild, String buildResult) {
