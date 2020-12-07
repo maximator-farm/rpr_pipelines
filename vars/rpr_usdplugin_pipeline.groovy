@@ -566,7 +566,7 @@ def executeBuild(String osName, Map options) {
         try {
             GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading the plugin repository.")
             dir ("RadeonProRenderUSD") {
-                checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git')
+                checkOutBranchOrScm(options.projectBranch, options.projectRepo)
             }
         } catch (e) {
             String errorMessage
@@ -657,7 +657,7 @@ def executePreBuild(Map options) {
     dir('RadeonProRenderUSD')
     {
         try {
-            checkOutBranchOrScm(options.projectBranch, 'git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git', true)
+            checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
         } catch (e) {
             String errorMessage = "Failed to download plugin repository."
             GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
@@ -977,7 +977,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 }
 
-def call(String projectBranch = "",
+def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git",
+        String projectBranch = "",
         String usdBranch = "master",
         String testsBranch = "master",
         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070',
@@ -1026,7 +1027,8 @@ def call(String projectBranch = "",
 
             def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
 
-            options << [projectBranch:projectBranch,
+            options << [projectRepo:projectRepo,
+                        projectBranch:projectBranch,
                         usdBranch:usdBranch,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
