@@ -395,7 +395,7 @@ def executeBuildWindows(String osName, Map options)
             if(options.branch_postfix)
             {
                 bat """
-                    rename hdRpr*.tar.gz *.(${options.branch_postfix}).tar.gz
+                    rename ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
                 """
             }
 
@@ -405,7 +405,7 @@ def executeBuildWindows(String osName, Map options)
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${options.win_build_name}.tar.gz</a></h3>"""
 
             bat """
-                rename hdRpr*.tar.gz hdRpr_${osName}.tar.gz
+                rename hdRpr* hdRpr_${osName}.tar.gz
             """
 
             stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
