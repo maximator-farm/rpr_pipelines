@@ -378,29 +378,14 @@ def executeBuildWindows(String osName, Map options)
 
         dir ("build") {
 
-            String pluginName
             if (options.buildType == "Houdini") {
                 options.win_houdini_python3 = options.houdini_python3 ? "py3" : "py2.7"
-                pluginName = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.win_houdini_python3}-${osName}"
-                bat """
-                    rename hdRpr*.tar.gz ${pluginName}.tar.gz
-                """
+                options.win_build_name = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.win_houdini_python3}-${osName}"
             } else if (options.buildType == "USD") {
-                pluginName = "hdRpr-${options.pluginVersion}-USD-${osName}"
-                bat """
-                    rename hdRpr*.tar.gz ${pluginName}.tar.gz
-                """
+                options.win_build_name = "hdRpr-${options.pluginVersion}-USD-${osName}"
             }
 
-            //if(options.branch_postfix)
-            //{
-            //    bat """
-            //        rename ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
-            //   """
-            //}
-
             archiveArtifacts "hdRpr*.tar.gz"
-            options.win_build_name = options.branch_postfix ? "${pluginName}.(${options.branch_postfix})" : "${pluginName}"
             String pluginUrl = "${BUILD_URL}/artifact/${options.win_build_name}.tar.gz"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${options.win_build_name}.tar.gz</a></h3>"""
 
@@ -457,23 +442,14 @@ def executeBuildOSX(String osName, Map options)
 
         dir ("build") {
 
-            String pluginName
             if (options.buildType == "Houdini") {
                 options.osx_houdini_python3 = options.houdini_python3 ? "py3" : "py2.7"
-                pluginName = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.osx_houdini_python3}-macOS"
+                options.osx_build_name = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.osx_houdini_python3}-macOS"
             } else if (options.buildType == "USD") {
-                pluginName = "hdRpr-${options.pluginVersion}-USD-macOS"
+                options.osx_build_name = "hdRpr-${options.pluginVersion}-USD-macOS"
             }
 
-            //if(options.branch_postfix)
-            //{
-            //    sh """
-            //        mv ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
-            //    """
-            //}
-
             archiveArtifacts "hdRpr*.tar.gz"
-            options.osx_build_name = options.branch_postfix ? "${pluginName}.(${options.branch_postfix})" : "${pluginName}"
             String pluginUrl = "${BUILD_URL}/artifact/${options.osx_build_name}.tar.gz"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${options.osx_build_name}.tar.gz</a></h3>"""
 
@@ -530,31 +506,22 @@ def executeBuildUnix(String osName, Map options)
 
         dir ("build") {
 
-            String pluginName
             if (options.buildType == "Houdini") {
                 options.unix_houdini_python3 = options.houdini_python3 ? "py3" : "py2.7"
                 if (osName == "Ubuntu18") {
-                    pluginName = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.unix_houdini_python3}-ubuntu18.04"
+                    options.unix_build_name = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.unix_houdini_python3}-ubuntu18.04"
                 } else {
-                    pluginName = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.unix_houdini_python3}-${osName}"
+                    options.unix_build_name = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.unix_houdini_python3}-${osName}"
                 }
             } else if (options.buildType == "USD") {
                 if (osName == "Ubuntu18") {
-                    pluginName = "hdRpr-${options.pluginVersion}-USD-ubuntu18.04"
+                    options.unix_build_name = "hdRpr-${options.pluginVersion}-USD-ubuntu18.04"
                 } else {
-                    pluginName = "hdRpr-${options.pluginVersion}-USD-${osName}"
+                    options.unix_build_name = "hdRpr-${options.pluginVersion}-USD-${osName}"
                 }
             }
 
-            //if(options.branch_postfix)
-            //{
-            //    sh """
-            //        mv ${pluginName}.tar.gz ${pluginName}.(${options.branch_postfix}).tar.gz
-            //    """
-            //}
-
             archiveArtifacts "hdRpr*.tar.gz"
-            options.unix_build_name = options.branch_postfix ? "${pluginName}.(${options.branch_postfix})" : "${pluginName}"
             String pluginUrl = "${BUILD_URL}/artifact/${options.unix_build_name}.tar.gz"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${options.unix_build_name}.tar.gz</a></h3>"""
 
@@ -685,17 +652,6 @@ def executePreBuild(Map options) {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
             options.testsPackage = "Full.json"
         }
-    }
-
-    // branch postfix
-    options.branch_postfix = ""
-    if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
-    {
-        options.branch_postfix = env.BRANCH_NAME.replace('/', '-')
-    }
-    else if (options.projectBranch && options.projectBranch != "origin/master" && options.projectBranch != "origin/develop")
-    {
-        options.branch_postfix = options.projectBranch.replace('/', '-')
     }
 
     dir('RadeonProRenderUSD')
