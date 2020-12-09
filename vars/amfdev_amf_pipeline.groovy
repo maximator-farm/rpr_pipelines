@@ -612,10 +612,12 @@ def executePreBuild(Map options) {
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
         options.commitSHA = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        options.commitDatetime = bat(script: "git show -s --format=%%ci HEAD", returnStdout: true).split('\r\n')[2].trim()
 
         println "The last commit was written by ${options.commitAuthor}."
         println "Commit message: ${options.commitMessage}"
         println "Commit SHA: ${options.commitSHA}"
+        println "Commmit datetime: ${options.commitDatetime}"
 
         currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -671,7 +673,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             bat """
             set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
             pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
-            python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
+            python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --commit_datetime "${options.commitDatetime}" --commit_message "${escapeCharsByUnicode(options.commitMessage)}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
             """
         }
     }
