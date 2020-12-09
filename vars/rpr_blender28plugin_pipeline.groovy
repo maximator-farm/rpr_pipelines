@@ -1241,6 +1241,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                                 JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                                 writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                             }
+                            if (options.sendToUMS) {
+                                sendStubsToUMS(options, "..\\summaryTestResults\\${engine}\\lost_tests.json", "..\\summaryTestResults\\${engine}\\skipped_tests.json", "..\\summaryTestResults\\${engine}\\retry_info.json", engine)
+                            }
                             if (options['isPreBuilt'])
                             {
                                 bat """
@@ -1448,6 +1451,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 ImageServiceURL = "${IS_URL}"
                 universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
                 universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
+
+                options.universeClientsProd = universeClientsProd
+                options.universeClientsDev = universeClientsDev
             }
 
             enginesNames = enginesNames.split(',') as List

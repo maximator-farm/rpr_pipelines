@@ -830,6 +830,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                         }
+                        if (options.sendToUMS) {
+                            sendStubsToUMS(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
+                        }
                         if (options['isPreBuilt'])
                         {
                             bat """
@@ -1021,6 +1024,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 ImageServiceURL = "${IS_URL}"
                 universeClientProd = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName)
                 universeClientDev = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName)
+
+                options.universeClientProd = universeClientProd
+                options.universeClientDev = universeClientDev
             }
 
             Boolean isPreBuilt = customBuildLinkWindows.length() > 0
