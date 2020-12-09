@@ -218,4 +218,18 @@ class utils {
             self.println(e.getMessage())
         }
     }
+
+    @NonCPS
+    static def parseJson(Object self, String jsonString) {
+        try {
+            def jsonSlurper = new groovy.json.JsonSlurperClassic()
+
+            return jsonSlurper.parseText(jsonString)
+        } catch(Exception e) {
+            self.println("[ERROR] Can't parse JSON. Inputted value: " + jsonString)
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+        return ""
+    }
 }

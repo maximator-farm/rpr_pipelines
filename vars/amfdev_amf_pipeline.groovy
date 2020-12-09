@@ -121,6 +121,53 @@ def renameLog(String osName, String build_name)
 }
 
 
+def updateTestResults(String osName, String configuration) {
+    try {
+        String outputJsonName = "${STAGE_NAME}.${configuration}.json"
+        def outputJson = readJSON file: outputJsonName
+        outputJson["platform"] = env.STAGE_NAME.replace("Test-", "")
+        outputJson["configuration"] = configuration
+        dir("jobs_launcher") {
+            checkOutBranchOrScm("master", "git@github.com:luxteam/jobs_launcher.git")
+            def machineInfoJson
+            String machineInfoRaw, renderDevice
+            dir('core') {
+                switch(osName) {
+                    case 'Windows':
+                        machineInfoRaw = bat(
+                            script: "set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH% & python -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
+                            returnStdout: true
+                        ).split('\r\n')[2].trim()
+                        renderDevice = bat(
+                            script: "set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH% & python -c \"from system_info import get_gpu; print(get_gpu())\"", 
+                            returnStdout: true
+                        ).split('\r\n')[2].trim()
+                        break;
+                    default:
+                        machineInfoRaw = sh(
+                            script: "python3 -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
+                            returnStdout: true
+                        )
+                        renderDevice = sh(
+                            script: "python3 -c \"from system_info import get_gpu; print(get_gpu())\"", 
+                            returnStdout: true
+                        )
+                        break;
+                }
+            }
+            machineInfoJson = utils.parseJson(this, machineInfoRaw.replaceAll("\'", "\""))
+            machineInfoJson["gpu"] = renderDevice
+            outputJson["machine_info"] = machineInfoJson
+        }
+        JSON serializedJson = JSONSerializer.toJSON(outputJson, new JsonConfig());
+        writeJSON file: outputJsonName, json: serializedJson, pretty: 4
+    } catch (e) {
+        println("[ERROR] Failed to save additional information")
+        println(e.toString())
+    }
+}
+
+
 def executeTests(String osName, String asicName, Map options) {
     try {
         switch(osName) {
@@ -190,18 +237,7 @@ def executeTestsWindows(String osName, String asicName, Map options) {
                         println("[ERROR] Failed to copy logs")
                         println(e.toString())
                     }
-                    try {
-                        String outputJsonName = "${STAGE_NAME}.${win_build_name}.json"
-                        def outputJson = readJSON file: outputJsonName
-                        outputJson["platform"] = env.STAGE_NAME.replace("Test-", "")
-                        outputJson["configuration"] = win_build_name
-                        outputJson["hostname"] = env.NODE_NAME
-                        JSON serializedJson = JSONSerializer.toJSON(outputJson, new JsonConfig());
-                        writeJSON file: outputJsonName, json: serializedJson, pretty: 4
-                    } catch (e) {
-                        println("[ERROR] Failed to save additional information")
-                        println(e.toString())
-                    }
+                    updateTestResults(osName, win_build_name)
                     bat """
                         if exist AMF rmdir /Q /S AMF
                         if exist binWindows.zip del binWindows.zip
@@ -256,18 +292,7 @@ def executeTestsOSX(String osName, String asicName, Map options) {
                         println("[ERROR] Failed to copy logs")
                         println(e.toString())
                     }
-                    try {
-                        String outputJsonName = "${STAGE_NAME}.${osx_build_name}.json"
-                        def outputJson = readJSON file: outputJsonName
-                        outputJson["platform"] = env.STAGE_NAME.replace("Test-", "")
-                        outputJson["configuration"] = osx_build_name
-                        outputJson["hostname"] = env.NODE_NAME
-                        JSON serializedJson = JSONSerializer.toJSON(outputJson, new JsonConfig());
-                        writeJSON file: outputJsonName, json: serializedJson, pretty: 4
-                    } catch (e) {
-                        println("[ERROR] Failed to save additional information")
-                        println(e.toString())
-                    }
+                    updateTestResults(osName, osx_build_name)
                     sh """
                         rm -rf AMF
                         rm -rf binOSX.zip
