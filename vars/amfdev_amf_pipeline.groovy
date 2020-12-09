@@ -57,12 +57,29 @@ def getAmfTool(String osName, String build_name, Map options)
             unzip zipFile: "binOSX.zip", dir: "AMF", quiet: true
 
             break;
-            
-            break;
 
         default:
             
-            // TODO implement artifacts getting for Linux
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options[build_name + 'sha']}.zip")) {
+
+                clearBinariesUnix()
+
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                unstash "AMF_Linux_${build_name}"
+                
+                sh """
+                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                    cp binLinux.zip "${CIS_TOOLS}/../PluginsBinaries/${options[build_name + 'sha']}.zip"
+                """ 
+
+            } else {
+                println "[INFO] The plugin ${options[build_name + 'sha']}.zip exists in the storage."
+                sh """
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options[build_name + 'sha']}.zip" binLinux.zip
+                """
+            }
+
+            unzip zipFile: "binLinux.zip", dir: "AMF", quiet: true
 
             break;
     }
@@ -309,7 +326,58 @@ def executeTestsOSX(String osName, String asicName, Map options) {
             }
         }
     }
-    
+}
+
+
+def executeTestsLinux(String osName, String asicName, Map options) {
+    cleanWS(osName)
+    options.buildConfiguration.each() { linux_build_conf ->
+        options.osxLibraryType.each() { linux_lib_type ->
+
+            println "Current build configuration: ${linux_build_conf}."
+            println "Current library type: ${linux_lib_type}."
+
+            String linux_build_name = generateBuildNameLinux(linux_build_conf, linux_lib_type)
+
+            try {
+                if (!options[linux_build_name + 'sha']) {
+                    println("[ERROR] Can't find info for saved stash of this configuration. It'll be skipped")
+                    return
+                }
+
+                timeout(time: "5", unit: 'MINUTES') {
+                    try {
+                        getAmfTool(osName, linux_build_name, options)
+                    } catch(e) {
+                        println("[ERROR] Failed to prepare tests on ${env.NODE_NAME}")
+                        println(e.toString())
+                        throw e
+                    }
+                }
+
+                executeTestCommand(osName, linux_build_name, options)
+
+            } catch (e) {
+                println(e.toString())
+                println(e.getMessage())
+                options.failureMessage = "Failed during testing ${linux_build_name} on ${asicName}-${osName}"
+                options.failureError = e.getMessage()
+                currentBuild.result = "FAILURE"
+            } finally {
+                try {
+                    renameLog(osName, linux_build_name)
+                } catch (e) {
+                    println("[ERROR] Failed to copy logs")
+                    println(e.toString())
+                }
+                updateTestResults(osName, linux_build_name)
+                sh """
+                    rm -rf AMF
+                    rm -rf binLinux.zip
+                """
+            }
+        }
+    }
 }
 
 
@@ -361,10 +429,17 @@ def executeBuildWindows(Map options) {
                             """
                         }
 
-                        bat """
-                            mkdir binWindows
-                            xcopy /s/y/i ${sourceCodeLocation}\\${win_build_conf.capitalize()}\\autotests.exe binWindows
-                        """
+                        try {
+                            bat """
+                                mkdir binWindows
+                                xcopy /s/y/i ${sourceCodeLocation}\\${win_build_conf.capitalize()}\\autotests.exe binWindows
+                            """
+                        } catch (e) {
+                            println(e.toString());
+                            println(e.getMessage());
+                            currentBuild.result = "FAILURE"
+                            println "[ERROR] Failed to copy autotests"
+                        }
 
                         if (win_lib_type == 'shared') {
                             bat """
@@ -456,10 +531,17 @@ def executeBuildOSX(Map options) {
                             ./build-mac.sh >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                         """
 
-                        sh """
-                            mkdir binOSX
-                            cp build/autotests binOSX/autotests
-                        """
+                        try {
+                            sh """
+                                mkdir binOSX
+                                cp build/autotests binOSX/autotests
+                            """
+                        } catch (e) {
+                            println(e.toString());
+                            println(e.getMessage());
+                            currentBuild.result = "FAILURE"
+                            println "[ERROR] Failed to copy autotests"
+                        }
 
                         if (osx_lib_type == 'shared') {
                             sh """
@@ -526,7 +608,7 @@ def executeBuildLinux(String osName, Map options) {
 
                     sh """
                         chmod u+x generate-${linux_lib_type}-linux.sh
-                        ./generate-${linux_lib_type}-linux.sh ${linux_build_conf.capitalize()} >> ../../../../../${STAGE_NAME}.${linux_build_name}.log 2>&1
+                        ./generate-${linux_lib_type}-linux.sh ${linux_build_conf.capitalize()} >> ../../../../${STAGE_NAME}.${linux_build_name}.log 2>&1
                     """
 
                     sh """
@@ -534,14 +616,21 @@ def executeBuildLinux(String osName, Map options) {
                         ./build-linux.sh >> ../../../../${STAGE_NAME}.${linux_build_name}.log 2>&1
                     """
 
-                    //TODO implement copying of autotests executable file
-                    sh """
-                        mkdir binLinux
-                    """
+                    try {
+                        sh """
+                            mkdir binLinux
+                            cp linux/autotests binOSX/autotests
+                        """
+                    } catch (e) {
+                        println(e.toString());
+                        println(e.getMessage());
+                        currentBuild.result = "FAILURE"
+                        println "[ERROR] Failed to copy autotests"
+                    }
 
                     if (linux_lib_type == 'shared') {
                         sh """
-                            cp linux/openAmf/libopenAmfLoader.a binLinux/libopenAmfLoader.a
+                            cp linux/openAmf/libopenAmf.so binLinux/libopenAmf.so
                         """
                     } else if (linux_lib_type == 'static') {
                         sh """
@@ -684,23 +773,25 @@ def executePreBuild(Map options) {
 def executeDeploy(Map options, List platformList, List testResultList) {
     cleanWS()
 
-    dir("testResults") {
-        testResultList.each() {
+    if(options['executeTests'] && testResultList)
+    {
+        dir("testResults") {
+            testResultList.each() {
 
-            try {
-                unstash "$it"
-            } catch(e) {
-                echo "[ERROR] Failed to unstash ${it}"
-                println(e.toString());
-                println(e.getMessage());
+                try {
+                    unstash "$it"
+                } catch(e) {
+                    echo "[ERROR] Failed to unstash ${it}"
+                    println(e.toString());
+                    println(e.getMessage());
+                }
+
             }
-
         }
-    }
 
-    dir("amf-report") {
-        String branchName = env.BRANCH_NAME ?: options.projectBranch
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+        dir("amf-report") {
+            String branchName = env.BRANCH_NAME ?: options.projectBranch
+            checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
         dir("amf/public/proj/OpenAMF_Autotests/Reports") {
             bat """
@@ -709,9 +800,9 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --commit_datetime "${options.commitDatetime}" --commit_message "${escapeCharsByUnicode(options.commitMessage)}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
             """
         }
-    }
 
-    utils.publishReport(this, "${BUILD_URL}", "testResults", "mainPage.html", "Test Report", "Summary Report")
+        utils.publishReport(this, "${BUILD_URL}", "testResults", "mainPage.html", "Test Report", "Summary Report")
+    }
 }
 
 
