@@ -793,12 +793,13 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             String branchName = env.BRANCH_NAME ?: options.projectBranch
             checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
-        dir("amf/public/proj/OpenAMF_Autotests/Reports") {
-            bat """
-            set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
-            pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
-            python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --commit_datetime "${options.commitDatetime}" --commit_message "${escapeCharsByUnicode(options.commitMessage)}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
-            """
+            dir("amf/public/proj/OpenAMF_Autotests/Reports") {
+                bat """
+                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
+                pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
+                python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --commit_datetime "${options.commitDatetime}" --commit_message "${escapeCharsByUnicode(options.commitMessage)}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
+                """
+            }
         }
 
         utils.publishReport(this, "${BUILD_URL}", "testResults", "mainPage.html", "Test Report", "Summary Report")
@@ -808,13 +809,13 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
     String projectRepo = "git@github.com:amfdev/AMF.git",
-    String platforms = 'Windows:AMD_WX7100,AMD_WX9100,AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA',
     String buildConfiguration = "release,debug",
     String winVisualStudioVersion = "2017,2019",
-    String winLibraryType = "shared,static",
-    String osxTool = "cmake,xcode",
-    String osxLibraryType = "shared,static",
-    String linuxLibraryType = "shared,static",
+    String winLibraryType = "static",
+    String osxTool = "cmake",
+    String osxLibraryType = "static",
+    String linuxLibraryType = "static",
     Boolean incrementVersion = true,
     Boolean forceBuild = false,
     String testsFilter = "*") {
