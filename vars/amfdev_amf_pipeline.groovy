@@ -127,6 +127,9 @@ def updateTestResults(String osName, String configuration) {
         def outputJson = readJSON file: outputJsonName
         outputJson["platform"] = env.STAGE_NAME.replace("Test-", "")
         outputJson["configuration"] = configuration
+        if (outputJson["failures"] > 0) {
+            currentBuild.result = "UNSTABLE"
+        }
         dir("jobs_launcher") {
             checkOutBranchOrScm("master", "git@github.com:luxteam/jobs_launcher.git")
             def machineInfoJson
@@ -190,6 +193,13 @@ def executeTests(String osName, String asicName, Map options) {
     } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
         stash includes: "${STAGE_NAME}.*.json, *.log", name: "${options.testResultsName}", allowEmpty: true
+        try {
+            archiveArtifacts artifacts: "*.json", allowEmptyArchive: false
+        } catch (e) {
+            println("[ERROR] Failed to save json with results")
+            println(e.toString())
+            currentBuild.result = "FAILURE"
+        }
     }
 }
 
@@ -229,7 +239,6 @@ def executeTestsWindows(String osName, String asicName, Map options) {
                     println(e.getMessage())
                     options.failureMessage = "Failed during testing ${win_build_name} on ${asicName}-${osName}"
                     options.failureError = e.getMessage()
-                    currentBuild.result = "FAILURE"
                 } finally {
                     try {
                         renameLog(osName, win_build_name)
@@ -284,7 +293,6 @@ def executeTestsOSX(String osName, String asicName, Map options) {
                     println(e.getMessage())
                     options.failureMessage = "Failed during testing ${osx_build_name} on ${asicName}-${osName}"
                     options.failureError = e.getMessage()
-                    currentBuild.result = "FAILURE"
                 } finally {
                     try {
                         renameLog(osName, osx_build_name)
@@ -592,7 +600,7 @@ def executeBuild(String osName, Map options) {
     } catch (e) {
         options.failureMessage = "[ERROR] Failed to build plugin on ${osName}"
         options.failureError = e.getMessage()
-        currentBuild.result = "FAILED"
+        currentBuild.result = "FAILURE"
         throw e
     } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
