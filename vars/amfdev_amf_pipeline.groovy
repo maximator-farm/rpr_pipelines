@@ -808,9 +808,9 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 
 def call(String projectBranch = "",
-    String projectRepo = "git@github.com:amfdev/AMF.git",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA',
-    String buildConfiguration = "release,debug",
+    String projectRepo = "git@github.com:luxteam/AMF.git",
+    String platforms = 'Windows:AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2070S,NVIDIA_RTX2080,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA',
+    String buildConfiguration = "release",
     String winVisualStudioVersion = "2017,2019",
     String winLibraryType = "static",
     String osxTool = "cmake",
