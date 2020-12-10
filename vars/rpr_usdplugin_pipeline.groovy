@@ -489,12 +489,17 @@ def executeBuildUnix(String osName, Map options)
     dir ("RadeonProRenderUSD") {
         GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Building the plugin.", "${BUILD_URL}/artifact/Build-Ubuntu18.log")
 
+        String installation_path = "${HOUDINI_INSTALLATION_PATH}"
+        if (!installation_path) {
+            installation_path = "/home/admin"
+        }
+
         if (options.buildType == "Houdini") {
             options.unix_houdini_python3 = options.houdini_python3 ? "-py3" : "-py2"
             options.unix_tool_path = "Houdini/hfs${options.houdiniVersion}${options.unix_houdini_python3}"
             sh """
                 mkdir build
-                export HFS=/home/admin/${options.unix_tool_path}
+                export HFS=${installation_path}/${options.unix_tool_path}
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
