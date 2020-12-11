@@ -110,7 +110,7 @@ def executeTestCommand(String osName, String asicName, Map options)
     String testsNames = options.tests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
-        if (options.parsedTests.contains(".json")) {
+        if (testsNames.contains(".json")) {
             // if tests package isn't splitted and it's execution of this package - replace test group for non-splitted package by empty string
             testsNames = ""
         } else {
@@ -694,13 +694,7 @@ def executePreBuild(Map options)
                     options.testsPackage = "none"
                 } else {
                     options.testsPackage = modifiedPackageName
-                    if (options.engines.count(",") > 0) {
-                        options.engines.split(",").each { engine ->
-                            tests << "${modifiedPackageName}-${engine}"
-                        }
-                    } else {
-                        tests << modifiedPackageName
-                    }
+                    tests << modifiedPackageName
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
             } else {
@@ -866,6 +860,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                         }
+                        if (options.sendToUMS) {
+                            sendStubsToUMS(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
+                        }
                         bat """
                         build_reports.bat ..\\summaryTestResults "RprViewer" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
                         """
@@ -1022,6 +1019,9 @@ def call(String projectBranch = "",
                 ImageServiceURL = "${IS_URL}"
                 universeClientProd = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName)
                 universeClientDev = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName)
+
+                options.universeClientProd = universeClientProd
+                options.universeClientDev = universeClientDev
             }
             
             String PRJ_ROOT='rpr-core'

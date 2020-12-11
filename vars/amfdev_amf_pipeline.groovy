@@ -57,12 +57,29 @@ def getAmfTool(String osName, String build_name, Map options)
             unzip zipFile: "binOSX.zip", dir: "AMF", quiet: true
 
             break;
-            
-            break;
 
         default:
             
-            // TODO implement artifacts getting for Linux
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options[build_name + 'sha']}.zip")) {
+
+                clearBinariesUnix()
+
+                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                unstash "AMF_Linux_${build_name}"
+                
+                sh """
+                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                    cp binLinux.zip "${CIS_TOOLS}/../PluginsBinaries/${options[build_name + 'sha']}.zip"
+                """ 
+
+            } else {
+                println "[INFO] The plugin ${options[build_name + 'sha']}.zip exists in the storage."
+                sh """
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options[build_name + 'sha']}.zip" binLinux.zip
+                """
+            }
+
+            unzip zipFile: "binLinux.zip", dir: "AMF", quiet: true
 
             break;
     }
@@ -121,6 +138,56 @@ def renameLog(String osName, String build_name)
 }
 
 
+def updateTestResults(String osName, String configuration) {
+    try {
+        String outputJsonName = "${STAGE_NAME}.${configuration}.json"
+        def outputJson = readJSON file: outputJsonName
+        outputJson["platform"] = env.STAGE_NAME.replace("Test-", "")
+        outputJson["configuration"] = configuration
+        if (outputJson["failures"] > 0) {
+            currentBuild.result = "UNSTABLE"
+        }
+        dir("jobs_launcher") {
+            checkOutBranchOrScm("master", "git@github.com:luxteam/jobs_launcher.git")
+            def machineInfoJson
+            String machineInfoRaw, renderDevice
+            dir('core') {
+                switch(osName) {
+                    case 'Windows':
+                        machineInfoRaw = bat(
+                            script: "set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH% & python -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
+                            returnStdout: true
+                        ).split('\r\n')[2].trim()
+                        renderDevice = bat(
+                            script: "set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH% & python -c \"from system_info import get_gpu; print(get_gpu())\"", 
+                            returnStdout: true
+                        ).split('\r\n')[2].trim()
+                        break;
+                    default:
+                        machineInfoRaw = sh(
+                            script: "python3 -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
+                            returnStdout: true
+                        )
+                        renderDevice = sh(
+                            script: "python3 -c \"from system_info import get_gpu; print(get_gpu())\"", 
+                            returnStdout: true
+                        )
+                        break;
+                }
+            }
+            machineInfoJson = utils.parseJson(this, machineInfoRaw.replaceAll("\'", "\""))
+            machineInfoJson["gpu"] = renderDevice
+            outputJson["machine_info"] = machineInfoJson
+        }
+        JSON serializedJson = JSONSerializer.toJSON(outputJson, new JsonConfig());
+        writeJSON file: outputJsonName, json: serializedJson, pretty: 4
+    } catch (e) {
+        println("[ERROR] Failed to save additional information")
+        println(e.toString())
+    }
+}
+
+
 def executeTests(String osName, String asicName, Map options) {
     try {
         switch(osName) {
@@ -143,6 +210,13 @@ def executeTests(String osName, String asicName, Map options) {
     } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
         stash includes: "${STAGE_NAME}.*.json, *.log", name: "${options.testResultsName}", allowEmpty: true
+        try {
+            archiveArtifacts artifacts: "*.json", allowEmptyArchive: false
+        } catch (e) {
+            println("[ERROR] Failed to save json with results")
+            println(e.toString())
+            currentBuild.result = "FAILURE"
+        }
     }
 }
 
@@ -182,7 +256,6 @@ def executeTestsWindows(String osName, String asicName, Map options) {
                     println(e.getMessage())
                     options.failureMessage = "Failed during testing ${win_build_name} on ${asicName}-${osName}"
                     options.failureError = e.getMessage()
-                    currentBuild.result = "FAILURE"
                 } finally {
                     try {
                         renameLog(osName, win_build_name)
@@ -190,18 +263,7 @@ def executeTestsWindows(String osName, String asicName, Map options) {
                         println("[ERROR] Failed to copy logs")
                         println(e.toString())
                     }
-                    try {
-                        String outputJsonName = "${STAGE_NAME}.${win_build_name}.json"
-                        def outputJson = readJSON file: outputJsonName
-                        outputJson["platform"] = env.STAGE_NAME.replace("Test-", "")
-                        outputJson["configuration"] = win_build_name
-                        outputJson["hostname"] = env.NODE_NAME
-                        JSON serializedJson = JSONSerializer.toJSON(outputJson, new JsonConfig());
-                        writeJSON file: outputJsonName, json: serializedJson, pretty: 4
-                    } catch (e) {
-                        println("[ERROR] Failed to save additional information")
-                        println(e.toString())
-                    }
+                    updateTestResults(osName, win_build_name)
                     bat """
                         if exist AMF rmdir /Q /S AMF
                         if exist binWindows.zip del binWindows.zip
@@ -248,7 +310,6 @@ def executeTestsOSX(String osName, String asicName, Map options) {
                     println(e.getMessage())
                     options.failureMessage = "Failed during testing ${osx_build_name} on ${asicName}-${osName}"
                     options.failureError = e.getMessage()
-                    currentBuild.result = "FAILURE"
                 } finally {
                     try {
                         renameLog(osName, osx_build_name)
@@ -256,18 +317,7 @@ def executeTestsOSX(String osName, String asicName, Map options) {
                         println("[ERROR] Failed to copy logs")
                         println(e.toString())
                     }
-                    try {
-                        String outputJsonName = "${STAGE_NAME}.${osx_build_name}.json"
-                        def outputJson = readJSON file: outputJsonName
-                        outputJson["platform"] = env.STAGE_NAME.replace("Test-", "")
-                        outputJson["configuration"] = osx_build_name
-                        outputJson["hostname"] = env.NODE_NAME
-                        JSON serializedJson = JSONSerializer.toJSON(outputJson, new JsonConfig());
-                        writeJSON file: outputJsonName, json: serializedJson, pretty: 4
-                    } catch (e) {
-                        println("[ERROR] Failed to save additional information")
-                        println(e.toString())
-                    }
+                    updateTestResults(osName, osx_build_name)
                     sh """
                         rm -rf AMF
                         rm -rf binOSX.zip
@@ -276,7 +326,58 @@ def executeTestsOSX(String osName, String asicName, Map options) {
             }
         }
     }
-    
+}
+
+
+def executeTestsLinux(String osName, String asicName, Map options) {
+    cleanWS(osName)
+    options.buildConfiguration.each() { linux_build_conf ->
+        options.osxLibraryType.each() { linux_lib_type ->
+
+            println "Current build configuration: ${linux_build_conf}."
+            println "Current library type: ${linux_lib_type}."
+
+            String linux_build_name = generateBuildNameLinux(linux_build_conf, linux_lib_type)
+
+            try {
+                if (!options[linux_build_name + 'sha']) {
+                    println("[ERROR] Can't find info for saved stash of this configuration. It'll be skipped")
+                    return
+                }
+
+                timeout(time: "5", unit: 'MINUTES') {
+                    try {
+                        getAmfTool(osName, linux_build_name, options)
+                    } catch(e) {
+                        println("[ERROR] Failed to prepare tests on ${env.NODE_NAME}")
+                        println(e.toString())
+                        throw e
+                    }
+                }
+
+                executeTestCommand(osName, linux_build_name, options)
+
+            } catch (e) {
+                println(e.toString())
+                println(e.getMessage())
+                options.failureMessage = "Failed during testing ${linux_build_name} on ${asicName}-${osName}"
+                options.failureError = e.getMessage()
+                currentBuild.result = "FAILURE"
+            } finally {
+                try {
+                    renameLog(osName, linux_build_name)
+                } catch (e) {
+                    println("[ERROR] Failed to copy logs")
+                    println(e.toString())
+                }
+                updateTestResults(osName, linux_build_name)
+                sh """
+                    rm -rf AMF
+                    rm -rf binLinux.zip
+                """
+            }
+        }
+    }
 }
 
 
@@ -328,10 +429,17 @@ def executeBuildWindows(Map options) {
                             """
                         }
 
-                        bat """
-                            mkdir binWindows
-                            xcopy /s/y/i ${sourceCodeLocation}\\${win_build_conf.capitalize()}\\autotests.exe binWindows
-                        """
+                        try {
+                            bat """
+                                mkdir binWindows
+                                xcopy /s/y/i ${sourceCodeLocation}\\${win_build_conf.capitalize()}\\autotests.exe binWindows
+                            """
+                        } catch (e) {
+                            println(e.toString());
+                            println(e.getMessage());
+                            currentBuild.result = "FAILURE"
+                            println "[ERROR] Failed to copy autotests"
+                        }
 
                         if (win_lib_type == 'shared') {
                             bat """
@@ -423,10 +531,17 @@ def executeBuildOSX(Map options) {
                             ./build-mac.sh >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                         """
 
-                        sh """
-                            mkdir binOSX
-                            cp build/autotests binOSX/autotests
-                        """
+                        try {
+                            sh """
+                                mkdir binOSX
+                                cp build/autotests binOSX/autotests
+                            """
+                        } catch (e) {
+                            println(e.toString());
+                            println(e.getMessage());
+                            currentBuild.result = "FAILURE"
+                            println "[ERROR] Failed to copy autotests"
+                        }
 
                         if (osx_lib_type == 'shared') {
                             sh """
@@ -493,7 +608,7 @@ def executeBuildLinux(String osName, Map options) {
 
                     sh """
                         chmod u+x generate-${linux_lib_type}-linux.sh
-                        ./generate-${linux_lib_type}-linux.sh ${linux_build_conf.capitalize()} >> ../../../../../${STAGE_NAME}.${linux_build_name}.log 2>&1
+                        ./generate-${linux_lib_type}-linux.sh ${linux_build_conf.capitalize()} >> ../../../../${STAGE_NAME}.${linux_build_name}.log 2>&1
                     """
 
                     sh """
@@ -501,14 +616,21 @@ def executeBuildLinux(String osName, Map options) {
                         ./build-linux.sh >> ../../../../${STAGE_NAME}.${linux_build_name}.log 2>&1
                     """
 
-                    //TODO implement copying of autotests executable file
-                    sh """
-                        mkdir binLinux
-                    """
+                    try {
+                        sh """
+                            mkdir binLinux
+                            cp linux/autotests binOSX/autotests
+                        """
+                    } catch (e) {
+                        println(e.toString());
+                        println(e.getMessage());
+                        currentBuild.result = "FAILURE"
+                        println "[ERROR] Failed to copy autotests"
+                    }
 
                     if (linux_lib_type == 'shared') {
                         sh """
-                            cp linux/openAmf/libopenAmfLoader.a binLinux/libopenAmfLoader.a
+                            cp linux/openAmf/libopenAmf.so binLinux/libopenAmf.so
                         """
                     } else if (linux_lib_type == 'static') {
                         sh """
@@ -567,7 +689,7 @@ def executeBuild(String osName, Map options) {
     } catch (e) {
         options.failureMessage = "[ERROR] Failed to build plugin on ${osName}"
         options.failureError = e.getMessage()
-        currentBuild.result = "FAILED"
+        currentBuild.result = "FAILURE"
         throw e
     } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
@@ -612,10 +734,12 @@ def executePreBuild(Map options) {
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
         options.commitSHA = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        options.commitDatetime = bat(script: "git show -s --format=%%ci HEAD", returnStdout: true).split('\r\n')[2].trim()
 
         println "The last commit was written by ${options.commitAuthor}."
         println "Commit message: ${options.commitMessage}"
         println "Commit SHA: ${options.commitSHA}"
+        println "Commmit datetime: ${options.commitDatetime}"
 
         currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -649,46 +773,49 @@ def executePreBuild(Map options) {
 def executeDeploy(Map options, List platformList, List testResultList) {
     cleanWS()
 
-    dir("testResults") {
-        testResultList.each() {
+    if(options['executeTests'] && testResultList)
+    {
+        dir("testResults") {
+            testResultList.each() {
 
-            try {
-                unstash "$it"
-            } catch(e) {
-                echo "[ERROR] Failed to unstash ${it}"
-                println(e.toString());
-                println(e.getMessage());
+                try {
+                    unstash "$it"
+                } catch(e) {
+                    echo "[ERROR] Failed to unstash ${it}"
+                    println(e.toString());
+                    println(e.getMessage());
+                }
+
             }
-
         }
-    }
 
-    dir("amf-report") {
-        String branchName = env.BRANCH_NAME ?: options.projectBranch
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+        dir("amf-report") {
+            String branchName = env.BRANCH_NAME ?: options.projectBranch
+            checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
-        dir("amf/public/proj/OpenAMF_Autotests/Reports") {
-            bat """
-            set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
-            pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
-            python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
-            """
+            dir("amf/public/proj/OpenAMF_Autotests/Reports") {
+                bat """
+                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
+                pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
+                python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --commit_datetime "${options.commitDatetime}" --commit_message "${escapeCharsByUnicode(options.commitMessage)}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
+                """
+            }
         }
-    }
 
-    utils.publishReport(this, "${BUILD_URL}", "testResults", "mainPage.html", "Test Report", "Summary Report")
+        utils.publishReport(this, "${BUILD_URL}", "testResults", "mainPage.html", "Test Report", "Summary Report")
+    }
 }
 
 
 def call(String projectBranch = "",
-    String projectRepo = "git@github.com:amfdev/AMF.git",
-    String platforms = 'Windows:AMD_WX7100,AMD_WX9100,AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA',
-    String buildConfiguration = "release,debug",
+    String projectRepo = "git@github.com:luxteam/AMF.git",
+    String platforms = 'Windows:AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2070S,NVIDIA_RTX2080,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA',
+    String buildConfiguration = "release",
     String winVisualStudioVersion = "2017,2019",
-    String winLibraryType = "shared,static",
-    String osxTool = "cmake,xcode",
-    String osxLibraryType = "shared,static",
-    String linuxLibraryType = "shared,static",
+    String winLibraryType = "static",
+    String osxTool = "cmake",
+    String osxLibraryType = "static",
+    String linuxLibraryType = "static",
     Boolean incrementVersion = true,
     Boolean forceBuild = false,
     String testsFilter = "*") {
