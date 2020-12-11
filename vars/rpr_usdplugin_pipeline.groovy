@@ -489,8 +489,10 @@ def executeBuildUnix(String osName, Map options)
     dir ("RadeonProRenderUSD") {
         GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Building the plugin.", "${BUILD_URL}/artifact/Build-Ubuntu18.log")
 
-        String installation_path = "${HOUDINI_INSTALLATION_PATH}"
-        if (!installation_path) {
+        String installation_path
+        if (env.HOUDINI_INSTALLATION_PATH) {
+            installation_path = "${env.HOUDINI_INSTALLATION_PATH}"
+        } else {
             installation_path = "/home/admin"
         }
 
