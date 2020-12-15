@@ -1431,6 +1431,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     def nodeRetry = []
     Map errorsInSuccession = [:]
     Map options = [:]
+    
+    sendToUMS = updateRefs.contains('Update') || sendToUMS
 
     try
     {

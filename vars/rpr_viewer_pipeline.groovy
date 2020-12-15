@@ -1005,6 +1005,8 @@ def call(String projectBranch = "",
     def nodeRetry = []
     Map errorsInSuccession = [:]
     Map options = [:]
+    
+    sendToUMS = updateRefs.contains('Update') || sendToUMS
 
     try 
     {
