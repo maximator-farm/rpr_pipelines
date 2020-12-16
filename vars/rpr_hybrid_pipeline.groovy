@@ -341,7 +341,7 @@ def executePreBuild(Map options)
     println "Commit message: ${commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
     
-    if (commitMessage.contains("[CIS:GENREF]") && env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+    if (commitMessage.contains("[CIS:GENREF]") && env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "1.xx")) {
         options.updateRefs = true
         println("[CIS:GENREF] has been founded in comment")
     }
