@@ -186,6 +186,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
         }
     } finally {
         archiveArtifacts "*.log"
+        archiveArtifacts "*.gtest.xml"
         junit "*.gtest.xml"
 
         if (options.testsQuality && env.CHANGE_ID)
@@ -341,7 +342,7 @@ def executePreBuild(Map options)
     println "Commit message: ${commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
     
-    if (commitMessage.contains("[CIS:GENREF]") && env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "1.xx")) {
+    if (commitMessage.contains("[CIS:GENREF]") && env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         options.updateRefs = true
         println("[CIS:GENREF] has been founded in comment")
     }
