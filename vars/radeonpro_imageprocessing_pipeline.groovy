@@ -49,11 +49,7 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
     try
     {
         checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git')
-
-        outputEnvironmentInfo(osName, "${STAGE_NAME}.dynamic")
-        outputEnvironmentInfo(osName, "${STAGE_NAME}.static")
         unstash "app_${libType}_${osName}"
-
         executeTestCommand(osName, libType, options.testPerformance)
     }
     catch (e)
@@ -98,6 +94,7 @@ def executeTests(String osName, String asicName, Map options)
     Boolean testsFailed = false
 
     try {
+        outputEnvironmentInfo(osName, "${STAGE_NAME}.dynamic")
         executeTestsForCustomLib(osName, 'dynamic', options)
     } catch (e) {
         println("Error during testing dynamic lib")
@@ -108,6 +105,7 @@ def executeTests(String osName, String asicName, Map options)
     }
 
     try {
+        outputEnvironmentInfo(osName, "${STAGE_NAME}.static")
         executeTestsForCustomLib(osName, 'static', options)
     } catch (e) {
         testsFailed = true
