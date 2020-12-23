@@ -418,7 +418,8 @@ def call(String projectBranch = "",
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = '',
-         Boolean testPerformance = false) {
+         Boolean testPerformance = false,
+         String tester_tag = 'RIF') {
 
     println "TAG_NAME: ${env.TAG_NAME}"
 
@@ -431,7 +432,7 @@ def call(String projectBranch = "",
                            [projectBranch:projectBranch,
                             enableNotifications:enableNotifications,
                             BUILDER_TAG:'BuilderRIF',
-                            TESTER_TAG:'RIF',
+                            TESTER_TAG:tester_tag,
                             BUILD_TIMEOUT:'30',
                             TEST_TIMEOUT:'30',
                             executeBuild:true,
