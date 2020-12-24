@@ -1146,46 +1146,52 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             if (options.sendToUMS) {
                                 sendStubsToUMS(options, "..\\summaryTestResults\\${engine}\\lost_tests.json", "..\\summaryTestResults\\${engine}\\skipped_tests.json", "..\\summaryTestResults\\${engine}\\retry_info.json", engine)
                             }
-                            if (options['isPreBuilt'])
-                            {
-                                // \\\\ - prevent escape sequence '\N'
-                                bat """
-                                build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(engineName)}\"
-                                """
-                            }
-                            else
-                            {
-                                bat """
-                                build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(engineName)}\"
-                                """
+                            try {
+                                if (options['isPreBuilt'])
+                                {
+                                    // \\\\ - prevent escape sequence '\N'
+                                    bat """
+                                    build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(engineName)}\"
+                                    """
+                                }
+                                else
+                                {
+                                    bat """
+                                    build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(engineName)}\"
+                                    """
+                                }
+                            } catch (e) {
+                                String errorMessage = utils.getReportFailReason(e.getMessage())
+                                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                                if (utils.isReportFailCritical(e.getMessage())) {
+                                    throw e
+                                } else {
+                                    currentBuild.result = "FAILURE"
+                                    problemMessageManager.saveGlobalFailReason(errorMessage)
+                                }
                             }
                         }
                     }
                 }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
+                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
-                if (utils.isReportFailCritical(e.getMessage())) {
-                    problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                    println("[ERROR] Failed to build test report.")
-                    println(e.toString())
-                    println(e.getMessage())
-                    if (!options.testDataSaved) {
-                        try {
-                            // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
-                            options.testDataSaved = true 
-                        } catch(e1) {
-                            println("[WARNING] Failed to publish test data.")
-                            println(e.toString())
-                            println(e.getMessage())
-                        }
+                println("[ERROR] Failed to build test report.")
+                println(e.toString())
+                println(e.getMessage())
+                if (!options.testDataSaved) {
+                    try {
+                        // Save test data for access it manually anyway
+                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
+                        options.testDataSaved = true 
+                    } catch(e1) {
+                        println("[WARNING] Failed to publish test data.")
+                        println(e.toString())
+                        println(e.getMessage())
                     }
-                    throw e
-                } else {
-                    currentBuild.result = "FAILURE"
-                    problemMessageManager.saveGlobalFailReason(errorMessage)
                 }
+                throw e
             }
 
             try
