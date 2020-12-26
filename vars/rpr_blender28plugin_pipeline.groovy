@@ -1098,7 +1098,7 @@ def executePreBuild(Map options)
                 universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
             }
     
-            if (universeClientParentProd.build != null && universeClientParentDev.build != null){
+            if (universeClientParentProd.build != null || universeClientParentDev.build != null){
                 options.buildIdProd = universeClientParentProd.build["id"]
                 options.jobIdProd = universeClientParentProd.build["job_id"]
                 options.isUrl = ImageServiceURL

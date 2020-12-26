@@ -608,7 +608,7 @@ def executePreBuild(Map options)
                     universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
                     universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
                 
-                    if (universeClientProd.build != null && universeClientDev != null){
+                    if (universeClientProd.build != null || universeClientDev != null){
                         options.buildIdProd = universeClientProd.build["id"]
                         options.jobIdProd = universeClientProd.build["job_id"]
                         options.isUrl = universeClientProd.is_url
