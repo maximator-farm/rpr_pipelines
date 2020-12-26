@@ -917,7 +917,7 @@ def executePreBuild(Map options)
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else if (env.JOB_NAME == "RadeonProRenderBlender2.8Plugin-WeeklyFull") {
+    } else if (env.JOB_NAME == "RadeonProRenderBlender2.8Plugin-WeeklyFull" || env.JOB_NAME == "RadeonProRenderBlender2.8Plugin-WeeklyFullNorthstar") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
                          [$class: 'LogRotator', artifactDaysToKeepStr: '',
                           artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
@@ -1084,15 +1084,8 @@ def executePreBuild(Map options)
 
     println "timeouts: ${options.timeouts}"
 
-    if (options.sendToUMS)
-    {
-        try
-        {
-            // Universe : auth because now we in node
-            // If use httpRequest in master slave will catch 408 error
-            universeClientParentProd.tokenSetup()
-            universeClientParentDev.tokenSetup()
-
+    if (options.sendToUMS) {
+        try {
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
             universeClientParentProd.createBuild('', '', false, options)
             universeClientParentDev.createBuild('', '', false, options)
@@ -1104,21 +1097,23 @@ def executePreBuild(Map options)
                 universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
                 universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
             }
-        }
-        catch (e)
-        {
-            println(e.toString())
-        }
+    
+            if (universeClientParentProd.build != null && universeClientParentDev.build != null){
+                options.buildIdProd = universeClientParentProd.build["id"]
+                options.jobIdProd = universeClientParentProd.build["job_id"]
+                options.isUrl = ImageServiceURL
 
-        if (universeClientParentProd.build != null){
-            options.buildIdProd = universeClientParentProd.build["id"]
-            options.jobIdProd = universeClientParentProd.build["job_id"]
-            options.isUrl = ImageServiceURL
-        }
-        if (universeClientParentDev.build != null){
-            options.buildIdDev = universeClientParentDev.build["id"]
-            options.jobIdDev = universeClientParentDev.build["job_id"]
-            options.isUrl = ImageServiceURL
+                options.buildIdDev = universeClientParentDev.build["id"]
+                options.jobIdDev = universeClientParentDev.build["job_id"]
+                options.isUrl = ImageServiceURL
+            } else {
+                println("Failed to create build: ${universeClientParentProd.build} & ${universeClientParentDev.build}. Set sendToUms to false.")
+                options.sendToUMS = false
+            }
+        } catch (e) {
+            println("Failed to create build in UMS. Set sendToUms to false.")
+            println(e.toString())
+            options.sendToUMS = false
         }
     }
 
@@ -1437,8 +1432,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     def nodeRetry = []
     Map errorsInSuccession = [:]
     Map options = [:]
-    
-    sendToUMS = updateRefs.contains('Update') || sendToUMS
 
     try
     {
@@ -1450,18 +1443,31 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 throw new Exception(errorMessage)
             }
 
-            withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
-                string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
-                string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
-            {
-                UniverseURLProd = "${PROD_UMS_URL}"
-                UniverseURLDev = "${DEV_UMS_URL}"
-                ImageServiceURL = "${IS_URL}"
-                universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
-                universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
+            sendToUMS = updateRefs.contains('Update') || sendToUMS
 
-                options.universeClientsProd = universeClientsProd
-                options.universeClientsDev = universeClientsDev
+            if (sendToUMS) {
+                try {
+                    withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
+                        string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
+                        string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
+                    {
+                        UniverseURLProd = "${PROD_UMS_URL}"
+                        UniverseURLDev = "${DEV_UMS_URL}"
+                        ImageServiceURL = "${IS_URL}"
+                        universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
+                        universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
+
+                        options.universeClientsProd = universeClientsProd
+                        options.universeClientsDev = universeClientsDev
+                    }
+                    universeClientParentProd.tokenSetup()
+                    universeClientParentDev.tokenSetup()
+                } catch (e) {
+                    println("[ERROR] Failed to setup token for UMS. Set sendToUms to false.")
+                    sendToUMS = false
+                    println(e.toString());
+                    println(e.getMessage());
+                }
             }
 
             enginesNames = enginesNames.split(',') as List
@@ -1511,9 +1517,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 platforms = filteredPlatforms
             }
 
-            String PRJ_NAME="RadeonProRenderBlender2.8Plugin"
-            String PRJ_ROOT="rpr-plugins"
-
             gpusCount = 0
             platforms.split(';').each()
             { platform ->
@@ -1528,7 +1531,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 }
             }
 
-
             def universePlatforms = convertPlatforms(platforms);
 
             def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
@@ -1538,6 +1540,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             println "Tests package: ${testsPackage}"
             println "Split tests execution: ${splitTestsExecution}"
             println "Tests execution type: ${parallelExecutionType}"
+            println "Send to UMS: ${sendToUMS} "
             println "UMS platforms: ${universePlatforms}"
 
             String prRepoName = ""
@@ -1556,8 +1559,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
-                        PRJ_NAME:PRJ_NAME,
-                        PRJ_ROOT:PRJ_ROOT,
+                        PRJ_NAME:"RadeonProRenderBlender2.8Plugin",
+                        PRJ_ROOT:"rpr-plugins",
                         incrementVersion:incrementVersion,
                         renderDevice:renderDevice,
                         testsPackage:testsPackage,

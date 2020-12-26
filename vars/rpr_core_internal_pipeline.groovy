@@ -656,37 +656,28 @@ def executePreBuild(Map options)
             options.testsList = ['']
             options.tests = tests.join(" ")
 
-            if (options.sendToUMS)
-            {
-                try
-                {
-                    // Universe : auth because now we in node
-                    // If use httpRequest in master slave will catch 408 error
-                    universeClientProd.tokenSetup()
-                    universeClientDev.tokenSetup()
-
-                    println("Test groups:")
-                    println(options.groupsUMS)
-
-                    // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+            if (options.sendToUMS) {
+                try {
                     universeClientProd.createBuild(options.universePlatforms, options.groupsUMS)
                     universeClientDev.createBuild(options.universePlatforms, options.groupsUMS)
-                }
-                catch (e)
-                {
-                    println(e.toString())
-                }
 
-                if (universeClientProd.build != null){
-                    options.buildIdProd = universeClientProd.build["id"]
-                    options.jobIdProd = universeClientProd.build["job_id"]
-                    options.isUrl = universeClientProd.is_url
-                }
-                if (universeClientDev.build != null){
-                    options.buildIdDev = universeClientDev.build["id"]
-                    options.jobIdDev = universeClientDev.build["job_id"]
-                    options.isUrl = universeClientDev.is_url
-                }
+                    if (universeClientProd.build != null && universeClientDev.build != null){
+                        options.buildIdProd = universeClientProd.build["id"]
+                        options.jobIdProd = universeClientProd.build["job_id"]
+                        options.isUrl = universeClientProd.is_url
+
+                        options.buildIdDev = universeClientDev.build["id"]
+                        options.jobIdDev = universeClientDev.build["job_id"]
+                        options.isUrl = universeClientDev.is_url
+                    } else {
+                        println("Failed to create build: ${universeClientProd.build} & ${[".build}. Set sendToUms to false.")
+                        options.sendToUMS = false
+                    }
+                } catch (e) {
+                    println("Failed to create build in UMS. Set sendToUms to false.")
+                    println(e.toString())
+                    options.sendToUMS = false
+                }    
             }
         }
     } catch (e) {
@@ -988,8 +979,30 @@ def call(String projectBranch = "",
     {
         try 
         {
-            String PRJ_NAME="RadeonProRenderCore"
-            String PRJ_ROOT="rpr-core"
+            sendToUMS = updateRefs.contains('Update') || sendToUMS
+
+            try {
+                withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
+                    string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
+                    string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
+                {
+                    UniverseURLProd = "${PROD_UMS_URL}"
+                    UniverseURLDev = "${DEV_UMS_URL}"
+                    ImageServiceURL = "${IS_URL}"
+                    universeClientProd = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName)
+                    universeClientDev = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName)
+
+                    options.universeClientProd = universeClientProd
+                    options.universeClientDev = universeClientDev
+                }
+                universeClientParentProd.tokenSetup()
+                universeClientParentDev.tokenSetup()
+            } catch (e) {
+                println("[ERROR] Failed to setup token for UMS. Set sendToUms to false.")
+                sendToUMS = false
+                println(e.toString());
+                println(e.getMessage());
+            }
 
             gpusCount = 0
             renderPlatforms.split(';').each()
@@ -1014,6 +1027,7 @@ def call(String projectBranch = "",
             println "Tests: ${tests}"
             println "Tests package: ${testsPackage}"
             println "Tests execution type: ${parallelExecutionType}"
+            println "Send to UMS: ${sendToUMS} "
             println "UMS platforms: ${universePlatforms}"
 
             String prRepoName = ""
@@ -1029,8 +1043,8 @@ def call(String projectBranch = "",
                         unitTestsBranch:unitTestsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
-                        PRJ_NAME:PRJ_NAME,
-                        PRJ_ROOT:PRJ_ROOT,
+                        PRJ_NAME:"RadeonProRenderCore",
+                        PRJ_ROOT:"rpr-core",
                         BUILDER_TAG:'BuilderS',
                         TESTER_TAG:tester_tag,
                         slackChannel:"${SLACK_CORE_CHANNEL}",

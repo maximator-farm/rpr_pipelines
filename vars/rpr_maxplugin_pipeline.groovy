@@ -729,33 +729,28 @@ def executePreBuild(Map options)
 
     options.testsList = options.tests
 
-    if (options.sendToUMS)
-    {
-        try
-        {
-            // Universe : auth because now we in node
-            // If use httpRequest in master slave will catch 408 error
-            universeClientProd.tokenSetup()
-            universeClientDev.tokenSetup()
-
+    if (options.sendToUMS) {
+        try {
             // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
             universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
             universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options)
-        }
-        catch (e)
-        {
-            println(e)
-        }
+        
+            if (universeClientProd.build != null && universeClientDev.build != null){
+                options.buildIdProd = universeClientProd.build["id"]
+                options.jobIdProd = universeClientProd.build["job_id"]
+                options.isUrl = universeClientProd.is_url
 
-        if (universeClientProd.build != null){
-            options.buildIdProd = universeClientProd.build["id"]
-            options.jobIdProd = universeClientProd.build["job_id"]
-            options.isUrl = universeClientProd.is_url
-        }
-        if (universeClientDev.build != null){
-            options.buildIdDev = universeClientDev.build["id"]
-            options.jobIdDev = universeClientDev.build["job_id"]
-            options.isUrl = universeClientDev.is_url
+                options.buildIdDev = universeClientDev.build["id"]
+                options.jobIdDev = universeClientDev.build["job_id"]
+                options.isUrl = universeClientDev.is_url
+            } else {
+                println("Failed to create build: ${universeClientProd.build} & ${universeClientDev.build}. Set sendToUms to false.")
+                options.sendToUMS = false
+            }
+        } catch (e) {
+            println("Failed to create build in UMS. Set sendToUms to false.")
+            println(e.toString())
+            options.sendToUMS = false
         }
     }
 
@@ -1007,22 +1002,34 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     Map errorsInSuccession = [:]
     Map options = [:]
     
-    sendToUMS = updateRefs.contains('Update') || sendToUMS
-
     try {
         try {
-            withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
-                string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
-                string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
-            {
-                UniverseURLProd = "${PROD_UMS_URL}"
-                UniverseURLDev = "${DEV_UMS_URL}"
-                ImageServiceURL = "${IS_URL}"
-                universeClientProd = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName)
-                universeClientDev = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName)
 
-                options.universeClientProd = universeClientProd
-                options.universeClientDev = universeClientDev
+            sendToUMS = updateRefs.contains('Update') || sendToUMS
+
+            if (sendToUMS) {
+                try{
+                    withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
+                        string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
+                        string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
+                    {
+                        UniverseURLProd = "${PROD_UMS_URL}"
+                        UniverseURLDev = "${DEV_UMS_URL}"
+                        ImageServiceURL = "${IS_URL}"
+                        universeClientProd = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName)
+                        universeClientDev = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName)
+
+                        options.universeClientProd = universeClientProd
+                        options.universeClientDev = universeClientDev
+                    }
+                    universeClientParentProd.tokenSetup()
+                    universeClientParentDev.tokenSetup()
+                } catch (e) {
+                    println("[ERROR] Failed to setup token for UMS. Set sendToUms to false.")
+                    sendToUMS = false
+                    println(e.toString());
+                    println(e.getMessage());
+                }
             }
 
             Boolean isPreBuilt = customBuildLinkWindows.length() > 0
@@ -1051,10 +1058,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 platforms = filteredPlatforms
             }
 
-            // if (tests == "" && testsPackage == "none") { currentBuild.setKeepLog(true) }
-
-            String PRJ_NAME="RadeonProRenderMaxPlugin"
-            String PRJ_ROOT="rpr-plugins"
             gpusCount = 0
             platforms.split(';').each()
             { platform ->
@@ -1078,6 +1081,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             println "Tests package: ${testsPackage}"
             println "Split tests execution: ${splitTestsExecution}"
             println "Tests execution type: ${parallelExecutionType}"
+            println "Send to UMS: ${sendToUMS} "
             println "UMS platforms: ${universePlatforms}"
 
             String prRepoName = ""
@@ -1093,8 +1097,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
-                        PRJ_NAME:PRJ_NAME,
-                        PRJ_ROOT:PRJ_ROOT,
+                        PRJ_NAME:"RadeonProRenderMaxPlugin",
+                        PRJ_ROOT:"rpr-plugins",
                         incrementVersion:incrementVersion,
                         renderDevice:renderDevice,
                         testsPackage:testsPackage,
