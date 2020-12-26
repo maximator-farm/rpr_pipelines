@@ -45,7 +45,7 @@ def installHoudiniPlugin(String osName, Map options){
 
             sh """
                 tar -xzf hdRpr_${osName}.tar.gz
-                cd ${options.unix_build_name}
+                cd ${options.ubuntu_build_name}
                 chmod +x activateHoudiniPlugin
                 echo y | ./activateHoudiniPlugin \"../${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
@@ -232,7 +232,6 @@ def executeTests(String osName, String asicName, Map options)
                         sh "rm -rf ./Work/GeneratedBaselines"        
                 }
             } else {
-                // TODO: receivebaseline for json suite
                 try {
                     String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_houdini_autotests_baselines" : "/mnt/c/TestResources/rpr_houdini_autotests_baselines"
                     GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")
@@ -516,17 +515,19 @@ def executeBuildUnix(String osName, Map options)
             if (options.buildType == "Houdini") {
                 options.unix_houdini_python3 = options.houdini_python3 ? "py3" : "py2.7"
                 if (osName == "Ubuntu18") {
-                    options.unix_build_name = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.unix_houdini_python3}-ubuntu18.04"
+                    options.ubuntu_build_name = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.unix_houdini_python3}-ubuntu18.04"
                 } else {
-                    options.unix_build_name = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.unix_houdini_python3}-${osName}"
+                    options.centos_build_name = "hdRpr-${options.pluginVersion}-Houdini-${options.houdiniVersion}-${options.unix_houdini_python3}-${osName}"
                 }
             } else if (options.buildType == "USD") {
                 if (osName == "Ubuntu18") {
-                    options.unix_build_name = "hdRpr-${options.pluginVersion}-USD-ubuntu18.04"
+                    options.ubuntu_build_name = "hdRpr-${options.pluginVersion}-USD-ubuntu18.04"
                 } else {
-                    options.unix_build_name = "hdRpr-${options.pluginVersion}-USD-${osName}"
+                    options.centos_build_name = "hdRpr-${options.pluginVersion}-USD-${osName}"
                 }
             }
+
+            if (osName == "Ubuntu18") options.unix_build_name = options.ubuntu_build_name else options.unix_build_name = options.centos_build_name
 
             archiveArtifacts "hdRpr*.tar.gz"
             String pluginUrl = "${BUILD_URL}/artifact/${options.unix_build_name}.tar.gz"
