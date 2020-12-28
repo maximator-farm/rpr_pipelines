@@ -923,51 +923,55 @@ def executePreBuild(Map options)
             options.tests = tests
 
             options.skippedTests = [:]
-            options.platforms.split(';').each()
-            {
-                if (it)
+            if (options.updateRefs != "No") {
+                options.platforms.split(';').each()
                 {
-                    List tokens = it.tokenize(':')
-                    String osName = tokens.get(0)
-                    String gpuNames = ""
-                    if (tokens.size() > 1)
+                    if (it)
                     {
-                        gpuNames = tokens.get(1)
-                    }
-
-                    if (gpuNames)
-                    {
-                        gpuNames.split(',').each()
+                        List tokens = it.tokenize(':')
+                        String osName = tokens.get(0)
+                        String gpuNames = ""
+                        if (tokens.size() > 1)
                         {
-                            for (test in options.tests) 
+                            gpuNames = tokens.get(1)
+                        }
+
+                        if (gpuNames)
+                        {
+                            gpuNames.split(',').each()
                             {
-                                if (!test.contains(".json")) {
-                                    String[] testNameParts = test.split("-")
-                                    testName = testNameParts[0]
-                                    engine = testNameParts[1]
-                                    try {
-                                        dir ("jobs_launcher") {
-                                            String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
-                                            if (output.contains("True")) {
-                                                if (!options.skippedTests.containsKey(test)) {
-                                                    options.skippedTests[test] = []
+                                for (test in options.tests) 
+                                {
+                                    if (!test.contains(".json")) {
+                                        String[] testNameParts = test.split("-")
+                                        testName = testNameParts[0]
+                                        engine = testNameParts[1]
+                                        try {
+                                            dir ("jobs_launcher") {
+                                                String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
+                                                if (output.contains("True")) {
+                                                    if (!options.skippedTests.containsKey(test)) {
+                                                        options.skippedTests[test] = []
+                                                    }
+                                                    options.skippedTests[test].add("${it}-${osName}")
                                                 }
-                                                options.skippedTests[test].add("${it}-${osName}")
                                             }
                                         }
-                                    }
-                                    catch(Exception e) {
-                                        println(e.toString())
-                                        println(e.getMessage())
+                                        catch(Exception e) {
+                                            println(e.toString())
+                                            println(e.getMessage())
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+                println "Skipped test groups:"
+                println options.skippedTests.inspect()
+            } else {
+                println "Ignore searching of tested groups due to updating of baselines"
             }
-            println "Skipped test groups:"
-            println options.skippedTests.inspect()
         }
     } catch (e) {
         String errorMessage = "Failed to configurate tests."
