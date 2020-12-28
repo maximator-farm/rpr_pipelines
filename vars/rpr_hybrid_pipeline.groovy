@@ -110,6 +110,15 @@ def executeTestCommand(String asicName, String osName, Map options)
 
 def executeTestsCustomQuality(String osName, String asicName, Map options)
 {
+    try {
+        timeout(time: "10", unit: 'MINUTES') {
+            validateDriver(osName, asicName, ["Ubuntu-NVIDIA": "455.26.02"], options)
+        }
+    } catch (e) {
+        println(e.toString())
+        println(e.getMessage())
+    }
+
     cleanWS(osName)
     String error_message = ""
     String REF_PATH_PROFILE
