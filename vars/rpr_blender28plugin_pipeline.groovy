@@ -713,7 +713,7 @@ def executeBuild(String osName, Map options)
 
         outputEnvironmentInfo(osName)
 
-        try {
+        expectedExceptionBlock(title: osName, osName: osName, env: env, options: options, configuration: ExpectedExceptionConfiguration.BUILD_PLUGIN) {
             switch(osName)
             {
                 case 'Windows':
@@ -739,11 +739,6 @@ def executeBuild(String osName, Map options)
                         executeBuildLinux(osName, options);
                     }
             }
-        } catch (e) {
-            String errorMessage = "Failed to build the plugin."
-            GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
-            problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
-            throw e
         }
     }
     catch (e) {

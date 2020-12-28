@@ -14,7 +14,6 @@
  *         problemMessage - Displayed message
  *         rethrow - Describe should exception be rethrown and how (default - No)
  *         scope - scope of problem message (default - Specific)
- *         enableGithubNotification - Update status in Github repo or not
  *         githubNotification - Map with values which describe params for updating status in Github repo
  *         Possible elements:
  *             status - Status which will be set
@@ -39,9 +38,9 @@ def call(Map blockOptions, Closure code) {
                     default:
                         saveProblemMessage(exception, exception["problemMessage"], stage, osName)
                 }
-                if (exception["enableGithubNotification"]) {
+                if (exception["githubNotification"]) {
                     GithubNotificator.updateStatus(blockOptions["options"]["stage"], blockOptions["title"], exception["githubNotification"]["status"], 
-                        blockOptions["env"], blockOptions["options"], exception["githubNotification"]["message"], blockOptions["buildUrl"])
+                        blockOptions["env"], blockOptions["options"], exception["githubNotification"]["message"] ?: "", blockOptions["buildUrl"])
                 }
                 return
             }
