@@ -713,7 +713,7 @@ def executeBuild(String osName, Map options)
 
         outputEnvironmentInfo(osName)
 
-        expectedExceptionBlock(title: osName, osName: osName, env: env, options: options, configuration: ExpectedExceptionConfiguration.BUILD_PLUGIN) {
+        expectedExceptionBlock(title: osName, osName: osName, env: env, options: options, configuration: ExpectedExceptionsConfiguration.BUILD_PLUGIN) {
             switch(osName)
             {
                 case 'Windows':
