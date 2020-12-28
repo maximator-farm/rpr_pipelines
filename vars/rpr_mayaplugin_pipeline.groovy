@@ -923,7 +923,7 @@ def executePreBuild(Map options)
             options.tests = tests
 
             options.skippedTests = [:]
-            if (options.updateRefs != "No") {
+            if (options.updateRefs == "No") {
                 options.platforms.split(';').each()
                 {
                     if (it)
