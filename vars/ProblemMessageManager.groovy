@@ -6,9 +6,9 @@ public class ProblemMessageManager {
         SPECIFIC, GENERAL, GLOBAL
     }
 
-    def static SPECIFIC = ExpectedExecutionThrowTypeValues.SPECIFIC
-    def static GENERAL = ExpectedExecutionThrowTypeValues.GENERAL
-    def static GLOBAL = ExpectedExecutionThrowTypeValues.GLOBAL
+    def static SPECIFIC = ProblemScope.SPECIFIC
+    def static GENERAL = ProblemScope.GENERAL
+    def static GLOBAL = ProblemScope.GLOBAL
 
     def context
     def currentBuild
