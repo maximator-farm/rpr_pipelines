@@ -83,6 +83,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 println("Scheduling ${osName}:${asicName} ${testName}")
 
                                 Map newOptions = options.clone()
+                                newOptions["stage"] = "Test"
                                 newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                 newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
                                 newOptions['tests'] = testName ?: options.tests
@@ -337,6 +338,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                 try {
                                     timeout(time: "${options.PREBUILD_TIMEOUT}", unit: 'MINUTES')
                                     {
+                                        options["stage"] = "PreBuild"
                                         executePreBuild(options)
                                         if(!options['executeBuild'])
                                         {
@@ -403,6 +405,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                         tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
                     }
                 }
+                options["stage"] = "Build"
                 parallel tasks
             }
             catch (e)
@@ -442,6 +445,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                     {
                         def reportBuilderLabels = "Windows && ReportBuilder"
 
+                        options["stage"] = "Deploy"
                         def retringFunction = { nodesList, currentTry ->
                             executeDeploy(options, platformList, testResultList)
                         }
