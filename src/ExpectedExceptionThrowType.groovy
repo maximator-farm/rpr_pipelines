@@ -23,7 +23,7 @@ public class ExpectedExceptionThrowType {
         }
     }
 
-    public static ExpectedExceptionThrowType RETHROW = ExpectedExceptionThrowTypeValues.RETHROW
-    public static ExpectedExceptionThrowType THROW_IN_WRAPPER = ExpectedExceptionThrowTypeValues.THROW_IN_WRAPPER
-    public static ExpectedExceptionThrowType NO = ExpectedExceptionThrowTypeValues.NO
+    def static RETHROW = ExpectedExceptionThrowTypeValues.RETHROW
+    def static THROW_IN_WRAPPER = ExpectedExceptionThrowTypeValues.THROW_IN_WRAPPER
+    def static NO = ExpectedExceptionThrowTypeValues.NO
 }
