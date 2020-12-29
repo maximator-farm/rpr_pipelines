@@ -28,15 +28,15 @@ def call(Map blockOptions, Closure code) {
         for (exception in blockOptions["configuration"]) {
             if ((exception["class"] == e.class) || (exception["class"] == "TimeoutExceeded" && utils.isTimeoutExceeded(e))) {
                 switch(exception["rethrow"]) {
-                    case ExpectedExecutionThrowType.RETHROW:
-                        saveProblemMessage(exception, exception["problemMessage"], stage, osName)
+                    case ExceptionThrowType.RETHROW:
+                        saveProblemMessage(blockOptions["options"], exception, exception["problemMessage"], blockOptions["stage"], blockOptions["osName"])
                         throw e
                         break
-                    case ExpectedExecutionThrowType.THROW_IN_WRAPPER:
+                    case ExceptionThrowType.THROW_IN_WRAPPER:
                         throw new ExpectedExceptionWrapper(exception["problemMessage"], e)
                         break
                     default:
-                        saveProblemMessage(exception, exception["problemMessage"], stage, osName)
+                        saveProblemMessage(blockOptions["options"], exception, exception["problemMessage"], blockOptions["stage"], blockOptions["osName"])
                 }
                 if (exception["githubNotification"]) {
                     GithubNotificator.updateStatus(blockOptions["options"]["stage"], blockOptions["title"], exception["githubNotification"]["status"], 
@@ -51,19 +51,19 @@ def call(Map blockOptions, Closure code) {
 }
 
 
-def saveProblemMessage(Map exception, String message, String stage = "", String osName = "") {
+def saveProblemMessage(Map options, Map exception, String message, String stage = "", String osName = "") {
     def messageFunciton
     // find function for specified scope
     switch(exception["scope"]) {
         case ProblemMessageManager.GENERAL:
-            messageFunciton = problemMessageManager.saveGeneralFailReason
+            messageFunciton = options.problemMessageManager.&saveGeneralFailReason
             break
         case ProblemMessageManager.GLOBAL:
-            messageFunciton = problemMessageManager.saveGlobalFailReason
+            messageFunciton = options.problemMessageManager.&saveGlobalFailReason
             break
         default:
             // SPECIFIC scope is default scope
-            messageFunciton = problemMessageManager.saveSpecificFailReason
+            messageFunciton = options.problemMessageManager.&saveSpecificFailReason
     }
     if (osName) {
         messageFunciton(message, stage, osName) 
