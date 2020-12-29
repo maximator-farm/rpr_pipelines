@@ -1,11 +1,11 @@
+@Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
+
 /**
  * Block which wraps processing of exceptions and notifications for them
  *
  * @param blockOptions Map with options (it's used for support optional params)
  * Possible elements:
  *     title - Name of status check which should be updated
- *     osName (optional) - Name of OS (if it's possible that there are few different OS for same stage)
- *     env - Environment variables
  *     options - Options list
  *     buildUrl (optional) - Url which will be set in status check
  *     configuration - List with Map for each exception
@@ -21,26 +21,31 @@
  * @param code Block of code which is executed
  */
 def call(Map blockOptions, Closure code) {
+    def title = blockOptions["title"]
+    def options = blockOptions["options"]
+    def buildUrl = blockOptions["buildUrl"]
+    def configuration = blockOptions["configuration"]
+
     try {
         code()
     } catch (e) {
         // find necessary exception in configuration
-        for (exception in blockOptions["configuration"]) {
+        for (exception in configuration) {
             if ((exception["class"] == e.class) || (exception["class"] == "TimeoutExceeded" && utils.isTimeoutExceeded(e))) {
                 switch(exception["rethrow"]) {
                     case ExceptionThrowType.RETHROW:
-                        saveProblemMessage(blockOptions["options"], exception, exception["problemMessage"], blockOptions["stage"], blockOptions["osName"])
+                        saveProblemMessage(options, exception, exception["problemMessage"], options["stage"], options["osName"])
                         throw e
                         break
                     case ExceptionThrowType.THROW_IN_WRAPPER:
                         throw new ExpectedExceptionWrapper(exception["problemMessage"], e)
                         break
                     default:
-                        saveProblemMessage(blockOptions["options"], exception, exception["problemMessage"], blockOptions["stage"], blockOptions["osName"])
+                        saveProblemMessage(options, exception, exception["problemMessage"], options["stage"], options["osName"])
                 }
                 if (exception["githubNotification"]) {
-                    GithubNotificator.updateStatus(blockOptions["options"]["stage"], blockOptions["title"], exception["githubNotification"]["status"], 
-                        blockOptions["env"], blockOptions["options"], exception["githubNotification"]["message"] ?: "", blockOptions["buildUrl"])
+                    GithubNotificator.updateStatus(options["stage"], title, exception["githubNotification"]["status"], 
+                        options, exception["githubNotification"]["message"] ?: "", buildUrl)
                 }
                 return
             }
@@ -56,14 +61,14 @@ def saveProblemMessage(Map options, Map exception, String message, String stage 
     // find function for specified scope
     switch(exception["scope"]) {
         case ProblemMessageManager.GENERAL:
-            messageFunciton = options.problemMessageManager.&saveGeneralFailReason
+            messageFunciton = problemMessageManager.&saveGeneralFailReason
             break
         case ProblemMessageManager.GLOBAL:
-            messageFunciton = options.problemMessageManager.&saveGlobalFailReason
+            messageFunciton = problemMessageManager.&saveGlobalFailReason
             break
         default:
             // SPECIFIC scope is default scope
-            messageFunciton = options.problemMessageManager.&saveSpecificFailReason
+            messageFunciton = problemMessageManager.&saveSpecificFailReason
     }
     if (osName) {
         messageFunciton(message, stage, osName) 

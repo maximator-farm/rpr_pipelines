@@ -84,6 +84,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                 Map newOptions = options.clone()
                                 newOptions["stage"] = "Test"
+                                newOptions["osName"] = osName
                                 newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                 newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
                                 newOptions['tests'] = testName ?: options.tests
@@ -379,6 +380,10 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 platforms.split(';').each()
                 {
                     if (it) {
+                        Map newOptions = options.clone()
+                        newOptions["stage"] = "Build"
+                        newOptions["osName"] = osName
+
                         List tokens = it.tokenize(':')
                         String osName = tokens.get(0)
                         String gpuNames = ""
@@ -393,8 +398,8 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                             gpuNames.split(',').each()
                             {
                                 // if not split - testsList doesn't exists
-                                options.testsList = options.testsList ?: ['']
-                                options['testsList'].each() { testName ->
+                                newOptions.testsList = newOptions.testsList ?: ['']
+                                newOptions['testsList'].each() { testName ->
                                     String asicName = it
                                     String testResultItem = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                     testResultList << testResultItem
@@ -402,10 +407,9 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                             }
                         }
 
-                        tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
+                        tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, newOptions)
                     }
                 }
-                options["stage"] = "Build"
                 parallel tasks
             }
             catch (e)

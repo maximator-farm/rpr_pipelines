@@ -16,7 +16,6 @@ import java.util.concurrent.atomic.AtomicInteger
 @Field UniverseClient universeClientParentDev
 @Field Map universeClientsProd = [:]
 @Field Map universeClientsDev = [:]
-@Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
 def getBlenderAddonInstaller(String osName, Map options)
@@ -713,7 +712,7 @@ def executeBuild(String osName, Map options)
 
         outputEnvironmentInfo(osName)
 
-        exceptionsBlock(title: osName, osName: osName, env: env, options: options, configuration: ExceptionsConfiguration.BUILD_PLUGIN) {
+        exceptionsBlock(title: osName, options: options, configuration: ExceptionsConfiguration.BUILD_PLUGIN) {
             switch(osName)
             {
                 case 'Windows':
@@ -1586,7 +1585,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         enginesNames:enginesNames,
                         nodeRetry: nodeRetry,
                         errorsInSuccession: errorsInSuccession,
-                        problemMessageManager: problemMessageManager,
                         platforms:platforms,
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
