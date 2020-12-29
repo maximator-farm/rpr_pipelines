@@ -1,3 +1,6 @@
+import groovy.transform.Field
+
+
 @Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 /**

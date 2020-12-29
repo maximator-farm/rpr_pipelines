@@ -294,7 +294,7 @@ def executeTests(String osName, String asicName, Map options)
     try {
         try {
             timeout(time: "5", unit: 'MINUTES') {
-                GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading tests repository.", "${BUILD_URL}")
+                GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, "Downloading tests repository.", "${BUILD_URL}")
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
@@ -308,7 +308,7 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         try {
-            GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading test scenes.", "${BUILD_URL}")
+            GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, "Downloading test scenes.", "${BUILD_URL}")
             downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Blender2.8Assets/", 'Blender2.8Assets')
         } catch (e) {
             throw new ExpectedExceptionWrapper("Failed to download test scenes.", e)
@@ -318,7 +318,7 @@ def executeTests(String osName, String asicName, Map options)
             Boolean newPluginInstalled = false
             try {
                 timeout(time: "12", unit: 'MINUTES') {
-                    GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Installing the plugin.", "${BUILD_URL}")
+                    GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, "Installing the plugin.", "${BUILD_URL}")
                     getBlenderAddonInstaller(osName, options)
                     newPluginInstalled = installBlenderAddon(osName, options.toolVersion, options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
@@ -335,7 +335,7 @@ def executeTests(String osName, String asicName, Map options)
             try {
                 if (newPluginInstalled) {
                     timeout(time: "6", unit: 'MINUTES') {
-                        GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Building cache.", "${BUILD_URL}")
+                        GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, "Building cache.", "${BUILD_URL}")
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
                             println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
@@ -399,7 +399,7 @@ def executeTests(String osName, String asicName, Map options)
                 try {
                     String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_blender_autotests_baselines" : "/mnt/c/TestResources/rpr_blender_autotests_baselines"
                     baseline_dir = enginePostfix ? "${baseline_dir}-${enginePostfix}" : baseline_dir
-                    GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")
+                    GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, "Downloading reference images.", "${BUILD_URL}")
                     println "[INFO] Downloading reference images for ${options.parsedTests}"
                     options.parsedTests.split(" ").each() {
                         if (it.contains(".json")) {
@@ -411,7 +411,7 @@ def executeTests(String osName, String asicName, Map options)
                 } catch (e) {
                     println("[WARNING] Problem when copying baselines. " + e.getMessage())
                 }
-                GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Executing tests.", "${BUILD_URL}")
+                GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, "Executing tests.", "${BUILD_URL}")
                 executeTestCommand(osName, asicName, options)
             }
             options.executeTestsFinished = true
@@ -450,11 +450,11 @@ def executeTests(String osName, String asicName, Map options)
         println(e.getMessage())
         
         if (e instanceof ExpectedExceptionWrapper) {
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "${e.getMessage()} ${additionalDescription}", "${BUILD_URL}")
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()} ${additionalDescription}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper("${e.getMessage()}\n${additionalDescription}", e.getCause())
         } else {
             String errorMessage = "The reason is not automatically identified. Please contact support."
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "${errorMessage} ${additionalDescription}", "${BUILD_URL}")
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${errorMessage} ${additionalDescription}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper("${errorMessage}\n${additionalDescription}", e)
         }
     } finally {
@@ -485,11 +485,11 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         if (sessionReport.summary.error > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "Some tests were marked as error. Check the report for details.", "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "Some tests were marked as error. Check the report for details.", "${BUILD_URL}")
                         } else if (sessionReport.summary.failed > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "Some tests were marked as failed. Check the report for details.", "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "Some tests were marked as failed. Check the report for details.", "${BUILD_URL}")
                         } else {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "success", env, options, "Tests completed successfully.", "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "success", options, "Tests completed successfully.", "${BUILD_URL}")
                         }
 
                         echo "Stashing test results to : ${options.testResultsName}"
@@ -520,11 +520,11 @@ def executeTests(String osName, String asicName, Map options)
             // throw exception in finally block only if test stage was finished
             if (options.executeTestsFinished) {
                 if (e instanceof ExpectedExceptionWrapper) {
-                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, e.getMessage(), "${BUILD_URL}")
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, e.getMessage(), "${BUILD_URL}")
                     throw e
                 } else {
                     String errorMessage = "An error occurred while saving test results. Please contact support."
-                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, , "${BUILD_URL}")
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, , "${BUILD_URL}")
                     throw new ExpectedExceptionWrapper(errorMessage, e)
                 }
             }
@@ -536,7 +536,7 @@ def executeBuildWindows(Map options)
 {
     dir('RadeonProRenderBlenderAddon\\BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", env, options, "Building the plugin.", "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "pending", options, "Building the plugin.", "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             build_win.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -572,7 +572,7 @@ def executeBuildWindows(Map options)
 
             stash includes: "RadeonProRenderBlender_Windows.zip", name: "appWindows"
 
-            GithubNotificator.updateStatus("Build", "Windows", "success", env, options, "The plugin was successfully built and published.", pluginUrl)
+            GithubNotificator.updateStatus("Build", "Windows", "success", options, "The plugin was successfully built and published.", pluginUrl)
         }
     }
 }
@@ -581,7 +581,7 @@ def executeBuildOSX(Map options)
 {
     dir('RadeonProRenderBlenderAddon/BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", "OSX", "pending", env, options, "Building the plugin.", "${BUILD_URL}/artifact/Build-OSX.log")
+        GithubNotificator.updateStatus("Build", "OSX", "pending", options, "Building the plugin.", "${BUILD_URL}/artifact/Build-OSX.log")
         sh """
             ./build_osx.sh >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -616,7 +616,7 @@ def executeBuildOSX(Map options)
 
             stash includes: "RadeonProRenderBlender_MacOS.zip", name: "appOSX"
 
-            GithubNotificator.updateStatus("Build", "OSX", "success", env, options, "The plugin was successfully built and published.", pluginUrl)
+            GithubNotificator.updateStatus("Build", "OSX", "success", options, "The plugin was successfully built and published.", pluginUrl)
         }
     }
 }
@@ -625,7 +625,7 @@ def executeBuildLinux(String osName, Map options)
 {
     dir('RadeonProRenderBlenderAddon/BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Building the plugin.", "${BUILD_URL}/artifact/Build-Ubuntu18.log")
+        GithubNotificator.updateStatus("Build", osName, "pending", options, "Building the plugin.", "${BUILD_URL}/artifact/Build-Ubuntu18.log")
         sh """
             ./build_linux.sh >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -661,7 +661,7 @@ def executeBuildLinux(String osName, Map options)
 
             stash includes: "RadeonProRenderBlender_${osName}.zip", name: "app${osName}"
 
-            GithubNotificator.updateStatus("Build", osName, "success", env, options, "The plugin was successfully built and published.", pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, "The plugin was successfully built and published.", pluginUrl)
         }
 
     }
@@ -677,7 +677,7 @@ def executeBuild(String osName, Map options)
         dir('RadeonProRenderBlenderAddon')
         {
             try {
-                GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading the plugin repository.")
+                GithubNotificator.updateStatus("Build", osName, "pending", options, "Downloading the plugin repository.")
                 checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], false, options['prBranchName'], options['prRepoName'])
             } catch (e) {
                 String errorMessage
@@ -686,7 +686,7 @@ def executeBuild(String osName, Map options)
                 } else {
                     errorMessage = "Failed to download plugin repository."
                 }
-                GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
+                GithubNotificator.updateStatus("Build", osName, "failure", options, errorMessage)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
                 throw e
             }
@@ -820,7 +820,7 @@ def executePreBuild(Map options)
                 checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
             } catch (e) {
                 String errorMessage = "Failed to download plugin repository."
-                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
+                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", options, errorMessage)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
                 throw e
             }
@@ -896,7 +896,7 @@ def executePreBuild(Map options)
             }
             catch(e) {
                 String errorMessage = "Failed to increment plugin version."
-                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
+                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", options, errorMessage)
                 problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
                 throw e
             }
@@ -1065,7 +1065,7 @@ def executePreBuild(Map options)
         }
     } catch (e) {
         String errorMessage = "Failed to configurate tests."
-        GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
+        GithubNotificator.updateStatus("PreBuild", "Version increment", "error", options, errorMessage)
         problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
         throw e
     }
@@ -1086,8 +1086,8 @@ def executePreBuild(Map options)
             for (int i = 0; i < options.engines.size(); i++) {
                 String engine = options.engines[i]
                 String engineName = options.enginesNames[i]
-                universeClientsProd[engine] = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName, engineName, universeClientParentProd)
-                universeClientsDev[engine] = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName, engineName, universeClientParentDev)
+                universeClientsProd[engine] = new UniverseClient(this, UniverseURLProd, ImageServiceURL, ProducteName, engineName, universeClientParentProd)
+                universeClientsDev[engine] = new UniverseClient(this, UniverseURLDev, ImageServiceURL, ProducteName, engineName, universeClientParentDev)
                 universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
                 universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
             }
@@ -1111,7 +1111,7 @@ def executePreBuild(Map options)
         }
     }
 
-    GithubNotificator.updateStatus("PreBuild", "Version increment", "success", env, options, "PreBuild stage was successfully finished.")
+    GithubNotificator.updateStatus("PreBuild", "Version increment", "success", options, "PreBuild stage was successfully finished.")
 }
 
 def executeDeploy(Map options, List platformList, List testResultList)
@@ -1121,11 +1121,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
         if(options['executeTests'] && testResultList)
         {
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Preparing tests results.", "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, "Preparing tests results.", "${BUILD_URL}")
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
             } catch (e) {
                 String errorMessage = "Failed to download tests repository."
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 throw e
             }
@@ -1198,7 +1198,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             List reportsNames = []
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report.", "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, "Building test report.", "${BUILD_URL}")
                 options.engines.each { engine ->
                     reports.add("${engine}/summary_report.html")
                 }
@@ -1248,7 +1248,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                                 }
                             } catch (e) {
                                 String errorMessage = utils.getReportFailReason(e.getMessage())
-                                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
                                 if (utils.isReportFailCritical(e.getMessage())) {
                                     throw e
                                 } else {
@@ -1262,7 +1262,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
                 println("[ERROR] Failed to build test report.")
                 println(e.toString())
                 println(e.getMessage())
@@ -1347,19 +1347,19 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Publishing test report.", "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, "Publishing test report.", "${BUILD_URL}")
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", env, options, "Report was published successfully. Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, "Report was published successfully. Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", env, options, "Report was published successfully.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, "Report was published successfully.", "${BUILD_URL}/Test_20Report")
                 }
             } catch (e) {
                 String errorMessage = "Failed to publish test report."
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
                 problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 throw e
             }
@@ -1448,8 +1448,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         UniverseURLProd = "${PROD_UMS_URL}"
                         UniverseURLDev = "${DEV_UMS_URL}"
                         ImageServiceURL = "${IS_URL}"
-                        universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
-                        universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
+                        universeClientParentProd = new UniverseClient(this, UniverseURLProd, ProducteName)
+                        universeClientParentDev = new UniverseClient(this, UniverseURLDev, ProducteName)
 
                         options.universeClientsProd = universeClientsProd
                         options.universeClientsDev = universeClientsDev

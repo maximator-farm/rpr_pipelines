@@ -367,7 +367,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                     if (options.problemMessageManager) {
                                         options.problemMessageManager.saveGeneralFailReason("Unknown reason.", "PreBuild")
                                     }
-                                    GithubNotificator.closeUnfinishedSteps(env, options, "PreBuild stage was failed.")
+                                    GithubNotificator.closeUnfinishedSteps(options, "PreBuild stage was failed.")
                                     throw e
                                 }
                             }
@@ -380,13 +380,14 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 platforms.split(';').each()
                 {
                     if (it) {
+                        List tokens = it.tokenize(':')
+                        String osName = tokens.get(0)
+                        String gpuNames = ""
+
                         Map newOptions = options.clone()
                         newOptions["stage"] = "Build"
                         newOptions["osName"] = osName
 
-                        List tokens = it.tokenize(':')
-                        String osName = tokens.get(0)
-                        String gpuNames = ""
                         if (tokens.size() > 1)
                         {
                             gpuNames = tokens.get(1)

@@ -81,8 +81,8 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                         nodeName = env.NODE_NAME
                         retringFunction(nodesList, i)
                         successCurrentNode = true
-                        if (GithubNotificator.getCurrentStatus(stageName, title, env, options) == "failure") {
-                            GithubNotificator.updateStatus(stageName, title, "error", env, options)
+                        if (GithubNotificator.getCurrentStatus(stageName, title, options) == "failure") {
+                            GithubNotificator.updateStatus(stageName, title, "error", options)
                         }
                         if (stageName != 'Test' && options.problemMessageManager) {
                             options.problemMessageManager.clearErrorReasons(stageName, osName) 
@@ -105,14 +105,14 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                             options.problemMessageManager.saveSpecificFailReason("Build was aborted by new commit.", stageName, osName) 
                         }
                         println "[INFO] GOT NEW COMMIT"
-                        GithubNotificator.closeUnfinishedSteps(env, options, "Build was aborted by new commit.")
+                        GithubNotificator.closeUnfinishedSteps(options, "Build was aborted by new commit.")
                         throw e
                     } else if (causeClassName.contains("UserInterruption") || causeClassName.contains("ExceptionCause")) {
                         if (options.problemMessageManager) {
                             options.problemMessageManager.saveSpecificFailReason("Build was aborted by user.", stageName, osName) 
                         }
                         println "[INFO] Build was aborted by user"
-                        GithubNotificator.closeUnfinishedSteps(env, options, "Build was aborted by user.")
+                        GithubNotificator.closeUnfinishedSteps(options, "Build was aborted by user.")
                         throw e
                     }
                 }
@@ -135,7 +135,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                     }
                 }
             } else if (exceptionClassName.contains("ClosedChannelException")) {
-                GithubNotificator.updateStatus(stageName, title, "failure", env, options, "Lost connection with machine. Please contact support.")
+                GithubNotificator.updateStatus(stageName, title, "failure", options, "Lost connection with machine. Please contact support.")
             }
 
             println "[ERROR] Failed on ${env.NODE_NAME} node"
@@ -145,11 +145,11 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             println "Exception stack trace: ${e.getStackTrace()}"
 
             if (utils.isTimeoutExceeded(e)) {
-                GithubNotificator.updateStatus(stageName, title, "failure", env, options, "Stage timeout exceeded.")
+                GithubNotificator.updateStatus(stageName, title, "failure", options, "Stage timeout exceeded.")
             } else {
                 // save unknown reason if any other reason wasn't set
-                if (GithubNotificator.getCurrentStatus(stageName, title, env, options) != "failure") {
-                    GithubNotificator.updateStatus(stageName, title, "failure", env, options, "The reason is not automatically identified. Please contact support.")
+                if (GithubNotificator.getCurrentStatus(stageName, title, options) != "failure") {
+                    GithubNotificator.updateStatus(stageName, title, "failure", options, "The reason is not automatically identified. Please contact support.")
                 }
             }
 
@@ -174,9 +174,9 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                             options.problemMessageManager.saveGeneralFailReason("Unknown reason.", stageName, osName)
                         }
                     }
-                    GithubNotificator.updateStatus(stageName, title, "error", env, options)
+                    GithubNotificator.updateStatus(stageName, title, "error", options)
                     if (stageName == 'Build') {
-                        GithubNotificator.failPluginBuilding(env, options, osName)
+                        GithubNotificator.failPluginBuilding(options, osName)
                     }
                     if (setBuildStatus) {
                         currentBuild.result = "FAILURE"
@@ -197,9 +197,9 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                         options.problemMessageManager.saveGeneralFailReason("Unknown reason.", stageName, osName)
                     }
                 }
-                GithubNotificator.updateStatus(stageName, title, "error", env, options)
+                GithubNotificator.updateStatus(stageName, title, "error", options)
                 if (stageName == 'Build') {
-                    GithubNotificator.failPluginBuilding(env, options, osName)
+                    GithubNotificator.failPluginBuilding(options, osName)
                 }
                 println "[ERROR] All nodes on ${stageName} stage with labels ${labels} failed."
                 if (setBuildStatus) {
