@@ -687,7 +687,7 @@ def executeBuild(String osName, Map options)
                     errorMessage = "Failed to download plugin repository."
                 }
                 GithubNotificator.updateStatus("Build", osName, "failure", options, errorMessage)
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
+                options.problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
                 throw e
             }
         }
@@ -712,7 +712,7 @@ def executeBuild(String osName, Map options)
 
         outputEnvironmentInfo(osName)
 
-        exceptionsBlock(title: osName, options: options, configuration: ExceptionsConfiguration.BUILD_PLUGIN) {
+        withNotifications(title: osName, options: options, configuration: ExceptionsConfiguration.BUILD_PLUGIN) {
             switch(osName)
             {
                 case 'Windows':
@@ -821,7 +821,7 @@ def executePreBuild(Map options)
             } catch (e) {
                 String errorMessage = "Failed to download plugin repository."
                 GithubNotificator.updateStatus("PreBuild", "Version increment", "error", options, errorMessage)
-                problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
+                options.problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
                 throw e
             }
 
@@ -897,7 +897,7 @@ def executePreBuild(Map options)
             catch(e) {
                 String errorMessage = "Failed to increment plugin version."
                 GithubNotificator.updateStatus("PreBuild", "Version increment", "error", options, errorMessage)
-                problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
+                options.problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
                 throw e
             }
         }
@@ -1066,7 +1066,7 @@ def executePreBuild(Map options)
     } catch (e) {
         String errorMessage = "Failed to configurate tests."
         GithubNotificator.updateStatus("PreBuild", "Version increment", "error", options, errorMessage)
-        problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
+        options.problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
         throw e
     }
 
@@ -1126,7 +1126,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             } catch (e) {
                 String errorMessage = "Failed to download tests repository."
                 GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
+                options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 throw e
             }
 
@@ -1253,7 +1253,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                                     throw e
                                 } else {
                                     currentBuild.result = "FAILURE"
-                                    problemMessageManager.saveGlobalFailReason(errorMessage)
+                                    options.problemMessageManager.saveGlobalFailReason(errorMessage)
                                 }
                             }
                         }
@@ -1261,7 +1261,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
+                options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
                 println("[ERROR] Failed to build test report.")
                 println(e.toString())
@@ -1317,13 +1317,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
                     currentBuild.result = "FAILURE"
 
-                    problemMessageManager.saveGlobalFailReason("Some tests marked as error.")
+                    options.problemMessageManager.saveGlobalFailReason("Some tests marked as error.")
                 }
                 else if (summaryReport.failed > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
 
-                    problemMessageManager.saveUnstableReason("Some tests marked as failed.")
+                    options.problemMessageManager.saveUnstableReason("Some tests marked as failed.")
                 }
             }
             catch(e)
@@ -1331,7 +1331,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 println(e.toString())
                 println(e.getMessage())
                 println("[ERROR] CAN'T GET TESTS STATUS")
-                problemMessageManager.saveUnstableReason("Can't get tests status")
+                options.problemMessageManager.saveUnstableReason("Can't get tests status")
                 currentBuild.result = "UNSTABLE"
             }
 
@@ -1360,7 +1360,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             } catch (e) {
                 String errorMessage = "Failed to publish test report."
                 GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
+                options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 throw e
             }
 
@@ -1418,6 +1418,10 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String parallelExecutionTypeString = "TakeAllNodes",
     Integer testCaseRetries = 2)
 {
+    ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
+    Map options = [:]
+    options.problemMessageManager = problemMessageManager
+
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
     SPU = (SPU == 'Default') ? '25' : SPU
@@ -1425,7 +1429,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     theshold = (theshold == 'Default') ? '0.05' : theshold
     def nodeRetry = []
     Map errorsInSuccession = [:]
-    Map options = [:]
 
     try
     {
@@ -1433,7 +1436,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         {
             if (!enginesNames) {
                 String errorMessage = "Engines parameter is required."
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Init")
+                options.problemMessageManager.saveSpecificFailReason(errorMessage, "Init")
                 throw new Exception(errorMessage)
             }
 
@@ -1595,7 +1598,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         }
         catch(e)
         {
-            problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")
+            options.problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")
 
             throw e
         }
@@ -1613,7 +1616,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     finally
     {
 
-        msg = problemMessageManager.publishMessages()
+        msg = options.problemMessageManager.publishMessages()
         if (options.sendToUMS) {
             node("Windows && PreBuild") {
                 try {
