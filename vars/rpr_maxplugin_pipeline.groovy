@@ -1022,8 +1022,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         options.universeClientProd = universeClientProd
                         options.universeClientDev = universeClientDev
                     }
-                    universeClientParentProd.tokenSetup()
-                    universeClientParentDev.tokenSetup()
+                    universeClientProd.tokenSetup()
+                    universeClientDev.tokenSetup()
                 } catch (e) {
                     println("[ERROR] Failed to setup token for UMS. Set sendToUms to false.")
                     sendToUMS = false

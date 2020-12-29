@@ -906,8 +906,8 @@ def call(String projectBranch = "",
                     options.universeClientProd = universeClientProd
                     options.universeClientDev = universeClientDev
                 }
-                universeClientParentProd.tokenSetup()
-                universeClientParentDev.tokenSetup()
+                universeClientProd.tokenSetup()
+                universeClientDev.tokenSetup()
             } catch (e) {
                 println("[ERROR] Failed to setup token for UMS. Set sendToUms to false.")
                 sendToUMS = false
