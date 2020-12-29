@@ -670,7 +670,7 @@ def executePreBuild(Map options)
                         options.jobIdDev = universeClientDev.build["job_id"]
                         options.isUrl = universeClientDev.is_url
                     } else {
-                        println("Failed to create build: ${universeClientProd.build} & ${[".build}. Set sendToUms to false.")
+                        println("Failed to create build: ${universeClientProd.build} & ${universeClientDev.build}. Set sendToUms to false.")
                         options.sendToUMS = false
                     }
                 } catch (e) {
