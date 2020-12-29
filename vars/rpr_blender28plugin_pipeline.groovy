@@ -292,47 +292,32 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
-        try {
+        withNotifications(title: options['stageName'], options: options, configuration: ExceptionsConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: 'MINUTES') {
                 GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, "Downloading tests repository.", "${BUILD_URL}")
                 cleanWS(osName)
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
             }
-        } catch (e) {
-            if (utils.isTimeoutExceeded(e)) {
-                throw new ExpectedExceptionWrapper("Failed to download tests repository due to timeout.", e)
-            } else {
-                throw new ExpectedExceptionWrapper("Failed to download tests repository.", e)
-            }
         }
 
-        try {
+        withNotifications(title: options['stageName'], options: options, configuration: ExceptionsConfiguration.DOWNLOAD_SCENES) {
             GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, "Downloading test scenes.", "${BUILD_URL}")
             downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Blender2.8Assets/", 'Blender2.8Assets')
-        } catch (e) {
-            throw new ExpectedExceptionWrapper("Failed to download test scenes.", e)
         }
 
         try {
             Boolean newPluginInstalled = false
-            try {
+            withNotifications(title: options['stageName'], options: options, configuration: ExceptionsConfiguration.INSTALL_PLUGIN) {
                 timeout(time: "12", unit: 'MINUTES') {
                     GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, "Installing the plugin.", "${BUILD_URL}")
                     getBlenderAddonInstaller(osName, options)
                     newPluginInstalled = installBlenderAddon(osName, options.toolVersion, options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
-            } catch (e) {
-                if (utils.isTimeoutExceeded(e)) {
-                    throw new ExpectedExceptionWrapper("Failed to install the plugin due to timeout.", e)
-                } else {
-                    throw new ExpectedExceptionWrapper("Failed to install the plugin.", e)
-                }
             }
         
-
-            try {
+            withNotifications(title: options['stageName'], options: options, configuration: ExceptionsConfiguration.BUILD_CACHE) {
                 if (newPluginInstalled) {
                     timeout(time: "6", unit: 'MINUTES') {
                         GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, "Building cache.", "${BUILD_URL}")
@@ -343,14 +328,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
                     }
                 }
-            } catch (e) {
-                if (utils.isTimeoutExceeded(e)) {
-                    throw new ExpectedExceptionWrapper("Failed to build cache due to timeout.", e)
-                } else {
-                    throw new ExpectedExceptionWrapper("Failed to build cache.", e)
-                }
-            }
-            
+            }  
         } catch(e) {
             println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
             println(e.toString())
@@ -381,7 +359,7 @@ def executeTests(String osName, String asicName, Map options)
 
         outputEnvironmentInfo(osName, options.stageName, options.currentTry)
 
-        try {
+        withNotifications(title: options['stageName'], options: options, configuration: ExceptionsConfiguration.EXECUTE_TESTS) {
             if (options['updateRefs'].contains('Update')) {
                 executeTestCommand(osName, asicName, options)
                 executeGenTestRefCommand(osName, options, options['updateRefs'].contains('clean'))
@@ -419,12 +397,6 @@ def executeTests(String osName, String asicName, Map options)
             if (options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"]) {
                 // mark that one group was finished and counting of errored groups in succession must be stopped
                 options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] = new AtomicInteger(-1)
-            }
-        } catch (e) {
-            if (utils.isTimeoutExceeded(e)) {
-                throw new ExpectedExceptionWrapper("Failed to execute tests due to timeout.", e)
-            } else {
-                throw new ExpectedExceptionWrapper("An error occurred while executing tests. Please contact support.", e)
             }
         }
 
@@ -676,35 +648,21 @@ def executeBuild(String osName, Map options)
     try {
         dir('RadeonProRenderBlenderAddon')
         {
-            try {
+            withNotifications(title: osName, options: options, configuration: ExceptionsConfiguration.DOWNLOAD_PLUGIN_REPO) {
                 GithubNotificator.updateStatus("Build", osName, "pending", options, "Downloading the plugin repository.")
                 checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], false, options['prBranchName'], options['prRepoName'])
-            } catch (e) {
-                String errorMessage
-                if (e.getMessage() && e.getMessage().contains("Branch not suitable for integration")) {
-                    errorMessage = "Failed to merge branches."
-                } else {
-                    errorMessage = "Failed to download plugin repository."
-                }
-                GithubNotificator.updateStatus("Build", osName, "failure", options, errorMessage)
-                options.problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
-                throw e
             }
         }
 
         if (options.sendToUMS) {
             timeout(time: "5", unit: 'MINUTES') {
                 dir('jobs_launcher') {
-                    try {
+                    withNotifications(title: osName, options: options, configuration: ExceptionsConfiguration.DOWNLOAD_PLUGIN_REPO) {
+                        GithubNotificator.updateStatus("Build", osName, "pending", options, "Downloading the plugin repository.")
                         checkOutBranchOrScm(options['jobsLauncherBranch'], 'git@github.com:luxteam/jobs_launcher.git')
-                    } catch (e) {
-                        if (utils.isTimeoutExceeded(e)) {
-                            println("[WARNING] Failed to download jobs launcher due to timeout")
-                        } else {
-                            println("[WARNING] Failed to download jobs launcher")
-                        }
-                        println(e.toString())
-                        println(e.getMessage())
+                    }
+                    withNotifications(title: osName, printMessage: true, options: options, configuration: ExceptionsConfiguration.DOWNLOAD_JOBS_LAUNCHER) {
+                        checkOutBranchOrScm(options['jobsLauncherBranch'], 'git@github.com:luxteam/jobs_launcher.git')
                     }
                 }
             }
@@ -816,13 +774,8 @@ def executePreBuild(Map options)
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderBlenderAddon')
         {
-            try {
+            withNotifications(title: "Version increment", options: options, configuration: ExceptionsConfiguration.DOWNLOAD_PLUGIN_REPO) {
                 checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
-            } catch (e) {
-                String errorMessage = "Failed to download plugin repository."
-                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", options, errorMessage)
-                options.problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
-                throw e
             }
 
             options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -842,7 +795,7 @@ def executePreBuild(Map options)
                 currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
 
-            try {
+            withNotifications(title: "Version increment", options: options, configuration: ExceptionsConfiguration.INCREMENT_PLUGIN_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
                 if (options['incrementVersion']) {
@@ -894,12 +847,6 @@ def executePreBuild(Map options)
                 currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
             }
-            catch(e) {
-                String errorMessage = "Failed to increment plugin version."
-                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", options, errorMessage)
-                options.problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
-                throw e
-            }
         }
     }
 
@@ -925,7 +872,7 @@ def executePreBuild(Map options)
     options.timeouts = [:]
     options.groupsUMS = []
 
-    try {
+    withNotifications(title: "Version increment", options: options, configuration: ExceptionsConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_blender')
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
@@ -1063,11 +1010,6 @@ def executePreBuild(Map options)
             println "Skipped test groups:"
             println options.skippedTests.inspect()
         }
-    } catch (e) {
-        String errorMessage = "Failed to configurate tests."
-        GithubNotificator.updateStatus("PreBuild", "Version increment", "error", options, errorMessage)
-        options.problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
-        throw e
     }
 
     if (env.CHANGE_URL) {
@@ -1120,14 +1062,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
     try {
         if(options['executeTests'] && testResultList)
         {
-            try {
+            withNotifications(title: "Building test report", options: options, configuration: ExceptionsConfiguration.DOWNLOAD_TESTS_REPO) {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, "Preparing tests results.", "${BUILD_URL}")
                 checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
-            } catch (e) {
-                String errorMessage = "Failed to download tests repository."
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
-                options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                throw e
             }
 
             Map lostStashes = [:]
@@ -1346,7 +1283,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options.testsStatus = ""
             }
 
-            try {
+            withNotifications(title: "Building test report", options: options, configuration: ExceptionsConfiguration.PUBLISH_REPORT) {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, "Publishing test report.", "${BUILD_URL}")
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
 
@@ -1357,13 +1294,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 } else {
                     GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, "Report was published successfully.", "${BUILD_URL}/Test_20Report")
                 }
-            } catch (e) {
-                String errorMessage = "Failed to publish test report."
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
-                options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                throw e
             }
-
 
             println "BUILD RESULT: ${currentBuild.result}"
             println "BUILD CURRENT RESULT: ${currentBuild.currentResult}"
@@ -1420,7 +1351,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
-    options.problemMessageManager = problemMessageManager
+    options["stage"] = "Init"
+    options["problemMessageManager"] = problemMessageManager
 
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
@@ -1430,14 +1362,12 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     def nodeRetry = []
     Map errorsInSuccession = [:]
 
-    try
-    {
-        try
-        {
-            if (!enginesNames) {
-                String errorMessage = "Engines parameter is required."
-                options.problemMessageManager.saveSpecificFailReason(errorMessage, "Init")
-                throw new Exception(errorMessage)
+    try {
+        withNotifications(options: options, configuration: ExceptionsConfiguration.INITIALIZATION) {
+            withNotifications(options: options, configuration: ExceptionsConfiguration.EMPTY_ENGINES_PARAM) {
+                if (!enginesNames) {
+                    throw new Exception()
+                }
             }
 
             sendToUMS = updateRefs.contains('Update') || sendToUMS
@@ -1595,12 +1525,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries
                         ]
-        }
-        catch(e)
-        {
-            options.problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")
-
-            throw e
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
