@@ -794,7 +794,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         println(e.getMessage())
                     }
                 }
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"])
                 {
                     dir("jobs_launcher")
                     {
