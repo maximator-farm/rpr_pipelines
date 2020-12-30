@@ -811,7 +811,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try
             {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report.", "${BUILD_URL}")
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"])
                 {
                     dir("jobs_launcher") {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)

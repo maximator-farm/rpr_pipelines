@@ -251,6 +251,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
 def call(String platforms, def executePreBuild, def executeBuild, def executeTests, def executeDeploy, Map options) {
     try {
         try {
+            options.baseBuildName = currentBuild.displayName
             if (env.BuildPriority) {
                 currentBuild.displayName = "${currentBuild.displayName} (Priority: ${env.BuildPriority})"
                 println("[INFO] Priority was set by BuildPriority parameter")

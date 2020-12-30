@@ -1117,7 +1117,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options.enginesNames.each { engine ->
                     reportsNames.add("Summary Report (${engine})")
                 }
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"])
                 {
                     dir("jobs_launcher") {
                         for (int i = 0; i < options.engines.size(); i++) {
