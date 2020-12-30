@@ -1,4 +1,4 @@
-public class ExceptionsConfiguration {
+public class NotificationConfiguration {
     
     def static ENGINES_PARAM = [
         "exceptions": [
