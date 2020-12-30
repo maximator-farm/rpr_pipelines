@@ -43,7 +43,7 @@ public class ExceptionsConfiguration {
 
     def static BUILD_PLUGIN = [
          ["class": "TimeoutExceeded", "problemMessage": "Failed to download tests repository due to timeout.", 
-         "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+         "rethrow": ExceptionThrowType.THROW_IN_WRAPPER],
 
          ["class": Exception, "problemMessage": "Failed to download tests repository.", 
          "rethrow": ExceptionThrowType.THROW_IN_WRAPPER]
@@ -64,7 +64,7 @@ public class ExceptionsConfiguration {
 
     def static INSTALL_PLUGIN = [
          ["class": "TimeoutExceeded", "problemMessage": "Failed to install the plugin due to timeout.", 
-         "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+         "rethrow": ExceptionThrowType.THROW_IN_WRAPPER],
 
          ["class": Exception, "problemMessage": "Failed to install the plugin.", 
          "rethrow": ExceptionThrowType.THROW_IN_WRAPPER]
@@ -72,7 +72,7 @@ public class ExceptionsConfiguration {
 
     def static BUILD_CACHE = [
          ["class": "TimeoutExceeded", "problemMessage": "Failed to build cache due to timeout.", 
-         "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+         "rethrow": ExceptionThrowType.THROW_IN_WRAPPER],
 
          ["class": Exception, "problemMessage": "Failed to build cache.", 
          "rethrow": ExceptionThrowType.THROW_IN_WRAPPER]
@@ -80,7 +80,7 @@ public class ExceptionsConfiguration {
 
     def static EXECUTE_TESTS = [
          ["class": "TimeoutExceeded", "problemMessage": "Failed to execute tests due to timeout.", 
-         "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+         "rethrow": ExceptionThrowType.THROW_IN_WRAPPER],
 
          ["class": Exception, "problemMessage": "An error occurred while executing tests. Please contact support.", 
          "rethrow": ExceptionThrowType.THROW_IN_WRAPPER]
