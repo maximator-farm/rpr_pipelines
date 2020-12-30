@@ -5,33 +5,53 @@
  * Possible elements:
  *     title - Name of status check which should be updated (required if GithubNotificator is initialized)
  *     options - Options list
- *     buildUrl (optional) - Url which will be set in status check
+ *     beginUrl (optional) - Url which will be set in status check before execution of code
+ *     endUrl (optional) - Url which will be set in status check if code was finished without exceptions
  *     printMessage (optional) - If it's true, print error message instead of its saving (default - false)
- *     configuration - List with Map for each exception
+ *     configuration - Map with configuration of notifications
  *     Possible elements:
- *         class - Class of target exception
- *         problemMessage - Displayed message
- *         rethrow - Describe should exception be rethrown and how (default - No)
- *         scope - scope of problem message (default - Specific)
- *         getMessage - list of messages one of which must be in message of exception
- *         githubNotification - Map with values which describe params for updating status in Github repo
+ *         begin (optional) - Map with configuration of notifications for status check before execution of code
  *         Possible elements:
- *             status - Status which will be set
  *             message (optional) - New message for status check 
+ *         end (optional) - Map with configuration of notifications for status check after execution of code without exceptions
+ *         Possible elements:
+ *             message (optional) - New message for status check 
+ *         exceptions (optional) - List of Maps with configuration of notifications for each exception
+ *         Structure of Maps:
+ *             class - Class of target exception
+ *             problemMessage - Displayed message
+ *             rethrow - Describe should exception be rethrown and how (default - No)
+ *             scope - scope of problem message (default - Specific)
+ *             getMessage - list of messages one of which must be in message of exception
+ *             githubNotification - Map with values which describe params for updating status in Github repo
+ *             Possible elements:
+ *                 status - Status which will be set
+ *                 message (optional) - New message for status check 
  * @param code Block of code which is executed
  */
 def call(Map blockOptions, Closure code) {
     def title = blockOptions["title"]
     def options = blockOptions["options"]
-    def buildUrl = blockOptions["buildUrl"]
+    def beginUrl = blockOptions["beginUrl"]
+    def endUrl = blockOptions["endUrl"]
     def printMessage = blockOptions["printMessage"]
     def configuration = blockOptions["configuration"]
 
     try {
+        if (configuration.begin?.message) {
+            GithubNotificator.updateStatus(options["stage"], title, "success",
+                options, configuration["begin"]["message"], beginUrl)
+        }
+
         code()
+
+        if (configuration.end?.message) {
+            GithubNotificator.updateStatus(options["stage"], title, "success",
+                options, configuration["end"]["message"], endUrl)
+        }
     } catch (e) {
         // find necessary exception in configuration
-        for (exception in configuration) {
+        for (exception in configuration["exceptions"]) {
             if ((exception["class"] == e.class) || (exception["class"] == "TimeoutExceeded" && utils.isTimeoutExceeded(e))) {
                 // check existence of some messages in exception if it's required
                 Boolean exceptionFound = true
@@ -70,7 +90,7 @@ def call(Map blockOptions, Closure code) {
                     }
                     if (exception["githubNotification"]) {
                         GithubNotificator.updateStatus(options["stage"], title, exception["githubNotification"]["status"], 
-                            options, exception["githubNotification"]["message"] ?: exception["problemMessage"], buildUrl)
+                            options, exception["githubNotification"]["message"] ?: exception["problemMessage"])
                     }
                     return
                 }

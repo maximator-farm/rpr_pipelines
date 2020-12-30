@@ -359,15 +359,15 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                             String causeClassName = it.getClass().toString()
                                             if (causeClassName.contains("ExceededTimeout")) {
                                                 if (options.problemMessageManager) {
-                                                    options.problemMessageManager.saveSpecificFailReason("Timeout exceeded.", "PreBuild")
+                                                    options.problemMessageManager.saveSpecificFailReason(NotificationConfiguration.TIMEOUT_EXCEEDED, "PreBuild")
                                                 }
                                             }
                                         }
                                     }
                                     if (options.problemMessageManager) {
-                                        options.problemMessageManager.saveGeneralFailReason("Unknown reason.", "PreBuild")
+                                        options.problemMessageManager.saveGeneralFailReason(NotificationConfiguration.UNKNOWN_REASON, "PreBuild")
                                     }
-                                    GithubNotificator.closeUnfinishedSteps(options, "PreBuild stage was failed.")
+                                    GithubNotificator.closeUnfinishedSteps(options, NotificationConfiguration.PRE_BUILD_STAGE_FAILED)
                                     throw e
                                 }
                             }
