@@ -723,7 +723,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
 
                         if(options.projectBranch != "") {
@@ -928,8 +928,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         forceBuild:forceBuild,
                         reportName:'Test_20Report',
                         splitTestsExecution:splitTestsExecution,
-                        BUILD_TIMEOUT:30,
-                        TEST_TIMEOUT:30,
+                        BUILD_TIMEOUT:45,
+                        TEST_TIMEOUT:45,
                         buildType:buildType,
                         rebuildUSD:rebuildUSD,
                         houdiniVersion:houdiniVersion,

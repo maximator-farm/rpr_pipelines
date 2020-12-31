@@ -231,7 +231,7 @@ def executeTests(String osName, String asicName, Map options)
         }
         options.executeTestsFinished = true
 
-        if (options["errorsInSuccession"]["${osName}-${asicName}"]) {
+        if (options["errorsInSuccession"]["${osName}-${asicName}"] != -1) {
             // mark that one group was finished and counting of errored groups in succession must be stopped
             options["errorsInSuccession"]["${osName}-${asicName}"] = new AtomicInteger(-1)
         }
@@ -641,7 +641,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         println(e.getMessage())
                     }
                 }
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"])
                 {
                     dir("jobs_launcher")
                     {
@@ -831,8 +831,8 @@ def call(String projectBranch = "",
                     options.universeClientProd = universeClientProd
                     options.universeClientDev = universeClientDev
                 }
-                universeClientParentProd.tokenSetup()
-                universeClientParentDev.tokenSetup()
+                universeClientProd.tokenSetup()
+                universeClientDev.tokenSetup()
             } catch (e) {
                 println("[ERROR] Failed to setup token for UMS. Set sendToUms to false.")
                 sendToUMS = false

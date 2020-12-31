@@ -670,7 +670,7 @@ def executePreBuild(Map options)
                         options.jobIdDev = universeClientDev.build["job_id"]
                         options.isUrl = universeClientDev.is_url
                     } else {
-                        println("Failed to create build: ${universeClientProd.build} & ${[".build}. Set sendToUms to false.")
+                        println("Failed to create build: ${universeClientProd.build} & ${universeClientDev.build}. Set sendToUms to false.")
                         options.sendToUMS = false
                     }
                 } catch (e) {
@@ -794,7 +794,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         println(e.getMessage())
                     }
                 }
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"])
                 {
                     dir("jobs_launcher")
                     {
@@ -995,8 +995,8 @@ def call(String projectBranch = "",
                     options.universeClientProd = universeClientProd
                     options.universeClientDev = universeClientDev
                 }
-                universeClientParentProd.tokenSetup()
-                universeClientParentDev.tokenSetup()
+                universeClientProd.tokenSetup()
+                universeClientDev.tokenSetup()
             } catch (e) {
                 println("[ERROR] Failed to setup token for UMS. Set sendToUms to false.")
                 sendToUMS = false

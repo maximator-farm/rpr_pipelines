@@ -387,7 +387,7 @@ def executeTests(String osName, String asicName, Map options)
         }
         options.executeTestsFinished = true
 
-        if (options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"]) {
+        if (options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] != -1) {
             // mark that one group was finished and counting of errored groups in succession must be stopped
             options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] = new AtomicInteger(-1)
         }
@@ -942,43 +942,45 @@ def executePreBuild(Map options)
             options.tests = tests
 
             options.skippedTests = [:]
-            options.platforms.split(';').each()
-            {
-                if (it)
+            if (options.updateRefs == "No") {
+                options.platforms.split(';').each()
                 {
-                    List tokens = it.tokenize(':')
-                    String osName = tokens.get(0)
-                    String gpuNames = ""
-                    if (tokens.size() > 1)
+                    if (it)
                     {
-                        gpuNames = tokens.get(1)
-                    }
-
-                    if (gpuNames)
-                    {
-                        gpuNames.split(',').each()
+                        List tokens = it.tokenize(':')
+                        String osName = tokens.get(0)
+                        String gpuNames = ""
+                        if (tokens.size() > 1)
                         {
-                            for (test in options.tests) 
+                            gpuNames = tokens.get(1)
+                        }
+
+                        if (gpuNames)
+                        {
+                            gpuNames.split(',').each()
                             {
-                                if (!test.contains(".json")) {
-                                    String testName = ""
-                                    String engine = ""
-                                    String[] testNameParts = test.split("-")
-                                    testName = testNameParts[0]
-                                    engine = testNameParts[1]
-                                    dir ("jobs_launcher") {
-                                        try {
-                                            String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
-                                            if (output.contains("True")) {
-                                                if (!options.skippedTests.containsKey(test)) {
-                                                    options.skippedTests[test] = []
+                                for (test in options.tests) 
+                                {
+                                    if (!test.contains(".json")) {
+                                        String testName = ""
+                                        String engine = ""
+                                        String[] testNameParts = test.split("-")
+                                        testName = testNameParts[0]
+                                        engine = testNameParts[1]
+                                        dir ("jobs_launcher") {
+                                            try {
+                                                String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
+                                                if (output.contains("True")) {
+                                                    if (!options.skippedTests.containsKey(test)) {
+                                                        options.skippedTests[test] = []
+                                                    }
+                                                    options.skippedTests[test].add("${it}-${osName}")
                                                 }
-                                                options.skippedTests[test].add("${it}-${osName}")
                                             }
-                                        }
-                                        catch(Exception e) {
-                                            println(e.toString())
-                                            println(e.getMessage())
+                                            catch(Exception e) {
+                                                println(e.toString())
+                                                println(e.getMessage())
+                                            }
                                         }
                                     }
                                 }
@@ -986,9 +988,11 @@ def executePreBuild(Map options)
                         }
                     }
                 }
+                println "Skipped test groups:"
+                println options.skippedTests.inspect()
+            } else {
+                println "Ignore searching of tested groups due to updating of baselines"
             }
-            println "Skipped test groups:"
-            println options.skippedTests.inspect()
         }
 
         if (env.CHANGE_URL) {
@@ -1119,7 +1123,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options.enginesNames.each { engine ->
                     reportsNames.add("Summary Report (${engine})")
                 }
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"])
                 {
                     dir("jobs_launcher") {
                         for (int i = 0; i < options.engines.size(); i++) {
@@ -1318,7 +1322,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
     String customBuildLinkOSX = "",
-    String enginesNames = "Tahoe,Northstar",
+    String enginesNames = "Northstar,Tahoe",
     String tester_tag = "Blender2.8",
     String toolVersion = "2.91",
     String mergeablePR = "",
