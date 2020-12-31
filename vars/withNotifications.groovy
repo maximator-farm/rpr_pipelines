@@ -1,5 +1,5 @@
 /**
- * Block which wraps processing of exceptions and notifications for them
+ * Block which wraps processing of common notifications
  *
  * @param blockOptions Map with options (it's used for support optional params)
  * Possible elements:
@@ -107,20 +107,13 @@ def saveProblemMessage(Map options, Map exception, String message, String stage 
     // find function for specified scope
     switch(exception["scope"]) {
         case ProblemMessageManager.GENERAL:
-            messageFunciton = options.problemMessageManager.&saveGeneralFailReason
+            options.problemMessageManager.saveGeneralFailReason(message, stage, osName)
             break
         case ProblemMessageManager.GLOBAL:
-            messageFunciton = options.problemMessageManager.&saveGlobalFailReason
+            options.problemMessageManager.saveGlobalFailReason(message)
             break
         default:
             // SPECIFIC scope is default scope
-            messageFunciton = options.problemMessageManager.&saveSpecificFailReason
-    }
-    if (osName) {
-        messageFunciton(message, stage, osName) 
-    } else if (stage) {
-        messageFunciton(message, stage) 
-    } else {
-        messageFunciton(message) 
+            options.problemMessageManager.saveSpecificFailReason(message, stage, osName)
     }
 }

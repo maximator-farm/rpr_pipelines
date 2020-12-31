@@ -5,8 +5,6 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
-
 
 def getViewerTool(String osName, Map options)
 {
@@ -106,38 +104,21 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
-        try {
-            timeout(time: "10", unit: 'MINUTES') {
-                GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading tests repository.", "${BUILD_URL}")
+        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
-                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_usdviewer.git')
-            }
-        } catch (e) {
-            if (utils.isTimeoutExceeded(e)) {
-                throw new ExpectedExceptionWrapper("Failed to download tests repository due to timeout.", e)
-            } else {
-                throw new ExpectedExceptionWrapper("Failed to download tests repository.", e)
+                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_usdviewer.git")
             }
         }
 
-        try {
-            timeout(time: "15", unit: 'MINUTES') {
-                GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Unpacking USDViewer package.", "${BUILD_URL}")
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_VIEWER_PACKAGE) {
+            timeout(time: "15", unit: "MINUTES") {
                 getViewerTool(osName, options)
             }
-        } catch (e) {
-            if (utils.isTimeoutExceeded(e)) {
-                throw new ExpectedExceptionWrapper("Failed to unpack USDViewer package due to timeout.", e)
-            } else {
-                throw new ExpectedExceptionWrapper("Failed to unpack USDViewer package.", e)
-            }
         }
 
-        try {
-            GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading test scenes.", "${BUILD_URL}")
-            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Assets/", 'USDViewerAssets')
-        } catch (e) {
-            throw new ExpectedExceptionWrapper("Failed to download test scenes.", e)
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
+            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Assets/", "USDViewerAssets")
         }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
@@ -147,47 +128,37 @@ def executeTests(String osName, String asicName, Map options)
 
         outputEnvironmentInfo(osName, "", options.currentTry)
 
-        try {
-            if(options['updateRefs'].contains('Update')) {
+        if(options["updateRefs"].contains("Update")) {
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, asicName, options)
-                executeGenTestRefCommand(osName, options, options['updateRefs'].contains('clean'))
-                sendFiles('./Work/GeneratedBaselines/', REF_PATH_PROFILE)
+                executeGenTestRefCommand(osName, options, options["updateRefs"].contains("clean"))
+                sendFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
                 // delete generated baselines when they're sent 
                 switch(osName) {
-                    case 'Windows':
+                    case "Windows":
                         bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
                         break;
                     default:
                         sh "rm -rf ./Work/GeneratedBaselines"        
                 }
-            } else {
-                try {
-                    GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")
-                    String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_viewer_autotests_baselines" : "/mnt/c/TestResources/usd_viewer_autotests_baselines"
-                    println "[INFO] Downloading reference images for ${options.tests}"
-                    options.tests.split(" ").each() {
-                        if (it.contains(".json")) {
-                            receiveFiles("${REF_PATH_PROFILE}/", baseline_dir)
-                        } else {
-                            receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
-                        }
+            }
+        } else {
+            withNotifications(title: options["stageName"], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
+                String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_viewer_autotests_baselines" : "/mnt/c/TestResources/usd_viewer_autotests_baselines"
+                println "[INFO] Downloading reference images for ${options.tests}"
+                options.tests.split(" ").each() {
+                    if (it.contains(".json")) {
+                        receiveFiles("${REF_PATH_PROFILE}/", baseline_dir)
+                    } else {
+                        receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
                     }
-                } 
-                catch (e)
-                {
-                    println("Baseline doesn't exist.")
                 }
-                GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Executing tests.", "${BUILD_URL}")
+            }
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, asicName, options)
             }
-            options.executeTestsFinished = true
-        } catch (e) {
-            if (utils.isTimeoutExceeded(e)) {
-                throw new ExpectedExceptionWrapper("Failed to execute tests due to timeout.", e)
-            } else {
-                throw new ExpectedExceptionWrapper("An error occurred while executing tests. Please contact support.", e)
-            }
         }
+        options.executeTestsFinished = true
 
     } catch (e) {
         if (options.currentTry < options.nodeReallocateTries) {
@@ -195,13 +166,13 @@ def executeTests(String osName, String asicName, Map options)
         } 
         println(e.toString())
         println(e.getMessage())
+
         if (e instanceof ExpectedExceptionWrapper) {
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, e.getMessage(), "${BUILD_URL}")
-            throw e
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()} ${additionalDescription}", "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper("${e.getMessage()}\n${additionalDescription}", e.getCause())
         } else {
-            String errorMessage = "The reason is not automatically identified. Please contact support."
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, errorMessage, "${BUILD_URL}")
-            throw new ExpectedExceptionWrapper(errorMessage, e)
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED} ${additionalDescription}", "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper("${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED}\n${additionalDescription}", e)
         }
     }
     finally {
@@ -221,11 +192,11 @@ def executeTests(String osName, String asicName, Map options)
                         sessionReport = readJSON file: 'Results/USDViewer/session_report.json'
 
                         if (sessionReport.summary.error > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "Some tests were marked as error. Check the report for details.", "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
                         } else if (sessionReport.summary.failed > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "Some tests were marked as failed. Check the report for details.", "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_FAILED, "${BUILD_URL}")
                         } else {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "success", env, options, "Tests completed successfully.", "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
                         }
 
                         echo "Stashing test results to : ${options.testResultsName}"
@@ -259,12 +230,11 @@ def executeTests(String osName, String asicName, Map options)
             // throw exception in finally block only if test stage was finished
             if (options.executeTestsFinished) {
                 if (e instanceof ExpectedExceptionWrapper) {
-                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, e.getMessage(), "${BUILD_URL}")
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, e.getMessage(), "${BUILD_URL}")
                     throw e
                 } else {
-                    String errorMessage = "An error occurred while saving test results. Please contact support."
-                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, , "${BUILD_URL}")
-                    throw new ExpectedExceptionWrapper(errorMessage, e)
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.FAILED_TO_SAVE_RESULTS, "${BUILD_URL}")
+                    throw new ExpectedExceptionWrapper(NotificationConfiguration.FAILED_TO_SAVE_RESULTS, e)
                 }
             }
         }
@@ -273,12 +243,11 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows(Map options)
 {
-    GithubNotificator.updateStatus("Build", "Windows", "pending", env, options, "Building USDViewer package.", "${BUILD_URL}/artifact/${STAGE_NAME}.USDPixar.log")
     withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;${PATH}", "WORKSPACE=${env.WORKSPACE.toString().replace('\\', '/')}"]) {
         outputEnvironmentInfo("Windows", "${STAGE_NAME}.EnvVariables")
 
         // vcvars64.bat sets VS/msbuild env
-        try {
+        withNotifications(title: "Windows", options: options, beginUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.USDPixar.log", configuration: NotificationConfiguration.BUILDING_VIEWER) {
             bat """
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
 
@@ -300,14 +269,10 @@ def executeBuildWindows(Map options)
                     -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE -DPXR_USE_PYTHON_3=ON >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
                 cmake --build build --config Release --target install >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
             """
-        } catch (e) {
-            String errorMessage = "Failed during USDViewer building."
-            GithubNotificator.updateStatus("Build", "Windows", "failure", env, options, errorMessage)
-            throw e
         }
 
         // delete files before zipping
-        try {
+        withNotifications(title: "Ubuntu18", options: options, endUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.PACKAGIING_VIEWER) {
             bat """
                 del RPRViewer\\binary\\inst\\pxrConfig.cmake
                 rmdir /Q /S RPRViewer\\binary\\inst\\cmake
@@ -320,67 +285,48 @@ def executeBuildWindows(Map options)
                 del RPRViewer\\binary\\inst\\lib\\*.pdb
                 del RPRViewer\\binary\\inst\\plugin\\usd\\*.lib
             """
-        } catch (e) {
-            String errorMessage = "Failed during artifacts copying building."
-            GithubNotificator.updateStatus("Build", "Windows", "failure", env, options, errorMessage)
-            throw e
-        }
 
-        // build USD Viewer installer
-        // TODO: remove try-catch when it will be merged in master
-        try {
-            dir("RPRViewer") {
-                bat """
-                    "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log
-                """
-                archiveArtifacts artifacts: "RPRViewer_Setup.exe", allowEmptyArchive: false
+            try {
+                dir("RPRViewer") {
+                    bat """
+                        "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log
+                    """
+                    archiveArtifacts artifacts: "RPRViewer_Setup.exe", allowEmptyArchive: false
+                }
+            } catch (e) {
+                println(e.toString())
+                println(e.getMessage())
+                println(e.getStackTrace())
+                //currentBuild.result = "FAILURE"
+                println "[ERROR] Failed to build USD Viewer installer"
             }
-        } catch (e) {
-            println(e.toString())
-            println(e.getMessage())
-            println(e.getStackTrace())
-            //currentBuild.result = "FAILURE"
-            println "[ERROR] Failed to build USD Viewer installer"
+
+            // TODO: filter files for archive
+            zip archive: true, dir: "RPRViewer\\binary\\inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
+            stash includes: "RadeonProUSDViewer_Windows.zip", name: "appWindows"
+            options.pluginWinSha = sha1 "RadeonProUSDViewer_Windows.zip"
         }
-
-        // TODO: filter files for archive
-        zip archive: true, dir: "RPRViewer\\binary\\inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
-        stash includes: "RadeonProUSDViewer_Windows.zip", name: "appWindows"
-        options.pluginWinSha = sha1 "RadeonProUSDViewer_Windows.zip"
-
-        GithubNotificator.updateStatus("Build", "Windows", "success", env, options, "USDViewer package was successfully built and published.", "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip")
     }
 }
 
 def executeBuild(String osName, Map options)
 {
     try {
-        try {
-            GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading USDViewer repository.")
-            checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
-        } catch (e) {
-            String errorMessage = "Failed to download RPRViewer repository."
-            GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
-            problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
-            throw e
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_VIEWER_REPO) {
+            checkOutBranchOrScm(options["projectBranch"], options["projectRepo"])
         }
 
-        try {
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_VIEWER) {
             switch (osName) {
-                case 'Windows':
+                case "Windows":
                     executeBuildWindows(options);
                     break;
-                case 'OSX':
+                case "OSX":
                     println "OS isn't supported."
                     break;
                 default:
                     println "OS isn't supported."
             }
-        } catch (e) {
-            String errorMessage = "Failed to build USDViewer package."
-            GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
-            problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
-            throw e
         }
     }
     catch (e) {
@@ -405,13 +351,8 @@ def executePreBuild(Map options)
         options.testsPackage = "smoke.json"
     }
 
-    try {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], true)
-    } catch (e) {
-        String errorMessage = "Failed to download USDViewer repository."
-        GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
-        problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
-        throw e
+    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_VIEWER_REPO) {
+        checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
     }
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -453,7 +394,7 @@ def executePreBuild(Map options)
     def tests = []
     options.timeouts = [:]
 
-    try {
+    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdviewer')
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_usdviewer.git')
@@ -566,22 +507,15 @@ def executePreBuild(Map options)
             println "Skipped test groups:"
             println options.skippedTests.inspect()
         }
-    } catch (e) {
-        String errorMessage = "Failed to configurate tests."
-        GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
-        problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
-        throw e
+
+        if (env.CHANGE_URL) {
+            options.githubNotificator.initPR(options, "${BUILD_URL}")
+        }
+
+        options.testsList = options.tests
+
+        println "timeouts: ${options.timeouts}"
     }
-
-    if (env.CHANGE_URL) {
-        options.githubNotificator.initPR(options, "${BUILD_URL}")
-    }
-
-    options.testsList = options.tests
-
-    println "timeouts: ${options.timeouts}"
-
-    GithubNotificator.updateStatus("PreBuild", "Version increment", "success", env, options, "PreBuild stage was successfully finished.")
 }
 
 def executeDeploy(Map options, List platformList, List testResultList)
@@ -590,14 +524,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
     {
         if(options['executeTests'] && testResultList)
         {
-            try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Preparing tests results.", "${BUILD_URL}")
-                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_usdviewer.git')
-            } catch (e) {
-                String errorMessage = "Failed to download tests repository."
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                throw e
+            withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_usdviewer.git")
             }
 
             List lostStashes = []
@@ -638,7 +566,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             String branchName = env.BRANCH_NAME ?: options.projectBranch
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report.", "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"])
                 {
                     dir("jobs_launcher") {
@@ -654,9 +582,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
                 if (utils.isReportFailCritical(e.getMessage())) {
-                    problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
+                    options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                     println("[ERROR] Failed to build test report.")
                     println(e.toString())
                     println(e.getMessage())
@@ -675,7 +603,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     throw e
                 } else {
                     currentBuild.result = "FAILURE"
-                    problemMessageManager.saveGlobalFailReason(errorMessage)
+                    options.problemMessageManager.saveGlobalFailReason(errorMessage)
                 }
             }
 
@@ -716,13 +644,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
                     currentBuild.result = "FAILURE"
 
-                    problemMessageManager.saveGlobalFailReason("Some tests marked as error")
+                    options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
                 }
                 else if (summaryReport.failed > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
 
-                    problemMessageManager.saveUnstableReason("Some tests marked as failed")
+                    options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
                 }
             }
             catch(e)
@@ -730,7 +658,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 println(e.toString())
                 println(e.getMessage())
                 println("[ERROR] CAN'T GET TESTS STATUS")
-                problemMessageManager.saveUnstableReason("Can't get tests status")
+                options.problemMessageManager.saveUnstableReason(NotificationConfiguration.CAN_NOT_GET_TESTS_STATUS)
                 currentBuild.result = "UNSTABLE"
             }
 
@@ -745,22 +673,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options.testsStatus = ""
             }
 
-            try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Publishing test report.", "${BUILD_URL}")
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary Report, Performance Report, Compare Report")
+            withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
+
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", env, options, "Report was published successfully. Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", env, options, "Report was published successfully.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
-            } catch (e) {
-                String errorMessage = "Failed to publish test report."
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                throw e
             }
         }
     }
@@ -784,13 +706,16 @@ def call(String projectBranch = "",
          String parallelExecutionTypeString = "TakeAllNodes",
          Integer testCaseRetries = 2)
 {
-    def nodeRetry = []
+    ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
+    options["stage"] = "Init"
+    options["problemMessageManager"] = problemMessageManager
 
-    try 
-    {
-        try 
-        {   
+    def nodeRetry = []
+
+    try {
+        withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+
             String PRJ_ROOT='rpr-core'
             String PRJ_NAME='USDViewer'
             String projectRepo='git@github.com:Radeon-Pro/RPRViewer.git'
@@ -832,12 +757,6 @@ def call(String projectBranch = "",
                         testCaseRetries:testCaseRetries
                         ]
         } 
-        catch(e)
-        {
-            problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")
-
-            throw e
-        }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
     }

@@ -16,7 +16,6 @@ import java.util.concurrent.atomic.AtomicInteger
 @Field UniverseClient universeClientParentDev
 @Field Map universeClientsProd = [:]
 @Field Map universeClientsDev = [:]
-@Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
 
 
 def getMayaPluginInstaller(String osName, Map options)
@@ -253,61 +252,35 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
     
     try {
-        try {
-            timeout(time: "5", unit: 'MINUTES') {
-                GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading tests repository.", "${BUILD_URL}")
+        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
-                println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
-            }
-        } catch (e) {
-            if (utils.isTimeoutExceeded(e)) {
-                throw new ExpectedExceptionWrapper("Failed to download tests repository due to timeout.", e)
-            } else {
-                throw new ExpectedExceptionWrapper("Failed to download tests repository.", e)
+                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_maya.git")
             }
         }
 
-        try {
-            GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading test scenes.", "${BUILD_URL}")
-            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MayaAssets/", 'MayaAssets')
-        } catch (e) {
-            throw new ExpectedExceptionWrapper("Failed to download test scenes.", e)
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
+            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MayaAssets/", "MayaAssets")
         }
 
         try {
             Boolean newPluginInstalled = false
-            try {
-                timeout(time: "15", unit: 'MINUTES') {
-                    GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Installing the plugin.", "${BUILD_URL}")
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+                timeout(time: "15", unit: "MINUTES") {
                     getMayaPluginInstaller(osName, options)
-                    newPluginInstalled = installMSIPlugin(osName, 'Maya', options)
+                    newPluginInstalled = installMSIPlugin(osName, "Maya", options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
-                }
-            } catch (e) {
-                if (utils.isTimeoutExceeded(e)) {
-                    throw new ExpectedExceptionWrapper("Failed to install the plugin due to timeout.", e)
-                } else {
-                    throw new ExpectedExceptionWrapper("Failed to install the plugin.", e)
                 }
             }
         
-            try {
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
                 if (newPluginInstalled) {
-                    timeout(time: "6", unit: 'MINUTES') {
-                        GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Building cache.", "${BUILD_URL}")
+                    timeout(time: "6", unit: "MINUTES") {
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
                         if(!fileExists("./Work/Results/Maya/cache_building.jpg")){
-                            println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
                             throw new ExpectedExceptionWrapper("No output image after cache building.", new Exception("No output image after cache building."))
                         }
                     }
-                }
-            } catch (e) {
-                if (utils.isTimeoutExceeded(e)) {
-                    throw new ExpectedExceptionWrapper("Failed to build cache due to timeout.", e)
-                } else {
-                    throw new ExpectedExceptionWrapper("Failed to build cache.", e)
                 }
             }
             
@@ -341,53 +314,44 @@ def executeTests(String osName, String asicName, Map options)
 
         outputEnvironmentInfo(osName, options.stageName, options.currentTry)
 
-        try {
-            if(options['updateRefs'].contains('Update'))
-            {
+        if(options["updateRefs"].contains("Update")) {
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, asicName, options)
-                executeGenTestRefCommand(osName, options, options['updateRefs'].contains('clean'))
-                sendFiles('./Work/GeneratedBaselines/', REF_PATH_PROFILE)
+                executeGenTestRefCommand(osName, options, options["updateRefs"].contains("clean"))
+                sendFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
                 // delete generated baselines when they're sent 
                 switch(osName) {
-                    case 'Windows':
+                    case "Windows":
                         bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
                         break;
                     default:
                         sh "rm -rf ./Work/GeneratedBaselines"        
                 }
             }
-            else
-            {
-                try {
-                    String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_maya_autotests_baselines" : "/mnt/c/TestResources/rpr_maya_autotests_baselines"
-                    baseline_dir = enginePostfix ? "${baseline_dir}-${enginePostfix}" : baseline_dir
-                    GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Downloading reference images.", "${BUILD_URL}")
-                    println "[INFO] Downloading reference images for ${options.parsedTests}"
-                    options.parsedTests.split(" ").each() {
-                        if (it.contains(".json")) {
-                            receiveFiles("${REF_PATH_PROFILE}/", baseline_dir)
-                        } else {
-                            receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
-                        }
+        }
+        else
+        {
+            withNotifications(title: options["stageName"], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
+                String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_maya_autotests_baselines" : "/mnt/c/TestResources/rpr_maya_autotests_baselines"
+                baseline_dir = enginePostfix ? "${baseline_dir}-${enginePostfix}" : baseline_dir
+                println "[INFO] Downloading reference images for ${options.parsedTests}"
+                options.parsedTests.split(" ").each() {
+                    if (it.contains(".json")) {
+                        receiveFiles("${REF_PATH_PROFILE}/", baseline_dir)
+                    } else {
+                        receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
                     }
-                } catch (e) {
-                    println("[WARNING] Problem when copying baselines. " + e.getMessage())
                 }
-                GithubNotificator.updateStatus("Test", options['stageName'], "pending", env, options, "Executing tests.", "${BUILD_URL}")
+            }
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, asicName, options)
             }
-            options.executeTestsFinished = true
+        }
+        options.executeTestsFinished = true
 
-            if (options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"]) {
-                // mark that one group was finished and counting of errored groups in succession must be stopped
-                options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] = new AtomicInteger(-1)
-            }
-        } catch (e) {
-            if (utils.isTimeoutExceeded(e)) {
-                throw new ExpectedExceptionWrapper("Failed to execute tests due to timeout.", e)
-            } else {
-                throw new ExpectedExceptionWrapper("An error occurred while executing tests. Please contact support.", e)
-            }
+        if (options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"]) {
+            // mark that one group was finished and counting of errored groups in succession must be stopped
+            options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] = new AtomicInteger(-1)
         }
 
     } catch (e) {
@@ -412,11 +376,11 @@ def executeTests(String osName, String asicName, Map options)
         println(e.getMessage())
         
         if (e instanceof ExpectedExceptionWrapper) {
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "${e.getMessage()} ${additionalDescription}", "${BUILD_URL}")
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()} ${additionalDescription}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper("${e.getMessage()}\n${additionalDescription}", e.getCause())
         } else {
             String errorMessage = "The reason is not automatically identified. Please contact support."
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "${errorMessage} ${additionalDescription}", "${BUILD_URL}")
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${errorMessage} ${additionalDescription}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper("${errorMessage}\n${additionalDescription}", e)
         }
     } finally {
@@ -447,11 +411,11 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         if (sessionReport.summary.error > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "Some tests were marked as error. Check the report for details.", "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
                         } else if (sessionReport.summary.failed > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, "Some tests were marked as failed. Check the report for details.", "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_FAILED, "${BUILD_URL}")
                         } else {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "success", env, options, "Tests completed successfully.", "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
                         }
 
                         echo "Stashing test results to : ${options.testResultsName}"
@@ -483,12 +447,11 @@ def executeTests(String osName, String asicName, Map options)
             // throw exception in finally block only if test stage was finished
             if (options.executeTestsFinished) {
                 if (e instanceof ExpectedExceptionWrapper) {
-                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, e.getMessage(), "${BUILD_URL}")
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, e.getMessage(), "${BUILD_URL}")
                     throw e
                 } else {
-                    String errorMessage = "An error occurred while saving test results. Please contact support."
-                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", env, options, , "${BUILD_URL}")
-                    throw new ExpectedExceptionWrapper(errorMessage, e)
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.FAILED_TO_SAVE_RESULTS, "${BUILD_URL}")
+                    throw new ExpectedExceptionWrapper(NotificationConfiguration.FAILED_TO_SAVE_RESULTS, e)
                 }
             }
         }
@@ -499,7 +462,7 @@ def executeBuildWindows(Map options)
 {
     dir('RadeonProRenderMayaPlugin\\MayaPkg')
     {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", env, options, "Building the plugin.", "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILDING_PLUGIN, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -543,7 +506,7 @@ def executeBuildWindows(Map options)
         options.pluginWinSha = sha1 'RadeonProRenderMaya.msi'
         stash includes: 'RadeonProRenderMaya.msi', name: 'appWindows'
 
-        GithubNotificator.updateStatus("Build", "Windows", "success", env, options, "The plugin was successfully built and published.", pluginUrl)
+        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.PLUGIN_BUILT, pluginUrl)
     }
 }
 
@@ -551,7 +514,7 @@ def executeBuildOSX(Map options)
 {
     dir('RadeonProRenderMayaPlugin/MayaPkg')
     {
-        GithubNotificator.updateStatus("Build", "OSX", "pending", env, options, "Building plugin.", "${BUILD_URL}/artifact/Build-OSX.log")
+        GithubNotificator.updateStatus("Build", "OSX", "pending", options, NotificationConfiguration.BUILDING_PLUGIN, "${BUILD_URL}/artifact/Build-OSX.log")
         sh """
             ./build_osx_installer.sh >> ../../${STAGE_NAME}.log 2>&1
         """
@@ -583,7 +546,7 @@ def executeBuildOSX(Map options)
             // options.productCode = "unknown"
             options.pluginOSXSha = sha1 'RadeonProRenderMaya.dmg'
 
-            GithubNotificator.updateStatus("Build", "OSX", "success", env, options, "The plugin was successfully built and published.", pluginUrl)
+            GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.PLUGIN_BUILT, pluginUrl)
         }
     }
 }
@@ -597,37 +560,18 @@ def executeBuild(String osName, Map options)
     }
 
     try {
-        dir('RadeonProRenderMayaPlugin')
+        dir("RadeonProRenderMayaPlugin")
         {
-            try {
-                GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading plugin repository.")
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo, false, options['prBranchName'], options['prRepoName'])
-            } catch (e) {
-                String errorMessage
-                if (e.getMessage() && e.getMessage().contains("Branch not suitable for integration")) {
-                    errorMessage = "Failed to merge branches."
-                } else {
-                    errorMessage = "Failed to download plugin repository."
-                }
-                GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
-                throw e
+            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_PLUGIN_REPO) {
+                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
             }
         }
 
         if (options.sendToUMS) {
-            timeout(time: "5", unit: 'MINUTES') {
-                dir('jobs_launcher') {
-                    try {
-                        checkOutBranchOrScm(options['jobsLauncherBranch'], 'git@github.com:luxteam/jobs_launcher.git')
-                    } catch (e) {
-                        if (utils.isTimeoutExceeded(e)) {
-                            println("[WARNING] Failed to download jobs launcher due to timeout")
-                        } else {
-                            println("[WARNING] Failed to download jobs launcher")
-                        }
-                        println(e.toString())
-                        println(e.getMessage())
+            timeout(time: "5", unit: "MINUTES") {
+                dir("jobs_launcher") {
+                    withNotifications(title: osName, printMessage: true, options: options, configuration: NotificationConfiguration.DOWNLOAD_JOBS_LAUNCHER) {
+                        checkOutBranchOrScm(options["jobsLauncherBranch"], "git@github.com:luxteam/jobs_launcher.git")
                     }
                 }
             }
@@ -635,23 +579,17 @@ def executeBuild(String osName, Map options)
 
         outputEnvironmentInfo(osName)
 
-        try {
-            switch(osName)
-            {
-            case 'Windows':
-                executeBuildWindows(options);
-                break;
-            case 'OSX':
-                executeBuildOSX(options);
-                break;
-            default:
-                echo "[WARNING] ${osName} is not supported"
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_PLUGIN) {
+            switch(osName) {
+                case "Windows":
+                    executeBuildWindows(options);
+                    break;
+                case "OSX":
+                    executeBuildOSX(options);
+                    break;
+                default:
+                    echo "[WARNING] ${osName} is not supported"
             }
-        } catch (e) {
-            String errorMessage = "Failed to build the plugin."
-            GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
-            problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
-            throw e
         }
     } catch (e) {
         throw e
@@ -728,13 +666,8 @@ def executePreBuild(Map options)
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderMayaPlugin')
         {
-            try {
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
-            } catch (e) {
-                String errorMessage = "Failed to download plugin repository."
-                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
-                problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
-                throw e
+            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_PLUGIN_REPO) {
+                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
             }
 
             options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -753,7 +686,7 @@ def executePreBuild(Map options)
                 currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
 
-            try {
+            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_PLUGIN_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
 
                 if (options['incrementVersion']) {
@@ -803,11 +736,6 @@ def executePreBuild(Map options)
                 currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
                 currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-            } catch (e) {
-                String errorMessage = "Failed to increment plugin version."
-                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
-                problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
-                throw e
             }
         }
     }
@@ -834,7 +762,7 @@ def executePreBuild(Map options)
     options.timeouts = [:]
     options.groupsUMS = []
 
-    try {
+    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_maya') 
         {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
@@ -969,55 +897,48 @@ def executePreBuild(Map options)
             println "Skipped test groups:"
             println options.skippedTests.inspect()
         }
-    } catch (e) {
-        String errorMessage = "Failed to configurate tests."
-        GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
-        problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
-        throw e
-    }
 
-    if (env.CHANGE_URL) {
-        options.githubNotificator.initPR(options, "${BUILD_URL}")
-    }
+        if (env.CHANGE_URL) {
+            options.githubNotificator.initPR(options, "${BUILD_URL}")
+        }
 
-    options.testsList = options.tests
+        options.testsList = options.tests
 
-    println "timeouts: ${options.timeouts}"
+        println "timeouts: ${options.timeouts}"
 
-    if (options.sendToUMS){
-        try {
-            // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-            universeClientParentProd.createBuild('', '', false, options)
-            universeClientParentDev.createBuild('', '', false, options)
-            for (int i = 0; i < options.engines.size(); i++) {
-                String engine = options.engines[i]
-                String engineName = options.enginesNames[i]
-                universeClientsProd[engine] = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName, engineName, universeClientParentProd)
-                universeClientsDev[engine] = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName, engineName, universeClientParentDev)
-                universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
-                universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
-            }
+        if (options.sendToUMS){
+            try {
+                // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
+                universeClientParentProd.createBuild('', '', false, options)
+                universeClientParentDev.createBuild('', '', false, options)
+                for (int i = 0; i < options.engines.size(); i++) {
+                    String engine = options.engines[i]
+                    String engineName = options.enginesNames[i]
+                    universeClientsProd[engine] = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName, engineName, universeClientParentProd)
+                    universeClientsDev[engine] = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName, engineName, universeClientParentDev)
+                    universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
+                    universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
+                }
 
-            if (universeClientParentProd.build != null || universeClientParentDev.build != null){
-                options.buildIdProd = universeClientParentProd.build["id"]
-                options.jobIdProd = universeClientParentProd.build["job_id"]
-                options.isUrl = ImageServiceURL
+                if (universeClientParentProd.build != null || universeClientParentDev.build != null){
+                    options.buildIdProd = universeClientParentProd.build["id"]
+                    options.jobIdProd = universeClientParentProd.build["job_id"]
+                    options.isUrl = ImageServiceURL
 
-                options.buildIdDev = universeClientParentDev.build["id"]
-                options.jobIdDev = universeClientParentDev.build["job_id"]
-                options.isUrl = ImageServiceURL
-            } else {
-                println("Failed to create build: ${universeClientParentProd.build} & ${universeClientParentDev.build}. Set sendToUms to false.")
+                    options.buildIdDev = universeClientParentDev.build["id"]
+                    options.jobIdDev = universeClientParentDev.build["job_id"]
+                    options.isUrl = ImageServiceURL
+                } else {
+                    println("Failed to create build: ${universeClientParentProd.build} & ${universeClientParentDev.build}. Set sendToUms to false.")
+                    options.sendToUMS = false
+                }
+            } catch (e) {
+                println("Failed to create build in UMS. Set sendToUms to false.")
+                println(e.toString())
                 options.sendToUMS = false
             }
-        } catch (e) {
-            println("Failed to create build in UMS. Set sendToUms to false.")
-            println(e.toString())
-            options.sendToUMS = false
         }
     }
-
-    GithubNotificator.updateStatus("PreBuild", "Version increment", "success", env, options, "PreBuild stage was successfully finished.")
 }
 
 def executeDeploy(Map options, List platformList, List testResultList)
@@ -1026,14 +947,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
     try {
         if(options['executeTests'] && testResultList)
         {
-            try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Preparing tests results.", "${BUILD_URL}")
-                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
-            } catch (e) {
-                String errorMessage = "Failed to download tests repository."
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                throw e
+            withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_maya.git")
             }
 
             Map lostStashes = [:]
@@ -1104,9 +1019,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             List reports = []
             List reportsNames = []
 
-            try
-            {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Building test report.", "${BUILD_URL}")
+            try {
+                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 options.engines.each { engine ->
                     reports.add("${engine}/summary_report.html")
                 }
@@ -1157,12 +1071,12 @@ def executeDeploy(Map options, List platformList, List testResultList)
                                 }
                             } catch (e) {
                                 String errorMessage = utils.getReportFailReason(e.getMessage())
-                                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
                                 if (utils.isReportFailCritical(e.getMessage())) {
                                     throw e
                                 } else {
                                     currentBuild.result = "FAILURE"
-                                    problemMessageManager.saveGlobalFailReason(errorMessage)
+                                    options.problemMessageManager.saveGlobalFailReason(errorMessage)
                                 }
                             }
                         }
@@ -1170,8 +1084,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
+                options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
                 println("[ERROR] Failed to build test report.")
                 println(e.toString())
                 println(e.getMessage())
@@ -1226,13 +1140,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
                     currentBuild.result = "FAILURE"
 
-                    problemMessageManager.saveGlobalFailReason("Some tests marked as error")
+                    options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
                 }
                 else if (summaryReport.failed > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
 
-                    problemMessageManager.saveUnstableReason("Some tests marked as failed")
+                    options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
                 }
             }
             catch(e)
@@ -1240,7 +1154,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 println(e.toString())
                 println(e.getMessage())
                 println("[ERROR] CAN'T GET TESTS STATUS")
-                problemMessageManager.saveUnstableReason("Can't get tests status")
+                options.problemMessageManager.saveUnstableReason(NotificationConfiguration.CAN_NOT_GET_TESTS_STATUS)
                 currentBuild.result = "UNSTABLE"
             }
 
@@ -1255,22 +1169,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options.testsStatus = ""
             }
 
-            try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", env, options, "Publishing test report.", "${BUILD_URL}")
+            withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", env, options, "Report was published successfully. Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", env, options, "Report was published successfully.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
-            } catch(e) {
-                String errorMessage = "Failed to publish test report."
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", env, options, errorMessage, "${BUILD_URL}")
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                throw e
             }
         }
     }
@@ -1322,6 +1230,11 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String parallelExecutionTypeString = "TakeAllNodes",
         Integer testCaseRetries = 2)
 {
+    ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
+    Map options = [:]
+    options["stage"] = "Init"
+    options["problemMessageManager"] = problemMessageManager
+
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
     SPU = (SPU == 'Default') ? '25' : SPU
@@ -1329,16 +1242,13 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     theshold = (theshold == 'Default') ? '0.05' : theshold
     def nodeRetry = []
     Map errorsInSuccession = [:]
-    Map options = [:]
 
-    try
-    {
-        try
-        {
-            if (!enginesNames) {
-                String errorMessage = "Engines parameter is required."
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Init")
-                throw new Exception(errorMessage)
+    try {
+        withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+            withNotifications(options: options, configuration: NotificationConfiguration.ENGINES_PARAM) {
+                if (!enginesNames) {
+                    throw new Exception()
+                }
             }
 
             sendToUMS = updateRefs.contains('Update') || sendToUMS
@@ -1488,10 +1398,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries
                         ]
-        } catch (e) {
-            problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")
-
-            throw e
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)

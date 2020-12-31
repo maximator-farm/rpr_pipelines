@@ -292,33 +292,32 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
-        withNotifications(title: options['stageName'], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-            timeout(time: "5", unit: 'MINUTES') {
+        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
+                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_blender.git")
             }
         }
 
-        withNotifications(title: options['stageName'], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Blender2.8Assets/", 'Blender2.8Assets')
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
+            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Blender2.8Assets/", "Blender2.8Assets")
         }
 
         try {
             Boolean newPluginInstalled = false
-            withNotifications(title: options['stageName'], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
-                timeout(time: "12", unit: 'MINUTES') {
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+                timeout(time: "12", unit: "MINUTES") {
                     getBlenderAddonInstaller(osName, options)
                     newPluginInstalled = installBlenderAddon(osName, options.toolVersion, options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
             }
         
-            withNotifications(title: options['stageName'], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
                 if (newPluginInstalled) {
-                    timeout(time: "6", unit: 'MINUTES') {
+                    timeout(time: "6", unit: "MINUTES") {
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
                         if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
-                            println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
                             throw new ExpectedExceptionWrapper("No output image after cache building.", new Exception("No output image after cache building."))
                         }
                     }
@@ -354,11 +353,11 @@ def executeTests(String osName, String asicName, Map options)
 
         outputEnvironmentInfo(osName, options.stageName, options.currentTry)
 
-        if (options['updateRefs'].contains('Update')) {
-            withNotifications(title: options['stageName'], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
+        if (options["updateRefs"].contains("Update")) {
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, asicName, options)
-                executeGenTestRefCommand(osName, options, options['updateRefs'].contains('clean'))
-                sendFiles('./Work/GeneratedBaselines/', REF_PATH_PROFILE)
+                executeGenTestRefCommand(osName, options, options["updateRefs"].contains("clean"))
+                sendFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
                 // delete generated baselines when they're sent 
                 switch(osName) {
                     case 'Windows':
@@ -370,7 +369,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         } else {
             // TODO: receivebaseline for json suite
-            withNotifications(title: options['stageName'], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
+            withNotifications(title: options["stageName"], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
                 String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_blender_autotests_baselines" : "/mnt/c/TestResources/rpr_blender_autotests_baselines"
                 baseline_dir = enginePostfix ? "${baseline_dir}-${enginePostfix}" : baseline_dir
                 println "[INFO] Downloading reference images for ${options.parsedTests}"
@@ -382,7 +381,7 @@ def executeTests(String osName, String asicName, Map options)
                     }
                 }
             }
-            withNotifications(title: options['stageName'], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, asicName, options)
             }
         }
@@ -392,6 +391,7 @@ def executeTests(String osName, String asicName, Map options)
             // mark that one group was finished and counting of errored groups in succession must be stopped
             options["errorsInSuccession"]["${osName}-${asicName}-${options.engine}"] = new AtomicInteger(-1)
         }
+
     } catch (e) {
         String additionalDescription = ""
         if (options.currentTry + 1 < options.nodeReallocateTries) {
@@ -639,15 +639,15 @@ def executeBuild(String osName, Map options)
         dir('RadeonProRenderBlenderAddon')
         {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_PLUGIN_REPO) {
-                checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], false, options['prBranchName'], options['prRepoName'])
+                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
             }
         }
 
         if (options.sendToUMS) {
             timeout(time: "5", unit: 'MINUTES') {
-                dir('jobs_launcher') {
+                dir("jobs_launcher") {
                     withNotifications(title: osName, printMessage: true, options: options, configuration: NotificationConfiguration.DOWNLOAD_JOBS_LAUNCHER) {
-                        checkOutBranchOrScm(options['jobsLauncherBranch'], 'git@github.com:luxteam/jobs_launcher.git')
+                        checkOutBranchOrScm(options["jobsLauncherBranch"], "git@github.com:luxteam/jobs_launcher.git")
                     }
                 }
             }
@@ -656,28 +656,23 @@ def executeBuild(String osName, Map options)
         outputEnvironmentInfo(osName)
 
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_PLUGIN) {
-            switch(osName)
-            {
-                case 'Windows':
+            switch(osName) {
+                case "Windows":
                     executeBuildWindows(options);
                     break;
-                case 'OSX':
-                    if(!fileExists("python3"))
-                    {
+                case "OSX":
+                    if(!fileExists("python3")) {
                         sh "ln -s /usr/local/bin/python3.7 python3"
                     }
-                    withEnv(["PATH=$WORKSPACE:$PATH"])
-                    {
+                    withEnv(["PATH=$WORKSPACE:$PATH"]) {
                         executeBuildOSX(options);
                     }
                     break;
                 default:
-                    if(!fileExists("python3"))
-                    {
+                    if(!fileExists("python3")) {
                         sh "ln -s /usr/bin/python3.7 python3"
                     }
-                    withEnv(["PATH=$PWD:$PATH"])
-                    {
+                    withEnv(["PATH=$PWD:$PATH"]) {
                         executeBuildLinux(osName, options);
                     }
             }
@@ -760,7 +755,7 @@ def executePreBuild(Map options)
         dir('RadeonProRenderBlenderAddon')
         {
             withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_PLUGIN_REPO) {
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
+                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
             }
 
             options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -1012,8 +1007,8 @@ def executePreBuild(Map options)
                 for (int i = 0; i < options.engines.size(); i++) {
                     String engine = options.engines[i]
                     String engineName = options.enginesNames[i]
-                    universeClientsProd[engine] = new UniverseClient(this, UniverseURLProd, ImageServiceURL, ProducteName, engineName, universeClientParentProd)
-                    universeClientsDev[engine] = new UniverseClient(this, UniverseURLDev, ImageServiceURL, ProducteName, engineName, universeClientParentDev)
+                    universeClientsProd[engine] = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName, engineName, universeClientParentProd)
+                    universeClientsDev[engine] = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName, engineName, universeClientParentDev)
                     universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
                     universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
                 }
@@ -1236,13 +1231,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
                     currentBuild.result = "FAILURE"
 
-                    options.problemMessageManager.saveGlobalFailReason("Some tests marked as error.")
+                    options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
                 }
                 else if (summaryReport.failed > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
 
-                    options.problemMessageManager.saveUnstableReason("Some tests marked as failed.")
+                    options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
                 }
             }
             catch(e)
@@ -1250,7 +1245,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 println(e.toString())
                 println(e.getMessage())
                 println("[ERROR] CAN'T GET TESTS STATUS")
-                options.problemMessageManager.saveUnstableReason("Can't get tests status")
+                options.problemMessageManager.saveUnstableReason(NotificationConfiguration.CAN_NOT_GET_TESTS_STATUS)
                 currentBuild.result = "UNSTABLE"
             }
 
@@ -1362,8 +1357,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         UniverseURLProd = "${PROD_UMS_URL}"
                         UniverseURLDev = "${DEV_UMS_URL}"
                         ImageServiceURL = "${IS_URL}"
-                        universeClientParentProd = new UniverseClient(this, UniverseURLProd, ProducteName)
-                        universeClientParentDev = new UniverseClient(this, UniverseURLDev, ProducteName)
+                        universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
+                        universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
 
                         options.universeClientsProd = universeClientsProd
                         options.universeClientsDev = universeClientsDev

@@ -7,8 +7,6 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
 
-@Field ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
-
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
@@ -24,7 +22,7 @@ def executeBuildWindows(Map options)
 {
     dir('RadeonProRenderBlenderAddon\\BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", env, options, "Building the plugin.", "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILDING_PLUGIN, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             set HDUSD_LIBS_DIR=..\\..\\libs
             build_win.cmd >> ../../${STAGE_NAME}.log  2>&1
@@ -60,7 +58,7 @@ def executeBuildWindows(Map options)
 
             stash includes: "BlenderUSDHydraAddon_Windows.zip", name: "appWindows"
 
-            GithubNotificator.updateStatus("Build", "Windows", "success", env, options, "The plugin was successfully built and published.", pluginUrl)
+            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.PLUGIN_BUILT, pluginUrl)
         }
     }
 }
@@ -82,57 +80,36 @@ def executeBuild(String osName, Map options)
 
         receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/libs/*", "libs")
 
-        dir('RadeonProRenderBlenderAddon')
+        dir("RadeonProRenderBlenderAddon")
         {
-            try {
-                GithubNotificator.updateStatus("Build", osName, "pending", env, options, "Downloading the plugin repository.")
-                checkOutBranchOrScm(options['projectBranch'], options['projectRepo'], false, options['prBranchName'], options['prRepoName'])
-            } catch (e) {
-                String errorMessage
-                if (e.getMessage() && e.getMessage().contains("Branch not suitable for integration")) {
-                    errorMessage = "Failed to merge branches."
-                } else {
-                    errorMessage = "Failed to download plugin repository."
-                }
-                GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
-                problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
-                throw e
+            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_PLUGIN_REPO) {
+                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
             }
         }
 
         outputEnvironmentInfo(osName)
 
-        try {
-            switch(osName)
-            {
-                case 'Windows':
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_PLUGIN) {
+            switch(osName) {
+                case "Windows":
                     executeBuildWindows(options);
                     break;
-                case 'OSX':
-                    if(!fileExists("python3"))
-                    {
+                case "OSX":
+                    if(!fileExists("python3")) {
                         sh "ln -s /usr/local/bin/python3.7 python3"
                     }
-                    withEnv(["PATH=$WORKSPACE:$PATH"])
-                    {
+                    withEnv(["PATH=$WORKSPACE:$PATH"]) {
                         executeBuildOSX(options);
                     }
                     break;
                 default:
-                    if(!fileExists("python3"))
-                    {
+                    if(!fileExists("python3")) {
                         sh "ln -s /usr/bin/python3.7 python3"
                     }
-                    withEnv(["PATH=$PWD:$PATH"])
-                    {
+                    withEnv(["PATH=$PWD:$PATH"]) {
                         executeBuildLinux(osName, options);
                     }
             }
-        } catch (e) {
-            String errorMessage = "Failed to build the plugin."
-            GithubNotificator.updateStatus("Build", osName, "failure", env, options, errorMessage)
-            problemMessageManager.saveSpecificFailReason(errorMessage, "Build", osName)
-            throw e
         }
     }
     catch (e) {
@@ -195,13 +172,8 @@ def executePreBuild(Map options)
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderBlenderAddon')
         {
-            try {
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
-            } catch (e) {
-                String errorMessage = "Failed to download plugin repository."
-                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
-                problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
-                throw e
+            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_PLUGIN_REPO) {
+                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
             }
 
             options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -221,7 +193,7 @@ def executePreBuild(Map options)
                 currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
 
-            try {
+            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_PLUGIN_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
                 if (options['incrementVersion']) {
@@ -273,12 +245,6 @@ def executePreBuild(Map options)
                 currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
             }
-            catch(e) {
-                String errorMessage = "Failed to increment plugin version."
-                GithubNotificator.updateStatus("PreBuild", "Version increment", "error", env, options, errorMessage)
-                problemMessageManager.saveSpecificFailReason(errorMessage, "PreBuild")
-                throw e
-            }
         }
     }
 
@@ -300,7 +266,9 @@ def executePreBuild(Map options)
         options.githubNotificator.initPR(options, "${BUILD_URL}", false)
     }
 
-    GithubNotificator.updateStatus("PreBuild", "Version increment", "success", env, options, "PreBuild stage was successfully finished.")
+    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+
+    }
 }
 
 
@@ -332,16 +300,16 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
     Boolean forceBuild = false
     )
 {
+    ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
+    Map options = [:]
+    options["stage"] = "Init"
+    options["problemMessageManager"] = problemMessageManager
  
     String PRJ_NAME="BlenderUSDHydraPlugin"
     String PRJ_ROOT="rpr-plugins"
 
-    Map options = [:]
-
-    try
-    {
-        try
-        {
+    try {
+        withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
             println "Platforms: ${platforms}"
 
             options << [projectRepo:projectRepo,
@@ -356,11 +324,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
                         ]
-        }
-        catch(e)
-        {
-            problemMessageManager.saveGeneralFailReason("Failed initialization.", "Init")
-            throw e
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)

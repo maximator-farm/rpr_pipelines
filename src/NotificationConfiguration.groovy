@@ -26,12 +26,54 @@ public class NotificationConfiguration {
                 "class": Exception, "problemMessage": "Failed to merge branches.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
                 "getMessage": ["Branch not suitable for integration"],
-                "githubNotification": ["status": "error"]
+                "githubNotification": ["status": "failure"]
             ],
             [
                 "class": Exception, "problemMessage": "Failed to download plugin repository.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
-                "githubNotification": ["status": "error"]
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
+    def static DOWNLOAD_RPR_SDK_REPO = [
+        "begin": ["message": "Downloading RadeonProRenderSDK repository."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to merge branches.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": ["Branch not suitable for integration"],
+                "githubNotification": ["status": "failure"]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to download RadeonProRenderSDK repository.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
+    def static DOWNLOAD_VIEWER_REPO = [
+        "begin": ["message": "Downloading Viewer repository."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to download Viewer repository.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
+    def static DOWNLOAD_USD_REPO = [
+        "begin": ["message": "Downloading the USD repository."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to download the USD repository.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "githubNotification": ["status": "failure"]
             ]
         ]
     ]
@@ -74,12 +116,56 @@ public class NotificationConfiguration {
     def static BUILD_PLUGIN = [
         "exceptions": [
             [
-                "class": "TimeoutExceeded", "problemMessage": "Failed to download tests repository due to timeout.", 
-                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
-            ],
+                "class": Exception, "problemMessage": "Failed to build the plugin.", 
+                "rethrow": ExceptionThrowType.RETHROW
+            ]
+        ]
+    ]
+
+    def static BUILD_RPR_SDK = [
+        "exceptions": [
             [
-                "class": Exception, "problemMessage": "Failed to download tests repository.", 
-                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+                "class": Exception, "problemMessage": "Failed to create RadeonProRenderSDK package.", 
+                "rethrow": ExceptionThrowType.RETHROW
+            ]
+        ]
+    ]
+
+    def static BUILD_VIEWER = [
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to create Viewer package.", 
+                "rethrow": ExceptionThrowType.RETHROW
+            ]
+        ]
+    ]
+
+    def static BUILDING_VIEWER = [
+        "begin": ["message": "Building Viewer."]
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed during Viewer building.", 
+                "rethrow": ExceptionThrowType.RETHROW
+            ]
+        ]
+    ]
+
+    def static BUILDING_RPR_SDK_PACKAGE = [
+        "begin": ["message": "Creating RadeonProRenderSDK package."]
+
+        "end": ["message": "RadeonProRenderSDK package was successfully created."]
+    ]
+
+    def static PACKAGIING_VIEWER = [
+        "begin": ["message": "Creating Viewer package."]
+
+        "end": ["message": "Viewer package was successfully created."]
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to create Viewer package.", 
+                "rethrow": ExceptionThrowType.RETHROW
             ]
         ]
     ]
@@ -110,6 +196,28 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static DOWNLOAD_RPR_SDK_PACKAGE = [
+        "begin": ["message": "Downloading RadeonProRenderSDK package."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to download RadeonProRenderSDK package.", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+            ]
+        ]
+    ]
+
+    def static DOWNLOAD_VIEWER_PACKAGE = [
+        "begin": ["message": "Downloading Viewer package."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to download Viewer package.", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+            ]
+        ]
+    ]
+
     def static INSTALL_PLUGIN = [
         "begin": ["message": "Installing the plugin."],
 
@@ -120,6 +228,21 @@ public class NotificationConfiguration {
             ],
             [
                 "class": Exception, "problemMessage": "Failed to install the plugin.", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
+    def static INSTALL_HOUDINI = [
+        "begin": ["message": "Installing Houdini."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to validate installed Houdini or install houdini due to timeout.", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to validate installed houdini or install houdini.", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
             ]
         ]
@@ -209,5 +332,7 @@ public class NotificationConfiguration {
     def static BUILD_ABORTED_BY_USER = "Build was aborted by user."
 
     def static LOST_CONNECTION_WITH_MACHINE = "Lost connection with machine. Please contact support."
+
+    def static CAN_NOT_GET_TESTS_STATUS = "Can't get tests status."
 
 }
