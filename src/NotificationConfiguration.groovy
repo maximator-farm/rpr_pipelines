@@ -23,6 +23,10 @@ public class NotificationConfiguration {
 
         "exceptions": [
             [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to download plugin repository due to timeout.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC
+            ],
+            [
                 "class": Exception, "problemMessage": "Failed to merge branches.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
                 "getMessage": ["Branch not suitable for integration"],
@@ -41,13 +45,27 @@ public class NotificationConfiguration {
 
         "exceptions": [
             [
-                "class": Exception, "problemMessage": "Failed to merge branches.", 
-                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
-                "getMessage": ["Branch not suitable for integration"],
-                "githubNotification": ["status": "failure"]
+                "class": "TimeoutExceeded", "problemMessage": "Failed to download RadeonProRenderSDK repository due to timeout.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC
             ],
             [
                 "class": Exception, "problemMessage": "Failed to download RadeonProRenderSDK repository.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
+    def static DOWNLOAD_UNIT_TESTS_REPO = [
+        "begin": ["message": "Downloading unit tests repository."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to download unit tests repository due to timeout.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to download unit tests repository.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
                 "githubNotification": ["status": "failure"]
             ]
@@ -58,6 +76,10 @@ public class NotificationConfiguration {
         "begin": ["message": "Downloading Viewer repository."],
 
         "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to download Viewer repository due to timeout.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC
+            ],
             [
                 "class": Exception, "problemMessage": "Failed to download Viewer repository.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
@@ -117,7 +139,8 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Failed to build the plugin.", 
-                "rethrow": ExceptionThrowType.RETHROW
+                "rethrow": ExceptionThrowType.RETHROW,
+                "githubNotification": ["status": "failure"]
             ]
         ]
     ]
@@ -126,7 +149,8 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Failed to create RadeonProRenderSDK package.", 
-                "rethrow": ExceptionThrowType.RETHROW
+                "rethrow": ExceptionThrowType.RETHROW,
+                "githubNotification": ["status": "failure"]
             ]
         ]
     ]
@@ -135,7 +159,8 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Failed to create Viewer package.", 
-                "rethrow": ExceptionThrowType.RETHROW
+                "rethrow": ExceptionThrowType.RETHROW,
+                "githubNotification": ["status": "failure"]
             ]
         ]
     ]
@@ -146,7 +171,8 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Failed during Viewer building.", 
-                "rethrow": ExceptionThrowType.RETHROW
+                "rethrow": ExceptionThrowType.RETHROW,
+                "githubNotification": ["status": "failure"]
             ]
         ]
     ]
@@ -165,7 +191,8 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Failed to create Viewer package.", 
-                "rethrow": ExceptionThrowType.RETHROW
+                "rethrow": ExceptionThrowType.RETHROW,
+                "githubNotification": ["status": "failure"]
             ]
         ]
     ]
@@ -301,6 +328,30 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static BUILDING_UNIT_TESTS_REPORT = [
+        "begin": ["message": "Building test report for unit tests."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to build test report for unit tests.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
+    def static BUILDING_UNIT_TESTS_REPORT = [
+        "begin": ["message": "Building test report for unit tests."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to build test report for unit tests.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
     def static PRE_BUILD_STAGE_FAILED = "PreBuild stage was failed."
 
     def static BUILDING_PLUGIN = "Building the plugin."
@@ -334,5 +385,7 @@ public class NotificationConfiguration {
     def static LOST_CONNECTION_WITH_MACHINE = "Lost connection with machine. Please contact support."
 
     def static CAN_NOT_GET_TESTS_STATUS = "Can't get tests status."
+
+    def static EXECUTE_UNIT_TESTS = "Executing unit tests."
 
 }

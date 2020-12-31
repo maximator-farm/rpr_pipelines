@@ -812,7 +812,7 @@ def call(String projectBranch = "",
     def nodeRetry = []
     Map errorsInSuccession = [:]
 
-    try  {
+    try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
 
             sendToUMS = updateRefs.contains('Update') || sendToUMS
