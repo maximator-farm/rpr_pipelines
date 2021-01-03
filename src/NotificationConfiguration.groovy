@@ -166,7 +166,7 @@ public class NotificationConfiguration {
     ]
 
     def static BUILDING_VIEWER = [
-        "begin": ["message": "Building Viewer."]
+        "begin": ["message": "Building Viewer."],
 
         "exceptions": [
             [
@@ -178,15 +178,15 @@ public class NotificationConfiguration {
     ]
 
     def static BUILDING_RPR_SDK_PACKAGE = [
-        "begin": ["message": "Creating RadeonProRenderSDK package."]
+        "begin": ["message": "Creating RadeonProRenderSDK package."],
 
         "end": ["message": "RadeonProRenderSDK package was successfully created."]
     ]
 
     def static PACKAGIING_VIEWER = [
-        "begin": ["message": "Creating Viewer package."]
+        "begin": ["message": "Creating Viewer package."],
 
-        "end": ["message": "Viewer package was successfully created."]
+        "end": ["message": "Viewer package was successfully created."],
 
         "exceptions": [
             [
@@ -322,18 +322,6 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Failed to publish test report.", 
-                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
-                "githubNotification": ["status": "failure"]
-            ]
-        ]
-    ]
-
-    def static BUILDING_UNIT_TESTS_REPORT = [
-        "begin": ["message": "Building test report for unit tests."],
-
-        "exceptions": [
-            [
-                "class": Exception, "problemMessage": "Failed to build test report for unit tests.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
                 "githubNotification": ["status": "failure"]
             ]
