@@ -468,7 +468,7 @@ def executePreBuild(Map options)
     }
 
     withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_RPR_SDK_REPO) {
-        checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
+        checkOutBranchOrScm(options["projectBranch"], "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git")
     }
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -765,7 +765,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                    "Test Report", "Summary Report, Performance Report, Compare Report")
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses

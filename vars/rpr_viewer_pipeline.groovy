@@ -882,7 +882,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                    "Test Report", "Summary Report, Performance Report, Compare Report")
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
