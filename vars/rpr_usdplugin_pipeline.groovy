@@ -198,7 +198,7 @@ def executeTests(String osName, String asicName, Map options)
                 }
             }
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
-                executeTestCommand(osName, asicName, options)
+                executeTestCommand(osName, options)
             }
         }
         options.executeTestsFinished = true
@@ -559,7 +559,6 @@ def executePreBuild(Map options) {
             githubNotificator.initPreBuild("${BUILD_URL}")
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options.enableNotifications = true
            options.executeBuild = true
            options.executeTests = true
            options.testsPackage = "Full.json"
