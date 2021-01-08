@@ -164,7 +164,7 @@ def executeUnitTests(String osName, String asicName, Map options)
     }
 
     try {
-        GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, NotificationConfiguration.EXECUTING_UNIT_TESTS, "${BUILD_URL}")
+        GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, NotificationConfiguration.EXECUTE_UNIT_TESTS, "${BUILD_URL}")
         executeUnitTestCommand(osName)
     } catch (e) {
         dir("HTML_Report") {
