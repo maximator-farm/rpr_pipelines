@@ -1,13 +1,13 @@
 def deployRML(Map options, String buildType) {
     if (env.TAG_NAME) {
         dir("rml-deploy") {
-            checkOutBranchOrScm("master", "${options.gitlabURL}/servants/rml-deploy.git", true, null, null, false, true, "radeonprorender-gitlab")
+            checkOutBranchOrScm("master", "${options.gitlabURLSSH}/servants/rml-deploy.git", true, null, null, false, true, "radeonprorender-gitlab")
             switch (env.CIS_OS) {
                 case "Windows":
                     bat """
                         if exist \"rml\\${CIS_OS}\\${buildType}\" RMDIR /S/Q \"rml\\${CIS_OS}\\${buildType}\"
                         MD \"rml\\${CIS_OS}\\${buildType}\"
-                        xcopy \"build-${buildType}\\${buildType}\" \"rml\\${CIS_OS}\\${buildType}\" /s/y/i
+                        xcopy \"..\\build-${buildType}\\${buildType}\" \"rml\\${CIS_OS}\\${buildType}\" /s/y/i
                         git config --local user.name "${options.gitUser}"
                         git config --local user.email "${options.gitEmail}"
                         git add --all
@@ -17,9 +17,9 @@ def deployRML(Map options, String buildType) {
                     break
                 default:
                     sh """
-                        if exist \"rml/${CIS_OS}/${buildType}\" RMDIR /S/Q \"rml/${CIS_OS}/${buildType}\"
-                        MD \"rml/${CIS_OS}/${buildType}\"
-                        xcopy \"build-${buildType}/${buildType}\" \"rml/${CIS_OS}/${buildType}\" /s/y/i
+                        rm -rf \"rml/${CIS_OS}/${buildType}\"
+                        mkdir -p \"rml/${CIS_OS}/${buildType}\"
+                        cp -r \"../build-${buildType}/${buildType}\" \"rml/${CIS_OS}/${buildType}\"
                         git config --local user.name "${options.gitUser}"
                         git config --local user.email "${options.gitEmail}"
                         git add --all
@@ -432,11 +432,12 @@ def call(String projectBranch = "",
     String PRJ_ROOT='rpr-ml'
     String PRJ_NAME='RadeonML'
 
-    def gitlabURL, gitUser, gitEmail
-    withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL'),
+    def gitlabURL, gitUser, gitEmail, gitlabURLSSH
+    withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL'), string(credentialsId: 'gitlabURLSSH', variable: 'GITLAB_URL_SSH'),
         string(credentialsId: 'gitUser', variable: 'GIT_USER'), string(credentialsId: 'gitEmail', variable: 'GIT_EMAIL')])
     {
         gitlabURL = GITLAB_URL
+        gitlabURLSSH = GITLAB_URL_SSH
         gitUser = GIT_USER
         gitEmail = GIT_EMAIL
     }
@@ -462,6 +463,7 @@ def call(String projectBranch = "",
              slackTocken:"slack-ml-channel",
              retriesForTestStage:1,
              gitlabURL:gitlabURL,
+             gitlabURLSSH:gitlabURLSSH,
              gitUser:gitUser,
              gitEmail:gitEmail])
 }
