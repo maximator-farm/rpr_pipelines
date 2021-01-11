@@ -1,4 +1,4 @@
-def deployRML(String buildType, Map options) {
+def deployRML(Map options, String buildType) {
     if (env.TAG_NAME) {
         dir("rml-deploy") {
             checkOutBranchOrScm("master", "${options.gitlabURL}/servants/rml-deploy.git", true, null, null, false, true, "radeonprorender-gitlab")
