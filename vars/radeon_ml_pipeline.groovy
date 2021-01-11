@@ -11,7 +11,7 @@ def deployRML(Map options, String buildType) {
                         git config --local user.name "${options.gitUser}"
                         git config --local user.email "${options.gitEmail}"
                         git add --all
-                        git commit -m "${CIS_OS} release ${env.TAG_NAME}"
+                        git commit -m "${CIS_OS} ${buildType} ${env.TAG_NAME}"
                         git push origin HEAD:master
                     """
                     break
@@ -23,7 +23,7 @@ def deployRML(Map options, String buildType) {
                         git config --local user.name "${options.gitUser}"
                         git config --local user.email "${options.gitEmail}"
                         git add --all
-                        git commit -m "${CIS_OS} release ${env.TAG_NAME}"
+                        git commit -m "${CIS_OS} ${buildType} ${env.TAG_NAME}"
                         git push origin HEAD:master
                     """
             }
