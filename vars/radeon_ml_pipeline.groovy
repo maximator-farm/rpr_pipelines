@@ -6,9 +6,9 @@ def deployRML(Map options, String buildType) {
                 switch (env.CIS_OS) {
                     case "Windows":
                         bat """
-                            if exist \"rml\\${CIS_OS}\\${buildType}\" RMDIR /S/Q \"rml\\${CIS_OS}\\${buildType}\"
-                            MD \"rml\\${CIS_OS}\\${buildType}\"
-                            xcopy \"..\\build-${buildType}\\${buildType}\" \"rml\\${CIS_OS}\\${buildType}" /s/y/i
+                            if exist \"${CIS_OS}\\${buildType}\" RMDIR /S/Q \"${CIS_OS}\\${buildType}\"
+                            MD \"${CIS_OS}\\${buildType}\"
+                            xcopy \"..\\build-${buildType}\\${buildType}\" \"${CIS_OS}\\${buildType}" /s/y/i
                             git config --local user.name "${options.gitUser}"
                             git config --local user.email "${options.gitEmail}"
                             git add --all
@@ -17,9 +17,9 @@ def deployRML(Map options, String buildType) {
                         break
                     default:
                         sh """
-                            rm -rf \"rml/${CIS_OS}/${buildType}\"
-                            mkdir -p \"rml/${CIS_OS}/${buildType}\"
-                            cp -r \"../build-${buildType}/${buildType}\" \"rml/${CIS_OS}\"
+                            rm -rf \"${CIS_OS}/${buildType}\"
+                            mkdir -p \"${CIS_OS}/${buildType}\"
+                            cp -r \"../build-${buildType}/${buildType}\" \"${CIS_OS}\"
                             git config --local user.name "${options.gitUser}"
                             git config --local user.email "${options.gitEmail}"
                             git add --all
