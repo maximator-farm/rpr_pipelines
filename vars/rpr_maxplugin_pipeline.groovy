@@ -317,6 +317,8 @@ def executeTests(String osName, String asicName, Map options)
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
                             // check that group isn't fully skipped
                             if (sessionReport.summary.total != sessionReport.summary.skipped || sessionReport.summary.total == 0){
+                                // remove installer of broken addon
+                                removeInstaller(osName: osName, options: options)
                                 collectCrashInfo(osName, options, options.currentTry)
                                 installMSIPlugin(osName, "Max", options, false, true)
                                 String errorMessage

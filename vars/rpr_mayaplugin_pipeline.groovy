@@ -316,6 +316,8 @@ def executeTests(String osName, String asicName, Map options)
             println("[ERROR] Failed to install plugin on ${env.NODE_NAME}.")
             // deinstalling broken addon
             installMSIPlugin(osName, "Maya", options, false, true)
+            // remove installer of broken addon
+            removeInstaller(osName: osName, options: options)
             throw e
         }
 
@@ -464,6 +466,8 @@ def executeTests(String osName, String asicName, Map options)
                             if (sessionReport.summary.total != sessionReport.summary.skipped || sessionReport.summary.total == 0){
                                 collectCrashInfo(osName, options, options.currentTry)
                                 installMSIPlugin(osName, "Maya", options, false, true)
+                                // remove installer of broken addon
+                                removeInstaller(osName: osName, options: options)
                                 String errorMessage
                                 if (options.currentTry < options.nodeReallocateTries) {
                                     errorMessage = "All tests were marked as error. The test group will be restarted."

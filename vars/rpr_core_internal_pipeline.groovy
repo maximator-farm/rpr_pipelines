@@ -391,6 +391,8 @@ def executeTests(String osName, String asicName, Map options)
                         // reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
                             if (sessionReport.summary.total != sessionReport.summary.skipped){
+                                // remove brocken core package
+                                removeInstaller(osName: osName, options: options, extension: "zip")
                                 collectCrashInfo(osName, options, options.currentTry)
                                 if (osName == "Ubuntu18"){
                                     sh """

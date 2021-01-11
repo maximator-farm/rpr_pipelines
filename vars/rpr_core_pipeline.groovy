@@ -335,6 +335,8 @@ def executeTests(String osName, String asicName, Map options)
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
                             // check that group isn't fully skipped
                             if (sessionReport.summary.total != sessionReport.summary.skipped || sessionReport.summary.total == 0){
+                                // remove brocken core package
+                                removeInstaller(osName: osName, options: options, extension: "zip")
                                 collectCrashInfo(osName, options, options.currentTry)
                                 if (osName == "Ubuntu18"){
                                     sh """

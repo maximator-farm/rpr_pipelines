@@ -357,6 +357,8 @@ def executeTests(String osName, String asicName, Map options)
             println(e.toString())
             // deinstalling broken addon
             installBlenderAddon(osName, options.toolVersion, options, false, true)
+            // remove installer of broken addon
+            removeInstaller(osName: osName, options: options, extension: "zip")
             throw e
         }
 
@@ -503,6 +505,8 @@ def executeTests(String osName, String asicName, Map options)
                             if (sessionReport.summary.total != sessionReport.summary.skipped || sessionReport.summary.total == 0){
                                 collectCrashInfo(osName, options, options.currentTry)
                                 installBlenderAddon(osName, options.toolVersion, options, false, true)
+                                // remove installer of broken addon
+                                removeInstaller(osName: osName, options: options, extension: "zip")
                                 String errorMessage
                                 if (options.currentTry < options.nodeReallocateTries) {
                                     errorMessage = "All tests were marked as error. The test group will be restarted."

@@ -173,18 +173,17 @@ class utils {
 
     static def renameFile(Object self, String osName, String oldName, String newName) {
         try {
-            switch(osName)
-            {
-            case 'Windows':
-                self.bat """
-                    rename \"${oldName}\" \"${newName}\"
-                """
-                break;
-            // OSX & Ubuntu18
-            default:
-                self.sh """
-                    mv ${oldName} ${newName}
-                """
+            switch(osName) {
+                case 'Windows':
+                    self.bat """
+                        rename \"${oldName}\" \"${newName}\"
+                    """
+                    break;
+                // OSX & Ubuntu18
+                default:
+                    self.sh """
+                        mv ${oldName} ${newName}
+                    """
             }
         }
         catch(Exception e) {
@@ -196,24 +195,45 @@ class utils {
 
     static def moveFiles(Object self, String osName, String source, String destination) {
         try {
-            switch(osName)
-            {
-            case 'Windows':
-                source = source.replace('/', '\\\\')
-                destination = destination.replace('/', '\\\\')
-                self.bat """
-                    move \"${source}\" \"${destination}\"
-                """
-                break;
-            // OSX & Ubuntu18
-            default:
-                self.sh """
-                    mv ${source} ${destination}
-                """
+            switch(osName) {
+                case 'Windows':
+                    source = source.replace('/', '\\\\')
+                    destination = destination.replace('/', '\\\\')
+                    self.bat """
+                        move \"${source}\" \"${destination}\"
+                    """
+                    break;
+                // OSX & Ubuntu18
+                default:
+                    self.sh """
+                        mv ${source} ${destination}
+                    """
             }
         }
         catch(Exception e) {
             self.println("[ERROR] Can't move files")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    }
+
+    static def removeFile(Object self, String osName, String fileName) {
+        try {
+            switch(osName) {
+                case 'Windows':
+                    self.bat """
+                        if exist \"${fileName}\" del \"${fileName}\"
+                    """
+                    break;
+                // OSX & Ubuntu18
+                default:
+                    self.sh """
+                        rm -rf \"${fileName}\"
+                    """
+            }
+        }
+        catch(Exception e) {
+            self.println("[ERROR] Can't remove file")
             self.println(e.toString())
             self.println(e.getMessage())
         }
