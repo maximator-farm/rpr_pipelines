@@ -1,33 +1,60 @@
 def deployRML(Map options, String buildType) {
-    if (env.TAG_NAME) {
-        dir("rml-deploy") {
-            checkOutBranchOrScm("master", "${options.gitlabURLSSH}/servants/rml-deploy.git", true, null, null, false, true, "radeonprorender-gitlab")
-            switch (env.CIS_OS) {
-                case "Windows":
-                    bat """
-                        if exist \"rml\\${CIS_OS}\\${buildType}\" RMDIR /S/Q \"rml\\${CIS_OS}\\${buildType}\"
-                        MD \"rml\\${CIS_OS}\\${buildType}\"
-                        xcopy \"..\\build-${buildType}\\${buildType}\" \"rml\\${CIS_OS}\\${buildType}\" /s/y/i
-                        git config --local user.name "${options.gitUser}"
-                        git config --local user.email "${options.gitEmail}"
-                        git add --all
-                        git commit -m "${CIS_OS} ${buildType} ${env.TAG_NAME}"
-                        git push origin HEAD:master
-                    """
-                    break
-                default:
-                    sh """
-                        rm -rf \"rml/${CIS_OS}/${buildType}\"
-                        mkdir -p \"rml/${CIS_OS}/${buildType}\"
-                        cp -r \"../build-${buildType}/${buildType}\" \"rml/${CIS_OS}/${buildType}\"
-                        git config --local user.name "${options.gitUser}"
-                        git config --local user.email "${options.gitEmail}"
-                        git add --all
-                        git commit -m "${CIS_OS} ${buildType} ${env.TAG_NAME}"
-                        git push origin HEAD:master
-                    """
+    try {
+        if (env.TAG_NAME) {
+            dir("rml-deploy") {
+                checkOutBranchOrScm("master", "${options.gitlabURLSSH}/servants/rml-deploy.git", true, null, null, false, true, "radeonprorender-gitlab")
+                switch (env.CIS_OS) {
+                    case "Windows":
+                        bat """
+                            if exist \"rml\\${CIS_OS}\\${buildType}\" RMDIR /S/Q \"rml\\${CIS_OS}\\${buildType}\"
+                            MD \"rml\\${CIS_OS}\\${buildType}\"
+                            xcopy \"..\\build-${buildType}\\${buildType}\" \"rml\\${CIS_OS}\\${buildType}" /s/y/i
+                            git config --local user.name "${options.gitUser}"
+                            git config --local user.email "${options.gitEmail}"
+                            git add --all
+                            git commit -m "${CIS_OS} ${buildType} ${env.TAG_NAME}"
+                        """
+                        break
+                    default:
+                        sh """
+                            rm -rf \"rml/${CIS_OS}/${buildType}\"
+                            mkdir -p \"rml/${CIS_OS}/${buildType}\"
+                            cp -r \"../build-${buildType}/${buildType}\" \"rml/${CIS_OS}\"
+                            git config --local user.name "${options.gitUser}"
+                            git config --local user.email "${options.gitEmail}"
+                            git add --all
+                            git commit -m "${CIS_OS} ${buildType} ${env.TAG_NAME}"
+                        """
+                }
+                // try 3 times to push new commit
+                for (int i = 0; i < 3; i++) {
+                    try {
+                        switch (env.CIS_OS) {
+                            case "Windows":
+                                bat """
+                                    git fetch origin master
+                                    git rebase FETCH_HEAD
+                                    git push origin HEAD:master
+                                """
+                                break
+                            default:
+                                sh """
+                                    git fetch origin master
+                                    git rebase FETCH_HEAD
+                                    git push origin HEAD:master
+                                """
+                        }
+                        break
+                    } catch (e1) {
+                        println("[ERROR] Failed to deploy ${buildType} for ${CIS_OS} (try #${i})")
+                    }
+                }
             }
         }
+    } catch (e) {
+        println("[ERROR] Failed to deploy ${buildType} for ${CIS_OS} at all")
+        println(e.toString())
+        println(e.getMessage())
     }
 }
 
@@ -453,7 +480,7 @@ def call(String projectBranch = "",
              projectRepo:projectRepo,
              BUILDER_TAG:'BuilderML',
              TESTER_TAG:'ML',
-             BUILD_TIMEOUT:'30',
+             BUILD_TIMEOUT:'45',
              TEST_TIMEOUT:'40',
              executeBuild:true,
              executeTests:true,
