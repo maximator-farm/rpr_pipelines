@@ -1,3 +1,36 @@
+def deployRML(String buildType, Map options) {
+    if (env.TAG_NAME) {
+        dir("rml-deploy") {
+            checkOutBranchOrScm("master", "${options.gitlabURL}/servants/rml-deploy.git", true, null, null, false, true, "radeonprorender-gitlab")
+            switch (env.CIS_OS) {
+                case "Windows":
+                    bat """
+                        if exist \"rml\\${CIS_OS}\\${buildType}\" RMDIR /S/Q \"rml\\${CIS_OS}\\${buildType}\"
+                        MD \"rml\\${CIS_OS}\\${buildType}\"
+                        xcopy \"build-${buildType}\\${buildType}\" \"rml\\${CIS_OS}\\${buildType}\" /s/y/i
+                        git config --local user.name "${options.gitUser}"
+                        git config --local user.email "${options.gitEmail}"
+                        git add --all
+                        git commit -m "${CIS_OS} release ${env.TAG_NAME}"
+                        git push origin HEAD:master
+                    """
+                    break
+                default:
+                    sh """
+                        if exist \"rml/${CIS_OS}/${buildType}\" RMDIR /S/Q \"rml/${CIS_OS}/${buildType}\"
+                        MD \"rml/${CIS_OS}/${buildType}\"
+                        xcopy \"build-${buildType}/${buildType}\" \"rml/${CIS_OS}/${buildType}\" /s/y/i
+                        git config --local user.name "${options.gitUser}"
+                        git config --local user.email "${options.gitEmail}"
+                        git add --all
+                        git commit -m "${CIS_OS} release ${env.TAG_NAME}"
+                        git push origin HEAD:master
+                    """
+            }
+        }
+    }
+}
+
 def executeUnitTestsCommand(String osName, Map options)
 {
     switch (osName) {
@@ -128,32 +161,34 @@ def executeTests(String osName, String asicName, Map options)
 }
 
 
-def executeWindowsBuildCommand(Map options, String build_type){
+def executeWindowsBuildCommand(Map options, String buildType){
 
-    outputEnvironmentInfo("Windows", "${STAGE_NAME}_${build_type}")
+    outputEnvironmentInfo("Windows", "${STAGE_NAME}_${buildType}")
 
     bat """
-        mkdir build-${build_type}
-        cd build-${build_type}
-        cmake ${options.cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}_${build_type}.log 2>&1
+        mkdir build-${buildType}
+        cd build-${buildType}
+        cmake ${options.cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
         set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-        %msbuild% RadeonML.sln -property:Configuration=${build_type} >> ..\\${STAGE_NAME}_${build_type}.log 2>&1
+        %msbuild% RadeonML.sln -property:Configuration=${buildType} >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
     """
     
     bat """
-        cd build-${build_type}
-        xcopy ..\\third_party\\miopen\\MIOpen.dll ${build_type}
-        xcopy ..\\third_party\\tensorflow\\windows\\* ${build_type}
-        mkdir ${build_type}\\rml
-        mkdir ${build_type}\\rml_internal
-        xcopy ..\\rml\\include\\rml\\*.h* ${build_type}\\rml
-        xcopy ..\\rml\\include\\rml_internal\\*.h* ${build_type}\\rml_internal
+        cd build-${buildType}
+        xcopy ..\\third_party\\miopen\\MIOpen.dll ${buildType}
+        xcopy ..\\third_party\\tensorflow\\windows\\* ${buildType}
+        mkdir ${buildType}\\rml
+        mkdir ${buildType}\\rml_internal
+        xcopy ..\\rml\\include\\rml\\*.h* ${buildType}\\rml
+        xcopy ..\\rml\\include\\rml_internal\\*.h* ${buildType}\\rml_internal
     """
 
-    zip dir: "build-${build_type}\\${build_type}", zipFile: "build-${build_type}\\${CIS_OS}_${build_type}.zip"
-    archiveArtifacts "build-${build_type}\\${CIS_OS}_${build_type}.zip"
+    deployRML(options, buildType)
+
+    zip dir: "build-${buildType}\\${buildType}", zipFile: "build-${buildType}\\${CIS_OS}_${buildType}.zip"
+    archiveArtifacts "build-${buildType}\\${CIS_OS}_${buildType}.zip"
     
-    zip archive: true, dir: "build-${build_type}\\${build_type}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe", zipFile: "${CIS_OS}_${build_type}.zip"
+    zip archive: true, dir: "build-${buildType}\\${buildType}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe", zipFile: "${CIS_OS}_${buildType}.zip"
 
 }
 
@@ -173,31 +208,33 @@ def executeBuildWindows(Map options)
 }
 
 
-def executeOSXBuildCommand(Map options, String build_type){
+def executeOSXBuildCommand(Map options, String buildType){
     
-    outputEnvironmentInfo("OSX", "${STAGE_NAME}_${build_type}")
+    outputEnvironmentInfo("OSX", "${STAGE_NAME}_${buildType}")
 
     sh """
-        mkdir build-${build_type}
-        cd build-${build_type}
-        cmake -DCMAKE_BUILD_TYPE=${build_type} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${build_type}.log 2>&1
-        make -j 4 >> ../${STAGE_NAME}_${build_type}.log 2>&1
+        mkdir build-${buildType}
+        cd build-${buildType}
+        cmake -DCMAKE_buildType=${buildType} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
+        make -j 4 >> ../${STAGE_NAME}_${buildType}.log 2>&1
     """
     
     sh """
-        cd build-${build_type}
-        mv bin ${build_type}
-        rm ${build_type}/*.a
-        mkdir ./${build_type}/rml
-        mkdir ./${build_type}/rml_internal
-        cp ../rml/include/rml/*.h* ./${build_type}/rml
-        cp ../rml/include/rml_internal/*.h* ./${build_type}/rml_internal
+        cd build-${buildType}
+        mv bin ${buildType}
+        rm ${buildType}/*.a
+        mkdir ./${buildType}/rml
+        mkdir ./${buildType}/rml_internal
+        cp ../rml/include/rml/*.h* ./${buildType}/rml
+        cp ../rml/include/rml_internal/*.h* ./${buildType}/rml_internal
 
-        tar cf ${CIS_OS}_${build_type}.tar ${build_type}
+        tar cf ${CIS_OS}_${buildType}.tar ${buildType}
     """
 
-    archiveArtifacts "build-${build_type}/${CIS_OS}_${build_type}.tar"
-    zip archive: true, dir: "build-${build_type}/${build_type}", glob: "libRadeonML*.dylib, test*", zipFile: "${CIS_OS}_${build_type}.zip"
+    deployRML(options, buildType)
+
+    archiveArtifacts "build-${buildType}/${CIS_OS}_${buildType}.tar"
+    zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.dylib, test*", zipFile: "${CIS_OS}_${buildType}.zip"
 }
 
 
@@ -216,33 +253,35 @@ def executeBuildOSX(Map options)
 }
 
 
-def executeLinuxBuildCommand(Map options, String build_type){
+def executeLinuxBuildCommand(Map options, String buildType){
     
-    outputEnvironmentInfo("Linux", "${STAGE_NAME}_${build_type}")
+    outputEnvironmentInfo("Linux", "${STAGE_NAME}_${buildType}")
 
     sh """
-        mkdir build-${build_type}
-        cd build-${build_type}
-        cmake -DCMAKE_BUILD_TYPE=${build_type} ${options.cmakeKeysLinux[CIS_OS]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}_${build_type}.log 2>&1
-        make -j 8 >> ../${STAGE_NAME}_${build_type}.log 2>&1
+        mkdir build-${buildType}
+        cd build-${buildType}
+        cmake -DCMAKE_buildType=${buildType} ${options.cmakeKeysLinux[CIS_OS]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
+        make -j 8 >> ../${STAGE_NAME}_${buildType}.log 2>&1
     """
     
     sh """
-        cd build-${build_type}
-        mv bin ${build_type}
-        rm ${build_type}/*.a
-        cp ../third_party/miopen/libMIOpen.so* ./${build_type}
-        cp ../third_party/tensorflow/linux/* ./${build_type}
-        mkdir ./${build_type}/rml
-        mkdir ./${build_type}/rml_internal
-        cp ../rml/include/rml/*.h* ./${build_type}/rml
-        cp ../rml/include/rml_internal/*.h* ./${build_type}/rml_internal
+        cd build-${buildType}
+        mv bin ${buildType}
+        rm ${buildType}/*.a
+        cp ../third_party/miopen/libMIOpen.so* ./${buildType}
+        cp ../third_party/tensorflow/linux/* ./${buildType}
+        mkdir ./${buildType}/rml
+        mkdir ./${buildType}/rml_internal
+        cp ../rml/include/rml/*.h* ./${buildType}/rml
+        cp ../rml/include/rml_internal/*.h* ./${buildType}/rml_internal
 
-        tar cf ${CIS_OS}_${build_type}.tar ${build_type}
+        tar cf ${CIS_OS}_${buildType}.tar ${buildType}
     """
 
-    archiveArtifacts "build-${build_type}/${CIS_OS}_${build_type}.tar"
-    zip archive: true, dir: "build-${build_type}/${build_type}", glob: "libRadeonML*.so, libMIOpen*.so, libtensorflow*.so, test*", zipFile: "${CIS_OS}_${build_type}.zip"
+    deployRML(options, buildType)
+
+    archiveArtifacts "build-${buildType}/${CIS_OS}_${buildType}.tar"
+    zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.so, libMIOpen*.so, libtensorflow*.so, test*", zipFile: "${CIS_OS}_${buildType}.zip"
 }
 
 
@@ -393,10 +432,13 @@ def call(String projectBranch = "",
     String PRJ_ROOT='rpr-ml'
     String PRJ_NAME='RadeonML'
 
-    def gitlabURL
-    withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')])
+    def gitlabURL, gitUser, gitEmail
+    withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL'),
+        string(credentialsId: 'gitUser', variable: 'GIT_USER'), string(credentialsId: 'gitEmail', variable: 'GIT_EMAIL')])
     {
         gitlabURL = GITLAB_URL
+        gitUser = GIT_USER
+        gitEmail = GIT_EMAIL
     }
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
@@ -419,5 +461,7 @@ def call(String projectBranch = "",
              slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
              slackTocken:"slack-ml-channel",
              retriesForTestStage:1,
-             gitlabURL:gitlabURL])
+             gitlabURL:gitlabURL,
+             gitUser:gitUser,
+             gitEmail:gitEmail])
 }
