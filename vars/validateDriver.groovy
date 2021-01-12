@@ -1,30 +1,39 @@
 def call(String osName, String asicName, Map targetDriverVersions, Map options)
 {
-    currentDriverVersion = getDriverVersion(osName, asicName, options)
-    targetDriverVersion = getDriverVersionFromMap(osName, asicName, targetDriverVersions)
-    if (targetDriverVersion && currentDriverVersion != targetDriverVersion){
-        installDriver(osName, asicName, targetDriverVersion, options)
-        installedDriverVersion = getDriverVersion(osName, asicName, options)
-        if (installedDriverVersion == targetDriverVersion){
-            println "[INFO] Driver successfully installed."
-        } else {
-            println "[ERROR] Failed to install driver. Trying again after reboot."
-            rebootTesterNode(osName)
-            installDriver(osName, asicName, targetDriverVersion, options)
-            installedDriverVersion = getDriverVersion(osName, asicName, options)
-            if (installedDriverVersion == targetDriverVersion){
-                println "[INFO] Driver successfully installed."
+    try {
+        timeout(time: "20", unit: 'MINUTES') {
+            currentDriverVersion = getDriverVersion(osName, asicName, options)
+            targetDriverVersion = getDriverVersionFromMap(osName, asicName, targetDriverVersions)
+
+            if (targetDriverVersion && currentDriverVersion != targetDriverVersion){
+                installDriver(osName, asicName, targetDriverVersion, options)
+                installedDriverVersion = getDriverVersion(osName, asicName, options)
+
+                if (installedDriverVersion == targetDriverVersion){
+                    println "[INFO] Driver successfully installed."
+                } else {
+                    println "[ERROR] Failed to install driver. Trying again after reboot."
+                    rebootTesterNode(osName)
+                    installDriver(osName, asicName, targetDriverVersion, options)
+                    installedDriverVersion = getDriverVersion(osName, asicName, options)
+                    if (installedDriverVersion == targetDriverVersion){
+                        println "[INFO] Driver successfully installed."
+                    } else {
+                        println "[ERROR] Failed to install driver"
+                        error "Failed to install driver."
+                    }
+                }
             } else {
-                println "[ERROR] Failed to install driver"
-                error "Failed to install driver."
+                if (targetDriverVersion) {
+                    println "[INFO] Current driver: ${currentDriverVersion} == ${targetDriverVersion}. Driver is already installed."
+                } else {
+                    println "[INFO] Driver install skipped. (-1)"
+                }
             }
         }
-    } else {
-        if (targetDriverVersion) {
-            println "[INFO] Current driver: ${currentDriverVersion} == ${targetDriverVersion}. Driver is already installed."
-        } else {
-            println "[INFO] Driver install skipped. (-1)"
-        }
+    } catch (e) {
+        println(e.toString())
+        println(e.getMessage())
     }
 }
 
@@ -49,7 +58,7 @@ def getDriverVersionFromMap(String osName, String asicName, Map targetDriverVers
                         return -1
                     }
                 }
-                break;
+                break
 
             case 'OSX':
                 println "[INFO] Driver install is unavailable for MacOS"
@@ -91,9 +100,9 @@ def getDriverVersion(String osName, String asicName, Map options)
                     // version = getWinAmdDriver()
                 } else if (asicName.contains("NVIDIA")) {
                     println "[INFO] Searching NVIDIA GPU driver on Windows"
-                    // version = getWinNvidiaDriver()
+                    version = getWinNvidiaDriver()
                 }
-                break;
+                break
 
             default:
                 if (asicName.contains("AMD")){
@@ -115,7 +124,14 @@ def getDriverVersion(String osName, String asicName, Map options)
 
 
 def getUbuntuNvidiaDriver(){
-    stdout = sh (script: "nvidia-smi | grep \"Driver Version\"", returnStdout: true)
+    stdout = sh (script: "nvidia-smi --query-gpu=driver_version --format=csv", returnStdout: true)
+    print ("Nvidia driver stdout: ${stdout}")
+    return (stdout =~ /\d+.\d+.\d+/).findAll()[0]
+}
+
+
+def getWinNvidiaDriver(){
+    stdout = bat (script: "${CIS_TOOLS}\\..\\drivers\\nvidia-smi.exe --query-gpu=driver_version --format=csv", returnStdout: true)
     print ("Nvidia driver stdout: ${stdout}")
     return (stdout =~ /\d+.\d+.\d+/).findAll()[0]
 }
@@ -134,7 +150,7 @@ def installDriver(String osName, String asicName, String driverVersion, Map opti
                     // installWinAmdDriver(riverVersion, options)
                 } else if (asicName.contains("NVIDIA")) {
                     println "[INFO] Install driver for NVIDIA GPU on Windows"
-                    // installWinNvidiaDriver(riverVersion, options)
+                    installWinNvidiaDriver(driverVersion, options)
                 }
                 break;
 
@@ -159,9 +175,17 @@ def installDriver(String osName, String asicName, String driverVersion, Map opti
 
 def installUbuntuNvidiaDriver(String driverVersion, Map options){
     sh """
-        sudo ${CIS_TOOLS}/installNvidiaDriverUbuntu.sh ${CIS_TOOLS}/../drivers/NVIDIA-Linux-x86_64-${driverVersion}.run ${WORKSPACE}/${STAGE_NAME}.driver.log >> ${WORKSPACE}/${STAGE_NAME}.driver_sh.log 2>&1
+        sudo ${CIS_TOOLS}/installNvidiaDriverUbuntu.sh ${CIS_TOOLS}/../drivers/NVIDIA-Linux-x86_64-${driverVersion}.run ${WORKSPACE}/${STAGE_NAME}.driver.log
     """
     rebootTesterNode("Ubuntu")
+}
+
+
+def installWinNvidiaDriver(String driverVersion, Map options){
+    bat """
+        ${CIS_TOOLS}\\..\\drivers\\${driverVersion}_geforce_win10_64bit_dch_international.exe -s
+    """
+    rebootTesterNode("Windows")
 }
 
 
