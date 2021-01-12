@@ -8,7 +8,27 @@ def deployRML(Map options, String buildType) {
                         bat """
                             if exist \"${CIS_OS}\\${buildType}\" RMDIR /S/Q \"${CIS_OS}\\${buildType}\"
                             MD \"${CIS_OS}\\${buildType}\"
-                            xcopy \"..\\build-${buildType}\\${buildType}\" \"${CIS_OS}\\${buildType}" /s/y/i
+                            xcopy \"..\\build-${buildType}\\${buildType}\\MIOpen.dll\" \"${CIS_OS}\\${buildType}"
+                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML.dll\" \"${CIS_OS}\\${buildType}"
+                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML-d.dll\" \"${CIS_OS}\\${buildType}"
+                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML.lib\" \"${CIS_OS}\\${buildType}"
+                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML-d.lib\" \"${CIS_OS}\\${buildType}"
+                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML_DirectML.dll\" \"${CIS_OS}\\${buildType}"
+                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML_DirectML-d.dll\" \"${CIS_OS}\\${buildType}"
+                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML_MIOpen.dll\" \"${CIS_OS}\\${buildType}"
+                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML_MIOpen-d.dll\" \"${CIS_OS}\\${buildType}"
+                            git config --local user.name "${options.gitUser}"
+                            git config --local user.email "${options.gitEmail}"
+                            git add --all
+                            git commit -m "${CIS_OS} ${buildType} ${env.TAG_NAME}"
+                        """
+                        break
+                    case "OSX":
+                        sh """
+                            rm -rf \"${CIS_OS}/${buildType}\"
+                            mkdir -p \"${CIS_OS}/${buildType}\"
+                            cp -R ../build-${buildType}/${buildType}/libRadeonML.*dylib \"${CIS_OS}/${buildType}\"
+                            cp -R ../build-${buildType}/${buildType}/libRadeonML_MPS.*dylib \"${CIS_OS}/${buildType}\"
                             git config --local user.name "${options.gitUser}"
                             git config --local user.email "${options.gitEmail}"
                             git add --all
@@ -19,7 +39,9 @@ def deployRML(Map options, String buildType) {
                         sh """
                             rm -rf \"${CIS_OS}/${buildType}\"
                             mkdir -p \"${CIS_OS}/${buildType}\"
-                            cp -r \"../build-${buildType}/${buildType}\" \"${CIS_OS}\"
+                            cp -R ../build-${buildType}/${buildType}/libMIOpen.so* \"${CIS_OS}/${buildType}\"
+                            cp -R ../build-${buildType}/${buildType}/libRadeonML_MIOpen.so* \"${CIS_OS}/${buildType}\"
+                            cp -R ../build-${buildType}/${buildType}/libRadeonML.so* \"${CIS_OS}/${buildType}\"
                             git config --local user.name "${options.gitUser}"
                             git config --local user.email "${options.gitEmail}"
                             git add --all
