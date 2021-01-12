@@ -731,7 +731,7 @@ def executePreBuild(Map options)
                                 {
                                     try {
                                         dir ("jobs_launcher") {
-                                            String output = bat(script: "is_group_skipped.bat ${it} ${osName} \"\" \"..\\jobs\\Tests\\${test}\\test.cases.json\"", returnStdout: true).trim()
+                                            String output = bat(script: "is_group_skipped.bat ${it} ${osName} \"\" \"..\\jobs\\Tests\\${test}\\test_cases.json\"", returnStdout: true).trim()
                                             if (output.contains("True")) {
                                                 if (!options.skippedTests.containsKey(test)) {
                                                     options.skippedTests[test] = []
