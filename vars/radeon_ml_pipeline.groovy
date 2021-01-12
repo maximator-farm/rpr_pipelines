@@ -317,8 +317,8 @@ def executeLinuxBuildCommand(Map options, String buildType){
         cd build-${buildType}
         mv bin ${buildType}
         rm ${buildType}/*.a
-        cp ../third_party/miopen/libMIOpen.so* ./${buildType}
-        cp ../third_party/tensorflow/linux/* ./${buildType}
+        cp -R ../third_party/miopen/libMIOpen.so* ./${buildType}
+        cp -R ../third_party/tensorflow/linux/* ./${buildType}
         mkdir ./${buildType}/rml
         mkdir ./${buildType}/rml_internal
         cp ../rml/include/rml/*.h* ./${buildType}/rml
