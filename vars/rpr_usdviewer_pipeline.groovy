@@ -111,7 +111,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_VIEWER_PACKAGE) {
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
             timeout(time: "15", unit: "MINUTES") {
                 getViewerTool(osName, options)
             }
@@ -247,7 +247,7 @@ def executeBuildWindows(Map options)
         outputEnvironmentInfo("Windows", "${STAGE_NAME}.EnvVariables")
 
         // vcvars64.bat sets VS/msbuild env
-        withNotifications(title: "Windows", options: options, beginUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.USDPixar.log", configuration: NotificationConfiguration.BUILDING_VIEWER) {
+        withNotifications(title: "Windows", options: options, beginUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.USDPixar.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             bat """
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
 
@@ -272,7 +272,7 @@ def executeBuildWindows(Map options)
         }
 
         // delete files before zipping
-        withNotifications(title: "Ubuntu18", options: options, endUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.PACKAGIING_VIEWER) {
+        withNotifications(title: "Ubuntu18", options: options, endUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
             bat """
                 del RPRViewer\\binary\\inst\\pxrConfig.cmake
                 rmdir /Q /S RPRViewer\\binary\\inst\\cmake
@@ -312,11 +312,11 @@ def executeBuildWindows(Map options)
 def executeBuild(String osName, Map options)
 {
     try {
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_VIEWER_REPO) {
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             checkOutBranchOrScm(options["projectBranch"], options["projectRepo"])
         }
 
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_VIEWER) {
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch (osName) {
                 case "Windows":
                     executeBuildWindows(options);
@@ -351,7 +351,7 @@ def executePreBuild(Map options)
         options.testsPackage = "smoke.json"
     }
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_VIEWER_REPO) {
+    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
     }
 

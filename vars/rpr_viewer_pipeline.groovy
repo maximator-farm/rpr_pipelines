@@ -187,7 +187,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_VIEWER_PACKAGE) {
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
             getViewerTool(osName, options)
         }
 
@@ -350,14 +350,14 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows(Map options)
 {
-    withNotifications(title: "Windows", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Windows.log", configuration: NotificationConfiguration.BUILDING_VIEWER) {
+    withNotifications(title: "Windows", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Windows.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
         bat """
             cmake . -B build -G "Visual Studio 15 2017" -A x64 >> ${STAGE_NAME}.log 2>&1
             cmake --build build --target RadeonProViewer --config Release >> ${STAGE_NAME}.log 2>&1
         """
     }
 
-    withNotifications(title: "Windows", options: options, endUrl: "${BUILD_URL}/artifact/RprViewer_Windows.zip", configuration: NotificationConfiguration.PACKAGIING_VIEWER) {
+    withNotifications(title: "Windows", options: options, endUrl: "${BUILD_URL}/artifact/RprViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         bat """
             mkdir ${options.DEPLOY_FOLDER}
             xcopy config.json ${options.DEPLOY_FOLDER}
@@ -402,7 +402,7 @@ def executeBuildWindows(Map options)
 
 def executeBuildLinux(Map options)
 {
-    withNotifications(title: "Ubuntu18", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Ubuntu18.log", configuration: NotificationConfiguration.BUILDING_VIEWER) {
+    withNotifications(title: "Ubuntu18", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Ubuntu18.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
         sh """
             mkdir build
             cd build
@@ -411,7 +411,7 @@ def executeBuildLinux(Map options)
         """
     }
 
-    withNotifications(title: "Ubuntu18", options: options, endUrl: "${BUILD_URL}/artifact/RprViewer_Ubuntu18.zip", configuration: NotificationConfiguration.PACKAGIING_VIEWER) {
+    withNotifications(title: "Ubuntu18", options: options, endUrl: "${BUILD_URL}/artifact/RprViewer_Ubuntu18.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         sh """
             mkdir ${options.DEPLOY_FOLDER}
             cp config.json ${options.DEPLOY_FOLDER}
@@ -449,7 +449,7 @@ def executeBuild(String osName, Map options)
     }
 
     try {
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_VIEWER_REPO) {
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             checkOutBranchOrScm(options["projectBranch"], options["projectRepo"])
         }
 
@@ -465,7 +465,7 @@ def executeBuild(String osName, Map options)
 
         outputEnvironmentInfo(osName)
 
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_VIEWER) {
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
                 case 'Windows':
                     executeBuildWindows(options)
@@ -515,7 +515,7 @@ def executePreBuild(Map options)
         options.testsPackage = "smoke.json"
     }
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_VIEWER_REPO) {
+    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
     }
 

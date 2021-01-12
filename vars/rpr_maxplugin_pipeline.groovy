@@ -320,7 +320,7 @@ def executeBuildWindows(Map options)
 {
     dir("RadeonProRenderMaxPlugin/Package")
     {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILDING_PLUGIN, "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -359,7 +359,7 @@ def executeBuildWindows(Map options)
         println "[INFO] Built MSI product code: ${options.productCode}"
         stash includes: 'RadeonProRenderMax.msi', name: 'appWindows'
 
-        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.PLUGIN_BUILT, pluginUrl)
+        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
     }
 }
 
@@ -374,7 +374,7 @@ def executeBuild(String osName, Map options)
     try {
         dir("RadeonProRenderMaxPlugin")
         {
-            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_RPR_SDK_REPO) {
+            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
             }
         }
@@ -391,7 +391,7 @@ def executeBuild(String osName, Map options)
 
         outputEnvironmentInfo(osName)
 
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_PLUGIN) {
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
                 case 'Windows':
                     executeBuildWindows(options);
@@ -476,7 +476,7 @@ def executePreBuild(Map options)
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderMaxPlugin')
         {
-            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_RPR_SDK_REPO) {
+            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
             }
 
@@ -496,7 +496,7 @@ def executePreBuild(Map options)
                 currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
 
-            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_PLUGIN_VERSION) {
+            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMaxPlugin\\version.h", '#define VERSION_STR')
 
                 if (options['incrementVersion']) {

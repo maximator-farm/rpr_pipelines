@@ -22,7 +22,7 @@ def executeBuildWindows(Map options)
 {
     dir('RadeonProRenderBlenderAddon\\BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILDING_PLUGIN, "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             set HDUSD_LIBS_DIR=..\\..\\libs
             build_win.cmd >> ../../${STAGE_NAME}.log  2>&1
@@ -58,7 +58,7 @@ def executeBuildWindows(Map options)
 
             stash includes: "BlenderUSDHydraAddon_Windows.zip", name: "appWindows"
 
-            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.PLUGIN_BUILT, pluginUrl)
+            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
         }
     }
 }
@@ -82,14 +82,14 @@ def executeBuild(String osName, Map options)
 
         dir("RadeonProRenderBlenderAddon")
         {
-            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_PLUGIN_REPO) {
+            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
             }
         }
 
         outputEnvironmentInfo(osName)
 
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_PLUGIN) {
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
                 case "Windows":
                     executeBuildWindows(options);
@@ -172,7 +172,7 @@ def executePreBuild(Map options)
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderBlenderAddon')
         {
-            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_PLUGIN_REPO) {
+            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
             }
 
@@ -193,7 +193,7 @@ def executePreBuild(Map options)
                 currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
 
-            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_PLUGIN_VERSION) {
+            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
                 if (options['incrementVersion']) {

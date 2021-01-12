@@ -299,7 +299,7 @@ def executeBuildWindows(String osName, Map options)
     }
     
     dir ("RadeonProRenderUSD") {
-        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILDING_PLUGIN, "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
 
         if (options.buildType == "Houdini") {
             options.win_houdini_python3 = options.houdini_python3 ? " Python3" : ""
@@ -338,7 +338,7 @@ def executeBuildWindows(String osName, Map options)
 
             stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
 
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.PLUGIN_BUILT, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
         }
     }
 }
@@ -366,7 +366,7 @@ def executeBuildOSX(String osName, Map options)
     }
 
     dir ("RadeonProRenderUSD") {
-        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILDING_PLUGIN, "${BUILD_URL}/artifact/Build-OSX.log")
+        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
 
         if (options.buildType == "Houdini") {
             options.osx_houdini_python3 = options.houdini_python3 ? "-py3" : "-py2"
@@ -402,7 +402,7 @@ def executeBuildOSX(String osName, Map options)
 
             stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
 
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.PLUGIN_BUILT, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
         }
     }
 }
@@ -430,7 +430,7 @@ def executeBuildUnix(String osName, Map options)
     }
 
     dir ("RadeonProRenderUSD") {
-        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILDING_PLUGIN, "${BUILD_URL}/artifact/Build-Ubuntu18.log")
+        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-Ubuntu18.log")
 
         String installation_path
         if (env.HOUDINI_INSTALLATION_PATH) {
@@ -483,7 +483,7 @@ def executeBuildUnix(String osName, Map options)
 
             stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
 
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.PLUGIN_BUILT, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
         }
     }
 }
@@ -503,7 +503,7 @@ def executeBuild(String osName, Map options) {
     }
 
     try {
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_PLUGIN_REPO) {
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             dir ("RadeonProRenderUSD") {
                 checkOutBranchOrScm(options.projectBranch, options.projectRepo)
             }
@@ -519,7 +519,7 @@ def executeBuild(String osName, Map options) {
 
         outputEnvironmentInfo(osName)
 
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_PLUGIN) {
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
                 case "Windows":
                     executeBuildWindows(osName, options);
@@ -570,7 +570,7 @@ def executePreBuild(Map options) {
 
     dir('RadeonProRenderUSD')
     {
-        withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_PLUGIN_REPO) {
+        withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
         }
 
@@ -588,7 +588,7 @@ def executePreBuild(Map options) {
             currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
         }
 
-        withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_PLUGIN_VERSION) {
+        withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
             options.majorVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_MAJOR_VERSION "', '')
             options.minorVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_MINOR_VERSION "', '')
             options.patchVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_PATCH_VERSION "', '')

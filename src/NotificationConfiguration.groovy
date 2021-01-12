@@ -18,12 +18,12 @@ public class NotificationConfiguration {
         ]
     ]
 
-    def static DOWNLOAD_PLUGIN_REPO = [
-        "begin": ["message": "Downloading plugin repository."],
+    def static DOWNLOAD_SOURCE_CODE_REPO = [
+        "begin": ["message": "Downloading source code repository."],
 
         "exceptions": [
             [
-                "class": "TimeoutExceeded", "problemMessage": "Failed to download plugin repository due to timeout.", 
+                "class": "TimeoutExceeded", "problemMessage": "Failed to download source code repository due to timeout.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC
             ],
             [
@@ -33,23 +33,7 @@ public class NotificationConfiguration {
                 "githubNotification": ["status": "failure"]
             ],
             [
-                "class": Exception, "problemMessage": "Failed to download plugin repository.", 
-                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
-                "githubNotification": ["status": "failure"]
-            ]
-        ]
-    ]
-
-    def static DOWNLOAD_RPR_SDK_REPO = [
-        "begin": ["message": "Downloading RadeonProRenderSDK repository."],
-
-        "exceptions": [
-            [
-                "class": "TimeoutExceeded", "problemMessage": "Failed to download RadeonProRenderSDK repository due to timeout.", 
-                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC
-            ],
-            [
-                "class": Exception, "problemMessage": "Failed to download RadeonProRenderSDK repository.", 
+                "class": Exception, "problemMessage": "Failed to download source code repository.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
                 "githubNotification": ["status": "failure"]
             ]
@@ -72,22 +56,6 @@ public class NotificationConfiguration {
         ]
     ]
 
-    def static DOWNLOAD_VIEWER_REPO = [
-        "begin": ["message": "Downloading Viewer repository."],
-
-        "exceptions": [
-            [
-                "class": "TimeoutExceeded", "problemMessage": "Failed to download Viewer repository due to timeout.", 
-                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC
-            ],
-            [
-                "class": Exception, "problemMessage": "Failed to download Viewer repository.", 
-                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
-                "githubNotification": ["status": "failure"]
-            ]
-        ]
-    ]
-
     def static DOWNLOAD_USD_REPO = [
         "begin": ["message": "Downloading the USD repository."],
 
@@ -100,10 +68,10 @@ public class NotificationConfiguration {
         ]
     ]
 
-    def static INCREMENT_PLUGIN_VERSION = [
+    def static INCREMENT_VERSION = [
         "exceptions": [
             [
-                "class": Exception, "problemMessage": "Failed to increment plugin version.", 
+                "class": Exception, "problemMessage": "Failed to increment version.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
                 "githubNotification": ["status": "error"]
             ]
@@ -135,62 +103,24 @@ public class NotificationConfiguration {
         ]
     ]
 
-    def static BUILD_PLUGIN = [
+    def static BUILD_SOURCE_CODE = [
         "exceptions": [
             [
-                "class": Exception, "problemMessage": "Failed to build the plugin.", 
+                "class": Exception, "problemMessage": "Failed to build the project.", 
                 "rethrow": ExceptionThrowType.RETHROW,
                 "githubNotification": ["status": "failure"]
             ]
         ]
     ]
 
-    def static BUILD_RPR_SDK = [
-        "exceptions": [
-            [
-                "class": Exception, "problemMessage": "Failed to create RadeonProRenderSDK package.", 
-                "rethrow": ExceptionThrowType.RETHROW,
-                "githubNotification": ["status": "failure"]
-            ]
-        ]
-    ]
+    def static BUILD_PACKAGE = [
+        "begin": ["message": "Creating package."],
 
-    def static BUILD_VIEWER = [
-        "exceptions": [
-            [
-                "class": Exception, "problemMessage": "Failed to create Viewer package.", 
-                "rethrow": ExceptionThrowType.RETHROW,
-                "githubNotification": ["status": "failure"]
-            ]
-        ]
-    ]
-
-    def static BUILDING_VIEWER = [
-        "begin": ["message": "Building Viewer."],
+        "end": ["message": "Package was successfully created."],
 
         "exceptions": [
             [
-                "class": Exception, "problemMessage": "Failed during Viewer building.", 
-                "rethrow": ExceptionThrowType.RETHROW,
-                "githubNotification": ["status": "failure"]
-            ]
-        ]
-    ]
-
-    def static BUILDING_RPR_SDK_PACKAGE = [
-        "begin": ["message": "Creating RadeonProRenderSDK package."],
-
-        "end": ["message": "RadeonProRenderSDK package was successfully created."]
-    ]
-
-    def static PACKAGIING_VIEWER = [
-        "begin": ["message": "Creating Viewer package."],
-
-        "end": ["message": "Viewer package was successfully created."],
-
-        "exceptions": [
-            [
-                "class": Exception, "problemMessage": "Failed to create Viewer package.", 
+                "class": Exception, "problemMessage": "Failed to create package.", 
                 "rethrow": ExceptionThrowType.RETHROW,
                 "githubNotification": ["status": "failure"]
             ]
@@ -223,23 +153,12 @@ public class NotificationConfiguration {
         ]
     ]
 
-    def static DOWNLOAD_RPR_SDK_PACKAGE = [
-        "begin": ["message": "Downloading RadeonProRenderSDK package."],
+    def static DOWNLOAD_PACKAGE = [
+        "begin": ["message": "Downloading package."],
 
         "exceptions": [
             [
-                "class": Exception, "problemMessage": "Failed to download RadeonProRenderSDK package.", 
-                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
-            ]
-        ]
-    ]
-
-    def static DOWNLOAD_VIEWER_PACKAGE = [
-        "begin": ["message": "Downloading Viewer package."],
-
-        "exceptions": [
-            [
-                "class": Exception, "problemMessage": "Failed to download Viewer package.", 
+                "class": Exception, "problemMessage": "Failed to download package.", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
             ]
         ]
@@ -342,9 +261,9 @@ public class NotificationConfiguration {
 
     def static PRE_BUILD_STAGE_FAILED = "PreBuild stage was failed."
 
-    def static BUILDING_PLUGIN = "Building the plugin."
+    def static BUILD_SOURCE_CODE_MESSAGE = "Building the project."
 
-    def static PLUGIN_BUILT = "The plugin was successfully built and published."
+    def static SOURCE_CODE_BUILT = "The project was successfully built and published."
 
     def static REASON_IS_NOT_IDENTIFIED = "The reason is not automatically identified. Please contact support."
 

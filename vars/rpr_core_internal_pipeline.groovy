@@ -146,7 +146,7 @@ def executeUnitTests(String osName, String asicName, Map options)
 {
     dir("RadeonProRenderSDK")
     {
-        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_RPR_SDK_REPO) {
+        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
                 checkOutBranchOrScm(options["projectBranch"], "git@github.com:amdadvtech/RadeonProRenderSDKInternal.git", false, options["prBranchName"], options["prRepoName"])
@@ -257,7 +257,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_RPR_SDK_PACKAGE) {
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
             getCoreSDK(osName, options)
         }
 
@@ -394,7 +394,7 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows(Map options) {
     withNotifications(title: "WIndows", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Windows.log",
-        endUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILDING_RPR_SDK_PACKAGE) {
+        endUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RPR/RadeonProRender/lib/x64") {
             zip archive: true, dir: ".", glob: "", zipFile: "binWin64.zip"
             stash includes: "binWin64.zip", name: 'WindowsSDK'
@@ -410,7 +410,7 @@ def executeBuildWindows(Map options) {
 
 def executeBuildOSX(Map options) {
     withNotifications(title: "OSX", options: options, beginUrl: "${BUILD_URL}/artifact/Build-OSX.log",
-        endUrl: "${BUILD_URL}/artifact/binMacOS.zip", configuration: NotificationConfiguration.BUILDING_RPR_SDK_PACKAGE) {
+        endUrl: "${BUILD_URL}/artifact/binMacOS.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binMacOS") {
             zip archive: true, dir: ".", glob: "", zipFile: "binMacOS.zip"
             stash includes: "binMacOS.zip", name: "OSXSDK"
@@ -426,7 +426,7 @@ def executeBuildOSX(Map options) {
 
 def executeBuildLinux(Map options) {
     withNotifications(title: "Ubuntu18", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Ubuntu18.log",
-        endUrl: "${BUILD_URL}/artifact/binUbuntu18.zip", configuration: NotificationConfiguration.BUILDING_RPR_SDK_PACKAGE) {
+        endUrl: "${BUILD_URL}/artifact/binUbuntu18.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
             zip archive: true, dir: ".", glob: "", zipFile: "binUbuntu18.zip"
             stash includes: "binUbuntu18.zip", name: "Ubuntu18SDK"
@@ -450,7 +450,7 @@ def executeBuild(String osName, Map options)
     try {
         dir("RadeonProRenderSDK")
         {
-            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_PLUGIN_REPO) {
+            withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], "git@github.com:amdadvtech/RadeonProRenderSDKInternal.git", false, options["prBranchName"], options["prRepoName"])
             }
         }
@@ -467,7 +467,7 @@ def executeBuild(String osName, Map options)
 
         outputEnvironmentInfo(osName)
 
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_RPR_SDK) {
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
                 case "Windows":
                     executeBuildWindows(options);
@@ -512,7 +512,7 @@ def executePreBuild(Map options)
         githubNotificator.initPreBuild("${BUILD_URL}")
     }
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_RPR_SDK_REPO) {
+    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkOutBranchOrScm(options["projectBranch"], "git@github.com:amdadvtech/RadeonProRenderSDKInternal.git")
     }
 
