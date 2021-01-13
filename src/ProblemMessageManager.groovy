@@ -6,6 +6,10 @@ public class ProblemMessageManager {
         SPECIFIC, GENERAL, GLOBAL
     }
 
+    def static SPECIFIC = ProblemScope.SPECIFIC
+    def static GENERAL = ProblemScope.GENERAL
+    def static GLOBAL = ProblemScope.GLOBAL
+
     def context
     def currentBuild
 

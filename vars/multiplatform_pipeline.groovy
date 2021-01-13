@@ -83,6 +83,8 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 println("Scheduling ${osName}:${asicName} ${testName}")
 
                                 Map newOptions = options.clone()
+                                newOptions["stage"] = "Test"
+                                newOptions["osName"] = osName
                                 newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                 newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
                                 newOptions['tests'] = testName ?: options.tests
@@ -338,6 +340,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                 try {
                                     timeout(time: "${options.PREBUILD_TIMEOUT}", unit: 'MINUTES')
                                     {
+                                        options["stage"] = "PreBuild"
                                         executePreBuild(options)
                                         if(!options['executeBuild'])
                                         {
@@ -357,15 +360,15 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                             String causeClassName = it.getClass().toString()
                                             if (causeClassName.contains("ExceededTimeout")) {
                                                 if (options.problemMessageManager) {
-                                                    options.problemMessageManager.saveSpecificFailReason("Timeout exceeded.", "PreBuild")
+                                                    options.problemMessageManager.saveSpecificFailReason(NotificationConfiguration.TIMEOUT_EXCEEDED, "PreBuild")
                                                 }
                                             }
                                         }
                                     }
                                     if (options.problemMessageManager) {
-                                        options.problemMessageManager.saveGeneralFailReason("Unknown reason.", "PreBuild")
+                                        options.problemMessageManager.saveGeneralFailReason(NotificationConfiguration.UNKNOWN_REASON, "PreBuild")
                                     }
-                                    GithubNotificator.closeUnfinishedSteps(env, options, "PreBuild stage was failed.")
+                                    GithubNotificator.closeUnfinishedSteps(options, NotificationConfiguration.PRE_BUILD_STAGE_FAILED)
                                     throw e
                                 }
                             }
@@ -381,6 +384,11 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                         List tokens = it.tokenize(':')
                         String osName = tokens.get(0)
                         String gpuNames = ""
+
+                        Map newOptions = options.clone()
+                        newOptions["stage"] = "Build"
+                        newOptions["osName"] = osName
+
                         if (tokens.size() > 1)
                         {
                             gpuNames = tokens.get(1)
@@ -392,8 +400,8 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                             gpuNames.split(',').each()
                             {
                                 // if not split - testsList doesn't exists
-                                options.testsList = options.testsList ?: ['']
-                                options['testsList'].each() { testName ->
+                                newOptions.testsList = newOptions.testsList ?: ['']
+                                newOptions['testsList'].each() { testName ->
                                     String asicName = it
                                     String testResultItem = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                     testResultList << testResultItem
@@ -401,7 +409,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                             }
                         }
 
-                        tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, options)
+                        tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, newOptions)
                     }
                 }
                 parallel tasks
@@ -443,6 +451,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                     {
                         def reportBuilderLabels = "Windows && ReportBuilder"
 
+                        options["stage"] = "Deploy"
                         def retringFunction = { nodesList, currentTry ->
                             executeDeploy(options, platformList, testResultList)
                         }

@@ -124,13 +124,12 @@ public class GithubNotificator {
      * @param stageName Name of stage
      * @param title Name of status check which should be updated
      * @param status New status of status check
-     * @param env Environment variables of main pipeline. It's used for decide that is it PR or not
      * @param options Options map
      * @param message Message of status check. If it's empty current message will be gotten
      * @param url Url of status check. If it's empty current url will be gotten
      */
-    static def updateStatus(String stageName, String title, String status, env, Map options, String message = "", String url = "") {
-        if (env.CHANGE_URL && options.githubNotificator) {
+    static def updateStatus(String stageName, String title, String status, Map options, String message = "", String url = "") {
+        if (options.githubNotificator) {
             options.githubNotificator.updateStatusPr(stageName, title, status, options.commitSHA, message, url)
         }
     }
@@ -178,11 +177,10 @@ public class GithubNotificator {
      *
      * @param stageName Name of stage
      * @param title Name of status check which should be updated
-     * @param env Environment variables of main pipeline. It's used for decide that is it PR or not
      * @param options Options map
      */
-    static def getCurrentStatus(String stageName, String title, env, Map options) {
-        if (env.CHANGE_URL && options.githubNotificator) {
+    static def getCurrentStatus(String stageName, String title, Map options) {
+        if (options.githubNotificator) {
             options.githubNotificator.getCurrentStatusPr(stageName, title)
         }
     }
@@ -207,12 +205,11 @@ public class GithubNotificator {
      * All pending and failure status checks will be marked as errored
      * It can be useful if build was aborted
      *
-     * @param env Environment variables of main pipeline. It's used for decide that is it PR or not
      * @param options Options map
      * @param message Message of status check. If it's empty current message will be gotten
      */
-    static def closeUnfinishedSteps(env, Map options, String message = "") {
-        if (env.CHANGE_URL && options.githubNotificator) {
+    static def closeUnfinishedSteps(Map options, String message = "") {
+        if (options.githubNotificator) {
             options.githubNotificator.closeUnfinishedStepsPr(options.commitSHA, message)
         }
     }
@@ -299,12 +296,11 @@ public class GithubNotificator {
      * Function for close status checks which represents test stages on some OS
      * It can be useful if building on some OS didn't finish successfully
      *
-     * @param env Environment variables of main pipeline. It's used for decide that is it PR or not
      * @param options Options map
      * @param osName OS name on which building failed
      */
-    static def failPluginBuilding(env, Map options, String osName) {
-        if (env.CHANGE_URL && options.githubNotificator) {
+    static def failPluginBuilding(Map options, String osName) {
+        if (options.githubNotificator) {
             options.githubNotificator.failPluginBuildingPr(osName)
         }
     }
