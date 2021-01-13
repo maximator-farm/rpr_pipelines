@@ -393,7 +393,7 @@ def executeTests(String osName, String asicName, Map options)
 }
 
 def executeBuildWindows(Map options) {
-    withNotifications(title: "WIndows", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Windows.log",
+    withNotifications(title: "Windows", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Windows.log",
         endUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RPR/RadeonProRender/lib/x64") {
             zip archive: true, dir: ".", glob: "", zipFile: "binWin64.zip"
