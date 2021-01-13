@@ -43,7 +43,7 @@ def executeBuildUbuntu(String osName, Map options)
     sh """
         mkdir release
         mkdir release/miopen
-        cp build/lib/libMIOpen.so* release
+        cp -R build/lib/libMIOpen.so* release
         cp build/include/miopen/*.h release/miopen
         cp include/miopen/*.h release/miopen
     """
@@ -69,7 +69,7 @@ def executeBuildCentOS(String osName, Map options)
     sh """
         mkdir release
         mkdir release/miopen
-        cp build/lib/libMIOpen.so* release
+        cp -R build/lib/libMIOpen.so* release
         cp build/include/miopen/*.h release/miopen
         cp include/miopen/*.h release/miopen
     """
