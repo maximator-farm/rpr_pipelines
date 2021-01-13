@@ -5,8 +5,8 @@
  * Possible elements:
  *     title - Name of status check which should be updated (required if GithubNotificator is initialized)
  *     options - Options list
- *     beginUrl (optional) - Url which will be set in status check before execution of code
- *     endUrl (optional) - Url which will be set in status check if code was finished without exceptions
+ *     logUrl (optional) - Url which will be set in status check before execution of code
+ *     artifactUrl (optional) - Url which will be set in status check if code was finished without exceptions
  *     printMessage (optional) - If it's true, print error message instead of its saving (default - false)
  *     configuration - Map with configuration of notifications
  *     Possible elements:
@@ -32,22 +32,22 @@
 def call(Map blockOptions, Closure code) {
     def title = blockOptions["title"]
     def options = blockOptions["options"]
-    def beginUrl = blockOptions["beginUrl"]
-    def endUrl = blockOptions["endUrl"]
+    def logUrl = blockOptions["logUrl"]
+    def artifactUrl = blockOptions["artifactUrl"]
     def printMessage = blockOptions["printMessage"]
     def configuration = blockOptions["configuration"]
 
     try {
         if (configuration.begin?.message) {
             GithubNotificator.updateStatus(options["stage"], title, "pending",
-                options, configuration["begin"]["message"], beginUrl)
+                options, configuration["begin"]["message"], logUrl)
         }
 
         code()
 
         if (configuration.end?.message) {
             GithubNotificator.updateStatus(options["stage"], title, "success",
-                options, configuration["end"]["message"], endUrl)
+                options, configuration["end"]["message"], artifactUrl)
         }
     } catch (e) {
         // find necessary exception in configuration

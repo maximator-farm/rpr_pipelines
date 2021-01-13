@@ -129,7 +129,7 @@ def executeTests(String osName, String asicName, Map options)
 {
 
      if (options.buildType == "Houdini") {
-        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.INSTALL_HOUDINI) {
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.INSTALL_HOUDINI) {
             timeout(time: "20", unit: "MINUTES") {
                 houdini_python3 = options.houdini_python3 ? "--python3" : ''
                 withCredentials([[$class: "UsernamePasswordMultiBinding", credentialsId: "sidefxCredentials", usernameVariable: "USERNAME", passwordVariable: "PASSWORD"]]) {
@@ -143,7 +143,7 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
-        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
                 checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_houdini.git")
@@ -299,7 +299,7 @@ def executeBuildWindows(String osName, Map options)
     }
     
     dir ("RadeonProRenderUSD") {
-        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
 
         if (options.buildType == "Houdini") {
             options.win_houdini_python3 = options.houdini_python3 ? " Python3" : ""
@@ -338,7 +338,7 @@ def executeBuildWindows(String osName, Map options)
 
             stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
 
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
 }
@@ -366,7 +366,7 @@ def executeBuildOSX(String osName, Map options)
     }
 
     dir ("RadeonProRenderUSD") {
-        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
+        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
 
         if (options.buildType == "Houdini") {
             options.osx_houdini_python3 = options.houdini_python3 ? "-py3" : "-py2"
@@ -402,7 +402,7 @@ def executeBuildOSX(String osName, Map options)
 
             stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
 
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
 }
@@ -430,7 +430,7 @@ def executeBuildUnix(String osName, Map options)
     }
 
     dir ("RadeonProRenderUSD") {
-        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-Ubuntu18.log")
+        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Ubuntu18.log")
 
         String installation_path
         if (env.HOUDINI_INSTALLATION_PATH) {
@@ -483,7 +483,7 @@ def executeBuildUnix(String osName, Map options)
 
             stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
 
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
 }

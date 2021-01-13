@@ -292,7 +292,7 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
-        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
                 checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_blender.git")
@@ -498,7 +498,7 @@ def executeBuildWindows(Map options)
 {
     dir('RadeonProRenderBlenderAddon\\BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             build_win.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -534,7 +534,7 @@ def executeBuildWindows(Map options)
 
             stash includes: "RadeonProRenderBlender_Windows.zip", name: "appWindows"
 
-            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
+            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
 }
@@ -543,7 +543,7 @@ def executeBuildOSX(Map options)
 {
     dir('RadeonProRenderBlenderAddon/BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", "OSX", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
+        GithubNotificator.updateStatus("Build", "OSX", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
         sh """
             ./build_osx.sh >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -578,7 +578,7 @@ def executeBuildOSX(Map options)
 
             stash includes: "RadeonProRenderBlender_MacOS.zip", name: "appOSX"
 
-            GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
+            GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
 }
@@ -587,7 +587,7 @@ def executeBuildLinux(String osName, Map options)
 {
     dir('RadeonProRenderBlenderAddon/BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-Ubuntu18.log")
+        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Ubuntu18.log")
         sh """
             ./build_linux.sh >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -623,7 +623,7 @@ def executeBuildLinux(String osName, Map options)
 
             stash includes: "RadeonProRenderBlender_${osName}.zip", name: "app${osName}"
 
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
 
     }

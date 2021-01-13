@@ -261,9 +261,9 @@ public class NotificationConfiguration {
 
     def static PRE_BUILD_STAGE_FAILED = "PreBuild stage was failed."
 
-    def static BUILD_SOURCE_CODE_MESSAGE = "Building the project."
+    def static BUILD_SOURCE_CODE_START_MESSAGE = "Building the project."
 
-    def static SOURCE_CODE_BUILT = "The project was successfully built and published."
+    def static BUILD_SOURCE_CODE_END_MESSAGE = "The project was successfully built and published."
 
     def static REASON_IS_NOT_IDENTIFIED = "The reason is not automatically identified. Please contact support."
 

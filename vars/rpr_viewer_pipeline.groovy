@@ -179,7 +179,7 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
-        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
                 checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_rprviewer.git")
@@ -350,14 +350,14 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows(Map options)
 {
-    withNotifications(title: "Windows", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Windows.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+    withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/Build-Windows.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
         bat """
             cmake . -B build -G "Visual Studio 15 2017" -A x64 >> ${STAGE_NAME}.log 2>&1
             cmake --build build --target RadeonProViewer --config Release >> ${STAGE_NAME}.log 2>&1
         """
     }
 
-    withNotifications(title: "Windows", options: options, endUrl: "${BUILD_URL}/artifact/RprViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+    withNotifications(title: "Windows", options: options, artifactUrl: "${BUILD_URL}/artifact/RprViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         bat """
             mkdir ${options.DEPLOY_FOLDER}
             xcopy config.json ${options.DEPLOY_FOLDER}
@@ -402,7 +402,7 @@ def executeBuildWindows(Map options)
 
 def executeBuildLinux(Map options)
 {
-    withNotifications(title: "Ubuntu18", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Ubuntu18.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+    withNotifications(title: "Ubuntu18", options: options, logUrl: "${BUILD_URL}/artifact/Build-Ubuntu18.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
         sh """
             mkdir build
             cd build
@@ -411,7 +411,7 @@ def executeBuildLinux(Map options)
         """
     }
 
-    withNotifications(title: "Ubuntu18", options: options, endUrl: "${BUILD_URL}/artifact/RprViewer_Ubuntu18.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+    withNotifications(title: "Ubuntu18", options: options, artifactUrl: "${BUILD_URL}/artifact/RprViewer_Ubuntu18.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         sh """
             mkdir ${options.DEPLOY_FOLDER}
             cp config.json ${options.DEPLOY_FOLDER}

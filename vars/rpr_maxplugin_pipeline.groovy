@@ -149,7 +149,7 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
     
     try {
-        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
                 checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_max.git")
@@ -320,7 +320,7 @@ def executeBuildWindows(Map options)
 {
     dir("RadeonProRenderMaxPlugin/Package")
     {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -359,7 +359,7 @@ def executeBuildWindows(Map options)
         println "[INFO] Built MSI product code: ${options.productCode}"
         stash includes: 'RadeonProRenderMax.msi', name: 'appWindows'
 
-        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
+        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
     }
 }
 

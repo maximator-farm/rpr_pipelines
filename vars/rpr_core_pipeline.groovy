@@ -181,7 +181,7 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
-        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
                 checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_core.git")
@@ -345,8 +345,8 @@ def executeTests(String osName, String asicName, Map options)
 }
 
 def executeBuildWindows(Map options) {
-    withNotifications(title: "Windows", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Windows.log",
-        endUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+    withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/Build-Windows.log",
+        artifactUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binWin64") {
             zip archive: true, dir: ".", glob: "", zipFile: "binWin64.zip"
             stash includes: "binWin64.zip", name: 'WindowsSDK'
@@ -361,8 +361,8 @@ def executeBuildWindows(Map options) {
 }
 
 def executeBuildOSX(Map options) {
-    withNotifications(title: "OSX", options: options, beginUrl: "${BUILD_URL}/artifact/Build-OSX.log",
-        endUrl: "${BUILD_URL}/artifact/binMacOS.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+    withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/Build-OSX.log",
+        artifactUrl: "${BUILD_URL}/artifact/binMacOS.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binMacOS") {
             zip archive: true, dir: ".", glob: "", zipFile: "binMacOS.zip"
             stash includes: "binMacOS.zip", name: "OSXSDK"
@@ -377,8 +377,8 @@ def executeBuildOSX(Map options) {
 }
 
 def executeBuildLinux(Map options) {
-    withNotifications(title: "Ubuntu18", options: options, beginUrl: "${BUILD_URL}/artifact/Build-Ubuntu18.log",
-        endUrl: "${BUILD_URL}/artifact/binUbuntu18.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+    withNotifications(title: "Ubuntu18", options: options, logUrl: "${BUILD_URL}/artifact/Build-Ubuntu18.log",
+        artifactUrl: "${BUILD_URL}/artifact/binUbuntu18.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
             zip archive: true, dir: ".", glob: "", zipFile: "binUbuntu18.zip"
             stash includes: "binUbuntu18.zip", name: "Ubuntu18SDK"

@@ -104,7 +104,7 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
-        withNotifications(title: options["stageName"], options: options, beginUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
                 checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_usdviewer.git")
@@ -247,7 +247,7 @@ def executeBuildWindows(Map options)
         outputEnvironmentInfo("Windows", "${STAGE_NAME}.EnvVariables")
 
         // vcvars64.bat sets VS/msbuild env
-        withNotifications(title: "Windows", options: options, beginUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.USDPixar.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+        withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.USDPixar.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             bat """
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
 
@@ -272,7 +272,7 @@ def executeBuildWindows(Map options)
         }
 
         // delete files before zipping
-        withNotifications(title: "Ubuntu18", options: options, endUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        withNotifications(title: "Ubuntu18", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
             bat """
                 del RPRViewer\\binary\\inst\\pxrConfig.cmake
                 rmdir /Q /S RPRViewer\\binary\\inst\\cmake

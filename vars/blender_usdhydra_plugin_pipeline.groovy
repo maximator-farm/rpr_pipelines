@@ -22,7 +22,7 @@ def executeBuildWindows(Map options)
 {
     dir('RadeonProRenderBlenderAddon\\BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             set HDUSD_LIBS_DIR=..\\..\\libs
             build_win.cmd >> ../../${STAGE_NAME}.log  2>&1
@@ -58,7 +58,7 @@ def executeBuildWindows(Map options)
 
             stash includes: "BlenderUSDHydraAddon_Windows.zip", name: "appWindows"
 
-            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.SOURCE_CODE_BUILT, pluginUrl)
+            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
 }
