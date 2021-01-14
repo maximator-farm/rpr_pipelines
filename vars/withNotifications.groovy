@@ -52,7 +52,8 @@ def call(Map blockOptions, Closure code) {
     } catch (e) {
         // find necessary exception in configuration
         for (exception in configuration["exceptions"]) {
-            if ((exception["class"].isInstance(e)) || (exception["class"] == "TimeoutExceeded" && utils.isTimeoutExceeded(e))) {
+            if ((exception["class"] instanceof Exception && exception["class"].isInstance(e)) 
+                || (exception["class"] == "TimeoutExceeded" && utils.isTimeoutExceeded(e))) {
                 // check existence of some messages in exception if it's required
                 Boolean exceptionFound = true
                 if (exception["getMessage"]) {
