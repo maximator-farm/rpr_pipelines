@@ -2,6 +2,9 @@ import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 import hudson.model.Result
 import groovy.json.JsonOutput
 
+/**
+ * self in methods params is a context of executable pipeline. Without it you can't call Jenkins methods.
+ */
 class utils {
 
     static int getTimeoutFromXML(Object self, String test, String keyword, Integer additional_xml_timeout) 
@@ -251,5 +254,44 @@ class utils {
             self.println(e.getMessage())
         }
         return ""
+    }
+
+    /**
+     * Download file using curl from given link
+     * @param filelink - full url to file
+     * @param outputDir - path to the directory where the file will be downloaded (default is current dir)
+     * @param credentialsId - custom Jenkins credentials
+     * @param extraParams - map with additional curl param, where keys and values are equivalent for curl
+     * @return relative path to downloaded file
+     */
+    static String downloadFile(Object self, String filelink, String outputDir = "./", String credentialsId = "", Map extraParams = [:]) {
+        String filename = filelink.split("/").last()
+        String command = "curl -L -o ${outputDir}${filename} "
+        if (credentialsId)
+            self.withCredentials([self.usernamePassword(credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                command += "-u ${self.USERNAME}:${self.PASSWORD} "
+            }
+        if (extraParams) {
+            extraParams.each { command += "-${it.key} ${it.value} " }
+        }
+        command += "${filelink}"
+        if (self.isUnix()) {
+            self.sh command
+        } else {
+            self.bat command
+        }
+        return outputDir + filename
+    }
+
+    /**
+     * Compares 2 images
+     * @param img1 - path to first image
+     * @param img2 - path to second image
+     * @return percentage difference of images (0 - similar, 100 - different)
+     */
+    static Double compareImages(Object self, String img1, String img2) {
+        return self.python3("./jobs_launcher/common/scripts/CompareMetrics.py --img1 ${img1} --img2 ${img2}").with {
+            (self.isUnix() ? it : it.split(" ").last()) as Double
+        }
     }
 }

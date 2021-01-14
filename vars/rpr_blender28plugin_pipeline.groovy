@@ -314,18 +314,22 @@ def executeTests(String osName, String asicName, Map options)
             }
         
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
-                if (newPluginInstalled) {
-                    timeout(time: "6", unit: "MINUTES") {
+                if (newPluginInstalled) {                         
+                    timeout(time: "12", unit: "MINUTES") {
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
-                        if(!fileExists("./Work/Results/Blender28/cache_building.jpg")){
+                        String cacheImgPath = "./Work/Results/Blender28/cache_building.jpg"
+                        if(!fileExists(cacheImgPath)){
+                            println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
                             throw new ExpectedExceptionWrapper("No output image after cache building.", new Exception("No output image after cache building."))
+                        } else {
+                            verifyMatlib("Blender", cacheImgPath, 70, osName, options)
                         }
                     }
                 }
             }  
         } catch(e) {
-            println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
             println(e.toString())
+            println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
             // deinstalling broken addon
             installBlenderAddon(osName, options.toolVersion, options, false, true)
             // remove installer of broken addon

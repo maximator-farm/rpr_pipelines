@@ -272,13 +272,17 @@ def executeTests(String osName, String asicName, Map options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
             }
-        
+
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
                 if (newPluginInstalled) {
-                    timeout(time: "6", unit: "MINUTES") {
+                    timeout(time: "12", unit: "MINUTES") {
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
-                        if(!fileExists("./Work/Results/Maya/cache_building.jpg")){
+                        String cacheImgPath = "./Work/Results/Maya/cache_building.jpg"
+                        if(!fileExists(cacheImgPath)){
+                            println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
                             throw new ExpectedExceptionWrapper("No output image after cache building.", new Exception("No output image after cache building."))
+                        } else {
+                            verifyMatlib("Maya", cacheImgPath, 50, osName, options)
                         }
                     }
                 }

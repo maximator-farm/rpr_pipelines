@@ -1,3 +1,7 @@
+/**
+ * @param command
+ * @return for Windows returned string contains executed command
+ */
 def call(String command)
 {
     echo command
