@@ -131,7 +131,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_blender.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --height ${options.Height} --width ${options.Width} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_blender.py --tool ${version} --engine \"${options.engine}\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --height ${options.Height} --width ${options.Width} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
@@ -156,7 +156,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_maya.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --batchRender ${options.batchRender} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_maya.py --tool ${version} --engine \"${options.engine}\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --batchRender ${options.batchRender} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
@@ -390,6 +390,7 @@ def call(String PCs = '',
 		Width:OptionsMap.width,
 		Height:OptionsMap.height,
 		Iterations:OptionsMap.iterations,
+		engine:OptionsMap.engine,
 		GPU:OptionsMap.gpu,
 		batchRender:OptionsMap.batch_render,
 		timeout:timeout
