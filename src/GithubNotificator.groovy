@@ -7,7 +7,8 @@ import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 public class GithubNotificator {
 
     def context
-    def pullRequest
+    String repositoryUrl
+    String commitSHA
     List buildCases = []
     List testCases = []
     Boolean hasDeployStage
@@ -18,11 +19,14 @@ public class GithubNotificator {
      * Main constructor
      *
      * @param context
-     * @param pullRequest Object of PR
+     * @param repositoryUrl Url to github repository
+     * @param commitSHA SHA of target commit
      */
-    GithubNotificator(context, pullRequest) {
+    GithubNotificator(def context, String repositoryUrl, String commitSHA) {
         this.context = context
-        this.pullRequest = pullRequest
+        // format as a http url
+        this.repositoryUrl = repositoryUrl.replace("git@", "https://").replace(".git", "")
+        this.commitSHA = commitSHA
     }
 
     /**
