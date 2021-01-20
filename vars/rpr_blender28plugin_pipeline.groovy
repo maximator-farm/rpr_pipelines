@@ -1504,7 +1504,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         NON_SPLITTED_PACKAGE_TIMEOUT:60,
                         DEPLOY_TIMEOUT:deployTimeout,
                         TESTER_TAG:tester_tag,
-                        BUILDER_TAG:"BuildBlender2.8",
                         universePlatforms: universePlatforms,
                         resX: resX,
                         resY: resY,
