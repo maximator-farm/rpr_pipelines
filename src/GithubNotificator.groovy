@@ -9,6 +9,7 @@ public class GithubNotificator {
     def context
     String repositoryUrl
     String commitSHA
+    GithubApiProvider githubApiProvider
     List buildCases = []
     List testCases = []
     Boolean hasDeployStage
@@ -25,8 +26,9 @@ public class GithubNotificator {
     GithubNotificator(def context, String repositoryUrl, String commitSHA) {
         this.context = context
         // format as a http url
-        this.repositoryUrl = repositoryUrl.replace("git@", "https://").replace(".git", "")
+        this.repositoryUrl = repositoryUrl.replace("git@github.com:", "https://github.com/").replaceAll(".git\$", "")
         this.commitSHA = commitSHA
+        githubApiProvider = new GithubApiProvider(context)
     }
 
     /**
@@ -38,7 +40,14 @@ public class GithubNotificator {
         try {
             context.println("[INFO] Started initialization of notification for PreBuild stage")
             String statusTitle = "[PREBUILD] Version increment"
-            pullRequest.createStatus("pending", statusTitle, "Status check for PreBuild stage initiialized.", url)
+            githubApiProvider.createOrUpdateStatusCheck(
+                repositoryUrl: repositoryUrl,
+                status: "pending",
+                name: statusTitle,
+                head_sha: commitSHA,
+                conclusion: "Status check for PreBuild stage initialized.",
+                details_url: url
+            )
             context.println("[INFO] Finished initialization of notification for PreBuild stage")
         } catch (e) {
             context.println("[ERROR] Failed to notification for PreBuild stage")

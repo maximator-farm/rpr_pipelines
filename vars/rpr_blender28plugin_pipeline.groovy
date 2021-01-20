@@ -730,9 +730,6 @@ def executePreBuild(Map options)
             options.executeBuild = true
             options.executeTests = true
             options.testsPackage = "regression.json"
-            GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
-            options.githubNotificator = githubNotificator
-            githubNotificator.initPreBuild("${BUILD_URL}")
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
@@ -781,6 +778,12 @@ def executePreBuild(Map options)
                 currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
             } else {
                 currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+            }
+
+            if (!options.forceBuild) {
+                GithubNotificator githubNotificator = new GithubNotificator(this, options["projectRepo"], options["commitSHA"])
+                options["githubNotificator"] = githubNotificator
+                githubNotificator.initPreBuild("${BUILD_URL}")
             }
 
             withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
