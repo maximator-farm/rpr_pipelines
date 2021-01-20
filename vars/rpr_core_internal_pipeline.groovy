@@ -514,41 +514,43 @@ def executePreBuild(Map options)
         githubNotificator.initPreBuild("${BUILD_URL}")
     }
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-        checkOutBranchOrScm(options["projectBranch"], "git@github.com:amdadvtech/RadeonProRenderSDKInternal.git")
-    }
+    dir('RadeonProRenderSDK') {
+        withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+            checkOutBranchOrScm(options["projectBranch"], "git@github.com:amdadvtech/RadeonProRenderSDKInternal.git")
+        }
 
-    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-    options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
-    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
-    println "The last commit was written by ${options.commitAuthor}."
-    println "Commit message: ${options.commitMessage}"
-    println "Commit SHA: ${options.commitSHA}"
-    println "Commit shortSHA: ${options.commitShortSHA}"
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${options.commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
+        println "Commit shortSHA: ${options.commitShortSHA}"
 
-    if (options.projectBranch){
-        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-    } else {
-        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-    }
+        if (options.projectBranch){
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+        } else {
+            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+        }
 
-    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30']]]);
-    } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30']]]);
+        if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+            properties([[$class: 'BuildDiscarderProperty', strategy:
+                             [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                              artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30']]]);
+        } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
+            properties([[$class: 'BuildDiscarderProperty', strategy:
+                             [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                              artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5']]]);
+        } else {
+            properties([[$class: 'BuildDiscarderProperty', strategy:
+                             [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                              artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30']]]);
+        }
     }
 
 

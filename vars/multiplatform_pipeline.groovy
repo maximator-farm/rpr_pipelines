@@ -333,7 +333,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 {
                     node("Windows && PreBuild")
                     {
-                        ws("WS/${options.PRJ_NAME}_PreBuild")
+                        ws("WS/${options.PRJ_NAME}_Build")
                         {
                             stage("PreBuild")
                             {
