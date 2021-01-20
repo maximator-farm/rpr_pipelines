@@ -150,7 +150,7 @@ def call(String projectBranch = "", String projectURL = 'git@github.com:Radeon-P
                             PRJ_ROOT:PRJ_ROOT,
                             BUILD_TIMEOUT:'10',
                             TEST_TIMEOUT:'10',
-                            BUILDER_TAG:'BuilderS',
+                            BUILDER_TAG:'Builder',
                             projectURL:projectURL,
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",

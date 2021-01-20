@@ -869,7 +869,7 @@ def call(String projectBranch = "",
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:90,
                                 DEPLOY_TIMEOUT:150,
-                                BUILDER_TAG:"BuilderAMF",
+                                BUILDER_TAG:"Builder",
                                 testsFilter:testsFilter
                                 ])
     } catch(e) {
