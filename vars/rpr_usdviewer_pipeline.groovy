@@ -291,7 +291,7 @@ def executeBuildWindows(Map options)
             try {
                 dir("RPRViewer") {
                     bat """
-                        "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log
+                        "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log 2>&1
                     """
                     archiveArtifacts artifacts: "RPRViewer_Setup.exe", allowEmptyArchive: false
                 }
