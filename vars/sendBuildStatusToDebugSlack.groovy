@@ -2,18 +2,21 @@ def call(Map options) {
 
     if (currentBuild.result == "FAILURE") {
 
+        String text 
+        if (options["problemMessageManager"]) {
+            text = options["problemMessageManager"].getMessages()
+        } else {
+            text = "Failed in:  ${options.FAILED_STAGES.join('\n')}"
+        } 
+
         String debagSlackMessage = """[{
-          "title": "${env.JOB_NAME} [${env.BUILD_NUMBER}]",
-          "title_link": "${env.BUILD_URL}",
-          "color": "#fc0356",
-          "pretext": "${currentBuild.result}",
-          "text": "Failed in:  ${options.FAILED_STAGES.join("\n")}"
-          }]
+            "title": "${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+            "title_link": "${env.BUILD_URL}",
+            "color": "#fc0356",
+            "pretext": "${currentBuild.result}",
+            "text": "${text.replace('\n', '\\n')}"
+            }]
         """;
-        // TODO: foreach
-        /*
-        "fields": [ { "title": '', value: '', short: "false"}, ... ]
-         */
 
         try {
             if ((env.BRANCH_NAME && env.BRANCH_NAME == "master") || env.CHANGE_BRANCH || env.JOB_NAME.contains("Weekly")) {
@@ -26,4 +29,5 @@ def call(Map options) {
             println(e.toString())
         }
     }
+
 }

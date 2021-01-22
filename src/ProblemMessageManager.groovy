@@ -165,6 +165,46 @@ public class ProblemMessageManager {
     }
 
     /**
+     * Return information about fail or unstable status as plain text
+     */
+    def getMessages() {
+        String messages = ""
+        if (failReasons.size() != 0) {
+            List failReasonsMessage = []
+            for (stage in failReasons) {
+                if (stage.value instanceof Map) {
+                    for (os in stage.value) {
+                        for (reason in os.value) {
+                            if (stage.key == 'Global') {
+                                failReasonsMessage.add("${reason}.")
+                            } else {
+                                failReasonsMessage.add("${reason} (${stage.key} stage: ${os.key}).")
+                            }   
+                        }
+                    }
+                } else {
+                    for (reason in stage.value) {
+                        if (stage.key == 'Global') {
+                            failReasonsMessage.add("${reason}.")
+                        } else {
+                            failReasonsMessage.add("${reason} (${stage.key} stage).")
+                        }
+                    }
+                }
+            }
+            messages = "Build Failure Reason: \n${failReasonsMessage.join('\n')}"
+        } else if (unstableReasons.size() != 0) {
+            messages = "Build Unstable Reason: \n${unstableReasons.join('\n')}"
+        } else if (currentBuild.result == "FAILURE") {
+            messages = "Build Failure Reason: \nUnknown"
+        } else if (currentBuild.result == "UNSTABLE") {
+            messages = "Build Unstable Reason: \nUnknown"
+        }
+
+        return messages
+    }
+
+    /**
      * Function for add in description of build information about fail or unstable status if there are any problems
      */
     def publishMessages() {
