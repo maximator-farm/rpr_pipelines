@@ -1363,8 +1363,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             }
 
             def assetsRepo
-            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')])
-            {
+            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
                 assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_blender_autotests"
             }
 
