@@ -81,8 +81,9 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                         nodeName = env.NODE_NAME
                         retringFunction(nodesList, i)
                         successCurrentNode = true
-                        if (GithubNotificator.getCurrentStatus(stageName, title, options) == "failure") {
-                            GithubNotificator.updateStatus(stageName, title, "error", options)
+                        def currentStatus = GithubNotificator.getCurrentStatus(stageName, title, options)
+                        if (currentStatus == "failure" || currentStatus == "timed_out") {
+                            GithubNotificator.updateStatus(stageName, title, "action_required", options)
                         }
                         if (stageName != 'Test' && options.problemMessageManager) {
                             options.problemMessageManager.clearErrorReasons(stageName, osName) 
@@ -148,7 +149,8 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                 GithubNotificator.updateStatus(stageName, title, "failure", options, NotificationConfiguration.STAGE_TIMEOUT_EXCEEDED)
             } else {
                 // save unknown reason if any other reason wasn't set
-                if (GithubNotificator.getCurrentStatus(stageName, title, options) != "failure") {
+                def currentStatus = GithubNotificator.getCurrentStatus(stageName, title, options)
+                if (currentStatus == "failure" || currentStatus == "timed_out") {
                     GithubNotificator.updateStatus(stageName, title, "failure", options, NotificationConfiguration.REASON_IS_NOT_IDENTIFIED)
                 }
             }
@@ -174,7 +176,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                             options.problemMessageManager.saveGeneralFailReason(NotificationConfiguration.UNKNOWN_REASON, stageName, osName)
                         }
                     }
-                    GithubNotificator.updateStatus(stageName, title, "error", options)
+                    GithubNotificator.updateStatus(stageName, title, "action_required", options)
                     if (stageName == 'Build') {
                         GithubNotificator.failPluginBuilding(options, osName)
                     }
@@ -197,7 +199,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                         options.problemMessageManager.saveGeneralFailReason(NotificationConfiguration.UNKNOWN_REASON, stageName, osName)
                     }
                 }
-                GithubNotificator.updateStatus(stageName, title, "error", options)
+                GithubNotificator.updateStatus(stageName, title, "action_required", options)
                 if (stageName == 'Build') {
                     GithubNotificator.failPluginBuilding(options, osName)
                 }

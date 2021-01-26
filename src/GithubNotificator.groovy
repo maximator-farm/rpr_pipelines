@@ -180,7 +180,7 @@ public class GithubNotificator {
                 statusTitle = statusTitle.replace(".json", "")
             }
 
-            def statusChecks = getStatusChecks(
+            def statusChecks = githubApiProvider.getStatusChecks(
                 repositoryUrl: repositoryUrl,
                 head_sha: commitSHA,
                 check_name: statusTitle
@@ -188,10 +188,10 @@ public class GithubNotificator {
 
             if (statusChecks["total_count"] > 0) {
                 if (!url) {
-                    url = statusChecks["check_runs"][0]["details_url"]
+                    url = statusChecks["check_runs"][0]["details_url"] ?: ""
                 }
                 if (!message) {
-                    message = statusChecks["check_runs"][0]["output"]["title"]
+                    message = statusChecks["check_runs"][0]["output"]["title"] ?: ""
                 }
             }
 
@@ -229,14 +229,19 @@ public class GithubNotificator {
     private def getCurrentStatusPr(String stageName, String title) {
         String statusTitle = "[${stageName.toUpperCase()}] ${title}"
         try {
-            def statusChecks = getStatusChecks(
+            def statusChecks = githubApiProvider.getStatusChecks(
                 repositoryUrl: repositoryUrl,
                 head_sha: commitSHA,
                 check_name: statusTitle
             )
 
             if (statusChecks["total_count"] > 0) {
-                return statusChecks["check_runs"][0]["status"]
+                if (statusChecks["check_runs"][0]["conclusion"]) {
+                    return statusChecks["check_runs"][0]["conclusion"]
+                } else {
+                    return statusChecks["check_runs"][0]["status"]
+                }
+                
             } else {
                 throw new Exception("Could not find suitable status check")
             }
@@ -268,7 +273,6 @@ public class GithubNotificator {
                     context.println("[INFO] Found next build which has same SHA of target commit as this commit. Status checks won't be closed")
                     return
                 }
-                //FIXME: get only first stages with each name (it's github API issue: check can't be deleted or updated)
                 List stagesList = []
                 stagesList << "[PREBUILD] Version increment"
                 buildCases.each { stagesList << "[BUILD] " + it }
@@ -276,13 +280,13 @@ public class GithubNotificator {
                 if (hasDeployStage) {
                     stagesList << "[DEPLOY] Building test report"
                 }
-                def statusChecks = getStatusChecks(
+                def statusChecks = githubApiProvider.getStatusChecks(
                     repositoryUrl: repositoryUrl,
                     head_sha: commitSHA
                 )
                 for (prStatus in statusChecks["check_runs"]) {
                     if (stagesList.contains(prStatus["name"])) {
-                        if (prStatus["status"] == "pending" || prStatus["status"] == "failure") {
+                        if (prStatus["status"] == "in_progress" || prStatus["status"] == "queued" || prStatus["conclusion"] == "failure" || prStatus["timed_out"] == "failure") {
                             if (!message) {
                                 message = prStatus["output"]["title"]
                             }
@@ -291,7 +295,7 @@ public class GithubNotificator {
                                 status: "error",
                                 name: prStatus["name"],
                                 head_sha: commitSHA,
-                                details_url: prStatus["details_url"],
+                                details_url: prStatus["details_url"] ?: "",
                                 output: [
                                     title: message,
                                     summary: "Use link below to check build details"
@@ -319,7 +323,7 @@ public class GithubNotificator {
             RunWrapper nextBuild = context.currentBuild.getNextBuild()
             while(nextBuild) {
                 String nextBuildSHA = ""
-                nextBuildSHA = getBuildCommit()
+                nextBuildSHA = commitSHA
                 //if it isn't possible to find commit SHA in description - it isn't initialized yet. Wait 1 minute
                 if(!nextBuildSHA) {
                     context.sleep(60)
@@ -340,19 +344,6 @@ public class GithubNotificator {
         return false
     }
 
-    private String getBuildCommit() {
-        String commitSHA = ""
-        def description = context.currentBuild.description
-        String[] descriptionParts = description.split('<br/>')
-        for (part in descriptionParts) {
-            if (part.contains('Commit SHA')) {
-                commitSHA = part.split(':')[1].replace('<b>', '').replace('</b>', '').trim()
-                break
-            }
-        }
-        return commitSHA
-    }
-
     /**
      * Function for close status checks which represents test stages on some OS
      * It can be useful if building on some OS didn't finish successfully
@@ -368,20 +359,20 @@ public class GithubNotificator {
 
     private def failPluginBuildingPr(String osName) {
         try {
-            def statusChecks = getStatusChecks(
+            def statusChecks = githubApiProvider.getStatusChecks(
                 repositoryUrl: repositoryUrl,
                 head_sha: commitSHA
             )
-            for (prStatus in statusChecks) {
+            for (prStatus in statusChecks["check_runs"]) {
                 if (prStatus["name"].contains("[TEST]") && prStatus["name"].contains(osName)) {
                     githubApiProvider.createOrUpdateStatusCheck(
                         repositoryUrl: repositoryUrl,
                         status: "error",
                         name: prStatus["name"],
                         head_sha: commitSHA,
-                        details_url: prStatus["details_url"],
+                        details_url: prStatus["details_url"] ?: "",
                         output: [
-                            title: message,
+                            title: prStatus["output"]["title"] ?: "",
                             summary: "Use link below to check build details"
                         ]
                     )

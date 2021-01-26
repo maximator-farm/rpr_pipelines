@@ -4,6 +4,8 @@ import groovy.json.JsonOutput
 
 class GithubApiProvider {
 
+    static final List COMPLETED_STATUSES = ["success", "failure", "neutral", "cancelled", "skipped", "timed_out", "action_required"]
+
     def context
     def installation_token
 
@@ -18,9 +20,9 @@ class GithubApiProvider {
     }
 
     private def buildQueryParams(Map params) {
-        Map paramPairs = [:]
+        List paramPairs = []
         for (param in params) {
-            paramPairs << "${param}=${params[param]}"
+            paramPairs << "${param.key}=${param.value.replaceAll(' ', '%20')}"
         }
         return paramPairs.join("&")
     }
@@ -59,10 +61,14 @@ class GithubApiProvider {
     }
 
     def createOrUpdateStatusCheck(Map params) {
+        params = params.clone()
         def repositoryUrl = params["repositoryUrl"]
         params.remove("repositoryUrl")
         def organization_name = repositoryUrl.split("/")[-2]
-        params["status"] = CheckStatusesMapping[params["status"]]
+        if (COMPLETED_STATUSES.contains(params["status"])) {
+            params["conclusion"] = params["status"]
+            params["status"] = "completed"
+        }
 
         return withInstallationAuthorization(organization_name) {
             def response = context.httpRequest(
@@ -81,27 +87,18 @@ class GithubApiProvider {
     }
 
     def getStatusChecks(Map params) {
+        params = params.clone()
         def repositoryUrl = params["repositoryUrl"]
         params.remove("repositoryUrl")
         def organization_name = repositoryUrl.split("/")[-2]
-        def commitSHA = params["commitSHA"]
-        params.remove("commitSHA")
+        def commitSHA = params["head_sha"]
+        params.remove("head_sha")
 
-        String queryParams = ""
-        if (params.containsKey("status")) {
-            def status = CheckStatusesMapping[params["status"]]
-            params.remove("status")
-            queryParams = "status=${status}"
-            if (params) {
-                queryParams = "${queryParams}&${buildQueryParams[params]}"
-            }
-        } else {
-            queryParams = "${buildQueryParams[params]}"
-        }
+        String queryParams = "${buildQueryParams(params)}"
 
         return withInstallationAuthorization(organization_name) {
             def response = context.httpRequest(
-                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/${head_sha}/check-runs?${queryParams}",
+                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/commits/${commitSHA}/check-runs?${queryParams}",
                 httpMode: "GET",
                 customHeaders: [
                     [name: "Authorization", value: "token ${installation_token}"]
@@ -116,7 +113,7 @@ class GithubApiProvider {
     public static Map CheckStatusesMapping = [
         "success": "success",
         "pending": "queued",
-        "failure": "failed",
+        "failure": "failure",
         "error": "action_required",
 
         "in_progress": "in_progress",

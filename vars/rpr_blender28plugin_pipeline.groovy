@@ -454,7 +454,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         if (sessionReport.summary.error > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
                         } else if (sessionReport.summary.failed > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_FAILED, "${BUILD_URL}")
                         } else {
@@ -1006,7 +1006,7 @@ def executePreBuild(Map options)
             }
         }
 
-        if (env.CHANGE_URL) {
+        if (!options.forceBuild) {
             options.githubNotificator.initPR(options, "${BUILD_URL}")
         }
 
