@@ -95,11 +95,13 @@ class GithubApiProvider {
             if (params) {
                 queryParams = "${queryParams}&${buildQueryParams[params]}"
             }
+        } else {
+            queryParams = "${buildQueryParams[params]}"
         }
 
         return withInstallationAuthorization(organization_name) {
             def response = context.httpRequest(
-                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/${commitSHA}/check-runs?${queryParams}",
+                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/${head_sha}/check-runs?${queryParams}",
                 httpMode: "GET",
                 customHeaders: [
                     [name: "Authorization", value: "token ${installation_token}"]

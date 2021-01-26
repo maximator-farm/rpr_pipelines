@@ -506,7 +506,7 @@ def executeBuildWindows(Map options)
 {
     dir('RadeonProRenderBlenderAddon\\BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             build_win.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -551,7 +551,7 @@ def executeBuildOSX(Map options)
 {
     dir('RadeonProRenderBlenderAddon/BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", "OSX", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
+        GithubNotificator.updateStatus("Build", "OSX", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
         sh """
             ./build_osx.sh >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -595,7 +595,7 @@ def executeBuildLinux(String osName, Map options)
 {
     dir('RadeonProRenderBlenderAddon/BlenderPkg')
     {
-        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Ubuntu18.log")
+        GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Ubuntu18.log")
         sh """
             ./build_linux.sh >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -1127,7 +1127,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             List reportsNames = []
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 options.engines.each { engine ->
                     reports.add("${engine}/summary_report.html")
                 }

@@ -42,11 +42,14 @@ public class GithubNotificator {
             String statusTitle = "[PREBUILD] Version increment"
             githubApiProvider.createOrUpdateStatusCheck(
                 repositoryUrl: repositoryUrl,
-                status: "pending",
+                status: "in_progress",
                 name: statusTitle,
                 head_sha: commitSHA,
-                conclusion: "Status check for PreBuild stage initialized.",
-                details_url: url
+                details_url: url,
+                output: [
+                    title: "Status check for PreBuild stage initialized.",
+                    summary: "Use link below to check build details"
+                ]
             )
             context.println("[INFO] Finished initialization of notification for PreBuild stage")
         } catch (e) {
@@ -108,18 +111,30 @@ public class GithubNotificator {
             }
 
             String statusTitle = ""
+
+            Map paramsBase = [
+                repositoryUrl: repositoryUrl,
+                status: "pending",
+                head_sha: commitSHA,
+                details_url: url,
+                output: [
+                    title: "This stage will be executed later...",
+                    summary: "Use link below to check build details"
+                ]
+            ]
+
             for (buildCase in buildCases) {
-                statusTitle = "[BUILD] ${buildCase}"
-                pullRequest.createStatus("pending", statusTitle, "This stage will be executed later...", url)
+                paramsBase["name"] = "[BUILD] ${buildCase}"
+                githubApiProvider.createOrUpdateStatusCheck(paramsBase)
             }
 
             for (testCase in testCases) {
-                statusTitle = "[TEST] ${testCase}"
-                pullRequest.createStatus("pending", statusTitle, "This stage will be executed later...", url)
+                paramsBase["name"] = "[TEST] ${testCase}"
+                githubApiProvider.createOrUpdateStatusCheck(paramsBase)
             }
             if (hasDeployStage) {
-                statusTitle = "[DEPLOY] Building test report"
-                pullRequest.createStatus("pending", statusTitle, "This stage will be executed later...", url)
+                paramsBase["name"] = "[DEPLOY] Building test report"
+                githubApiProvider.createOrUpdateStatusCheck(paramsBase)
             }
             context.println("[INFO] Finished initialization of PR notifications")
         } catch (e) {
@@ -165,19 +180,32 @@ public class GithubNotificator {
                 statusTitle = statusTitle.replace(".json", "")
             }
 
-            for (prStatus in pullRequest.statuses) {
-                if (statusTitle == prStatus.context) {
-                    if (!url) {
-                        url = prStatus.targetUrl
-                    }
-                    if (!message) {
-                        message = prStatus.description
-                    }
-                    break
+            def statusChecks = getStatusChecks(
+                repositoryUrl: repositoryUrl,
+                head_sha: commitSHA,
+                check_name: statusTitle
+            )
+
+            if (statusChecks["total_count"] > 0) {
+                if (!url) {
+                    url = statusChecks["check_runs"][0]["details_url"]
+                }
+                if (!message) {
+                    message = statusChecks["check_runs"][0]["output"]["title"]
                 }
             }
 
-            pullRequest.createStatus(status, statusTitle, message, url)
+            githubApiProvider.createOrUpdateStatusCheck(
+                repositoryUrl: repositoryUrl,
+                status: status,
+                name: statusTitle,
+                head_sha: commitSHA,
+                details_url: url,
+                output: [
+                    title: message,
+                    summary: "Use link below to check build details"
+                ]
+            )
         } catch (e) {
             context.println("[ERROR] Failed to update status for ${statusTitle}")
             context.println(e.toString())
@@ -201,10 +229,16 @@ public class GithubNotificator {
     private def getCurrentStatusPr(String stageName, String title) {
         String statusTitle = "[${stageName.toUpperCase()}] ${title}"
         try {
-            for (prStatus in pullRequest.statuses) {
-                if (statusTitle == prStatus.context) {
-                    return prStatus.state
-                }
+            def statusChecks = getStatusChecks(
+                repositoryUrl: repositoryUrl,
+                head_sha: commitSHA,
+                check_name: statusTitle
+            )
+
+            if (statusChecks["total_count"] > 0) {
+                return statusChecks["check_runs"][0]["status"]
+            } else {
+                throw new Exception("Could not find suitable status check")
             }
         } catch (e) {
             context.println("[ERROR] Failed to get status for ${statusTitle}")
@@ -242,15 +276,29 @@ public class GithubNotificator {
                 if (hasDeployStage) {
                     stagesList << "[DEPLOY] Building test report"
                 }
-                for (prStatus in pullRequest.statuses) {
-                    if (stagesList.contains(prStatus.context)) {
-                        if (prStatus.state == "pending" || prStatus.state == "failure") {
+                def statusChecks = getStatusChecks(
+                    repositoryUrl: repositoryUrl,
+                    head_sha: commitSHA
+                )
+                for (prStatus in statusChecks["check_runs"]) {
+                    if (stagesList.contains(prStatus["name"])) {
+                        if (prStatus["status"] == "pending" || prStatus["status"] == "failure") {
                             if (!message) {
-                                message = prStatus.description
+                                message = prStatus["output"]["title"]
                             }
-                            pullRequest.createStatus("error", prStatus.context, message, prStatus.url)
+                            githubApiProvider.createOrUpdateStatusCheck(
+                                repositoryUrl: repositoryUrl,
+                                status: "error",
+                                name: prStatus["name"],
+                                head_sha: commitSHA,
+                                details_url: prStatus["details_url"],
+                                output: [
+                                    title: message,
+                                    summary: "Use link below to check build details"
+                                ]
+                            )
                         }
-                        stagesList.remove(prStatus.context)
+                        stagesList.remove(prStatus["name"])
                     }
                     if (stagesList.size() == 0) {
                         break
@@ -320,9 +368,23 @@ public class GithubNotificator {
 
     private def failPluginBuildingPr(String osName) {
         try {
-            for (prStatus in pullRequest.statuses) {
-                if (prStatus.context.contains("[TEST]") && prStatus.context.contains(osName)) {
-                    pullRequest.createStatus("error", prStatus.context, "Building stage was failed", prStatus.url)
+            def statusChecks = getStatusChecks(
+                repositoryUrl: repositoryUrl,
+                head_sha: commitSHA
+            )
+            for (prStatus in statusChecks) {
+                if (prStatus["name"].contains("[TEST]") && prStatus["name"].contains(osName)) {
+                    githubApiProvider.createOrUpdateStatusCheck(
+                        repositoryUrl: repositoryUrl,
+                        status: "error",
+                        name: prStatus["name"],
+                        head_sha: commitSHA,
+                        details_url: prStatus["details_url"],
+                        output: [
+                            title: message,
+                            summary: "Use link below to check build details"
+                        ]
+                    )
                 }
             }
             context.println("[INFO] Test steps were closed")
