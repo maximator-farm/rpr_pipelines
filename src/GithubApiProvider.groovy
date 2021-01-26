@@ -29,11 +29,11 @@ class GithubApiProvider {
         context.withCredentials([context.string(credentialsId: "githubNotificationAppKey", variable: "GITHUB_APP_KEY"),
             context.string(credentialsId: "githubNotificationAppId", variable: "GITHUB_APP_ID")]) {
 
-            context.withEnv(["github_app_key=${GITHUB_APP_KEY}"]) {
-                if (self.isUnix()) {
-                    installation_token = python3("${context.CIS_TOOLS}/auth_github.py --github_app_id ${GITHUB_APP_ID} --organization_name ${organization_name}")
+            context.withEnv(["github_app_key=${context.GITHUB_APP_KEY}"]) {
+                if (context.isUnix()) {
+                    installation_token = context.python3("${context.CIS_TOOLS}/auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}")
                 } else {
-                    installation_token = python3("${context.CIS_TOOLS}\\auth_github.py --github_app_id ${GITHUB_APP_ID} --organization_name ${organization_name}", false)
+                    installation_token = context.python3("${context.CIS_TOOLS}\\auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}", false)
                 }
             }
 
@@ -47,17 +47,21 @@ class GithubApiProvider {
         def response = function()
         if (response.status == 401) {
             receiveInstallationToken(organization_name)
+        } else {
+            return parseResponse(response.content)
         }
-        def response = function()
+        response = function()
         if (response.status == 401) {
             throw new Exception("Could not authorize request")
+        } else {
+            return parseResponse(response.content)
         }
     }
 
     def createOrUpdateStatusCheck(Map params) {
         def repositoryUrl = params["repositoryUrl"]
         params.remove("repositoryUrl")
-        organization_name = repositoryUrl.split("/")[-2]
+        def organization_name = repositoryUrl.split("/")[-2]
         params["status"] = CheckStatusesMapping[params["status"]]
 
         return withInstallationAuthorization(organization_name) {
@@ -72,14 +76,14 @@ class GithubApiProvider {
                 validResponseCodes: '0:401'
             )
 
-            return parseResponse(response)
+            return response
         }
     }
 
     def getStatusChecks(Map params) {
         def repositoryUrl = params["repositoryUrl"]
         params.remove("repositoryUrl")
-        organization_name = repositoryUrl.split("/")[-2]
+        def organization_name = repositoryUrl.split("/")[-2]
         def commitSHA = params["commitSHA"]
         params.remove("commitSHA")
 
@@ -99,11 +103,11 @@ class GithubApiProvider {
                 httpMode: "GET",
                 customHeaders: [
                     [name: "Authorization", value: "token ${installation_token}"]
-                ]
+                ],
                 validResponseCodes: '0:401'
             )
 
-            return parseResponse(response)
+            return response
         }
     }
 
