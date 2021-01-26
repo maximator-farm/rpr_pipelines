@@ -2,7 +2,7 @@
  * @param command
  * @return for Windows returned string contains executed command
  */
-def call(String command)
+def call(String command, String returnWindowsCommnad = true)
 {
     echo command
     String ret
@@ -12,10 +12,12 @@ def call(String command)
     }
     else
     {
+        // @ before command - it won't be return in output
+        String returnCommnadSymbol = returnWindowsCommnad ? : "" ? "@"
         withEnv(["PATH=c:\\python35\\;c:\\python35\\scripts\\;${PATH}"]) {
             ret = bat(
                 script: """
-                python ${command}
+                ${returnCommnadSymbol}python ${command}
                 """,
                 returnStdout: true
             )

@@ -5,6 +5,7 @@ import groovy.json.JsonOutput
 class GithubApiProvider {
 
     def context
+    def installation_token
 
     GithubApiProvider(def context) {
         this.context = context
@@ -24,27 +25,61 @@ class GithubApiProvider {
         return paramPairs.join("&")
     }
 
+    private String receiveInstallationToken(String organization_name) {
+        context.withCredentials([context.string(credentialsId: "githubNotificationAppKey", variable: "GITHUB_APP_KEY"),
+            context.string(credentialsId: "githubNotificationAppId", variable: "GITHUB_APP_ID")]) {
+
+            context.withEnv(["github_app_key=${GITHUB_APP_KEY}"]) {
+                if (self.isUnix()) {
+                    installation_token = python3("${context.CIS_TOOLS}/auth_github.py --github_app_id ${GITHUB_APP_ID} --organization_name ${organization_name}")
+                } else {
+                    installation_token = python3("${context.CIS_TOOLS}\\auth_github.py --github_app_id ${GITHUB_APP_ID} --organization_name ${organization_name}", false)
+                }
+            }
+
+        }
+    }
+
+    private def withInstallationAuthorization(String organization_name, Closure function) {
+        if (!installation_token) {
+            receiveInstallationToken(organization_name)
+        }
+        def response = function()
+        if (response.status == 401) {
+            receiveInstallationToken(organization_name)
+        }
+        def response = function()
+        if (response.status == 401) {
+            throw new Exception("Could not authorize request")
+        }
+    }
+
     def createOrUpdateStatusCheck(Map params) {
         def repositoryUrl = params["repositoryUrl"]
         params.remove("repositoryUrl")
+        organization_name = repositoryUrl.split("/")[-2]
         params["status"] = CheckStatusesMapping[params["status"]]
 
-        def response = context.httpRequest(
-            url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/check-runs",
-            authentication: "jenkinsCredentials",
-            httpMode: "POST",
-            requestBody: JsonOutput.toJson(params),
-            customHeaders: [
-                [name: "Content-type", value: "application/json"]
-            ]
-        )
+        return withInstallationAuthorization(organization_name) {
+            def response = context.httpRequest(
+                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/check-runs",
+                httpMode: "POST",
+                requestBody: JsonOutput.toJson(params),
+                customHeaders: [
+                    [name: "Content-type", value: "application/json"],
+                    [name: "Authorization", value: "token ${installation_token}"]
+                ],
+                validResponseCodes: '0:401'
+            )
 
-        return parseResponse(response)
+            return parseResponse(response)
+        }
     }
 
     def getStatusChecks(Map params) {
         def repositoryUrl = params["repositoryUrl"]
         params.remove("repositoryUrl")
+        organization_name = repositoryUrl.split("/")[-2]
         def commitSHA = params["commitSHA"]
         params.remove("commitSHA")
 
@@ -58,13 +93,18 @@ class GithubApiProvider {
             }
         }
 
-        def response = context.httpRequest(
-            url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/${commitSHA}/check-runs?${queryParams}",
-            authentication: "jenkinsCredentials",
-            httpMode: "GET"
-        )
+        return withInstallationAuthorization(organization_name) {
+            def response = context.httpRequest(
+                url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos')}/${commitSHA}/check-runs?${queryParams}",
+                httpMode: "GET",
+                customHeaders: [
+                    [name: "Authorization", value: "token ${installation_token}"]
+                ]
+                validResponseCodes: '0:401'
+            )
 
-        return parseResponse(response)
+            return parseResponse(response)
+        }
     }
 
     public static Map CheckStatusesMapping = [
