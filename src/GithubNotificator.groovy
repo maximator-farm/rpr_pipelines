@@ -114,7 +114,7 @@ public class GithubNotificator {
 
             Map paramsBase = [
                 repositoryUrl: repositoryUrl,
-                status: "pending",
+                status: "queued",
                 head_sha: commitSHA,
                 details_url: url,
                 output: [

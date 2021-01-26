@@ -110,16 +110,4 @@ class GithubApiProvider {
         }
     }
 
-    public static Map CheckStatusesMapping = [
-        "success": "success",
-        "pending": "queued",
-        "failure": "failure",
-        "error": "action_required",
-
-        "in_progress": "in_progress",
-        "neutral": "neutral",
-        "timed_out": "timed_out",
-        "canceled": "canceled",
-    ]
-
 }
