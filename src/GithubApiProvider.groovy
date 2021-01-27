@@ -31,7 +31,7 @@ class GithubApiProvider {
         context.withCredentials([context.string(credentialsId: "githubNotificationAppKey", variable: "GITHUB_APP_KEY"),
             context.string(credentialsId: "githubNotificationAppId", variable: "GITHUB_APP_ID")]) {
 
-            context.withEnv(["github_app_key=${context.GITHUB_APP_KEY}"]) {
+            context.withEnv(["GITHUB_APP_KEY=${context.GITHUB_APP_KEY}"]) {
                 if (context.isUnix()) {
                     installation_token = context.python3("${context.CIS_TOOLS}/auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}")
                 } else {
