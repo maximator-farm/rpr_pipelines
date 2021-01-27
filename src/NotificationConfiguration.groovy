@@ -267,6 +267,15 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static CREATE_GITHUB_NOTIFICATOR = [
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "[WARNING] Failed to create GithubNotificator.", 
+                "rethrow": ExceptionThrowType.NO, "scope": ProblemMessageManager.SPECIFIC
+            ]
+        ]
+    ]
+
     def static PRE_BUILD_STAGE_FAILED = "PreBuild stage was failed."
 
     def static BUILD_SOURCE_CODE_START_MESSAGE = "Building the project."

@@ -33,9 +33,9 @@ class GithubApiProvider {
 
             context.withEnv(["GITHUB_APP_KEY=${context.GITHUB_APP_KEY}"]) {
                 if (context.isUnix()) {
-                    installation_token = context.python3("${context.CIS_TOOLS}/auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}")
+                    installation_token = context.python3("${context.CIS_TOOLS}/auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}").split("\n")[-1]
                 } else {
-                    installation_token = context.python3("${context.CIS_TOOLS}\\auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}", false)
+                    installation_token = context.python3("${context.CIS_TOOLS}\\auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}", false).split("\n")[-1]
                 }
             }
 
@@ -54,7 +54,7 @@ class GithubApiProvider {
         }
         response = function()
         if (response.status == 401) {
-            throw new Exception("Could not authorize request")
+            throw new Exception("Could not authorize request with token ${installation_token}")
         } else {
             return parseResponse(response.content)
         }
@@ -108,6 +108,16 @@ class GithubApiProvider {
 
             return response
         }
+    }
+
+    def getPullRequest(String repositoryUrl) {
+        def response = context.httpRequest(
+            url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos').replace('/pull/', '/pulls/')}",
+            authentication: 'radeonprorender',
+            httpMode: "GET",
+        )
+
+        return parseResponse(response.content)
     }
 
 }

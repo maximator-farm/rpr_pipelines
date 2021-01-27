@@ -783,12 +783,6 @@ def executePreBuild(Map options)
                 currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
 
-            if (!options.forceBuild) {
-                GithubNotificator githubNotificator = new GithubNotificator(this, options["projectRepo"], options["commitSHA"])
-                options["githubNotificator"] = githubNotificator
-                githubNotificator.initPreBuild("${BUILD_URL}")
-            }
-
             withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
@@ -840,6 +834,13 @@ def executePreBuild(Map options)
                 currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
                 currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
+                if (!options.forceBuild) {
+                    withNotifications(title: "Version increment", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+                        GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                        options["githubNotificator"] = githubNotificator
+                        githubNotificator.initPreBuild("${BUILD_URL}")
+                    }
+                }
             }
         }
     }
