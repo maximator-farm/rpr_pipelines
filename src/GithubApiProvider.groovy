@@ -7,7 +7,7 @@ class GithubApiProvider {
     static final List COMPLETED_STATUSES = ["success", "failure", "neutral", "cancelled", "skipped", "timed_out", "action_required"]
 
     def context
-    def installation_token
+    volatile def installation_token
 
     GithubApiProvider(def context) {
         this.context = context
