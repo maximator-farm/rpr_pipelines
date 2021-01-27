@@ -85,8 +85,7 @@ class utils {
         }
     }
 
-    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "")
-    {
+    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "") {
         Map params = [allowMissing: false,
                      alwaysLinkToLastBuild: false,
                      keepAll: true,
@@ -104,7 +103,7 @@ class utils {
                 authentication: 'jenkinsCredentials',
                 httpMode: 'GET'
             )
-            self.println("[INFO] Report exists")
+            self.println("[INFO] Report exists.")
         } catch(e) {
             self.println("[ERROR] Can't access report")
             throw new Exception("Can't access report", e)

@@ -25,11 +25,9 @@ def getNextTest(Iterator iterator) {
 
 def executeTestsNode(String osName, String gpuNames, def executeTests, Map options)
 {
-    if(gpuNames && options['executeTests'])
-    {
+    if (gpuNames && options['executeTests']) {
         def testTasks = [:]
-        gpuNames.split(',').each()
-        {
+        gpuNames.split(',').each() {
             String asicName = it
             
             testTasks["Test-${asicName}-${osName}"] = {
@@ -39,10 +37,10 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                     options.testsList = options.testsList ?: ['']
 
                     def testerTag = "Tester"
-                    if (options.TESTER_TAG){
+                    if (options.TESTER_TAG) {
                         if (options.TESTER_TAG.indexOf(' ') > -1){
                             testerTag = options.TESTER_TAG
-                        }else {
+                        } else {
                             testerTag = "${options.TESTER_TAG} && Tester"
                         }
                     } 
@@ -193,33 +191,25 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
             }
         }
         parallel testTasks
-    }
-    else
-    {
+    } else {
         echo "[WARNING] No tests found for ${osName}"
     }
 }
 
 def executePlatform(String osName, String gpuNames, def executeBuild, def executeTests, Map options)
 {
-    def retNode =
-    {
-        try
-        {
-            if(options['executeBuild'] && executeBuild)
-            {
-                stage("Build-${osName}")
-                {
-                    def builderLabels = "${osName} && ${options.BUILDER_TAG}"
+    def retNode = {
+        try {
 
+            if (options['executeBuild'] && executeBuild) {
+                stage("Build-${osName}") {
+                    def builderLabels = "${osName} && ${options.BUILDER_TAG}"
                     def retringFunction = { nodesList, currentTry ->
                         executeBuild(osName, options)
                     }
-
                     run_with_retries(builderLabels, options.BUILD_TIMEOUT, retringFunction, false, "Build", options, ['FlowInterruptedException'], -1, osName, true)
                 }
             }
-
 
             if (options.containsKey('tests') && options.containsKey('testsPackage')){
                 if (options['testsPackage'] != 'none' || options['tests'].size() == 0 || !(options['tests'].size() == 1 && options['tests'].get(0).length() == 0)){ // BUG: can throw exception if options['tests'] is string with length 1
@@ -228,9 +218,8 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
             } else {
                 executeTestsNode(osName, gpuNames, executeTests, options)
             }
-        }
-        catch (e)
-        {
+
+        } catch (e) {
             println "[ERROR] executePlatform throw the exception"
             println "Exception: ${e.toString()}"
             println "Exception message: ${e.getMessage()}"
@@ -287,22 +276,22 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
         if(env.CHANGE_ID) {
             //set logRotation for PRs
             properties([[$class: 'BuildDiscarderProperty', strategy:
-                [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5']]]);
+                [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
 
             def buildNumber = env.BUILD_NUMBER as int
             if (buildNumber > 1) milestone(buildNumber - 1)
             milestone(buildNumber)
 
+        } else {
+            properties([[$class: 'BuildDiscarderProperty', strategy:
+                [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
         }
 
         def date = new Date()
         dateFormatter = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss")
         dateFormatter.setTimeZone(TimeZone.getTimeZone("GMT+3:00"))
         options.JOB_STARTED_TIME = dateFormatter.format(date)
-
-        /*properties([[$class: 'BuildDiscarderProperty', strategy:
-                     [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                      artifactNumToKeepStr: '10', daysToKeepStr: '', numToKeepStr: '']]]);*/
+        
         timestamps
         {
             String PRJ_PATH="${options.PRJ_ROOT}/${options.PRJ_NAME}"
@@ -315,8 +304,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
             if(options.get('BUILDER_TAG', '') == '')
                 options['BUILDER_TAG'] = 'Builder'
 
-            // if timeout doesn't set - use default
-            // value in minutes
+            // if timeout doesn't set - use default (value in minutes)
             options['PREBUILD_TIMEOUT'] = options['PREBUILD_TIMEOUT'] ?: 20
             options['BUILD_TIMEOUT'] = options['BUILD_TIMEOUT'] ?: 40
             options['TEST_TIMEOUT'] = options['TEST_TIMEOUT'] ?: 20
@@ -327,30 +315,21 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
             def platformList = [];
             def testResultList = [];
 
-            try
-            {
-                if(executePreBuild)
-                {
-                    node("Windows && PreBuild")
-                    {
-                        ws("WS/${options.PRJ_NAME}_PreBuild")
-                        {
-                            stage("PreBuild")
-                            {
+            try {
+                if (executePreBuild) {
+                    node("Windows && PreBuild") {
+                        ws("WS/${options.PRJ_NAME}_Build") {
+                            stage("PreBuild") {
                                 try {
-                                    timeout(time: "${options.PREBUILD_TIMEOUT}", unit: 'MINUTES')
-                                    {
+                                    timeout(time: "${options.PREBUILD_TIMEOUT}", unit: 'MINUTES') {
                                         options["stage"] = "PreBuild"
                                         executePreBuild(options)
-                                        if(!options['executeBuild'])
-                                        {
+                                        if(!options['executeBuild']) {
                                             options.CBR = 'SKIPPED'
                                             echo "Build SKIPPED"
                                         }
                                     }
-                                }
-                                catch (e)
-                                {
+                                } catch (e) {
                                     println("[ERROR] Failed during prebuild stage on ${env.NODE_NAME}")
                                     println(e.toString());
                                     println(e.getMessage());
@@ -378,8 +357,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
                 def tasks = [:]
 
-                platforms.split(';').each()
-                {
+                platforms.split(';').each() {
                     if (it) {
                         List tokens = it.tokenize(':')
                         String osName = tokens.get(0)
@@ -389,16 +367,13 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                         newOptions["stage"] = "Build"
                         newOptions["osName"] = osName
 
-                        if (tokens.size() > 1)
-                        {
+                        if (tokens.size() > 1) {
                             gpuNames = tokens.get(1)
                         }
 
                         platformList << osName
-                        if(gpuNames)
-                        {
-                            gpuNames.split(',').each()
-                            {
+                        if (gpuNames) {
+                            gpuNames.split(',').each() {
                                 // if not split - testsList doesn't exists
                                 newOptions.testsList = newOptions.testsList ?: ['']
                                 newOptions['testsList'].each() { testName ->
@@ -413,9 +388,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                     }
                 }
                 parallel tasks
-            }
-            catch (e)
-            {
+            } catch (e) {
                 println(e.toString());
                 println(e.getMessage());
                 currentBuild.result = "FAILURE"
@@ -432,9 +405,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                         }
                     }
                 }
-            }
-            finally
-            {
+            } finally {
                 Boolean executeDeployStage = true
                 if (options['executeTests']) {
                     if (options.containsKey('tests') && options.containsKey('testsPackage')){
@@ -445,40 +416,32 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 } else {
                     executeDeployStage = false
                 }
-                if(executeDeploy && executeDeployStage)
-                {
-                    stage("Deploy")
-                    {
+                if (executeDeploy && executeDeployStage) {
+                    stage("Deploy") {
                         def reportBuilderLabels = "Windows && ReportBuilder"
 
                         options["stage"] = "Deploy"
                         def retringFunction = { nodesList, currentTry ->
                             executeDeploy(options, platformList, testResultList)
+                            println("[INFO] Deploy stage finished without unexpected exception. Clean workspace")
+                            cleanWS("Windows")
                         }
-
                         run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options, [], 2)
                     }
                 }
             }
         }
-    }
-    catch (FlowInterruptedException e)
-    {
+    } catch (FlowInterruptedException e) {
         println(e.toString());
         println(e.getMessage());
         options.buildWasAborted = true
         echo "Job was ABORTED by user. Job status: ${currentBuild.result}"
-    }
-    catch (e)
-    {
+    } catch (e) {
         currentBuild.result = "FAILURE"
         throw e
-    }
-    finally
-    {
+    } finally {
         echo "enableNotifications = ${options.enableNotifications}"
-        if("${options.enableNotifications}" == "true")
-        {
+        if("${options.enableNotifications}" == "true") {
             sendBuildStatusNotification(currentBuild.result,
                                         options.get('slackChannel', ''),
                                         options.get('slackBaseUrl', ''),

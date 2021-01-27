@@ -17,6 +17,7 @@ class UniverseClient {
     def is_parent;
     def engine;
     def child_of;
+    
     def major_keys = [
         [
             "key": "projectRepo",
@@ -182,6 +183,7 @@ class UniverseClient {
         this.env = env;
         this.is_url = is_url;
         this.product = product;
+        this.child_of = false;
         this.is_parent = false;
     }
 
@@ -325,6 +327,10 @@ class UniverseClient {
             this.context.echo "SPLITTED JOB NAME = ${splittedJobName}"
             this.context.echo "JOB_NAME = ${splittedJobName[0]}"
 
+            def references = [
+                "jenkins_report": "${env.JENKINS_URL}job/${env.JOB_NAME}/${env.BUILD_NUMBER}"
+            ]
+
             def tags = []
 
             String tag = "Other"
@@ -367,6 +373,7 @@ class UniverseClient {
             
             buildBody['upd_baselines'] = updRefs
             buildBody['parameters'] = parameters
+            buildBody['references'] = references
             buildBody['info'] = info
             
             
@@ -388,6 +395,15 @@ class UniverseClient {
             def content = jsonSlurper.parseText(res.content);
             this.build = content["build"];
             this.context.echo content["msg"];
+            
+            if (this.is_parent || (!this.child_of && !this.is_parent)) {
+                if (this.context.currentBuild.description == null) {
+                    this.context.currentBuild.description = ""
+                }
+        
+                this.context.currentBuild.description += "<br><a href='${this.url.replaceAll('api','')}products/${this.build.job_id}/${this.build.id}/summary' target='_blank'>UMS Report (${this.url.replaceAll('api','')})</a>"
+            }
+
             return res;
         }
         retryWrapper(request)
@@ -433,7 +449,12 @@ class UniverseClient {
     def changeStatus(status) {
         this.context.println("[INFO] START TO CHANGE UMS BUILD STATUS. PLEASE, DO NOT ABORT JOB")
         def request = {
+            
             status = status ?: "SUCCESS"
+            
+            // TODO: fix this statuses duct tape
+            // or just move into seporated module/function
+            
             def mapStatuses = [
                 "FAILURE": "error",
                 "FAILED": "error",
@@ -442,6 +463,7 @@ class UniverseClient {
                 "SUCCESS": "passed",
                 "SUCCESSFUL": "passed"
             ]
+            
             this.context.println("[INFO] Sending build status - \"${mapStatuses[status]}\"")
 
             def buildBody = [

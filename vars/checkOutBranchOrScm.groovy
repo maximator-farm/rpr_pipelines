@@ -2,6 +2,7 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 import hudson.plugins.git.GitException
 import hudson.AbortException
 
+
 def call(String branchName, String repoName, Boolean disableSubmodules=false, String prBranchName = '', String prRepoName = '', Boolean polling=false, Boolean changelog=true, \
     String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false) {
     
@@ -17,9 +18,17 @@ def call(String branchName, String repoName, Boolean disableSubmodules=false, St
     {
         println(e.toString())
         println(e.getMessage())
-        println "[ERROR] Failed to checkout git on ${env.NODE_NAME}. Cleaning workspace and try again."
-        cleanWS()
-        executeCheckout(branchName, repoName, disableSubmodules, prBranchName, prRepoName, polling, changelog, credId, useLFS, true)
+        
+        if (useLFS) {
+            println "[ERROR] Failed to checkout git LFS on ${env.NODE_NAME}. Sleeping and trying again."
+            sleep(30)
+        } else {
+            println "[ERROR] Failed to checkout git on ${env.NODE_NAME}. Cleaning workspace and try again."
+            cleanWS()
+            wipeWorkspace=true
+        }
+        
+        executeCheckout(branchName, repoName, disableSubmodules, prBranchName, prRepoName, polling, changelog, credId, useLFS, wipeWorkspace)
     }
 }
 

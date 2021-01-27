@@ -300,7 +300,10 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Blender2.8Assets/", "Blender2.8Assets")
+            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_blender_autotests" : "C:\\TestResources\\rpr_blender_autotests"
+            dir(assets_dir){
+                checkOutBranchOrScm(options.assetsBranch, options.assetsRepo, true, null, null, false, true, "radeonprorender-gitlab", true)
+            }
         }
 
         try {
@@ -1314,6 +1317,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderBlenderAddon.git",
     String projectBranch = "",
+    String assetsBranch = "master",
     String testsBranch = "master",
     String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;Ubuntu18:AMD_RadeonVII;OSX:AMD_RXVEGA',
     String updateRefs = 'No',
@@ -1359,6 +1363,11 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 if (!enginesNames) {
                     throw new Exception()
                 }
+            }
+
+            def assetsRepo
+            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
+                assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_blender_autotests"
             }
 
             sendToUMS = updateRefs.contains('Update') || sendToUMS
@@ -1474,6 +1483,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
+                        assetsBranch:assetsBranch,
+                        assetsRepo:assetsRepo,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
@@ -1495,7 +1506,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         NON_SPLITTED_PACKAGE_TIMEOUT:60,
                         DEPLOY_TIMEOUT:deployTimeout,
                         TESTER_TAG:tester_tag,
-                        BUILDER_TAG:"BuildBlender2.8",
                         universePlatforms: universePlatforms,
                         resX: resX,
                         resY: resY,

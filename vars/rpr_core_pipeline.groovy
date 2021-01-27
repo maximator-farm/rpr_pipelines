@@ -193,7 +193,10 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/", "CoreAssets")
+            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_core" : "C:\\TestResources\\rpr_core"
+            dir(assets_dir){
+                checkOutBranchOrScm(options.assetsBranch, options.assetsRepo, true, null, null, false, true, "radeonprorender-gitlab", true)
+            }
         }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
@@ -469,41 +472,42 @@ def executePreBuild(Map options)
         options.collectTrackedMetrics = true
     }
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-        checkOutBranchOrScm(options["projectBranch"], "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git")
-    }
+    dir('RadeonProRenderSDK') {
+        withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+            checkOutBranchOrScm(options["projectBranch"], "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git")
+        }
 
-    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-    options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
-    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
-    println "The last commit was written by ${options.commitAuthor}."
-    println "Commit message: ${options.commitMessage}"
-    println "Commit SHA: ${options.commitSHA}"
-    println "Commit shortSHA: ${options.commitShortSHA}"
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${options.commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
 
-    if (options.projectBranch){
-        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-    } else {
-        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-    }
+        if (options.projectBranch){
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+        } else {
+            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+        }
 
-    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30']]]);
-    } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30']]]);
+        if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+            properties([[$class: 'BuildDiscarderProperty', strategy:
+                             [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                              artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
+        } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
+            properties([[$class: 'BuildDiscarderProperty', strategy:
+                             [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                              artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5']]]);
+        } else {
+            properties([[$class: 'BuildDiscarderProperty', strategy:
+                             [$class: 'LogRotator', artifactDaysToKeepStr: '',
+                              artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
+        }
     }
 
 
@@ -611,9 +615,12 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-            	dir("core_tests_configuration") {
-                    bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat ${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/ .")
-            	}
+                withCredentials([string(credentialsId: 'buildsRemoteHost', variable: 'REMOTE_HOST')])
+                {
+                    dir("core_tests_configuration") {
+                        bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat ${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/ . ${REMOTE_HOST}")
+                    }
+                }
             } catch (e) {
                 println("[ERROR] Can't download json files with core tests configuration")
             }
@@ -791,6 +798,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 
 def call(String projectBranch = "",
+         String assetsBranch = "master",
          String testsBranch = "master",
          String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070',
          String updateRefs = 'No',
@@ -817,6 +825,11 @@ def call(String projectBranch = "",
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+
+            def assetsRepo
+            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
+                assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_core"
+            }
 
             sendToUMS = updateRefs.contains('Update') || sendToUMS
 
@@ -877,12 +890,14 @@ def call(String projectBranch = "",
             }
 
             options << [projectBranch:projectBranch,
+                        assetsBranch:assetsBranch,
+                        assetsRepo:assetsRepo,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
                         PRJ_NAME:"RadeonProRenderCore",
                         PRJ_ROOT:"rpr-core",
-                        BUILDER_TAG:'BuilderS',
+                        BUILDER_TAG:'Builder',
                         TESTER_TAG:tester_tag,
                         slackChannel:"${SLACK_CORE_CHANNEL}",
                         renderDevice:renderDevice,

@@ -205,7 +205,7 @@ def call(String projectRepo='git@github.com:BenjaminCoquelle/MIOpen.git',
                             executeBuild:true,
                             executeTests:false,
                             projectRepo:projectRepo,
-                            BUILDER_TAG:'BuilderMIOpen'
+                            BUILDER_TAG:'Builder'
                             ])
 
 }
