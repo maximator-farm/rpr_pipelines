@@ -40,22 +40,6 @@ public class NotificationConfiguration {
         ]
     ]
 
-    def static DOWNLOAD_SVN_REPO = [
-        "begin": ["message": "Downloading svn repository."],
-
-        "exceptions": [
-            [
-                "class": "TimeoutExceeded", "problemMessage": "Failed to download svn repository due to timeout.", 
-                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC
-            ],
-            [
-                "class": Exception, "problemMessage": "Failed to download svn repository.", 
-                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
-                "githubNotification": ["status": "failure"]
-            ]
-        ]
-    ]
-
     def static DOWNLOAD_UNIT_TESTS_REPO = [
         "begin": ["message": "Downloading unit tests repository."],
 
@@ -89,7 +73,7 @@ public class NotificationConfiguration {
             [
                 "class": Exception, "problemMessage": "Failed to increment version.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
-                "githubNotification": ["status": "error"]
+                "githubNotification": ["status": "action_required"]
             ]
         ]
     ]
@@ -101,7 +85,7 @@ public class NotificationConfiguration {
             [
                 "class": Exception, "problemMessage": "Failed to configurate tests.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
-                "githubNotification": ["status": "error"]
+                "githubNotification": ["status": "action_required"]
             ]
         ]
     ]
@@ -160,11 +144,11 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": "TimeoutExceeded", "problemMessage": "Failed to download tests repository due to timeout.", 
-                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER, "scope": ProblemMessageManager.SPECIFIC
+                "rethrow": ExceptionThrowType.NO, "scope": ProblemMessageManager.SPECIFIC
             ],
             [
                 "class": Exception, "problemMessage": "Failed to download tests repository.", 
-                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER, "scope": ProblemMessageManager.SPECIFIC
+                "rethrow": ExceptionThrowType.NO, "scope": ProblemMessageManager.SPECIFIC
             ]
         ]
     ]

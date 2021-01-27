@@ -182,17 +182,26 @@ public class GithubNotificator {
 
             def statusChecks = githubApiProvider.getStatusChecks(
                 repositoryUrl: repositoryUrl,
-                head_sha: commitSHA,
-                check_name: statusTitle
+                head_sha: commitSHA
             )
 
+            Boolean checkFound = false
             if (statusChecks["total_count"] > 0) {
-                if (!url) {
-                    url = statusChecks["check_runs"][0]["details_url"] ?: ""
+                for (prStatus in statusChecks["check_runs"]) {
+                    if (statusTitle == prStatus["name"]) {
+                        checkFound = true
+                        if (!url) {
+                            url = prStatus["details_url"] ?: ""
+                        }
+                        if (!message) {
+                            message = prStatus["output"]["title"] ?: ""
+                        }
+                        break
+                    }
                 }
-                if (!message) {
-                    message = statusChecks["check_runs"][0]["output"]["title"] ?: ""
-                }
+            }
+            if (!checkFound) {
+                throw new Exception("Could not find suitable status check")
             }
 
             githubApiProvider.createOrUpdateStatusCheck(
@@ -231,18 +240,23 @@ public class GithubNotificator {
         try {
             def statusChecks = githubApiProvider.getStatusChecks(
                 repositoryUrl: repositoryUrl,
-                head_sha: commitSHA,
-                check_name: statusTitle
+                head_sha: commitSHA
             )
 
+            Boolean checkFound = false
             if (statusChecks["total_count"] > 0) {
-                if (statusChecks["check_runs"][0]["conclusion"]) {
-                    return statusChecks["check_runs"][0]["conclusion"]
-                } else {
-                    return statusChecks["check_runs"][0]["status"]
+                for (prStatus in statusChecks["check_runs"]) {
+                    if (statusTitle == prStatus["name"]) {
+                        checkFound = true
+                        if (prStatus["conclusion"]) {
+                            return prStatus["conclusion"]
+                        } else {
+                            return prStatus["status"]
+                        }
+                    }
                 }
-                
-            } else {
+            } 
+            if (!checkFound) {
                 throw new Exception("Could not find suitable status check")
             }
         } catch (e) {

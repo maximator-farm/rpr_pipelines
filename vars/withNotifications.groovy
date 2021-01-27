@@ -39,7 +39,7 @@ def call(Map blockOptions, Closure code) {
 
     try {
         if (configuration.begin?.message) {
-            GithubNotificator.updateStatus(options["stage"], title, "pending",
+            GithubNotificator.updateStatus(options["stage"], title, "in_progress",
                 options, configuration["begin"]["message"], logUrl)
         }
 
@@ -68,7 +68,7 @@ def call(Map blockOptions, Closure code) {
                     }
                 }
                 if (exceptionFound) {
-                    if (!printMessage && options.problemMessageManager && (options["stage"] != "Test")) {
+                    if (!printMessage && options.problemMessageManager) {
                         saveProblemMessage(options, exception, exception["problemMessage"], options["stage"], options["osName"])
                     } else {
                         println(exception["problemMessage"])
