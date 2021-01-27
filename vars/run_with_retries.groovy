@@ -82,9 +82,6 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                         retringFunction(nodesList, i)
                         successCurrentNode = true
                         def currentStatus = GithubNotificator.getCurrentStatus(stageName, title, options)
-                        if (currentStatus == "failure" || currentStatus == "timed_out") {
-                            GithubNotificator.updateStatus(stageName, title, "action_required", options)
-                        }
                         if (stageName != 'Test' && options.problemMessageManager) {
                             options.problemMessageManager.clearErrorReasons(stageName, osName) 
                         }
