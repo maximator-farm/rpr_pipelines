@@ -28,13 +28,16 @@ public class GithubNotificator {
         githubApiProvider = new GithubApiProvider(context)
         // format as a http url
         this.repositoryUrl = options["projectRepo"].replace("git@github.com:", "https://github.com/").replaceAll(".git\$", "")
+    }
+
+    def init(Map options) {
         // check that it's PR or not
         if (context.env.CHANGE_URL) {
             this.commitSHA = githubApiProvider.getPullRequest(context.env.CHANGE_URL)["head"]["sha"]
         } else {
             this.commitSHA = options["commitSHA"]
         }
-        context.println("Github Notificator created for commit ${commitSHA} in repo ${repositoryUrl}")
+        context.println("Github Notificator initialized for commit ${commitSHA} in repo ${repositoryUrl}")
     }
 
     /**

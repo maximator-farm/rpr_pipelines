@@ -837,6 +837,7 @@ def executePreBuild(Map options)
                 if (!options.forceBuild) {
                     withNotifications(title: "Version increment", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
                         GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                        githubNotificator.init(options)
                         options["githubNotificator"] = githubNotificator
                         githubNotificator.initPreBuild("${BUILD_URL}")
                     }
