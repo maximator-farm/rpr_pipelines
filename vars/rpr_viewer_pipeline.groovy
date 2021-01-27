@@ -47,7 +47,7 @@ def getViewerTool(String osName, Map options)
 
         case 'OSX':
             println "OSX isn't supported"
-            break;
+            break
 
         default:
             
@@ -73,30 +73,28 @@ def getViewerTool(String osName, Map options)
 
             unzip zipFile: "RprViewer_Ubuntu18.zip", dir: "RprViewer", quiet: true
 
-            break;
+            break
     }
 }
 
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
-    dir('scripts')
-    {
-        switch(osName)
-        {
+    dir('scripts') {
+        switch(osName) {
             case 'Windows':
                 bat """
-                make_results_baseline.bat ${delete}
+                    make_results_baseline.bat ${delete}
                 """
-                break;
+                break
             case 'OSX':
                 sh """
-                ./make_results_baseline.sh ${delete}
+                    ./make_results_baseline.sh ${delete}
                 """
-                break;
+                break
             default:
                 sh """
-                ./make_results_baseline.sh ${delete}
+                    ./make_results_baseline.sh ${delete}
                 """
         }
     }
@@ -142,24 +140,24 @@ def executeTestCommand(String osName, String asicName, Map options)
                     dir('scripts')
                     {
                         bat """
-                        set CIS_RENDER_DEVICE=%CIS_RENDER_DEVICE%${driverPostfix}
-                        run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                            set CIS_RENDER_DEVICE=%CIS_RENDER_DEVICE%${driverPostfix}
+                            run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                         """
                     }
-                    break;
+                    break
 
                 case 'OSX':
                     echo "OSX is not supported"
-                    break;
+                    break
 
                 default:
                     dir('scripts')
                     {
                         withEnv(["LD_LIBRARY_PATH=../RprViewer/engines/hybrid:\$LD_LIBRARY_PATH"]) {
                             sh """
-                            chmod +x ../RprViewer/RadeonProViewer
-                            chmod +x run.sh
-                            ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                                chmod +x ../RprViewer/RadeonProViewer
+                                chmod +x run.sh
+                                ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                             """
                         }
                     }
@@ -268,8 +266,7 @@ def executeTests(String osName, String asicName, Map options)
             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED} ${additionalDescription}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper("${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED}\n${additionalDescription}", e)
         }
-    }
-    finally {
+    } finally {
         try {
             dir("${options.stageName}") {
                 utils.moveFiles(this, osName, "../*.log", ".")
@@ -479,11 +476,9 @@ def executeBuild(String osName, Map options)
                     executeBuildLinux(options)
             }
         }
-    }
-    catch (e) {
+    } catch (e) {
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
         if (options.sendToUMS) {
             dir("jobs_launcher") {
@@ -588,8 +583,7 @@ def executePreBuild(Map options)
 
             def packageInfo
 
-            if(options.testsPackage != "none") 
-            {
+            if (options.testsPackage != "none") {
                 packageInfo = readJSON file: "jobs/${options.testsPackage}"
                 options.isPackageSplitted = packageInfo["split"]
                 // if it's build of manual job and package can be splitted - use list of tests which was specified in params (user can change list of tests before run build)
@@ -651,24 +645,18 @@ def executePreBuild(Map options)
 
             options.skippedTests = [:]
             if (options.updateRefs == "No") {
-                options.platforms.split(';').each()
-                {
-                    if (it)
-                    {
+                options.platforms.split(';').each() {
+                    if (it) {
                         List tokens = it.tokenize(':')
                         String osName = tokens.get(0)
                         String gpuNames = ""
-                        if (tokens.size() > 1)
-                        {
+                        if (tokens.size() > 1) {
                             gpuNames = tokens.get(1)
                         }
 
-                        if (gpuNames)
-                        {
-                            gpuNames.split(',').each()
-                            {
-                                for (test in options.tests) 
-                                {
+                        if (gpuNames) {
+                            gpuNames.split(',').each() {
+                                for (test in options.tests) {
                                     try {
                                         dir ("jobs_launcher") {
                                             String output = bat(script: "is_group_skipped.bat ${it} ${osName} \"\" \"..\\jobs\\Tests\\${test}\\test_cases.json\"", returnStdout: true).trim()
@@ -733,34 +721,26 @@ def executePreBuild(Map options)
 
 def executeDeploy(Map options, List platformList, List testResultList)
 {
-    try
-    {
-        if(options['executeTests'] && testResultList)
-        {
+    try {
+        if(options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_rprviewer.git")
             }
 
             List lostStashes = []
 
-            dir("summaryTestResults")
-            {
+            dir("summaryTestResults") {
                 unstashCrashInfo(options['nodeRetry'])
-                testResultList.each()
-                {
-                    dir("$it".replace("testResult-", ""))
-                    {
-                        try
-                        {
+                testResultList.each() {
+                    dir("$it".replace("testResult-", "")) {
+                        try {
                             unstash "$it"
-                        }catch(e)
-                        {
+                        } catch(e) {
                             echo "[ERROR] Failed to unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))
                             println(e.toString());
                             println(e.getMessage());
                         }
-
                     }
                 }
             }
@@ -780,8 +760,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"])
-                {
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         dir("..\\summaryTestResults") {
@@ -792,7 +771,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             sendStubsToUMS(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
                         bat """
-                        build_reports.bat ..\\summaryTestResults "RprViewer" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                            build_reports.bat ..\\summaryTestResults "RprViewer" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
                         """
                     }
                 }
@@ -823,35 +802,28 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             }
 
-            try
-            {
+            try {
                 dir("jobs_launcher") {
                     bat "get_status.bat ..\\summaryTestResults"
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println("[ERROR] during slack status generation")
                 println(e.toString())
                 println(e.getMessage())
             }
 
-            try
-            {
+            try {
                 dir("jobs_launcher") {
                     archiveArtifacts "launcher.engine.log"
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println("[ERROR] during archiving launcher.engine.log")
                 println(e.toString())
                 println(e.getMessage())
             }
 
             Map summaryTestResults = [:]
-            try
-            {
+            try {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 summaryTestResults['passed'] = summaryReport.passed
                 summaryTestResults['failed'] = summaryReport.failed
@@ -861,16 +833,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     currentBuild.result = "FAILURE"
 
                     options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
-                }
-                else if (summaryReport.failed > 0) {
+                } else if (summaryReport.failed > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
 
                     options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
                 println("[ERROR] CAN'T GET TESTS STATUS")
@@ -878,12 +847,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 currentBuild.result = "UNSTABLE"
             }
 
-            try
-            {
+            try {
                 options.testsStatus = readFile("summaryTestResults/slack_status.json")
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
                 options.testsStatus = ""
@@ -902,9 +868,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             }
         }
-    }
-    catch(e)
-    {
+    } catch(e) {
         println(e.toString());
         println(e.getMessage());
         throw e
@@ -913,7 +877,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RadeonVII,AMD_RadeonVII_Beta,NVIDIA_RTX2080TI;Ubuntu18:AMD_RadeonVII',
+         String platforms = 'Windows:AMD_RadeonVII,AMD_RadeonVII_Beta,NVIDIA_RTX2080TI',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          Boolean incrementVersion = true,
@@ -982,7 +946,7 @@ def call(String projectBranch = "",
                         PRJ_NAME:'RadeonProViewer',
                         PRJ_ROOT:'rpr-core',
                         projectRepo:'git@github.com:Radeon-Pro/RadeonProViewer.git',
-                        BUILDER_TAG:'BuilderViewer',
+                        BUILDER_TAG:'Builder',
                         TESTER_TAG:tester_tag,
                         executeBuild:true,
                         executeTests:true,
@@ -1007,17 +971,12 @@ def call(String projectBranch = "",
         } 
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
-    }
-    catch(e)
-    {
+    } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString());
         println(e.getMessage());
-
         throw e
-    }
-    finally
-    {
+    } finally {
 
         msg = problemMessageManager.publishMessages()
         if (options.sendToUMS) {
@@ -1029,8 +988,7 @@ def call(String projectBranch = "",
                     String status = options.buildWasAborted ? "ABORTED" : currentBuild.result
                     universeClientProd.changeStatus(status)
                     universeClientDev.changeStatus(status)
-                }
-                catch (e){
+                } catch (e){
                     println(e.getMessage())
                 }
             }
