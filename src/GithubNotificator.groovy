@@ -20,8 +20,7 @@ public class GithubNotificator {
      * Main constructor
      *
      * @param context
-     * @param repositoryUrl Url to github repository
-     * @param commitSHA SHA of target commit
+     * @param options Options map
      */
     GithubNotificator(def context, Map options) {
         this.context = context
@@ -30,6 +29,11 @@ public class GithubNotificator {
         this.repositoryUrl = options["projectRepo"].replace("git@github.com:", "https://github.com/").replaceAll(".git\$", "")
     }
 
+    /**
+     * Initialization of GithubNotificator object
+     *
+     * @param options Options map
+     */
     def init(Map options) {
         // check that it's PR or not
         if (context.env.CHANGE_URL) {

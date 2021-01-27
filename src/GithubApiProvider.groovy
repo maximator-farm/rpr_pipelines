@@ -2,6 +2,9 @@ import groovy.json.JsonSlurperClassic
 import groovy.json.JsonOutput
 
 
+/**
+ * Class which implements some requests to GithubApi
+ */
 class GithubApiProvider {
 
     static final List COMPLETED_STATUSES = ["success", "failure", "neutral", "cancelled", "skipped", "timed_out", "action_required"]
@@ -9,6 +12,11 @@ class GithubApiProvider {
     def context
     volatile def installation_token
 
+    /**
+     * Main constructor
+     *
+     * @param context
+     */
     GithubApiProvider(def context) {
         this.context = context
     }
@@ -35,7 +43,7 @@ class GithubApiProvider {
                 if (context.isUnix()) {
                     installation_token = context.python3("${context.CIS_TOOLS}/auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}").split("\n")[-1]
                 } else {
-                    installation_token = context.python3("${context.CIS_TOOLS}\\auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}", false).split("\n")[-1]
+                    installation_token = context.python3("${context.CIS_TOOLS}\\auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}").split("\n")[-1]
                 }
             }
 
@@ -60,6 +68,11 @@ class GithubApiProvider {
         }
     }
 
+    /**
+     * Function for create or update status check (see https://docs.github.com/en/rest/reference/checks#create-a-check-run)
+     *
+     * @param params params of request (all params are specified by documentation except additional required params: repositoryUrl and status(set always insted of conslusion))
+     */
     def createOrUpdateStatusCheck(Map params) {
         params = params.clone()
         def repositoryUrl = params["repositoryUrl"]
@@ -86,6 +99,11 @@ class GithubApiProvider {
         }
     }
 
+    /**
+     * Function for get list of status checks (see https://docs.github.com/en/rest/reference/checks#list-check-runs-for-a-git-reference)
+     *
+     * @param params params of request (all params are specified by documentation except additional required params: repositoryUrl and head_sha)
+     */
     def getStatusChecks(Map params) {
         params = params.clone()
         def repositoryUrl = params["repositoryUrl"]
@@ -110,6 +128,11 @@ class GithubApiProvider {
         }
     }
 
+    /**
+     * Function for get info about specified pull request (see https://docs.github.com/en/rest/reference/pulls#get-a-pull-request)
+     *
+     * @param repositoryUrl url to target pull request
+     */
     def getPullRequest(String repositoryUrl) {
         def response = context.httpRequest(
             url: "${repositoryUrl.replace('https://github.com', 'https://api.github.com/repos').replace('/pull/', '/pulls/')}",
