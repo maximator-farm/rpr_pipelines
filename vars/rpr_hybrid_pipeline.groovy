@@ -423,7 +423,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                              alwaysLinkToLastBuild: false,
                              keepAll: true,
                              reportDir: "SummaryReport",
-                             reportFiles: "$reportFiles",
+                             reportFiles: "${reportFiles.replaceAll('^, ', '')}",
                              reportName: "HTML Failures"])
             }
             catch(e) {
@@ -449,7 +449,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                              alwaysLinkToLastBuild: false,
                              keepAll: true,
                              reportDir: "SummaryReport",
-                             reportFiles: "$reportFiles",
+                             reportFiles: "${reportFiles.replaceAll('^, ', '')}",
                              reportName: "HTML Failures"])
             }
             catch(e) {
