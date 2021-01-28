@@ -451,7 +451,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String customBuildLinkWindows = "",
          String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:NVIDIA_RTX2080TI',
+         String platforms = 'Windows:NVIDIA_RTX2080',
          Boolean updateORRefs = false,
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
