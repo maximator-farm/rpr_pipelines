@@ -36,17 +36,22 @@ class GithubApiProvider {
     }
 
     private String receiveInstallationToken(String organization_name) {
-        context.withCredentials([context.string(credentialsId: "githubNotificationAppKey", variable: "GITHUB_APP_KEY"),
-            context.string(credentialsId: "githubNotificationAppId", variable: "GITHUB_APP_ID")]) {
-
-            context.withEnv(["GITHUB_APP_KEY=${context.GITHUB_APP_KEY}"]) {
-                if (context.isUnix()) {
-                    installation_token = context.python3("${context.CIS_TOOLS}/auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}").split("\n")[-1]
-                } else {
-                    installation_token = context.python3("${context.CIS_TOOLS}\\auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}").split("\n")[-1]
+        try {
+            context.withCredentials([context.string(credentialsId: "githubNotificationAppKey", variable: "GITHUB_APP_KEY"),
+                context.string(credentialsId: "githubNotificationAppId", variable: "GITHUB_APP_ID")]) {
+    
+                context.withEnv(["GITHUB_APP_KEY=${context.GITHUB_APP_KEY}"]) {
+                    if (context.isUnix()) {
+                        installation_token = context.python3("${context.CIS_TOOLS}/auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}").split("\n")[-1]
+                    } else {
+                        installation_token = context.python3("${context.CIS_TOOLS}\\auth_github.py --github_app_id ${context.GITHUB_APP_ID} --organization_name ${organization_name}").split("\n")[-1]
+                    }
                 }
             }
-
+        } catch (Exception e) {
+            context.println("[ERROR] Failed to get installation token")
+            context.println(e.toString())
+            context.println(e.getMessage())
         }
     }
 
