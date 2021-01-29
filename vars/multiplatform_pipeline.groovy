@@ -273,18 +273,23 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
         }
 
         // if it's PR - supersede all previously launched executions
-        if(env.CHANGE_ID) {
+        if (env.CHANGE_ID) {
             //set logRotation for PRs
             properties([[$class: 'BuildDiscarderProperty', strategy:
-                [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
+                [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]])
 
             def buildNumber = env.BUILD_NUMBER as int
             if (buildNumber > 1) milestone(buildNumber - 1)
             milestone(buildNumber)
-
-        } else {
+            
+        } else { 
             properties([[$class: 'BuildDiscarderProperty', strategy:
-                [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
+                [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]])
+        }
+
+        if (env.JOB_NAME.contains("Dev")) {
+            properties([[$class: 'BuildDiscarderProperty', strategy:
+                [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '30', numToKeepStr: '10']]])
         }
 
         def date = new Date()
