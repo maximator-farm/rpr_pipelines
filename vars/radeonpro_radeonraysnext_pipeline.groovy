@@ -84,6 +84,17 @@ def executePreBuild(Map options)
     println "Commit message: ${options.commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
 
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else if (env.BRANCH_NAME) {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '90', numToKeepStr: '3']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '10']]]);
+    }
+
 }
 
 def executeBuild(String osName, Map options)
@@ -137,7 +148,6 @@ def call(String projectBranch = "",
                             PRJ_ROOT:PRJ_ROOT,
                             BUILD_TIMEOUT:'10',
                             TEST_TIMEOUT:'10',
-                            BUILDER_TAG:'Builder',
                             projectRepo:projectRepo,
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",

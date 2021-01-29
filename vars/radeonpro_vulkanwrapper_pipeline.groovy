@@ -174,23 +174,20 @@ def executeBuild(String osName, Map options)
         checkOutBranchOrScm(options.projectBranch, "git@github.com:Radeon-Pro/RadeonProVulkanWrapper.git")
         outputEnvironmentInfo(osName)
 
-        switch(osName)
-        {
-        case 'Windows':
-            executeBuildWindows(options);
-            break;
-        case 'OSX':
-            executeBuildOSX(options);
-            break;
-        default:
-            executeBuildLinux(options, osName);
+        switch(osName) {
+            case 'Windows':
+                executeBuildWindows(options)
+                break
+            case 'OSX':
+                executeBuildOSX(options)
+                break
+            default:
+                executeBuildLinux(options, osName)
         }
-    }
-    catch (e) {
+    } catch (e) {
         currentBuild.result = "FAILED"
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts "*.log"
     }
 }
@@ -199,8 +196,7 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
-    dir('RadeonProVulkanWrapper')
-    {
+    dir('RadeonProVulkanWrapper') {
         checkOutBranchOrScm(options.projectBranch, "git@github.com:Radeon-Pro/RadeonProVulkanWrapper.git")
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -210,22 +206,30 @@ def executePreBuild(Map options)
         println "Commit message: ${commitMessage}"
         println "Commit SHA: ${options.commitSHA}"
 
-        if(env.BRANCH_NAME == "master" || options.projectBranch == "master")
-        {
-            try
-            {
+        if (env.BRANCH_NAME == "master" || options.projectBranch == "master") {
+            try {
                 bat "tools\\doxygen\\doxygen.exe tools\\doxygen\\Doxyfile >> doxygen_build.log 2>&1"
                 archiveArtifacts allowEmptyArchive: true, artifacts: 'doxygen_build.log'
                 sendFiles('./docs/', "/${options.PRJ_ROOT}/${options.PRJ_NAME}/doxygen-docs")
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println("Can't build doxygen documentation")
                 println(e.toString())
                 currentBuild.result = "UNSTABLE"
             }
         }
     }
+
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else if (env.BRANCH_NAME) {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '90', numToKeepStr: '3']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '10']]]);
+    }
+
 }
 
 
@@ -233,6 +237,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 {
     cleanWS()
 }
+
 
 def call(String projectBranch = "",
          String platforms = 'Windows;Ubuntu18;CentOS7',
@@ -246,7 +251,6 @@ def call(String projectBranch = "",
                             enableNotifications:enableNotifications,
                             PRJ_NAME:'RadeonProVulkanWrapper',
                             PRJ_ROOT:'rpr-core',
-                            BUILDER_TAG:'Builder',
                             executeBuild:true,
                             executeTests:false,
                             BUILD_TIMEOUT:'40',

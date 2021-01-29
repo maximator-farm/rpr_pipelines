@@ -85,6 +85,17 @@ def executePreBuild(Map options)
     println "The last commit was written by ${options.commitAuthor}."
     println "Commit message: ${options.commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
+
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else if (env.BRANCH_NAME) {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '90', numToKeepStr: '3']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '10']]]);
+    }
 }
 
 def executeBuild(String osName, Map options)
@@ -124,9 +135,6 @@ def call(String projectBranch = "",
          Boolean enableNotifications = true) {
 
     String PRJ_ROOT="rpr-core"
-     
-    properties([[$class: 'BuildDiscarderProperty', strategy: 
-        [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]])
     
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, 
                            [projectRepo:projectRepo,
@@ -138,7 +146,6 @@ def call(String projectBranch = "",
                             PRJ_ROOT:PRJ_ROOT,
                             BUILD_TIMEOUT:'10',
                             TEST_TIMEOUT:'10',
-                            BUILDER_TAG:'Builder',
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
                             slackTocken:"${SLACK_BAIKAL_TOCKEN}",

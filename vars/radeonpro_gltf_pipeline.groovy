@@ -11,36 +11,36 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows()
 {
     bat """
-    set msbuild=\"C:\\Program Files (x86)\\MSBuild\\14.0\\Bin\\MSBuild.exe\"
-    if not exist %msbuild% (
-        set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-    )
-    set target=build
-    set maxcpucount=/maxcpucount
-    set PATH=C:\\Python27\\;%PATH%
-    .\\Tools\\premake\\win\\premake5 vs2015    >> ${STAGE_NAME}.log 2>&1
-    set solution=Build\\ProRenderGLTF.sln
-    %msbuild% /target:%target% %maxcpucount% /property:Configuration=Release;Platform=x64 %parameters% %solution% >> ${STAGE_NAME}.log 2>&1
+        set msbuild=\"C:\\Program Files (x86)\\MSBuild\\14.0\\Bin\\MSBuild.exe\"
+        if not exist %msbuild% (
+            set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
+        )
+        set target=build
+        set maxcpucount=/maxcpucount
+        set PATH=C:\\Python27\\;%PATH%
+        .\\Tools\\premake\\win\\premake5 vs2015    >> ${STAGE_NAME}.log 2>&1
+        set solution=Build\\ProRenderGLTF.sln
+        %msbuild% /target:%target% %maxcpucount% /property:Configuration=Release;Platform=x64 %parameters% %solution% >> ${STAGE_NAME}.log 2>&1
     """
 }
 
 def executeBuildOSX()
 {
-     sh """
-    chmod +x Tools/premake/osx/premake5
-    Tools/premake/osx/premake5 gmake   >> ${STAGE_NAME}.log 2>&1
-    cd Build
-    make config=release_x64 >> ../${STAGE_NAME}.log 2>&1
+    sh """
+        chmod +x Tools/premake/osx/premake5
+        Tools/premake/osx/premake5 gmake   >> ${STAGE_NAME}.log 2>&1
+        cd Build
+        make config=release_x64 >> ../${STAGE_NAME}.log 2>&1
     """
 }
 
 def executeBuildLinux()
 {
     sh """
-    chmod +x Tools/premake/linux64/premake5
-    Tools/premake/linux64/premake5 gmake   >> ${STAGE_NAME}.log 2>&1
-    cd Build
-    make config=release_x64 >> ../${STAGE_NAME}.log 2>&1
+        chmod +x Tools/premake/linux64/premake5
+        Tools/premake/linux64/premake5 gmake   >> ${STAGE_NAME}.log 2>&1
+        cd Build
+        make config=release_x64 >> ../${STAGE_NAME}.log 2>&1
     """
 }
 
@@ -48,17 +48,23 @@ def executePreBuild(Map options)
 {
     checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRender-GLTF.git')
 
-    AUTHOR_NAME = bat (
-            script: "git show -s --format=%%an HEAD ",
-            returnStdout: true
-            ).split('\r\n')[2].trim()
+    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+    commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
+    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    println "The last commit was written by ${options.commitAuthor}."
+    println "Commit message: ${commitMessage}"
+    println "Commit SHA: ${options.commitSHA}"
 
-    echo "The last commit was written by ${AUTHOR_NAME}."
-    options.AUTHOR_NAME = AUTHOR_NAME
-
-    commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true ).split('\r\n')[2].trim()
-    echo "Commit message: ${commitMessage}"
-    options.commitMessage = commitMessage
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else if (env.BRANCH_NAME) {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '90', numToKeepStr: '3']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '10']]]);
+    }
 }
 
 
@@ -68,51 +74,29 @@ def executeBuild(String osName, Map options)
         checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRender-GLTF.git')
         outputEnvironmentInfo(osName)
 
-        switch(osName)
-        {
-        case 'Windows':
-            executeBuildWindows();
-            break;
-        case 'OSX':
-            executeBuildOSX();
-            break;
-        default:
-            executeBuildLinux();
-            break;
+        switch(osName) {
+            case 'Windows':
+                executeBuildWindows()
+                break
+            case 'OSX':
+                executeBuildOSX()
+                break
+            default:
+                executeBuildLinux()
         }
 
-       // stash includes: 'Bin/**/*', name: "app${osName}"
-
-    }
-    catch (e) {
+    } catch (e) {
         currentBuild.result = "FAILED"
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts "*.log"
     }
 }
 
 def executeDeploy(Map options, List platformList, List testResultList)
-{
-    try {
-        platformList.each()
-        {
-            String osName = it;
-            dir(osName)
-            {
-                //unstash "app${osName}"
-            }
-        }
-    }
-    catch (e) {
-        currentBuild.result = "FAILED"
-        throw e
-    }
-    finally {
-        archiveArtifacts "*.log"
-    }
+{ 
 }
+
 
 def call(String projectBranch = "",
          String platforms = 'Windows;Ubuntu18;OSX',
@@ -120,14 +104,10 @@ def call(String projectBranch = "",
 
     String PRJ_NAME="RadeonProRender-GLTF"
     String PRJ_ROOT="rpr-core"
-    properties([[$class: 'BuildDiscarderProperty', strategy:
-                 [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                  artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                            [projectBranch:projectBranch,
                             enableNotifications:enableNotifications,
-                            BUILDER_TAG:'Builder',
                             BUILD_TIMEOUT:'10',
                             executeBuild:true,
                             executeTests:false,

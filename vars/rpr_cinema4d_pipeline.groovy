@@ -46,7 +46,6 @@ def executeBuildOSX(Map options)
 
 def executeBuild(String osName, Map options)
 {
-
     checkOutBranchOrScm(options.projectBranch, "git@github.com:Radeon-Pro/RadeonProRenderC4DPlugin.git")
     outputEnvironmentInfo(osName)
 
@@ -54,19 +53,17 @@ def executeBuild(String osName, Map options)
         switch (osName) {
             case 'Windows':
                 executeBuildWindows(options);
-                break;
+                break
             case 'OSX':
                 executeBuildOSX(options);
-                break;
+                break
             default:
                 println "OS isn't supported."
         }
-    }
-    catch (e) {
+    } catch (e) {
         currentBuild.result = "FAILED"
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
 }
@@ -97,26 +94,21 @@ def executePreBuild(Map options)
         echo "branch was detected as Pull Request"
         options['isPR'] = true
         options.testsPackage = "PR"
-    }
-    else if(env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         options.testsPackage = "master"
-    }
-    else if(env.BRANCH_NAME) {
+    } else if (env.BRANCH_NAME) {
         options.testsPackage = "smoke"
     }
 
     if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
-    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master") {
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else if (env.BRANCH_NAME) {
         properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '90', numToKeepStr: '3']]]);
     } else {
         properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
     }
 
 }
@@ -139,7 +131,6 @@ def call(String projectBranch = "",
              enableNotifications:enableNotifications,
              PRJ_NAME:'RadeonProRenderCinema4DPlugin',
              PRJ_ROOT:'rpr-plugins',
-             BUILDER_TAG:'BuilderC4D',
              executeBuild:true,
              executeTests:false
              ])

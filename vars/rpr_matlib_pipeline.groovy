@@ -112,7 +112,6 @@ def call(String projectBranch = "",
                             PRJ_ROOT:PRJ_ROOT,
                             BUILD_TIMEOUT:'25',
                             TEST_TIMEOUT:'25',
-                            BUILDER_TAG:'Builder',
                             projectURL:projectURL,
                             retriesForTestStage:1])
 }

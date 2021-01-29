@@ -5,20 +5,18 @@ def executeGenTestRefCommand(String osName, Map options)
 
 def executeTestCommand(String osName, Map options)
 {
-    dir("Build/unittests")
-    {
-        switch(osName)
-        {
+    dir("Build/unittests") {
+        switch(osName) {
             case 'Windows':
                 bat """
-                call Release\\RTF_UnitTests.exe --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ..\\..\\${STAGE_NAME}.log 2>&1
+                    call Release\\RTF_UnitTests.exe --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ..\\..\\${STAGE_NAME}.log 2>&1
                 """
-                break;
+                break
             case 'OSX':
-                echo "pass"
-                break;
+                println "not supported"
+                break
             default:
-                echo "pass"
+                println "not supported"
         }
     }
 }
@@ -37,7 +35,7 @@ def executeTests(String osName, String asicName, Map options)
         bat "rmdir /s /q shaders"
         unstash "shaders${osName}"
         
-        if(options['updateRefs']) {
+        if (options['updateRefs']) {
             echo "Updating Reference Images"
             executeGenTestRefCommand(osName, options)
             
@@ -45,13 +43,11 @@ def executeTests(String osName, String asicName, Map options)
             echo "Execute Tests"
             executeTestCommand(osName, options)
         }
-    }
-    catch (e) {
+    } catch (e) {
         println(e.toString());
         println(e.getMessage());
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts "*.log"
         junit "*.gtest.xml"
     }
@@ -89,22 +85,28 @@ def executeBuildLinux(Map options)
 
 def executePreBuild(Map options)
 {
-    dir('RadeonProVulkanWrapper')
-    {
+    dir('RadeonProVulkanWrapper') {
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
-        AUTHOR_NAME = bat (
-                script: "git show -s --format=%%an HEAD ",
-                returnStdout: true
-                ).split('\r\n')[2].trim()
-
-        echo "The last commit was written by ${AUTHOR_NAME}."
-        options.AUTHOR_NAME = AUTHOR_NAME
-
-        commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true ).split('\r\n')[2].trim()
-        echo "Commit message: ${commitMessage}"
-        options.commitMessage = commitMessage
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
     }
+
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+    } else if (env.BRANCH_NAME) {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '90', numToKeepStr: '3']]]);
+    } else {
+        properties([[$class: 'BuildDiscarderProperty', strategy:
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '10']]]);
+    }
+
 }
 
 def executeBuild(String osName, Map options)
@@ -179,7 +181,6 @@ def call(String projectBranch = "",
                             PRJ_NAME:PRJ_NAME,
                             PRJ_ROOT:PRJ_ROOT,
                             projectRepo:projectRepo,
-                            BUILDER_TAG:'Builder',
                             executeBuild:true,
                             executeTests:true,
                             BUILD_TIMEOUT:'10',
