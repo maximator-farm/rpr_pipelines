@@ -2,6 +2,8 @@ import groovy.json.JsonOutput;
 import groovy.json.JsonSlurperClassic;
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
 // imports for work with JSONs
+import java.util.Date;
+// import date for get end time timestamp in set status
 
 /**
  * Client for Universal Monitoring System
@@ -466,8 +468,12 @@ class UniverseClient {
             
             this.context.println("[INFO] Sending build status - \"${mapStatuses[status]}\"")
 
+            long timeMilliseconds = new Date().getTime()
+            long timestamp = (long) (timeMilliseconds / 1000)
+
             def buildBody = [
-                'status': mapStatuses[status]
+                'status': mapStatuses[status],
+                'ts': timestamp
             ]
 
             def res = this.context.httpRequest(
