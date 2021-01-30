@@ -67,8 +67,7 @@ def getMaxPluginInstaller(String osName, Map options)
                     """
                 }
             }
-
-            break;
+            break
 
         default:
             echo "[WARNING] ${osName} is not supported"
@@ -79,15 +78,13 @@ def getMaxPluginInstaller(String osName, Map options)
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
-    dir('scripts')
-    {
-        switch(osName)
-        {
+    dir('scripts') {
+        switch(osName) {
             case 'Windows':
                 bat """
                     make_results_baseline.bat ${delete}
                 """
-                break;
+                break
             default:
                 echo "[WARNING] ${osName} is not supported"
         }
@@ -125,12 +122,11 @@ def executeTestCommand(String osName, String asicName, Map options)
                 "UMS_BUILD_ID_DEV=${options.buildIdDev}", "UMS_JOB_ID_DEV=${options.jobIdDev}", "UMS_URL_DEV=${universeClientDev.url}",
                 "UMS_LOGIN_DEV=${UMS_USER}", "UMS_PASSWORD_DEV=${UMS_PASSWORD}",
                 "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${options.isUrl}",
-                "MINIO_ENDPOINT=${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY=${MINIO_SECRET_KEY}"])
+                "MINIO_ENDPOINT=${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY=${MINIO_SECRET_KEY}"]) 
             {
-                dir('scripts')
-                {
+                dir('scripts') {
                     bat"""
-                    run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.updateRefs} >> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                        run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.toolVersion} ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.updateRefs} >> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                     """
                 }
             }
@@ -141,7 +137,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    if (options.sendToUMS){
+    if (options.sendToUMS) {
         universeClientProd.stage("Tests-${osName}-${asicName}", "begin")
         universeClientDev.stage("Tests-${osName}-${asicName}", "begin")
     }
@@ -157,7 +153,10 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/MaxAssets/", "MaxAssets")
+            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_max_autotests" : "C:\\TestResources\\rpr_max_autotests"
+            dir(assets_dir){
+                checkOutBranchOrScm(options.assetsBranch, options.assetsRepo, true, null, null, false, true, "radeonprorender-gitlab", true)
+            }
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
@@ -256,8 +255,7 @@ def executeTests(String osName, String asicName, Map options)
                 }
             }
             if (stashResults) {
-                dir('Work')
-                {
+                dir('Work') {
                     if (fileExists("Results/Max/session_report.json")) {
                         
                         def sessionReport = null
@@ -369,13 +367,12 @@ def executeBuildWindows(Map options)
 def executeBuild(String osName, Map options)
 {
     cleanWS(osName)
-    if (options.sendToUMS){
+    if (options.sendToUMS) {
         universeClientProd.stage("Build-" + osName , "begin")
         universeClientDev.stage("Build-" + osName , "begin")
     }
     try {
-        dir("RadeonProRenderMaxPlugin")
-        {
+        dir("RadeonProRenderMaxPlugin") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
             }
@@ -402,13 +399,10 @@ def executeBuild(String osName, Map options)
                     echo "[WARNING] ${osName} is not supported"
             }
         }
-
         //stash includes: 'Bin/**/*', name: "app${osName}"
-    }
-    catch (e) {
+    } catch (e) {
         throw e
-    }
-    finally {
+    } finally {
         if (options.sendToUMS) {
             dir("jobs_launcher") {
                 switch(osName) {
@@ -420,7 +414,7 @@ def executeBuild(String osName, Map options)
         }
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
-    if (options.sendToUMS){
+    if (options.sendToUMS) {
         universeClientProd.stage("Build-" + osName, "end")
         universeClientDev.stage("Build-" + osName, "end")
     }
@@ -462,16 +456,11 @@ def executePreBuild(Map options)
 
     // branch postfix
     options["branch_postfix"] = ""
-    if(env.BRANCH_NAME && env.BRANCH_NAME == "master")
-    {
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         options["branch_postfix"] = "release"
-    }
-    else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
-    {
+    } else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
         options["branch_postfix"] = env.BRANCH_NAME.replace('/', '-')
-    }
-    else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop")
-    {
+    } else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop") {
         options["branch_postfix"] = options.projectBranch.replace('/', '-')
     }
 
@@ -524,16 +513,12 @@ def executePreBuild(Map options)
                         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
                         options.projectBranch = options.commitSHA
                         println "[INFO] Project branch hash: ${options.projectBranch}"
-                    }
-                    else
-                    {
-                        if(options.commitMessage.contains("CIS:BUILD"))
-                        {
+                    } else {
+                        if (options.commitMessage.contains("CIS:BUILD")) {
                             options['executeBuild'] = true
                         }
 
-                        if(options.commitMessage.contains("CIS:TESTS"))
-                        {
+                        if (options.commitMessage.contains("CIS:TESTS")) {
                             options['executeBuild'] = true
                             options['executeTests'] = true
                         }
@@ -575,8 +560,7 @@ def executePreBuild(Map options)
     options.groupsUMS = []
 
     withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-        dir('jobs_test_max')
-        {
+        dir('jobs_test_max') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_max.git')
             dir ('jobs_launcher') {
                 options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
@@ -586,8 +570,7 @@ def executePreBuild(Map options)
 
             def packageInfo
 
-            if(options.testsPackage != "none") 
-            {
+            if (options.testsPackage != "none")  {
                 packageInfo = readJSON file: "jobs/${options.testsPackage}"
                 options.isPackageSplitted = packageInfo["split"]
                 // if it's build of manual job and package can be splitted - use list of tests which was specified in params (user can change list of tests before run build)
@@ -624,6 +607,7 @@ def executePreBuild(Map options)
                         }
                     }
                 }
+
                 tests.each() {
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
@@ -694,24 +678,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             List lostStashes = []
 
-            dir("summaryTestResults")
-            {
+            dir("summaryTestResults") {
                 unstashCrashInfo(options['nodeRetry'])
-                testResultList.each()
-                {
-                    dir("$it".replace("testResult-", ""))
-                    {
-                        try
-                        {
+                testResultList.each() {
+                    dir("$it".replace("testResult-", "")) {
+                        try {
                             unstash "$it"
-                        }catch(e)
-                        {
+                        } catch(e) {
                             echo "Can't unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))
                             println(e.toString());
                             println(e.getMessage());
                         }
-
                     }
                 }
             }
@@ -720,7 +698,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 dir("jobs_launcher") {
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"{}\"
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -728,11 +706,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
-            try
-            {
+            try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"])
-                {
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         dir("..\\summaryTestResults") {
@@ -745,13 +721,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         if (options['isPreBuilt'])
                         {
                             bat """
-                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("3ds Max")} "PreBuilt" "PreBuilt" "PreBuilt"
+                                build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("3ds Max")} "PreBuilt" "PreBuilt" "PreBuilt"
                             """
-                        }
-                        else
-                        {
+                        } else {
                             bat """
-                            build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("3ds Max")} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("3ds Max")} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }
                     }
@@ -783,35 +757,28 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             }
 
-            try
-            {
+            try {
                 dir("jobs_launcher") {
                     bat "get_status.bat ..\\summaryTestResults"
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println("[ERROR] during slack status generation")
                 println(e.toString())
                 println(e.getMessage())
             }
 
-            try
-            {
+            try {
                 dir("jobs_launcher") {
                     archiveArtifacts "launcher.engine.log"
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println("[ERROR] during archiving launcher.engine.log")
                 println(e.toString())
                 println(e.getMessage())
             }
 
             Map summaryTestResults = [:]
-            try
-            {
+            try {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 summaryTestResults['passed'] = summaryReport.passed
                 summaryTestResults['failed'] = summaryReport.failed
@@ -821,16 +788,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     currentBuild.result = "FAILURE"
 
                     options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
-                }
-                else if (summaryReport.failed > 0) {
+                } else if (summaryReport.failed > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
 
                     options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
                 println("[ERROR] CAN'T GET TESTS STATUS")
@@ -838,12 +802,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 currentBuild.result = "UNSTABLE"
             }
 
-            try
-            {
+            try {
                 options.testsStatus = readFile("summaryTestResults/slack_status.json")
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
                 options.testsStatus = ""
@@ -862,23 +823,17 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             }
         }
-    }
-    catch (e) {
+    } catch (e) {
         println(e.toString());
         println(e.getMessage());
         throw e
-    }
-    finally
-    {}
+    } finally {}
 }
 
 def appendPlatform(String filteredPlatforms, String platform) {
-    if (filteredPlatforms)
-    {
+    if (filteredPlatforms) {
         filteredPlatforms +=  ";" + platform
-    } 
-    else 
-    {
+    } else {
         filteredPlatforms += platform
     }
     return filteredPlatforms
@@ -886,6 +841,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderMaxPlugin.git",
         String projectBranch = "",
+        String assetsBranch = "master",
         String testsBranch = "master",
         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI',
         String updateRefs = 'No',
@@ -924,10 +880,15 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
 
+            def assetsRepo
+            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
+                assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_max_autotests"
+            }
+
             sendToUMS = updateRefs.contains('Update') || sendToUMS
 
             if (sendToUMS) {
-                try{
+                try {
                     withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
                         string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
                         string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
@@ -958,19 +919,16 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 //remove platforms for which pre built plugin is not specified
                 String filteredPlatforms = ""
 
-                platforms.split(';').each()
-                { platform ->
+                platforms.split(';').each() { platform ->
                     List tokens = platform.tokenize(':')
                     String platformName = tokens.get(0)
 
-                    switch(platformName)
-                    {
+                    switch (platformName) {
                     case 'Windows':
-                        if (customBuildLinkWindows)
-                        {
+                        if (customBuildLinkWindows) {
                             filteredPlatforms = appendPlatform(filteredPlatforms, platform)
                         }
-                        break;
+                        break
                     }
                 }
 
@@ -978,14 +936,11 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             }
 
             gpusCount = 0
-            platforms.split(';').each()
-            { platform ->
+            platforms.split(';').each() { platform ->
                 List tokens = platform.tokenize(':')
-                if (tokens.size() > 1)
-                {
+                if (tokens.size() > 1) {
                     gpuNames = tokens.get(1)
-                    gpuNames.split(',').each()
-                    {
+                    gpuNames.split(',').each() {
                         gpusCount += 1
                     }
                 }
@@ -1013,6 +968,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
+                        assetsBranch:assetsBranch,
+                        assetsRepo:assetsRepo,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
