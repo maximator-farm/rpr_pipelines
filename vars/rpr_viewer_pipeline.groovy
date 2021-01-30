@@ -18,8 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 def getViewerTool(String osName, Map options)
 {
-    switch(osName)
-    {
+    switch(osName) {
         case 'Windows':
 
             if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip")) {
@@ -42,8 +41,7 @@ def getViewerTool(String osName, Map options)
             }
 
             unzip zipFile: "RprViewer_Windows.zip", dir: "RprViewer", quiet: true
-
-            break;
+            break
 
         case 'OSX':
             println "OSX isn't supported"
@@ -72,8 +70,6 @@ def getViewerTool(String osName, Map options)
             }
 
             unzip zipFile: "RprViewer_Ubuntu18.zip", dir: "RprViewer", quiet: true
-
-            break
     }
 }
 
@@ -116,7 +112,6 @@ def executeTestCommand(String osName, String asicName, Map options)
     }
 
     println "Set timeout to ${test_timeout}"
-
     timeout(time: test_timeout, unit: 'MINUTES') { 
 
         withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
@@ -132,35 +127,32 @@ def executeTestCommand(String osName, String asicName, Map options)
                 "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${options.isUrl}",
                 "MINIO_ENDPOINT=${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY=${MINIO_SECRET_KEY}"])
             {
-                switch(osName)
-                {
-                case 'Windows':
-                    String driverPostfix = asicName.endsWith('_Beta') ? " Beta Driver" : ""
+                switch(osName) {
+                    case 'Windows':
+                        String driverPostfix = asicName.endsWith('_Beta') ? " Beta Driver" : ""
 
-                    dir('scripts')
-                    {
-                        bat """
-                            set CIS_RENDER_DEVICE=%CIS_RENDER_DEVICE%${driverPostfix}
-                            run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
-                        """
-                    }
-                    break
-
-                case 'OSX':
-                    echo "OSX is not supported"
-                    break
-
-                default:
-                    dir('scripts')
-                    {
-                        withEnv(["LD_LIBRARY_PATH=../RprViewer/engines/hybrid:\$LD_LIBRARY_PATH"]) {
-                            sh """
-                                chmod +x ../RprViewer/RadeonProViewer
-                                chmod +x run.sh
-                                ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                        dir('scripts') {
+                            bat """
+                                set CIS_RENDER_DEVICE=%CIS_RENDER_DEVICE%${driverPostfix}
+                                run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                             """
                         }
-                    }
+                        break
+
+                    case 'OSX':
+                        println("OSX is not supported")
+                        break
+
+                    default:
+                        dir('scripts') {
+                            withEnv(["LD_LIBRARY_PATH=../RprViewer/engines/hybrid:\$LD_LIBRARY_PATH"]) {
+                                sh """
+                                    chmod +x ../RprViewer/RadeonProViewer
+                                    chmod +x run.sh
+                                    ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                                """
+                            }
+                        }
                 }
             }
         }
@@ -190,17 +182,18 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/Assets/", "RprViewer")
+            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_viewer_autotests" : "C:\\TestResources\\rpr_viewer_autotests"
+            dir(assets_dir){
+                checkOutBranchOrScm(options.assetsBranch, options.assetsRepo, true, null, null, false, true, "radeonprorender-gitlab", true)
+            }
         }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
         String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
-
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
         outputEnvironmentInfo(osName, "", options.currentTry)
 
-        
         if (options["updateRefs"].contains("Update")) {
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, asicName, options)
@@ -218,7 +211,7 @@ def executeTests(String osName, String asicName, Map options)
         } else {
             withNotifications(title: options["stageName"], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
                 String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_viewer_autotests_baselines" : "/mnt/c/TestResources/rpr_viewer_autotests_baselines"
-                println "[INFO] Downloading reference images for ${options.tests}"
+                println("[INFO] Downloading reference images for ${options.tests}")
                 options.tests.split(" ").each() {
                     if (it.contains(".json")) {
                         receiveFiles("${REF_PATH_PROFILE}/", baseline_dir)
@@ -470,7 +463,7 @@ def executeBuild(String osName, Map options)
                     executeBuildWindows(options)
                     break;
                 case 'OSX':
-                    println "OSX isn't supported."
+                    println("OSX isn't supported.")
                     break;
                 default:
                     executeBuildLinux(options)
@@ -566,8 +559,7 @@ def executePreBuild(Map options)
     options.groupsUMS = []
 
     withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-        dir('jobs_test_rprviewer')
-        {
+        dir('jobs_test_rprviewer') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rprviewer.git')
             dir ('jobs_launcher') {
                 options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
@@ -586,8 +578,7 @@ def executePreBuild(Map options)
                 }
             }
 
-            if(options.testsPackage != "none")
-            {
+            if(options.testsPackage != "none") {
                 if (options.isPackageSplitted) {
                     println("[INFO] Tests package '${options.testsPackage}' can be splitted")
                 } else {
@@ -614,6 +605,7 @@ def executePreBuild(Map options)
                         }
                     }
                 }
+
                 tests.each() {
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
@@ -661,8 +653,7 @@ def executePreBuild(Map options)
                                                 options.skippedTests[test].add("${it}-${osName}")
                                             }
                                         }
-                                    }
-                                    catch(Exception e) {
+                                    } catch(Exception e) {
                                         println(e.toString())
                                         println(e.getMessage())
                                     }
@@ -870,6 +861,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
+         String assetsBranch = "master",
          String testsBranch = "master",
          String platforms = 'Windows:AMD_RadeonVII,AMD_RadeonVII_Beta,NVIDIA_RTX2080',
          String updateRefs = 'No',
@@ -893,6 +885,11 @@ def call(String projectBranch = "",
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+
+            def assetsRepo
+            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
+                assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_viewer_autotests"
+            }
 
             sendToUMS = updateRefs.contains('Update') || sendToUMS
 
@@ -933,6 +930,8 @@ def call(String projectBranch = "",
             println "UMS platforms: ${universePlatforms}"
 
             options << [projectBranch:projectBranch,
+                        assetsBranch:assetsBranch,
+                        assetsRepo:assetsRepo,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
@@ -970,7 +969,6 @@ def call(String projectBranch = "",
         println(e.getMessage());
         throw e
     } finally {
-
         msg = problemMessageManager.publishMessages()
         if (options.sendToUMS) {
             node("Windows && PreBuild") {
@@ -981,7 +979,7 @@ def call(String projectBranch = "",
                     String status = options.buildWasAborted ? "ABORTED" : currentBuild.result
                     universeClientProd.changeStatus(status)
                     universeClientDev.changeStatus(status)
-                } catch (e){
+                } catch (e) {
                     println(e.getMessage())
                 }
             }
