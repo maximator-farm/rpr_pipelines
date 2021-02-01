@@ -243,22 +243,18 @@ def executeBuildWindows(Map options)
         outputEnvironmentInfo("Windows", "${STAGE_NAME}.EnvVariables")
 
         // vcvars64.bat sets VS/msbuild env
-        withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.USDPixar.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+        withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             bat """
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
 
-                cd USDPixar
-                git apply ../usd_dev.patch  >> ${STAGE_NAME}.USDPixar.log 2>&1
-                cd ..
-
                 :: USD
 
-                python USDPixar\\build_scripts\\build_usd.py --build RPRViewer/binary/build --src RPRViewer/binary/deps RPRViewer/binary/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
+                python USDPixar\\build_scripts\\build_usd.py --build RPRViewer/binary/windows/build --src RPRViewer/binary/windows/deps RPRViewer/binary/windows/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
             
                 :: HdRPRPlugin
 
                 set PXR_DIR=%CD%\\USDPixar
-                set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\inst
+                set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
 
                 cd HdRPRPlugin
                 cmake -B build -G "Visual Studio 15 2017 Win64" -Dpxr_DIR=%PXR_DIR% -DCMAKE_INSTALL_PREFIX=%INSTALL_PREFIX_DIR% ^
@@ -268,18 +264,18 @@ def executeBuildWindows(Map options)
         }
 
         // delete files before zipping
-        withNotifications(title: "Ubuntu18", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        withNotifications(title: "Windows", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
             bat """
-                del RPRViewer\\binary\\inst\\pxrConfig.cmake
-                rmdir /Q /S RPRViewer\\binary\\inst\\cmake
-                rmdir /Q /S RPRViewer\\binary\\inst\\include
-                rmdir /Q /S RPRViewer\\binary\\inst\\lib\\cmake
-                rmdir /Q /S RPRViewer\\binary\\inst\\lib\\pkgconfig
-                del RPRViewer\\binary\\inst\\bin\\*.lib
-                del RPRViewer\\binary\\inst\\bin\\*.pdb
-                del RPRViewer\\binary\\inst\\lib\\*.lib
-                del RPRViewer\\binary\\inst\\lib\\*.pdb
-                del RPRViewer\\binary\\inst\\plugin\\usd\\*.lib
+                del RPRViewer\\binary\\windows\\inst\\pxrConfig.cmake
+                rmdir /Q /S RPRViewer\\binary\\windows\\inst\\cmake
+                rmdir /Q /S RPRViewer\\binary\\windows\\inst\\include
+                rmdir /Q /S RPRViewer\\binary\\windows\\inst\\lib\\cmake
+                rmdir /Q /S RPRViewer\\binary\\windows\\inst\\lib\\pkgconfig
+                del RPRViewer\\binary\\windows\\inst\\bin\\*.lib
+                del RPRViewer\\binary\\windows\\inst\\bin\\*.pdb
+                del RPRViewer\\binary\\windows\\inst\\lib\\*.lib
+                del RPRViewer\\binary\\windows\\inst\\lib\\*.pdb
+                del RPRViewer\\binary\\windows\\inst\\plugin\\usd\\*.lib
             """
 
             try {
@@ -298,12 +294,61 @@ def executeBuildWindows(Map options)
             }
 
             // TODO: filter files for archive
-            zip archive: true, dir: "RPRViewer\\binary\\inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
+            zip archive: true, dir: "RPRViewer\\binary\\windows\\inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
             stash includes: "RadeonProUSDViewer_Windows.zip", name: "appWindows"
             options.pluginWinSha = sha1 "RadeonProUSDViewer_Windows.zip"
         }
     }
 }
+
+
+def executeBuildOSX(Map options)
+{
+    
+    outputEnvironmentInfo("OSX", "${STAGE_NAME}.EnvVariables")
+
+    // vcvars64.bat sets VS/msbuild env
+    withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+        sh """
+            # USD
+            python3 USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst \
+                --build-args USD,"-DQT_SYMLINKS_DIR=$QT_SYMLINKS_DIR" >> ${STAGE_NAME}.USDPixar.log 2>&1
+
+            # HdRprPlugin
+            PXR_DIR=\$(pwd)/USDPixar
+            INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
+
+            cd HdRPRPlugin
+            cmake -B build -Dpxr_DIR=$PXR_DIR -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX_DIR -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE \
+                -DPXR_USE_PYTHON_3=ON >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
+            cmake --build build --config Release --target install >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
+           
+        """
+    }
+
+    // delete files before zipping
+    withNotifications(title: "OSX", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        // bat """
+        //     rm RPRViewer/binary/inst/pxrConfig.cmake
+        //     rm -rf RPRViewer/binary/inst/cmake
+        //     rm -rf RPRViewer/binary/inst/include
+        //     rm -rf RPRViewer/binary/inst/lib/cmake
+        //     rm -rf RPRViewer/binary/inst/lib/pkgconfig
+        //     del RPRViewer/binary/inst/bin/*.lib
+        //     del RPRViewer/binary/inst/bin/*.pdb
+        //     del RPRViewer/binary/inst/lib/*.lib
+        //     del RPRViewer/binary/inst/lib/*.pdb
+        //     del RPRViewer/binary/inst/plugin/usd/*.lib
+        // """
+
+        // TODO: filter files for archive
+        zip archive: true, dir: "RPRViewer/binary/mac/inst", glob: '', zipFile: "RadeonProUSDViewer_OSX.zip"
+        // stash includes: "RadeonProUSDViewer_OSX.zip", name: "appOSX"
+        options.pluginWinSha = sha1 "RadeonProUSDViewer_OSX.zip"
+    }
+    
+}
+
 
 def executeBuild(String osName, Map options)
 {
@@ -315,11 +360,11 @@ def executeBuild(String osName, Map options)
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch (osName) {
                 case "Windows":
-                    executeBuildWindows(options);
-                    break;
+                    executeBuildWindows(options)
+                    break
                 case "OSX":
-                    println "OS isn't supported."
-                    break;
+                    executeBuildOSX(options)
+                    break
                 default:
                     println "OS isn't supported."
             }
@@ -369,36 +414,30 @@ def executePreBuild(Map options)
 
     if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
         properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
     } else if (env.JOB_NAME == "RadeonProViewer-WeeklyFull") {
         properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     } else {
         properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
+            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
     }
 
     def tests = []
     options.timeouts = [:]
 
     withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-        dir('jobs_test_usdviewer')
-        {
+        dir('jobs_test_usdviewer') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_usdviewer.git')
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             println "[INFO] Test branch hash: ${options['testsBranch']}"
 
             def packageInfo
 
-            if(options.testsPackage != "none") 
-            {
+            if (options.testsPackage != "none")  {
                 packageInfo = readJSON file: "jobs/${options.testsPackage}"
                 options.isPackageSplitted = packageInfo["split"]
                 // if it's build of manual job and package can be splitted - use list of tests which was specified in params (user can change list of tests before run build)
@@ -407,8 +446,7 @@ def executePreBuild(Map options)
                 }
             }
 
-            if(options.testsPackage != "none")
-            {
+            if (options.testsPackage != "none") {
                 if (options.isPackageSplitted) {
                     println("[INFO] Tests package '${options.testsPackage}' can be splitted")
                 } else {
