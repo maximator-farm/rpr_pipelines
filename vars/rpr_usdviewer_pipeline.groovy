@@ -310,6 +310,8 @@ def executeBuildOSX(Map options)
     // vcvars64.bat sets VS/msbuild env
     withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
         sh """
+            export QT_SYMLINKS_DIR=/Users/admin/Qt5.14.2/QtSymlinks
+
             # USD
             python3 USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst \
                 --build-args USD,"-DQT_SYMLINKS_DIR=$QT_SYMLINKS_DIR" >> ${STAGE_NAME}.USDPixar.log 2>&1
