@@ -240,14 +240,30 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;${PATH}", "WORKSPACE=${env.WORKSPACE.toString().replace('\\', '/')}"]) {
+        outputEnvironmentInfo("Windows", "${STAGE_NAME}.EnvVariables")
+
         // vcvars64.bat sets VS/msbuild env
-        withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+        withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             bat """
-                call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.log 2>&1
-                call "build_all_windows.bat" >> ${STAGE_NAME}.log 2>&1
+               call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
+
+               :: USD
+
+               python USDPixar\\build_scripts\\build_usd.py --build RPRViewer/binary/windows/build --src RPRViewer/binary/windows/deps RPRViewer/binary/windows/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
+            
+               :: HdRPRPlugin
+
+               set PXR_DIR=%CD%\\USDPixar
+               set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
+
+               cd HdRPRPlugin
+               cmake -B build -G "Visual Studio 15 2017 Win64" -Dpxr_DIR=%PXR_DIR% -DCMAKE_INSTALL_PREFIX=%INSTALL_PREFIX_DIR% ^
+                   -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE -DPXR_USE_PYTHON_3=ON >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
+               cmake --build build --config Release --target install >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
             """
         }
 
+        // delete files before zipping
         withNotifications(title: "Windows", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
             bat """
                 del RPRViewer\\binary\\windows\\inst\\pxrConfig.cmake
@@ -288,22 +304,51 @@ def executeBuildWindows(Map options)
 
 def executeBuildOSX(Map options)
 {
+    
+    outputEnvironmentInfo("OSX", "${STAGE_NAME}.EnvVariables")
+
     // vcvars64.bat sets VS/msbuild env
-    withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+    withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
         sh """
             export QT_SYMLINKS_DIR=/Users/admin/Qt5.14.2/QtSymlinks
 
-            chmod u+x build_all_mac.sh
-            ./build_all_mac.sh >> ${STAGE_NAME}.log 2>&1
+            # USD
+            python3.7 USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst \
+                --build-args USD,"-DQT_SYMLINKS_DIR=\$QT_SYMLINKS_DIR" >> ${STAGE_NAME}.USDPixar.log 2>&1
+
+            # HdRprPlugin
+            PXR_DIR=\$(pwd)/USDPixar
+            INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
+
+            cd HdRPRPlugin
+            cmake -B build -Dpxr_DIR=\$PXR_DIR -DCMAKE_INSTALL_PREFIX=\$INSTALL_PREFIX_DIR -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE \
+                -DPXR_USE_PYTHON_3=ON >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
+            cmake --build build --config Release --target install >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
+           
         """
     }
 
+    // delete files before zipping
     withNotifications(title: "OSX", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_OSX.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        // bat """
+        //     rm RPRViewer/binary/inst/pxrConfig.cmake
+        //     rm -rf RPRViewer/binary/inst/cmake
+        //     rm -rf RPRViewer/binary/inst/include
+        //     rm -rf RPRViewer/binary/inst/lib/cmake
+        //     rm -rf RPRViewer/binary/inst/lib/pkgconfig
+        //     del RPRViewer/binary/inst/bin/*.lib
+        //     del RPRViewer/binary/inst/bin/*.pdb
+        //     del RPRViewer/binary/inst/lib/*.lib
+        //     del RPRViewer/binary/inst/lib/*.pdb
+        //     del RPRViewer/binary/inst/plugin/usd/*.lib
+        // """
+
         // TODO: filter files for archive
         zip archive: true, dir: "RPRViewer/binary/mac/inst", glob: '', zipFile: "RadeonProUSDViewer_OSX.zip"
         // stash includes: "RadeonProUSDViewer_OSX.zip", name: "appOSX"
         // options.pluginOSXSha = sha1 "RadeonProUSDViewer_OSX.zip"
     }
+    
 }
 
 
@@ -313,8 +358,6 @@ def executeBuild(String osName, Map options)
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             checkOutBranchOrScm(options["projectBranch"], options["projectRepo"])
         }
-
-        outputEnvironmentInfo(osName)
 
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch (osName) {
