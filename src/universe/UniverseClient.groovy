@@ -1,3 +1,5 @@
+package universe
+
 import groovy.json.JsonOutput;
 import groovy.json.JsonSlurperClassic;
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
@@ -229,6 +231,7 @@ class UniverseClient {
      *
      * @param func function to be retried
      * @param validResponseCodes response codes that will be indicated as OK
+     * @param allowAborting allow method to be canceled by aborting of build or not
      */
     def retryWrapper(func, validResponseCodes = [200], allowAborting = true) {
         def attempt = 0
@@ -301,7 +304,7 @@ class UniverseClient {
      * @param info info map ["key1": "value1", ... , "keyN": "valueN"]
      */
 
-    def createBuild(envs = '', suites = '', updRefs = false, options = null) {
+    def createBuild(envs = "", suites = "", updRefs = false, options = null, front_url = "") {
         def request = {
             // prepare build parameters
             def parameters = [:]
@@ -399,11 +402,13 @@ class UniverseClient {
             this.context.echo content["msg"];
             
             if (this.is_parent || (!this.child_of && !this.is_parent)) {
-                if (this.context.currentBuild.description == null) {
-                    this.context.currentBuild.description = ""
+                if (front_url) {
+                    if (this.context.currentBuild.description == null) {
+                        this.context.currentBuild.description = ""
+                    }
+
+                    this.context.currentBuild.description += "<br><a href='${front_url}/products/${this.build.job_id}/${this.build.id}/summary' target='_blank'>UMS Report (${this.url.replaceAll('api','')})</a>"
                 }
-        
-                this.context.currentBuild.description += "<br><a href='${this.url.replaceAll('api','')}products/${this.build.job_id}/${this.build.id}/summary' target='_blank'>UMS Report (${this.url.replaceAll('api','')})</a>"
             }
 
             return res;

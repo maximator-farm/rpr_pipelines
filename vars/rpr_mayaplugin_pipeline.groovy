@@ -1,5 +1,5 @@
 import groovy.transform.Field
-import UniverseClient
+import universe.*
 import groovy.json.JsonOutput;
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
@@ -8,14 +8,7 @@ import TestsExecutionType
 import java.util.concurrent.atomic.AtomicInteger
 
 
-@Field String UniverseURLProd
-@Field String UniverseURLDev
-@Field String ImageServiceURL
-@Field String ProducteName = "AMD%20Radeon™%20ProRender%20for%20Maya"
-@Field UniverseClient universeClientParentProd
-@Field UniverseClient universeClientParentDev
-@Field Map universeClientsProd = [:]
-@Field Map universeClientsDev = [:]
+@Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20Maya"
 
 
 def getMayaPluginInstaller(String osName, Map options)
@@ -169,7 +162,7 @@ def buildRenderCache(String osName, String toolVersion, String log_name, Integer
 
 def executeTestCommand(String osName, String asicName, Map options)
 {
-    def test_timeout = options.timeouts["${options.parsedTests}"]
+    def testTimeout = options.timeouts["${options.parsedTests}"]
     String testsNames = options.parsedTests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
@@ -182,43 +175,27 @@ def executeTestCommand(String osName, String asicName, Map options)
         }
     }
 
-    println "Set timeout to ${test_timeout}"
+    println "Set timeout to ${testTimeout}"
 
-    timeout(time: test_timeout, unit: 'MINUTES') { 
-        withCredentials([usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
-            usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD'),
-            string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
-            usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')])
-        {
-            withEnv(["UMS_USE=${options.sendToUMS}", "UMS_ENV_LABEL=${osName}-${asicName}",
-                "UMS_BUILD_ID_PROD=${options.buildIdProd}", "UMS_JOB_ID_PROD=${options.jobIdProd}", "UMS_URL_PROD=${UniverseURLProd}", 
-                "UMS_LOGIN_PROD=${UMS_USER}", "UMS_PASSWORD_PROD=${UMS_PASSWORD}",
-                "UMS_BUILD_ID_DEV=${options.buildIdDev}", "UMS_JOB_ID_DEV=${options.jobIdDev}", "UMS_URL_DEV=${UniverseURLDev}",
-                "UMS_LOGIN_DEV=${UMS_USER}", "UMS_PASSWORD_DEV=${UMS_PASSWORD}",
-                "IS_LOGIN=${IS_USER}", "IS_PASSWORD=${IS_PASSWORD}", "IS_URL=${ImageServiceURL}",
-                "MINIO_ENDPOINT=${MINIO_ENDPOINT}", "MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}", "MINIO_SECRET_KEY=${MINIO_SECRET_KEY}"])
-            {
-                switch(osName)
-                {
-                    case 'Windows':
-                        dir('scripts')
-                        {
-                            bat """
-                                run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
-                            """
-                        }
-                        break;
-                    case 'OSX':
-                        dir('scripts')
-                        {
-                            sh """
-                                ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\" 2>&1
-                            """
-                        }
-                        break;
-                    default:
-                        echo "[WARNING] ${osName} is not supported"
-                }
+    timeout(time: testTimeout, unit: 'MINUTES') { 
+        UniverseManager.executeTests(osName, asicName, options) {
+            switch(osName) {
+                case 'Windows':
+                    dir('scripts') {
+                        bat """
+                            run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                        """
+                    }
+                    break;
+                case 'OSX':
+                    dir('scripts') {
+                        sh """
+                            ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\" 2>&1
+                        """
+                    }
+                    break;
+                default:
+                    println("[WARNING] ${osName} is not supported")
             }
         }
     }
@@ -235,17 +212,7 @@ def executeTests(String osName, String asicName, Map options)
     options.parsedTests = parsedTestNames.join(" ")
 
     if (options.sendToUMS){
-        universeClientsProd[options.engine].stage("Tests-${osName}-${asicName}", "begin")
-        universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "begin")
-
-        if (universeClientsProd[options.engine].build != null){
-            options.buildIdProd = universeClientsProd[options.engine].build["id"]
-            options.jobIdProd = universeClientsProd[options.engine].build["job_id"]
-        }
-        if (universeClientsDev[options.engine].build != null){
-            options.buildIdDev = universeClientsDev[options.engine].build["id"]
-            options.jobIdDev = universeClientsDev[options.engine].build["job_id"]
-        }
+        options.universeManager.startTestsStage(osName, asicName, options)
     }
 
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
@@ -398,9 +365,7 @@ def executeTests(String osName, String asicName, Map options)
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             if (options.sendToUMS) {
-                dir("jobs_launcher") {
-                    sendToMINIO(options, osName, "../${options.stageName}", "*.log")
-                }
+                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log")
             }
             if (stashResults) {
                 dir('Work')
@@ -410,10 +375,8 @@ def executeTests(String osName, String asicName, Map options)
                         def sessionReport = null
                         sessionReport = readJSON file: 'Results/Maya/session_report.json'
 
-                        if (options.sendToUMS)
-                        {
-                            universeClientsProd[options.engine].stage("Tests-${osName}-${asicName}", "end")
-                            universeClientsDev[options.engine].stage("Tests-${osName}-${asicName}", "end")
+                        if (options.sendToUMS) {
+                            options.universeManager.finishTestsStage(osName, asicName, options)
                         }
 
                         if (sessionReport.summary.error > 0) {
@@ -488,8 +451,8 @@ def executeBuildWindows(Map options)
         rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
         if (options.sendToUMS) {
-            dir("../../jobs_launcher") {
-                sendToMINIO(options, "Windows", "..\\RadeonProRenderMayaPlugin\\MayaPkg", BUILD_NAME, false)
+            dir ("../..") {
+                options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderMayaPlugin\\MayaPkg", BUILD_NAME, false)
             }
         }
 
@@ -542,9 +505,9 @@ def executeBuildOSX(Map options)
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             if (options.sendToUMS) {
-                dir("../../../jobs_launcher") {
-                    sendToMINIO(options, "OSX", "../RadeonProRenderMayaAddon/MayaPkg/.installer_build", BUILD_NAME, false)                            
-                }
+                dir ("../../..") {
+                    options.universeManager.sendToMINIO(options, "OSX", "../RadeonProRenderMayaPlugin/MayaPkg/.installer_build", BUILD_NAME, false)
+                }                
             }
 
             sh "cp RadeonProRender*.dmg RadeonProRenderMaya.dmg"
@@ -563,8 +526,7 @@ def executeBuildOSX(Map options)
 def executeBuild(String osName, Map options)
 {
     if (options.sendToUMS){
-        universeClientParentProd.stage("Build-" + osName , "begin")
-        universeClientParentDev.stage("Build-" + osName , "begin")
+        options.universeManager.startBuildStage(osName)
     }
 
     try {
@@ -574,18 +536,6 @@ def executeBuild(String osName, Map options)
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
             }
         }
-
-        if (options.sendToUMS) {
-            timeout(time: "5", unit: "MINUTES") {
-                dir("jobs_launcher") {
-                    withNotifications(title: osName, printMessage: true, options: options, configuration: NotificationConfiguration.DOWNLOAD_JOBS_LAUNCHER) {
-                        checkOutBranchOrScm(options["jobsLauncherBranch"], "git@github.com:luxteam/jobs_launcher.git")
-                    }
-                }
-            }
-        }
-
-        outputEnvironmentInfo(osName)
 
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
@@ -601,24 +551,12 @@ def executeBuild(String osName, Map options)
         }
     } catch (e) {
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts "*.log"
         if (options.sendToUMS) {
-            dir("jobs_launcher") {
-                switch(osName) {
-                    case 'Windows':
-                        sendToMINIO(options, osName, "..", "*.log")
-                        break;
-                    default:
-                        sendToMINIO(options, osName, "..", "*.log")
-                }                          
-            }
+            options.universeManager.sendToMINIO(options, osName, "..", "*.log")
+            options.universeManager.finishBuildStage(osName)
         }
-    }
-    if (options.sendToUMS){
-        universeClientParentProd.stage("Build-" + osName , "end")
-        universeClientParentDev.stage("Build-" + osName , "end")
     }
 }
 
@@ -919,36 +857,7 @@ def executePreBuild(Map options)
         println "timeouts: ${options.timeouts}"
 
         if (options.sendToUMS){
-            try {
-                // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
-                universeClientParentProd.createBuild('', '', false, options)
-                universeClientParentDev.createBuild('', '', false, options)
-                for (int i = 0; i < options.engines.size(); i++) {
-                    String engine = options.engines[i]
-                    String engineName = options.enginesNames[i]
-                    universeClientsProd[engine] = new UniverseClient(this, UniverseURLProd, env, ImageServiceURL, ProducteName, engineName, universeClientParentProd)
-                    universeClientsDev[engine] = new UniverseClient(this, UniverseURLDev, env, ImageServiceURL, ProducteName, engineName, universeClientParentDev)
-                    universeClientsProd[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
-                    universeClientsDev[engine].createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs)
-                }
-
-                if (universeClientParentProd.build != null || universeClientParentDev.build != null){
-                    options.buildIdProd = universeClientParentProd.build["id"]
-                    options.jobIdProd = universeClientParentProd.build["job_id"]
-                    options.isUrl = ImageServiceURL
-
-                    options.buildIdDev = universeClientParentDev.build["id"]
-                    options.jobIdDev = universeClientParentDev.build["job_id"]
-                    options.isUrl = ImageServiceURL
-                } else {
-                    println("Failed to create build: ${universeClientParentProd.build} & ${universeClientParentDev.build}. Set sendToUms to false.")
-                    options.sendToUMS = false
-                }
-            } catch (e) {
-                println("Failed to create build in UMS. Set sendToUms to false.")
-                println(e.toString())
-                options.sendToUMS = false
-            }
+            options.universeManager.createBuilds(options)
         }
     }
 }
@@ -1065,7 +974,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                                 writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                             }
                             if (options.sendToUMS) {
-                                sendStubsToUMS(options, "..\\summaryTestResults\\${engine}\\lost_tests.json", "..\\summaryTestResults\\${engine}\\skipped_tests.json", "..\\summaryTestResults\\${engine}\\retry_info.json", engine)
+                                options.engine = engine
+                                options.universeManager.sendStubs(options, "..\\summaryTestResults\\${engine}\\lost_tests.json", "..\\summaryTestResults\\${engine}\\skipped_tests.json", "..\\summaryTestResults\\${engine}\\retry_info.json")
                             }
                             try {
                                 if (options['isPreBuilt'])
@@ -1264,31 +1174,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             }
 
             sendToUMS = updateRefs.contains('Update') || sendToUMS
-
-            if (sendToUMS) {
-                try {
-                    withCredentials([string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
-                        string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
-                        string(credentialsId: 'imageServiceURL', variable: 'IS_URL')])
-                    {
-                        UniverseURLProd = "${PROD_UMS_URL}"
-                        UniverseURLDev = "${DEV_UMS_URL}"
-                        ImageServiceURL = "${IS_URL}"
-                        universeClientParentProd = new UniverseClient(this, UniverseURLProd, env, ProducteName)
-                        universeClientParentDev = new UniverseClient(this, UniverseURLDev, env, ProducteName)
-
-                        options.universeClientsProd = universeClientsProd
-                        options.universeClientsDev = universeClientsDev
-                    }
-                    universeClientParentProd.tokenSetup()
-                    universeClientParentDev.tokenSetup()
-                } catch (e) {
-                    println("[ERROR] Failed to setup token for UMS. Set sendToUms to false.")
-                    sendToUMS = false
-                    println(e.toString());
-                    println(e.getMessage());
-                }
-            }
             
             enginesNames = enginesNames.split(',') as List
             def formattedEngines = []
@@ -1410,42 +1295,25 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries
                         ]
+
+            if (sendToUMS) {
+                UniverseManager universeManager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)
+                universeManager.init()
+                options["universeManager"] = universeManager
+            }
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
-    } 
-    catch(e) 
-    {
+    } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString());
         println(e.getMessage());
         throw e
     }
-    finally
-    {
-        msg = problemMessageManager.publishMessages()
+    finally {
+        String problemMessage = options.problemMessageManager.publishMessages()
         if (options.sendToUMS) {
-            node("Windows && PreBuild") {
-                try {
-                    universeClientParentProd.problemMessage(msg)
-                    universeClientParentDev.problemMessage(msg)
-
-                    String status = options.buildWasAborted ? "ABORTED" : currentBuild.result
-                    universeClientParentProd.changeStatus(status)
-                    universeClientParentDev.changeStatus(status)
-                    if (universeClientsProd) {
-                        for (client in universeClientsProd) {
-                            client.value.changeStatus(status)
-                        }
-                        for (client in universeClientsDev) {
-                            client.value.changeStatus(status)
-                        }
-                    }
-                }
-                catch (e){
-                    println(e.getMessage())
-                }
-            }
+            options.universeManager.closeBuild(problemMessage, options)
         }
     }
 
