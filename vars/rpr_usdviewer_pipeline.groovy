@@ -329,7 +329,7 @@ def executeBuildOSX(Map options)
     }
 
     // delete files before zipping
-    withNotifications(title: "OSX", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+    withNotifications(title: "OSX", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_OSX.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         // bat """
         //     rm RPRViewer/binary/inst/pxrConfig.cmake
         //     rm -rf RPRViewer/binary/inst/cmake
@@ -346,7 +346,7 @@ def executeBuildOSX(Map options)
         // TODO: filter files for archive
         zip archive: true, dir: "RPRViewer/binary/mac/inst", glob: '', zipFile: "RadeonProUSDViewer_OSX.zip"
         // stash includes: "RadeonProUSDViewer_OSX.zip", name: "appOSX"
-        options.pluginWinSha = sha1 "RadeonProUSDViewer_OSX.zip"
+        // options.pluginOSXSha = sha1 "RadeonProUSDViewer_OSX.zip"
     }
     
 }
@@ -707,7 +707,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectBranch = "",
          String assetsBranch = "master",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_WX9100,AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT',
+         String platforms = 'Windows:AMD_WX9100,AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT;OSX',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
