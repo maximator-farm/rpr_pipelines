@@ -310,6 +310,7 @@ def executeBuildOSX(Map options)
     // vcvars64.bat sets VS/msbuild env
     withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
         sh """
+            export OS=Darwin
             export QT_SYMLINKS_DIR=/Users/admin/Qt5.14.2/QtSymlinks
 
             # USD
