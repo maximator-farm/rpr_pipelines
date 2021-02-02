@@ -244,22 +244,26 @@ def executeBuildWindows(Map options)
 
         // vcvars64.bat sets VS/msbuild env
         withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+            //bat """
+            //   call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
+
+            //   :: USD
+
+            //   python USDPixar\\build_scripts\\build_usd.py --build RPRViewer/binary/windows/build --src RPRViewer/binary/windows/deps RPRViewer/binary/windows/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
+            
+            //   :: HdRPRPlugin
+
+            //   set PXR_DIR=%CD%\\USDPixar
+            //   set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
+
+            //   cd HdRPRPlugin
+            //   cmake -B build -G "Visual Studio 15 2017 Win64" -Dpxr_DIR=%PXR_DIR% -DCMAKE_INSTALL_PREFIX=%INSTALL_PREFIX_DIR% ^
+            //       -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE -DPXR_USE_PYTHON_3=ON >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
+            //   cmake --build build --config Release --target install >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
+            //"""
             bat """
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
-
-                :: USD
-
-                python USDPixar\\build_scripts\\build_usd.py --build RPRViewer/binary/windows/build --src RPRViewer/binary/windows/deps RPRViewer/binary/windows/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
-            
-                :: HdRPRPlugin
-
-                set PXR_DIR=%CD%\\USDPixar
-                set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
-
-                cd HdRPRPlugin
-                cmake -B build -G "Visual Studio 15 2017 Win64" -Dpxr_DIR=%PXR_DIR% -DCMAKE_INSTALL_PREFIX=%INSTALL_PREFIX_DIR% ^
-                    -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE -DPXR_USE_PYTHON_3=ON >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
-                cmake --build build --config Release --target install >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
+                call "build_all_windows.bat" >> ${STAGE_NAME}.log 2>&1
             """
         }
 
