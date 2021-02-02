@@ -314,14 +314,14 @@ def executeBuildOSX(Map options)
 
             # USD
             python3 USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst \
-                --build-args USD,"-DQT_SYMLINKS_DIR=$QT_SYMLINKS_DIR" >> ${STAGE_NAME}.USDPixar.log 2>&1
+                --build-args USD,"-DQT_SYMLINKS_DIR=\$QT_SYMLINKS_DIR" >> ${STAGE_NAME}.USDPixar.log 2>&1
 
             # HdRprPlugin
             PXR_DIR=\$(pwd)/USDPixar
             INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
 
             cd HdRPRPlugin
-            cmake -B build -Dpxr_DIR=$PXR_DIR -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX_DIR -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE \
+            cmake -B build -Dpxr_DIR=\$PXR_DIR -DCMAKE_INSTALL_PREFIX=\$INSTALL_PREFIX_DIR -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE \
                 -DPXR_USE_PYTHON_3=ON >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
             cmake --build build --config Release --target install >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
            
