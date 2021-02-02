@@ -312,6 +312,7 @@ def executeBuildOSX(Map options)
         sh """
             export OS=Darwin
             export QT_SYMLINKS_DIR=/Users/admin/Qt5.14.2/QtSymlinks
+            export PATH="/Users/admin/Qt5.14.2/5.14.2/clang_64/bin:$PATH"
 
             # USD
             python3.7 USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst \
