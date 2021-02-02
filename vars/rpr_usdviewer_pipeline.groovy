@@ -1,5 +1,5 @@
 import groovy.transform.Field
-import groovy.json.JsonOutput;
+import groovy.json.JsonOutput
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
@@ -44,10 +44,8 @@ def getViewerTool(String osName, Map options)
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
-    dir('scripts')
-    {
-        switch(osName)
-            {
+    dir('scripts') {
+        switch(osName) {
             case 'Windows':
                 bat """
                     make_results_baseline.bat ${delete}
@@ -133,7 +131,7 @@ def executeTests(String osName, String asicName, Map options)
                 switch(osName) {
                     case "Windows":
                         bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
-                        break;
+                        break
                     default:
                         sh "rm -rf ./Work/GeneratedBaselines"        
                 }
@@ -193,7 +191,7 @@ def executeTests(String osName, String asicName, Map options)
                             GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
                         }
 
-                        echo "Stashing test results to : ${options.testResultsName}"
+                        println("Stashing test results to : ${options.testResultsName}")
                         stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
                         // reallocate node if there are still attempts
@@ -315,11 +313,11 @@ def executeBuild(String osName, Map options)
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch (osName) {
                 case "Windows":
-                    executeBuildWindows(options);
-                    break;
+                    executeBuildWindows(options)
+                    break
                 case "OSX":
                     println "OS isn't supported."
-                    break;
+                    break
                 default:
                     println "OS isn't supported."
             }
@@ -367,38 +365,18 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-    if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else if (env.JOB_NAME == "RadeonProViewer-WeeklyFull") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    }
-
     def tests = []
     options.timeouts = [:]
 
     withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-        dir('jobs_test_usdviewer')
-        {
+        dir('jobs_test_usdviewer') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_usdviewer.git')
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             println "[INFO] Test branch hash: ${options['testsBranch']}"
 
             def packageInfo
 
-            if(options.testsPackage != "none") 
-            {
+            if (options.testsPackage != "none") {
                 packageInfo = readJSON file: "jobs/${options.testsPackage}"
                 options.isPackageSplitted = packageInfo["split"]
                 // if it's build of manual job and package can be splitted - use list of tests which was specified in params (user can change list of tests before run build)
@@ -407,8 +385,7 @@ def executePreBuild(Map options)
                 }
             }
 
-            if(options.testsPackage != "none")
-            {
+            if (options.testsPackage != "none") {
                 if (options.isPackageSplitted) {
                     println("[INFO] Tests package '${options.testsPackage}' can be splitted")
                 } else {
@@ -528,8 +505,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         }catch(e) {
                             println "[ERROR] Failed to unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))
-                            println(e.toString());
-                            println(e.getMessage());
+                            println(e.toString())
+                            println(e.getMessage())
                         }
 
                     }
@@ -658,8 +635,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
         }
     } catch(e) {
-        println(e.toString());
-        println(e.getMessage());
+        println(e.toString())
+        println(e.getMessage())
         throw e
     }
 }
@@ -696,7 +673,7 @@ def call(String projectBranch = "",
             String PRJ_NAME='USDViewer'
             String projectRepo='git@github.com:Radeon-Pro/RPRViewer.git'
 
-            def universePlatforms = convertPlatforms(platforms);
+            def universePlatforms = convertPlatforms(platforms)
 
             def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
 
@@ -739,8 +716,8 @@ def call(String projectBranch = "",
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
-        println(e.toString());
-        println(e.getMessage());
+        println(e.toString())
+        println(e.getMessage())
         throw e
     } finally {
         problemMessageManager.publishMessages()

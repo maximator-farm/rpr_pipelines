@@ -1,6 +1,6 @@
 import universe.*
 import groovy.transform.Field
-import groovy.json.JsonOutput;
+import groovy.json.JsonOutput
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
@@ -13,8 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 def getCoreSDK(String osName, Map options)
 {
-    switch(osName)
-    {
+    switch(osName) {
         case 'Windows':
 
             if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip")) {
@@ -37,8 +36,7 @@ def getCoreSDK(String osName, Map options)
             }
 
             unzip zipFile: "binWin64.zip", dir: "rprSdk", quiet: true
-
-            break;
+            break
 
         case 'OSX':
 
@@ -62,8 +60,7 @@ def getCoreSDK(String osName, Map options)
             }
 
             unzip zipFile: "binMacOS.zip", dir: "rprSdk", quiet: true
-
-            break;
+            break
 
         default:
 
@@ -88,31 +85,27 @@ def getCoreSDK(String osName, Map options)
             }
 
             unzip zipFile: "binUbuntu18.zip", dir: "rprSdk", quiet: true
-
-            break;
     }
 }
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
 
-    dir('scripts')
-    {
-        switch(osName)
-        {
+    dir('scripts') {
+        switch(osName) {
             case 'Windows':
                 bat """
-                make_results_baseline.bat ${delete}
+                    make_results_baseline.bat ${delete}
                 """
-                break;
+                break
             case 'OSX':
                 sh """
-                ./make_results_baseline.sh ${delete}
+                    ./make_results_baseline.sh ${delete}
                 """
-                break;
+                break
             default:
                 sh """
-                ./make_results_baseline.sh ${delete}
+                    ./make_results_baseline.sh ${delete}
                 """
         }
     }
@@ -128,7 +121,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.iterations} ${options.updateRefs} >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                     """
                 }
-                break;
+                break
             case 'OSX':
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
@@ -137,7 +130,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         """
                     }
                 }
-                break;
+                break
             default:
                 dir('scripts') {
                     withEnv(["LD_LIBRARY_PATH=../rprSdk:\$LD_LIBRARY_PATH"]) {
@@ -194,7 +187,7 @@ def executeTests(String osName, String asicName, Map options)
                 switch(osName) {
                     case "Windows":
                         bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
-                        break;
+                        break
                     default:
                         sh "rm -rf ./Work/GeneratedBaselines"        
                 }
@@ -246,8 +239,7 @@ def executeTests(String osName, String asicName, Map options)
             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED} ${additionalDescription}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper("${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED}\n${additionalDescription}", e)
         }
-    }
-    finally {
+    } finally {
         try {
             dir("${options.stageName}") {
                 utils.moveFiles(this, osName, "../*.log", ".")
@@ -259,15 +251,13 @@ def executeTests(String osName, String asicName, Map options)
                 options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log")
             }
             if (stashResults) {
-                dir('Work')
-                {
+                dir('Work') {
                     if (fileExists("Results/Core/session_report.json")) {
 
                         def sessionReport = null
                         sessionReport = readJSON file: 'Results/Core/session_report.json'
 
-                        if (options.sendToUMS)
-                        {
+                        if (options.sendToUMS) {
                             options.universeManager.finishTestsStage(osName, asicName, options)
                         }
 
@@ -279,7 +269,7 @@ def executeTests(String osName, String asicName, Map options)
                             GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
                         }
 
-                        echo "Stashing test results to : ${options.testResultsName}"
+                        println "Stashing test results to : ${options.testResultsName}"
                         stash includes: '**/*', excludes: '**/cache/**', name: "${options.testResultsName}", allowEmpty: true
 
                         // reallocate node if there are still attempts
@@ -385,13 +375,13 @@ def executeBuild(String osName, Map options)
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_PACKAGE) {
             switch(osName) {
                 case "Windows":
-                    executeBuildWindows(options);
-                    break;
+                    executeBuildWindows(options)
+                    break
                 case "OSX":
-                    executeBuildOSX(options);
-                    break;
+                    executeBuildOSX(options)
+                    break
                 default:
-                    executeBuildLinux(options);
+                    executeBuildLinux(options)
             }
         }
     } catch (e) {
@@ -408,7 +398,7 @@ def executeBuild(String osName, Map options)
 def executePreBuild(Map options)
 {
     if (env.CHANGE_URL) {
-        println "Branch was detected as Pull Request"
+        println "Build was detected as Pull Request"
         GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
         options.githubNotificator = githubNotificator
         githubNotificator.initPreBuild("${BUILD_URL}")
@@ -439,20 +429,6 @@ def executePreBuild(Map options)
         currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
         currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
-
-        if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-            properties([[$class: 'BuildDiscarderProperty', strategy:
-                             [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                              artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-        } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
-            properties([[$class: 'BuildDiscarderProperty', strategy:
-                             [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                              artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-        } else {
-            properties([[$class: 'BuildDiscarderProperty', strategy:
-                             [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                              artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-        }
     }
 
 
@@ -460,8 +436,7 @@ def executePreBuild(Map options)
     options.groupsUMS = []
 
     withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-        dir('jobs_test_core')
-        {
+        dir('jobs_test_core') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
             dir ('jobs_launcher') {
                 options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
@@ -469,8 +444,7 @@ def executePreBuild(Map options)
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             println "[INFO] Test branch hash: ${options['testsBranch']}"
 
-            if(options.testsPackage != "none")
-            {
+            if (options.testsPackage != "none") {
                 // json means custom test suite. Split doesn't supported
                 def tempTests = readJSON file: "jobs/${options.testsPackage}"
                 tempTests["groups"].each() {
@@ -480,8 +454,7 @@ def executePreBuild(Map options)
                 options.tests = tests
                 options.testsPackage = "none"
                 options.groupsUMS = tests
-            }
-            else {
+            } else {
                 options.tests.split(" ").each()
                 {
                     tests << "${it}"
@@ -508,8 +481,7 @@ def executePreBuild(Map options)
 def executeDeploy(Map options, List platformList, List testResultList)
 {
     try {
-        if(options['executeTests'] && testResultList)
-        {
+        if (options['executeTests'] && testResultList) {
 
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_core.git")
@@ -517,22 +489,17 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             List lostStashes = []
 
-            dir("summaryTestResults")
-            {
+            dir("summaryTestResults") {
                 unstashCrashInfo(options['nodeRetry'])
-                testResultList.each()
-                {
-                    dir("$it".replace("testResult-", ""))
-                    {
-                        try
-                        {
+                testResultList.each() {
+                    dir("$it".replace("testResult-", "")) {
+                        try {
                             unstash "$it"
-                        }catch(e)
-                        {
+                        } catch(e) {
                             echo "Can't unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))
-                            println(e.toString());
-                            println(e.getMessage());
+                            println(e.toString())
+                            println(e.getMessage())
                         }
 
                     }
@@ -540,8 +507,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-                withCredentials([string(credentialsId: 'buildsRemoteHost', variable: 'REMOTE_HOST')])
-                {
+                withCredentials([string(credentialsId: 'buildsRemoteHost', variable: 'REMOTE_HOST')]) {
                     dir("core_tests_configuration") {
                         bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat ${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/ . ${REMOTE_HOST}")
                     }
@@ -575,16 +541,14 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         println(e.getMessage())
                     }
                 }
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"])
-                {
-                    dir("jobs_launcher")
-                    {
-                        if(options.projectBranch != "") {
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
+                    dir("jobs_launcher") {
+                        if (options.projectBranch != "") {
                             options.branchName = options.projectBranch
                         } else {
                             options.branchName = env.BRANCH_NAME
                         }
-                        if(options.incrementVersion) {
+                        if (options.incrementVersion) {
                             options.branchName = "master"
                         }
 
@@ -593,7 +557,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         dir("..\\summaryTestResults") {
-                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig())
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                         }
                         if (options.sendToUMS) {
@@ -601,7 +565,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         }
 
                         bat """
-                        build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
+                            build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
                         """
 
                         bat "get_status.bat ..\\summaryTestResults"
@@ -645,22 +609,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             }
 
-            try
-            {
+            try {
                 dir("jobs_launcher") {
                     archiveArtifacts "launcher.engine.log"
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println("[ERROR] during archiving launcher.engine.log")
                 println(e.toString())
                 println(e.getMessage())
             }
 
             Map summaryTestResults = [:]
-            try
-            {
+            try {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 summaryTestResults['passed'] = summaryReport.passed
                 summaryTestResults['failed'] = summaryReport.failed
@@ -670,16 +630,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     currentBuild.result = "FAILURE"
 
                     options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
-                }
-                else if (summaryReport.failed > 0) {
+                } else if (summaryReport.failed > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
 
                     options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
                 println("[ERROR] CAN'T GET TESTS STATUS")
@@ -687,12 +644,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 currentBuild.result = "UNSTABLE"
             }
 
-            try
-            {
+            try {
                 options.testsStatus = readFile("summaryTestResults/slack_status.json")
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
                 options.testsStatus = ""
@@ -711,14 +665,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             }
         }
-    }
-    catch (e) {
-        println(e.toString());
-        println(e.getMessage());
+    } catch (e) {
+        println(e.toString())
+        println(e.getMessage())
         throw e
-    }
-    finally
-    {}
+    } finally {}
 }
 
 
@@ -759,21 +710,17 @@ def call(String projectBranch = "",
             sendToUMS = updateRefs.contains('Update') || sendToUMS
 
             gpusCount = 0
-            platforms.split(';').each()
-            { platform ->
+            platforms.split(';').each() { platform ->
                 List tokens = platform.tokenize(':')
-                if (tokens.size() > 1)
-                {
+                if (tokens.size() > 1) {
                     gpuNames = tokens.get(1)
-                    gpuNames.split(',').each()
-                    {
+                    gpuNames.split(',').each() {
                         gpusCount += 1
                     }
                 }
             }
 
-            def universePlatforms = convertPlatforms(platforms);
-
+            def universePlatforms = convertPlatforms(platforms)
             def parallelExecutionType = TestsExecutionType.valueOf(parallelExecutionTypeString)
 
             println "Platforms: ${platforms}"
@@ -843,6 +790,5 @@ def call(String projectBranch = "",
         if (options.sendToUMS) {
             options.universeManager.closeBuild(problemMessage, options)
         }
-
     }
 }

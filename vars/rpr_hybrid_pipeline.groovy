@@ -292,10 +292,10 @@ def executeBuild(String osName, Map options)
         switch(osName) {
             case 'Windows':
                 executeBuildWindows(options)
-                break;
+                break
             case 'OSX':
                 executeBuildOSX(options)
-                break;
+                break
             default:
                 executeBuildLinux(options)
         }
@@ -337,7 +337,7 @@ def executePreBuild(Map options)
     }
 
     if (env.CHANGE_URL) {
-        echo "branch was detected as Pull Request"
+        println("Build was detected as Pull Request")
     }
 
     options.commitMessage = []
@@ -348,7 +348,7 @@ def executePreBuild(Map options)
     println "Commit list message: ${options.commitMessage}"
     
     // set pending status for all
-    if(env.CHANGE_ID) {
+    if (env.CHANGE_ID) {
         def commitContexts = []
         options['platforms'].split(';').each() { platform ->
             List tokens = platform.tokenize(':')
@@ -379,18 +379,6 @@ def executePreBuild(Map options)
         }
         options['commitContexts'] = commitContexts
     }
-
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    } else if (env.BRANCH_NAME) {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '90', numToKeepStr: '3']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    }
-
 }
 
 def executeDeploy(Map options, List platformList, List testResultList)
@@ -409,8 +397,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             }
                             catch(e) {
                                 echo "Can't unstash ${it} ${quality}"
-                                println(e.toString());
-                                println(e.getMessage());
+                                println(e.toString())
+                                println(e.getMessage())
                             }
                         }
                     }
@@ -434,9 +422,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             reportFiles += ", ${it}-Failures/report.html".replace("testResult-", "")
                         }
                         catch(e) {
-                            echo "[ERROR] Can't unstash ${it}"
-                            println(e.toString());
-                            println(e.getMessage());
+                            println("[ERROR] Can't unstash ${it}")
+                            println(e.toString())
+                            println(e.getMessage())
                         }
                     }
                 }

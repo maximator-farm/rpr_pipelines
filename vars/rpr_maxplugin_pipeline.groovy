@@ -13,8 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 def getMaxPluginInstaller(String osName, Map options)
 {
-    switch(osName)
-    {
+    switch(osName) {
         case 'Windows':
 
             if (options['isPreBuilt']) {
@@ -65,7 +64,7 @@ def getMaxPluginInstaller(String osName, Map options)
             break
 
         default:
-            echo "[WARNING] ${osName} is not supported"
+            println "[WARNING] ${osName} is not supported"
     }
 
 }
@@ -81,7 +80,7 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
                 """
                 break
             default:
-                echo "[WARNING] ${osName} is not supported"
+                println "[WARNING] ${osName} is not supported"
         }
     }
 }
@@ -164,7 +163,7 @@ def executeTests(String osName, String asicName, Map options)
                 switch(osName) {
                     case "Windows":
                         bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
-                        break;
+                        break
                     default:
                         sh "rm -rf ./Work/GeneratedBaselines"        
                 }
@@ -220,8 +219,7 @@ def executeTests(String osName, String asicName, Map options)
             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED} ${additionalDescription}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper("${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED}\n${additionalDescription}", e)
         }
-    }
-    finally {
+    } finally {
         try {
             dir("${options.stageName}") {
                 utils.moveFiles(this, osName, "../*.log", ".")
@@ -251,7 +249,7 @@ def executeTests(String osName, String asicName, Map options)
                             GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
                         }
 
-                        echo "Stashing test results to : ${options.testResultsName}"
+                        println("Stashing test results to : ${options.testResultsName}")
                         stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
                         // deinstalling broken addon
@@ -294,15 +292,13 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows(Map options)
 {
-    dir("RadeonProRenderMaxPlugin/Package")
-    {
+    dir("RadeonProRenderMaxPlugin/Package") {
         GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
 
-        if(options.branch_postfix)
-        {
+        if (options.branch_postfix) {
             bat """
                 rename RadeonProRender*msi *.(${options.branch_postfix}).msi
             """
@@ -358,10 +354,10 @@ def executeBuild(String osName, Map options)
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
                 case 'Windows':
-                    executeBuildWindows(options);
-                    break;
+                    executeBuildWindows(options)
+                    break
                 default:
-                    echo "[WARNING] ${osName} is not supported"
+                    println("[WARNING] ${osName} is not supported")
             }
         }
         //stash includes: 'Bin/**/*', name: "app${osName}"
@@ -414,15 +410,14 @@ def executePreBuild(Map options)
     options["branch_postfix"] = ""
     if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         options["branch_postfix"] = "release"
-    } else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
         options["branch_postfix"] = env.BRANCH_NAME.replace('/', '-')
-    } else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop") {
+    } else if (options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop") {
         options["branch_postfix"] = options.projectBranch.replace('/', '-')
     }
 
     if (!options['isPreBuilt']) {
-        dir('RadeonProRenderMaxPlugin')
-        {
+        dir('RadeonProRenderMaxPlugin') {
             withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
             }
@@ -493,24 +488,6 @@ def executePreBuild(Map options)
         }
     }
 
-    if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25']]]);
-    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else if (env.JOB_NAME == "RadeonProRenderMaxPlugin-WeeklyFull") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    }
-
     def tests = []
     options.timeouts = [:]
     options.groupsUMS = []
@@ -535,8 +512,7 @@ def executePreBuild(Map options)
                 }
             }
 
-            if(options.testsPackage != "none")
-            {
+            if (options.testsPackage != "none") {
                 if (options.isPackageSplitted) {
                     println("[INFO] Tests package '${options.testsPackage}' can be splitted")
                 } else {
@@ -605,8 +581,7 @@ def executePreBuild(Map options)
 def executeDeploy(Map options, List platformList, List testResultList)
 {
     try {
-        if(options['executeTests'] && testResultList)
-        {
+        if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_max.git")
             }
@@ -622,8 +597,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         } catch(e) {
                             echo "Can't unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))
-                            println(e.toString());
-                            println(e.getMessage());
+                            println(e.toString())
+                            println(e.getMessage())
                         }
                     }
                 }
@@ -647,7 +622,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     dir("jobs_launcher") {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         dir("..\\summaryTestResults") {
-                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig())
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                         }
                         if (options.sendToUMS) {
@@ -759,8 +734,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
         }
     } catch (e) {
-        println(e.toString());
-        println(e.getMessage());
+        println(e.toString())
+        println(e.getMessage())
         throw e
     } finally {}
 }
@@ -824,8 +799,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
             Boolean isPreBuilt = customBuildLinkWindows.length() > 0
 
-            if (isPreBuilt)
-            {
+            if (isPreBuilt) {
                 //remove platforms for which pre built plugin is not specified
                 String filteredPlatforms = ""
 
@@ -927,17 +901,13 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
-    }
-    catch(e)
-    {
+    } catch(e) {
         currentBuild.result = "FAILURE"
-        println(e.toString());
-        println(e.getMessage());
+        println(e.toString())
+        println(e.getMessage())
 
         throw e
-    }
-    finally
-    {
+    } finally {
         String problemMessage = options.problemMessageManager.publishMessages()
         if (options.sendToUMS) {
             options.universeManager.closeBuild(problemMessage, options)

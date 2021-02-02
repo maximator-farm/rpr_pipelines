@@ -43,8 +43,8 @@ def executeBuildWindows(Map options) {
         println "[INFO] Job was aborted during build stage"
         throw error
     } catch (e) {
-        println(e.toString());
-        println(e.getMessage());
+        println(e.toString())
+        println(e.getMessage())
         currentBuild.result = "FAILED"
         println "[ERROR] Failed to build Inventor plugin on Windows"
     }
@@ -57,11 +57,10 @@ def executeBuild(String osName, Map options) {
             checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
         }
         
-        switch(osName)
-        {
+        switch(osName) {
             case 'Windows':
-                executeBuildWindows(options);
-                break;
+                executeBuildWindows(options)
+                break
         }
     } catch (e) {
         options.failureMessage = "[ERROR] Failed to build plugin on ${osName}"
@@ -151,24 +150,6 @@ def executePreBuild(Map options) {
     currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
-
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25']]]);
-    } else if (env.BRANCH_NAME && BRANCH_NAME != "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25']]]);
-    } else if (env.CHANGE_URL) {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    }
 }
 
 
@@ -183,14 +164,11 @@ def call(String projectBranch = "",
         String PRJ_ROOT="rpr-plugins"
 
         gpusCount = 0
-        platforms.split(';').each()
-        { platform ->
+        platforms.split(';').each() { platform ->
             List tokens = platform.tokenize(':')
-            if (tokens.size() > 1)
-            {
+            if (tokens.size() > 1) {
                 gpuNames = tokens.get(1)
-                gpuNames.split(',').each()
-                {
+                gpuNames.split(',').each() {
                     gpusCount += 1
                 }
             }
@@ -212,9 +190,8 @@ def call(String projectBranch = "",
         currentBuild.result = "FAILED"
         failureMessage = "INIT FAILED"
         failureError = e.getMessage()
-        println(e.toString());
-        println(e.getMessage());
-
+        println(e.toString())
+        println(e.getMessage())
         throw e
     }
 }

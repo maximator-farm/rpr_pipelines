@@ -66,11 +66,11 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
         }
 
         if (options['updateRefs']) {
-            echo "Updating Reference Images"
+            println("Updating Reference Images")
             executeGenTestRefCommand(osName, options)
             sendFiles('./BaikalNext/RprTest/ReferenceImages/*.*', "${REF_PATH_PROFILE}")
         } else {
-            echo "Execute Tests"
+            println("Executing Tests")
             receiveFiles("${REF_PATH_PROFILE}/*", './BaikalNext/RprTest/ReferenceImages/')
             executeTestCommand(osName, options)
         }
@@ -177,7 +177,7 @@ def executePreBuild(Map options)
     }
 
     if (env.CHANGE_URL) {
-        echo "branch was detected as Pull Request"
+        println("Build was detected as Pull Request")
     }
 
     options.commitMessage = []
@@ -210,18 +210,6 @@ def executePreBuild(Map options)
         }
         options['commitContexts'] = commitContexts
     }
-
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    } else if (env.BRANCH_NAME) {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '90', numToKeepStr: '3']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    }
-
 }
 
 def executeBuild(String osName, Map options)
@@ -239,10 +227,10 @@ def executeBuild(String osName, Map options)
         switch(osName) {
             case 'Windows':
                 executeBuildWindows(options)
-                break;
+                break
             case 'OSX':
                 executeBuildOSX(options)
-                break;
+                break
             default:
                 executeBuildLinux(options)
         }
@@ -281,9 +269,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             reportFiles += ", ${it}-${quality}_failures/report.html".replace("testResult-", "")
                         }
                         catch(e) {
-                            echo "Can't unstash ${it} ${quality}"
-                            println(e.toString());
-                            println(e.getMessage());
+                            println("Can't unstash ${it} ${quality}")
+                            println(e.toString())
+                            println(e.getMessage())
                         }
                     }
                 }

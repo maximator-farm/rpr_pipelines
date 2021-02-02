@@ -1,11 +1,9 @@
 def executeTestCommand(String osName)
 {
-
 }
 
 def executeTests(String osName, String asicName, Map options)
 {
-
 }
 
 def executeBuildWindows()
@@ -54,17 +52,6 @@ def executePreBuild(Map options)
     println "The last commit was written by ${options.commitAuthor}."
     println "Commit message: ${commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
-
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
-    } else if (env.BRANCH_NAME) {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '90', numToKeepStr: '3']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-            [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '10']]]);
-    }
 }
 
 
