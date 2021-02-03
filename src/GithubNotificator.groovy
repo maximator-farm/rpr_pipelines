@@ -52,7 +52,7 @@ public class GithubNotificator {
     def initPreBuild(String url) {
         try {
             context.println("[INFO] Started initialization of notification for PreBuild stage")
-            String statusTitle = "[PREBUILD] Version increment"
+            String statusTitle = "[PREBUILD] Jenkins build configuration"
             githubApiProvider.createOrUpdateStatusCheck(
                 repositoryUrl: repositoryUrl,
                 status: "in_progress",
@@ -311,7 +311,7 @@ public class GithubNotificator {
                     return
                 }
                 List stagesList = []
-                stagesList << "[PREBUILD] Version increment"
+                stagesList << "[PREBUILD] Jenkins build configuration"
                 buildCases.each { stagesList << "[BUILD] " + it }
                 testCases.each { stagesList << "[TEST] " + it }
                 if (hasDeployStage) {
