@@ -453,7 +453,7 @@ def executePreBuild(Map options)
         options.testsPackage = "smoke.json"
     }
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
     }
 
@@ -475,16 +475,14 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-    if (env.CHANGE_URL || env.BRANCH_NAME) {
-        withNotifications(title: "Version increment", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+    if (options['incrementVersion']) {
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
             GithubNotificator githubNotificator = new GithubNotificator(this, options)
             githubNotificator.init(options)
             options["githubNotificator"] = githubNotificator
             githubNotificator.initPreBuild("${BUILD_URL}")
         }
-    }
-
-    if (options['incrementVersion']) {
+        
         String testsFromCommit = utils.getTestsFromCommitMessage(options.commitMessage)
         if(env.BRANCH_NAME != "develop" && testsFromCommit) {
             // get a list of tests from commit message for auto builds
@@ -497,7 +495,7 @@ def executePreBuild(Map options)
     options.timeouts = [:]
     options.groupsUMS = []
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_rprviewer') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rprviewer.git')
             dir ('jobs_launcher') {
@@ -608,8 +606,8 @@ def executePreBuild(Map options)
             }
         }
 
-        if (env.CHANGE_URL || env.BRANCH_NAME) {
-            options.githubNotificator.initPR(options, "${BUILD_URL}")
+        if (env.BRANCH_NAME) {
+            options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
 
         options.testsList = options.tests

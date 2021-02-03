@@ -340,7 +340,7 @@ def executePreBuild(Map options)
         options.testsPackage = "smoke.json"
     }
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
     }
 
@@ -362,8 +362,8 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-    if (!options.forceBuild) {
-        withNotifications(title: "Version increment", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+    if (env.BRANCH_NAME) {
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
             GithubNotificator githubNotificator = new GithubNotificator(this, options)
             githubNotificator.init(options)
             options["githubNotificator"] = githubNotificator
@@ -374,7 +374,7 @@ def executePreBuild(Map options)
     def tests = []
     options.timeouts = [:]
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdviewer') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_usdviewer.git')
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
@@ -482,8 +482,8 @@ def executePreBuild(Map options)
             }
         }
 
-        if (!options.forceBuild) {
-            options.githubNotificator.initPR(options, "${BUILD_URL}")
+        if (env.BRANCH_NAME) {
+            options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
 
         options.testsList = options.tests
