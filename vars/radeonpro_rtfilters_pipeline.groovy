@@ -5,20 +5,18 @@ def executeGenTestRefCommand(String osName, Map options)
 
 def executeTestCommand(String osName, Map options)
 {
-    dir("Build/unittests")
-    {
-        switch(osName)
-        {
+    dir("Build/unittests") {
+        switch(osName) {
             case 'Windows':
                 bat """
-                call Release\\RTF_UnitTests.exe --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ..\\..\\${STAGE_NAME}.log 2>&1
+                    call Release\\RTF_UnitTests.exe --gtest_output=xml:../../${STAGE_NAME}.gtest.xml >> ..\\..\\${STAGE_NAME}.log 2>&1
                 """
-                break;
+                break
             case 'OSX':
-                echo "pass"
-                break;
+                println "not supported"
+                break
             default:
-                echo "pass"
+                println "not supported"
         }
     }
 }
@@ -37,21 +35,19 @@ def executeTests(String osName, String asicName, Map options)
         bat "rmdir /s /q shaders"
         unstash "shaders${osName}"
         
-        if(options['updateRefs']) {
-            echo "Updating Reference Images"
+        if (options['updateRefs']) {
+            println("Updating Reference Images")
             executeGenTestRefCommand(osName, options)
             
         } else {
-            echo "Execute Tests"
+            println("Execute Tests")
             executeTestCommand(osName, options)
         }
-    }
-    catch (e) {
+    } catch (e) {
         println(e.toString());
         println(e.getMessage());
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts "*.log"
         junit "*.gtest.xml"
     }
@@ -89,21 +85,15 @@ def executeBuildLinux(Map options)
 
 def executePreBuild(Map options)
 {
-    dir('RadeonProVulkanWrapper')
-    {
+    dir('RadeonProVulkanWrapper') {
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
-        AUTHOR_NAME = bat (
-                script: "git show -s --format=%%an HEAD ",
-                returnStdout: true
-                ).split('\r\n')[2].trim()
-
-        echo "The last commit was written by ${AUTHOR_NAME}."
-        options.AUTHOR_NAME = AUTHOR_NAME
-
-        commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true ).split('\r\n')[2].trim()
-        echo "Commit message: ${commitMessage}"
-        options.commitMessage = commitMessage
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
     }
 }
 
@@ -113,26 +103,23 @@ def executeBuild(String osName, Map options)
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
         outputEnvironmentInfo(osName)
 
-        switch(osName)
-        {
-        case 'Windows': 
-            executeBuildWindows(options); 
-            break;
-        case 'OSX':
-            executeBuildOSX(options);
-            break;
-        default: 
-            executeBuildLinux(options);
+        switch(osName) {
+            case 'Windows': 
+                executeBuildWindows(options) 
+                break
+            case 'OSX':
+                executeBuildOSX(options)
+                break
+            default: 
+                executeBuildLinux(options)
         }
         
         stash includes: 'Build/**/*', name: "app${osName}"
         stash includes: 'shaders/**/*/', name: "shaders${osName}"
-    }
-    catch (e) {
+    } catch (e) {
         currentBuild.result = "FAILED"
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts "*.log"
         //zip archive: true, dir: 'Build', glob: '', zipFile: "${osName}Build.zip"
     }                        
@@ -140,17 +127,13 @@ def executeBuild(String osName, Map options)
 
 def executeDeploy(Map options, List platformList, List testResultList)
 {
-    if(options['executeTests'] && testResultList)
-    {
+    if (options['executeTests'] && testResultList) {
         cleanWS()
 
-        dir("BuildsArtifacts")
-        {
-            platformList.each()
-            {
+        dir("BuildsArtifacts") {
+            platformList.each() {
                 try {
-                    dir(it)
-                    {
+                    dir(it) {
                         unstash "app${it}"
                     }
                 } catch(e) {
@@ -179,7 +162,6 @@ def call(String projectBranch = "",
                             PRJ_NAME:PRJ_NAME,
                             PRJ_ROOT:PRJ_ROOT,
                             projectRepo:projectRepo,
-                            BUILDER_TAG:'Builder',
                             executeBuild:true,
                             executeTests:true,
                             BUILD_TIMEOUT:'10',

@@ -1,6 +1,5 @@
 import groovy.transform.Field
 import groovy.json.JsonOutput
-import UniverseClient
 import utils
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
@@ -20,22 +19,19 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows(Map options)
 {
-    dir('RadeonProRenderBlenderAddon\\BlenderPkg')
-    {
+    dir('RadeonProRenderBlenderAddon\\BlenderPkg') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             set HDUSD_LIBS_DIR=..\\..\\libs
             build_win.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
 
-        dir('.build')
-        {
+        dir('.build') {
             bat """
                 rename hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_Windows.zip
             """
 
-            if(options.branch_postfix)
-            {
+            if (options.branch_postfix) {
                 bat """
                     rename BlenderUSDHydraAddon*zip *.(${options.branch_postfix}).zip
                 """
@@ -80,8 +76,7 @@ def executeBuild(String osName, Map options)
 
         receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/libs/*", "libs")
 
-        dir("RadeonProRenderBlenderAddon")
-        {
+        dir("RadeonProRenderBlenderAddon") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
             }
@@ -92,30 +87,28 @@ def executeBuild(String osName, Map options)
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
                 case "Windows":
-                    executeBuildWindows(options);
-                    break;
+                    executeBuildWindows(options)
+                    break
                 case "OSX":
-                    if(!fileExists("python3")) {
+                    if (!fileExists("python3")) {
                         sh "ln -s /usr/local/bin/python3.7 python3"
                     }
                     withEnv(["PATH=$WORKSPACE:$PATH"]) {
-                        executeBuildOSX(options);
+                        executeBuildOSX(options)
                     }
-                    break;
+                    break
                 default:
-                    if(!fileExists("python3")) {
+                    if (!fileExists("python3")) {
                         sh "ln -s /usr/bin/python3.7 python3"
                     }
                     withEnv(["PATH=$PWD:$PATH"]) {
-                        executeBuildLinux(osName, options);
+                        executeBuildLinux(osName, options)
                     }
             }
         }
-    }
-    catch (e) {
+    } catch (e) {
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
 }
@@ -153,22 +146,16 @@ def executePreBuild(Map options)
 
     // branch postfix
     options["branch_postfix"] = ""
-    if(env.BRANCH_NAME && env.BRANCH_NAME == "master")
-    {
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         options["branch_postfix"] = "release"
-    }
-    else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop")
-    {
+    } else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
         options["branch_postfix"] = env.BRANCH_NAME.replace('/', '-')
-    }
-    else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop")
-    {
+    } else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop") {
         options["branch_postfix"] = options.projectBranch.replace('/', '-')
     }
 
     if (!options['isPreBuilt']) {
-        dir('RadeonProRenderBlenderAddon')
-        {
+        dir('RadeonProRenderBlenderAddon') {
             withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
             }
@@ -184,7 +171,7 @@ def executePreBuild(Map options)
             println "Commit SHA: ${options.commitSHA}"
             println "Commit shortSHA: ${options.commitShortSHA}"
 
-            if (options.projectBranch){
+            if (options.projectBranch) {
                 currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
             } else {
                 currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
@@ -194,7 +181,7 @@ def executePreBuild(Map options)
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
                 if (options['incrementVersion']) {
-                    if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
+                    if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
                         options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ')
                         println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
@@ -217,16 +204,12 @@ def executePreBuild(Map options)
                         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
                         options.projectBranch = options.commitSHA
                         println "[INFO] Project branch hash: ${options.projectBranch}"
-                    }
-                    else
-                    {
-                        if(options.commitMessage.contains("CIS:BUILD"))
-                        {
+                    } else {
+                        if (options.commitMessage.contains("CIS:BUILD")) {
                             options['executeBuild'] = true
                         }
 
-                        if(options.commitMessage.contains("CIS:TESTS"))
-                        {
+                        if (options.commitMessage.contains("CIS:TESTS")) {
                             options['executeBuild'] = true
                             options['executeTests'] = true
                         }
@@ -235,7 +218,6 @@ def executePreBuild(Map options)
                         println "[INFO] Test groups mentioned in commit message: ${options.tests}"
                     }
                 }
-
                 currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
                 currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
                 currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -253,21 +235,7 @@ def executePreBuild(Map options)
         }
     }
 
-    if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '25']]]);
-    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20']]]);
-    }
-
-    if (!options.forceBuild) {
+    if (env.CHANGE_URL) {
         options.githubNotificator.initPR(options, "${BUILD_URL}", false)
     }
 
@@ -283,12 +251,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 
 def appendPlatform(String filteredPlatforms, String platform) {
-    if (filteredPlatforms)
-    {
+    if (filteredPlatforms) {
         filteredPlatforms +=  ";" + platform
-    }
-    else
-    {
+    } else {
         filteredPlatforms += platform
     }
     return filteredPlatforms
@@ -332,17 +297,12 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
-    }
-    catch(e)
-    {
+    } catch(e) {
         currentBuild.result = "FAILURE"
-        println(e.toString());
-        println(e.getMessage());
-
+        println(e.toString())
+        println(e.getMessage())
         throw e
-    }
-    finally
-    {
+    } finally {
         problemMessageManager.publishMessages()
     }
 

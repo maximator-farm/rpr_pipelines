@@ -1,24 +1,22 @@
 def executeGenTestRefCommand(String osName, Map options)
 {
-    dir('BaikalNext/RprTest')
-    {
-        switch(osName)
-        {
+    dir('BaikalNext/RprTest') {
+        switch(osName) {
             case 'Windows':
                 bat """
-                ..\\bin\\RprTest -quality ${options.RENDER_QUALITY} -genref 1 --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ..\\..\\${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
+                    ..\\bin\\RprTest -quality ${options.RENDER_QUALITY} -genref 1 --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ..\\..\\${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
                 """
-                break;
+                break
             case 'OSX':
                 sh """
-                export LD_LIBRARY_PATH=../bin:\$LD_LIBRARY_PATH
-                ../bin/RprTest -quality ${options.RENDER_QUALITY} -genref 1 --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ../../${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
+                    export LD_LIBRARY_PATH=../bin:\$LD_LIBRARY_PATH
+                    ../bin/RprTest -quality ${options.RENDER_QUALITY} -genref 1 --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ../../${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
                 """
-                break;
+                break
             default:
                 sh """
-                export LD_LIBRARY_PATH=../bin:\$LD_LIBRARY_PATH
-                ../bin/RprTest -quality ${options.RENDER_QUALITY} -genref 1 --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ../../${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
+                    export LD_LIBRARY_PATH=../bin:\$LD_LIBRARY_PATH
+                    ../bin/RprTest -quality ${options.RENDER_QUALITY} -genref 1 --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ../../${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
                 """
         }
     }
@@ -26,25 +24,23 @@ def executeGenTestRefCommand(String osName, Map options)
 
 def executeTestCommand(String osName, Map options)
 {
-    dir('BaikalNext/RprTest')
-    {
-        switch(osName)
-        {
+    dir('BaikalNext/RprTest') {
+        switch(osName) {
             case 'Windows':
                 bat """
-                ..\\bin\\RprTest -quality ${options.RENDER_QUALITY} --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ..\\..\\${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
+                    ..\\bin\\RprTest -quality ${options.RENDER_QUALITY} --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ..\\..\\${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
                 """
-                break;
+                break
             case 'OSX':
                 sh """
-                export LD_LIBRARY_PATH=../bin:\$LD_LIBRARY_PATH
-                ../bin/RprTest -quality ${options.RENDER_QUALITY} --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ../../${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
+                    export LD_LIBRARY_PATH=../bin:\$LD_LIBRARY_PATH
+                    ../bin/RprTest -quality ${options.RENDER_QUALITY} --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ../../${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
                 """
-                break;
+                break
             default:
                 sh """
-                export LD_LIBRARY_PATH=../bin:\$LD_LIBRARY_PATH
-                ../bin/RprTest -quality ${options.RENDER_QUALITY} --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ../../${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
+                    export LD_LIBRARY_PATH=../bin:\$LD_LIBRARY_PATH
+                    ../bin/RprTest -quality ${options.RENDER_QUALITY} --gtest_output=xml:../../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml >> ../../${STAGE_NAME}.${options.RENDER_QUALITY}.log 2>&1
                 """
         }
     }
@@ -61,8 +57,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
     try {
         outputEnvironmentInfo(osName, "${STAGE_NAME}.${options.RENDER_QUALITY}")
         unstash "app${osName}"
-        switch(osName)
-        {
+        switch(osName) {
             case 'Windows':
                 unzip dir: '.', glob: '', zipFile: 'BaikalNext_Build-Windows.zip'
                 break
@@ -70,17 +65,16 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
                 sh "tar -xJf BaikalNext_Build*"
         }
 
-        if(options['updateRefs']) {
-            echo "Updating Reference Images"
+        if (options['updateRefs']) {
+            println("Updating Reference Images")
             executeGenTestRefCommand(osName, options)
             sendFiles('./BaikalNext/RprTest/ReferenceImages/*.*', "${REF_PATH_PROFILE}")
         } else {
-            echo "Execute Tests"
+            println("Executing Tests")
             receiveFiles("${REF_PATH_PROFILE}/*", './BaikalNext/RprTest/ReferenceImages/')
             executeTestCommand(osName, options)
         }
-    }
-    catch (e) {
+    } catch (e) {
         println("Exception during [${options.RENDER_QUALITY}] quality tests execution")
         println(e.getMessage())
         error_message = e.getMessage()
@@ -102,13 +96,11 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
         }
 
         //error("Failure")
-    }
-    finally {
+    } finally {
         archiveArtifacts "*.log"
         junit "*.gtest.xml"
 
-        if (env.CHANGE_ID)
-        {
+        if (env.CHANGE_ID) {
             String context = "[TEST] ${osName}-${asicName}-${options.RENDER_QUALITY}"
             String description = error_message ? "Testing finished with error message: ${error_message}" : "Testing finished"
             String status = error_message ? "failure" : "success"
@@ -127,8 +119,7 @@ def executeTests(String osName, String asicName, Map options)
         try {
             options['RENDER_QUALITY'] = "${it}"
             executeTestsCustomQuality(osName, asicName, options)
-        }
-        catch (e) {
+        } catch (e) {
             // suppress exception for start next quality test
             some_stage_fail = true
             println(e.toString())
@@ -186,7 +177,7 @@ def executePreBuild(Map options)
     }
 
     if (env.CHANGE_URL) {
-        echo "branch was detected as Pull Request"
+        println("Build was detected as Pull Request")
     }
 
     options.commitMessage = []
@@ -197,24 +188,19 @@ def executePreBuild(Map options)
     println "Commit list message: ${options.commitMessage}"
 
     // set pending status for all
-    if(env.CHANGE_ID) {
+    if (env.CHANGE_ID) {
 
         def commitContexts = []
-        options['platforms'].split(';').each()
-        { platform ->
+        options['platforms'].split(';').each() { platform ->
             List tokens = platform.tokenize(':')
             String osName = tokens.get(0)
-            // Statuses for builds
             String context = "[BUILD] ${osName}"
             commitContexts << context
             pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
             if (tokens.size() > 1) {
                 gpuNames = tokens.get(1)
-                gpuNames.split(',').each()
-                { gpuName ->
-                    options['testsQuality'].split(",").each()
-                    { testQuality ->
-                        // Statuses for tests
+                gpuNames.split(',').each() { gpuName ->
+                    options['testsQuality'].split(",").each() { testQuality ->
                         context = "[TEST] ${osName}-${gpuName}-${testQuality}"
                         commitContexts << context
                         pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
@@ -230,46 +216,37 @@ def executeBuild(String osName, Map options)
 {
     String error_message = ""
     String context = "[BUILD] ${osName}"
-    try
-    {
+    try {
         checkOutBranchOrScm(options.projectBranch, "git@github.com:Radeon-Pro/Ludashi-Hybrid.git")
         outputEnvironmentInfo(osName)
 
-        if (env.CHANGE_ID)
-        {
+        if (env.CHANGE_ID) {
             pullRequest.createStatus("pending", context, "Checkout has been finished. Trying to build...", "${env.JOB_URL}")
         }
 
-        switch(osName)
-        {
-        case 'Windows':
-            executeBuildWindows(options);
-            break;
-        case 'OSX':
-            executeBuildOSX(options);
-            break;
-        default:
-            executeBuildLinux(options);
+        switch(osName) {
+            case 'Windows':
+                executeBuildWindows(options)
+                break
+            case 'OSX':
+                executeBuildOSX(options)
+                break
+            default:
+                executeBuildLinux(options)
         }
 
-        dir('Build')
-        {
+        dir('Build') {
             stash includes: "BaikalNext_${STAGE_NAME}*", name: "app${osName}"
         }
-    }
-    catch (e)
-    {
+    } catch (e) {
         println(e.getMessage())
         error_message = e.getMessage()
         currentBuild.result = "FAILED"
         throw e
-    }
-    finally
-    {
+    } finally {
         archiveArtifacts "*.log"
         archiveArtifacts "Build/BaikalNext_${STAGE_NAME}*"
-        if (env.CHANGE_ID)
-        {
+        if (env.CHANGE_ID) {
             String status = error_message ? "failure" : "success"
             pullRequest.createStatus("${status}", context, "Build finished as '${status}'", "${env.BUILD_URL}/artifact/${STAGE_NAME}.log")
             options['commitContexts'].remove(context)
@@ -277,10 +254,11 @@ def executeBuild(String osName, Map options)
     }
 }
 
+
 def executeDeploy(Map options, List platformList, List testResultList)
 {
     cleanWS()
-    if(options['executeTests'] && testResultList) {
+    if (options['executeTests'] && testResultList) {
         try {
             String reportFiles = ""
             dir("SummaryReport") {
@@ -291,9 +269,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             reportFiles += ", ${it}-${quality}_failures/report.html".replace("testResult-", "")
                         }
                         catch(e) {
-                            echo "Can't unstash ${it} ${quality}"
-                            println(e.toString());
-                            println(e.getMessage());
+                            println("Can't unstash ${it} ${quality}")
+                            println(e.toString())
+                            println(e.getMessage())
                         }
                     }
                 }
@@ -304,18 +282,15 @@ def executeDeploy(Map options, List platformList, List testResultList)
                          reportDir: "SummaryReport",
                          reportFiles: "$reportFiles",
                          reportName: "HTML Failures"])
-        }
-        catch(e) {
+        } catch(e) {
             println(e.toString())
         }
     }
 
     // set error statuses for PR, except if current build has been superseded by new execution
-    if (env.CHANGE_ID && !currentBuild.nextBuild)
-    {
+    if (env.CHANGE_ID && !currentBuild.nextBuild) {
         // if jobs was aborted or crushed remove pending status for unfinished stages
-        options['commitContexts'].each()
-        {
+        options['commitContexts'].each() {
             pullRequest.createStatus("error", it, "Build has been terminated unexpectedly", "${env.BUILD_URL}")
         }
         String status = currentBuild.result ? "${currentBuild.result} \n failures report: ${env.BUILD_URL}/HTML_20Failures/" : "success"

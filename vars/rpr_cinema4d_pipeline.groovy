@@ -1,5 +1,6 @@
 def executeTests(String osName, String asicName, Map options)
-{}
+{
+}
 
 def executeBuildWindows(Map options)
 {
@@ -46,27 +47,24 @@ def executeBuildOSX(Map options)
 
 def executeBuild(String osName, Map options)
 {
-
     checkOutBranchOrScm(options.projectBranch, "git@github.com:Radeon-Pro/RadeonProRenderC4DPlugin.git")
     outputEnvironmentInfo(osName)
 
     try {
         switch (osName) {
             case 'Windows':
-                executeBuildWindows(options);
-                break;
+                executeBuildWindows(options)
+                break
             case 'OSX':
-                executeBuildOSX(options);
-                break;
+                executeBuildOSX(options)
+                break
             default:
                 println "OS isn't supported."
         }
-    }
-    catch (e) {
+    } catch (e) {
         currentBuild.result = "FAILED"
         throw e
-    }
-    finally {
+    } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
 }
@@ -94,36 +92,19 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
     if (env.CHANGE_URL) {
-        echo "branch was detected as Pull Request"
-        options['isPR'] = true
+        println("Build was detected as Pull Request")
         options.testsPackage = "PR"
-    }
-    else if(env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         options.testsPackage = "master"
-    }
-    else if(env.BRANCH_NAME) {
+    } else if (env.BRANCH_NAME) {
         options.testsPackage = "smoke"
     }
-
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
-    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
-    }
-
 }
 
 
 def executeDeploy(Map options, List platformList, List testResultList)
-{}
+{
+}
 
 
 def call(String projectBranch = "",
@@ -139,7 +120,6 @@ def call(String projectBranch = "",
              enableNotifications:enableNotifications,
              PRJ_NAME:'RadeonProRenderCinema4DPlugin',
              PRJ_ROOT:'rpr-plugins',
-             BUILDER_TAG:'BuilderC4D',
              executeBuild:true,
              executeTests:false
              ])

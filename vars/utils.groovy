@@ -7,8 +7,7 @@ import groovy.json.JsonOutput
  */
 class utils {
 
-    static int getTimeoutFromXML(Object self, String test, String keyword, Integer additional_xml_timeout) 
-    {
+    static int getTimeoutFromXML(Object self, String test, String keyword, Integer additional_xml_timeout) {
         try {
             String xml = self.readFile("jobs/Tests/${test}/test.job-manifest.xml")
             for (xml_string in xml.split("<")) {
@@ -48,8 +47,7 @@ class utils {
         return result
     }
 
-    static def markNodeOffline(Object self, String nodeName, String offlineMessage)
-    {
+    static def markNodeOffline(Object self, String nodeName, String offlineMessage) {
         try {
             def nodes = jenkins.model.Jenkins.instance.getLabel(nodeName).getNodes()
             nodes[0].getComputer().doToggleOffline(offlineMessage)
@@ -61,8 +59,7 @@ class utils {
         }
     }
 
-    static def sendExceptionToSlack(Object self, String jobName, String buildNumber, String buildUrl, String webhook, String channel, String message)
-    {
+    static def sendExceptionToSlack(Object self, String jobName, String buildNumber, String buildUrl, String webhook, String channel, String message) {
         try {
             def slackMessage = [
                 attachments: [[
@@ -113,7 +110,7 @@ class utils {
     static def deepcopyCollection(Object self, def collection) {
         def bos = new ByteArrayOutputStream()
         def oos = new ObjectOutputStream(bos)
-        oos.writeObject(collection);
+        oos.writeObject(collection)
         oos.flush()
         def bin = new ByteArrayInputStream(bos.toByteArray())
         def ois = new ObjectInputStream(bin)
@@ -180,15 +177,14 @@ class utils {
                     self.bat """
                         rename \"${oldName}\" \"${newName}\"
                     """
-                    break;
+                    break
                 // OSX & Ubuntu18
                 default:
                     self.sh """
                         mv ${oldName} ${newName}
                     """
             }
-        }
-        catch(Exception e) {
+        } catch(Exception e) {
             self.println("[ERROR] Can't rename file")
             self.println(e.toString())
             self.println(e.getMessage())
@@ -204,15 +200,14 @@ class utils {
                     self.bat """
                         move \"${source}\" \"${destination}\"
                     """
-                    break;
+                    break
                 // OSX & Ubuntu18
                 default:
                     self.sh """
                         mv ${source} ${destination}
                     """
             }
-        }
-        catch(Exception e) {
+        } catch(Exception e) {
             self.println("[ERROR] Can't move files")
             self.println(e.toString())
             self.println(e.getMessage())
@@ -226,15 +221,14 @@ class utils {
                     self.bat """
                         if exist \"${fileName}\" del \"${fileName}\"
                     """
-                    break;
+                    break
                 // OSX & Ubuntu18
                 default:
                     self.sh """
                         rm -rf \"${fileName}\"
                     """
             }
-        }
-        catch(Exception e) {
+        } catch(Exception e) {
             self.println("[ERROR] Can't remove file")
             self.println(e.toString())
             self.println(e.getMessage())

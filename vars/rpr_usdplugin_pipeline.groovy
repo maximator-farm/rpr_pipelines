@@ -9,8 +9,7 @@ import TestsExecutionType
 
 def installHoudiniPlugin(String osName, Map options){
     
-    switch(osName)
-    {
+    switch(osName) {
         case 'Windows':
 
             unstash "appWindows"
@@ -22,7 +21,7 @@ def installHoudiniPlugin(String osName, Map options){
                 echo y | activateHoudiniPlugin.exe >> \"..\\${options.stageName}_${options.currentTry}.install.log\"  2>&1
             """
 
-            break;
+            break
 
         case "OSX":
 
@@ -35,7 +34,7 @@ def installHoudiniPlugin(String osName, Map options){
                 echo y | ./activateHoudiniPlugin >> \"../${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
             
-            break;
+            break
 
         default:
             
@@ -56,19 +55,18 @@ def installHoudiniPlugin(String osName, Map options){
 def buildRenderCache(String osName, Map options)
 {
     dir("scripts") {
-        switch(osName)
-        {
+        switch(osName) {
             case 'Windows':
                 bat """
                     build_rpr_cache.bat \"${options.win_tool_path}\\bin\\husk.exe\" >> \"..\\${options.stageName}_${options.currentTry}.cb.log\"  2>&1
                 """
-                break;
+                break
             case 'OSX':
                 sh """
                     chmod +x build_rpr_cache.sh
                     ./build_rpr_cache.sh \"${options.osx_tool_path}/bin/husk\" >> \"../${options.stageName}_${options.currentTry}.cb.log\" 2>&1
                 """  
-                break;   
+                break  
             default:
                 sh """
                     chmod +x build_rpr_cache.sh
@@ -81,15 +79,13 @@ def buildRenderCache(String osName, Map options)
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
-    dir('scripts')
-    {
-        switch(osName)
-        {
+    dir('scripts') {
+        switch(osName) {
             case 'Windows':
                 bat """
                     make_results_baseline.bat ${delete}
                 """
-                break;
+                break
             default:
                 sh """
                     chmod +x make_results_baseline.sh
@@ -102,19 +98,18 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 def executeTestCommand(String osName, Map options)
 {
     dir('scripts') {
-        switch(osName)
-        {
+        switch(osName) {
             case 'Windows':
                 bat """
                     run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                 """
-                break;
+                break
             case 'OSX':
                 sh """
                     chmod +x run.sh
                     ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
                 """
-                break;
+                break
             default:
                 sh """
                     chmod +x run.sh
@@ -184,7 +179,7 @@ def executeTests(String osName, String asicName, Map options)
                 switch(osName) {
                     case "Windows":
                         bat "if exist Work\\GeneratedBaselines rmdir /Q /S Work\\GeneratedBaselines"
-                        break;
+                        break
                     default:
                         sh "rm -rf ./Work/GeneratedBaselines"        
                 }
@@ -226,8 +221,7 @@ def executeTests(String osName, String asicName, Map options)
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             if (stashResults) {
-                dir('Work')
-                {
+                dir('Work') {
                     if (fileExists("Results/Houdini/session_report.json")) {
 
                         def sessionReport = null
@@ -241,12 +235,12 @@ def executeTests(String osName, String asicName, Map options)
                             GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
                         }
 
-                        echo "Stashing test results to : ${options.testResultsName}"
+                        println "Stashing test results to : ${options.testResultsName}"
                         stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
-                        echo "Total: ${sessionReport.summary.total}"
-                        echo "Error: ${sessionReport.summary.error}"
-                        echo "Skipped: ${sessionReport.summary.skipped}"
+                        println "Total: ${sessionReport.summary.total}"
+                        println "Error: ${sessionReport.summary.error}"
+                        println "Skipped: ${sessionReport.summary.skipped}"
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
                             if (sessionReport.summary.total != sessionReport.summary.skipped){
                                 // collectCrashInfo(osName, options, options.currentTry)
@@ -522,13 +516,13 @@ def executeBuild(String osName, Map options) {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
                 case "Windows":
-                    executeBuildWindows(osName, options);
-                    break;
+                    executeBuildWindows(osName, options)
+                    break
                 case "OSX":
-                    executeBuildOSX(osName, options);
-                    break;
+                    executeBuildOSX(osName, options)
+                    break
                 default:
-                    executeBuildUnix(osName, options);
+                    executeBuildUnix(osName, options)
             }
         }
     } catch (e) {
@@ -565,8 +559,7 @@ def executePreBuild(Map options) {
         }
     }
 
-    dir('RadeonProRenderUSD')
-    {
+    dir('RadeonProRenderUSD') {
         withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
         }
@@ -604,8 +597,7 @@ def executePreBuild(Map options) {
                 }
             }
 
-            if(options['incrementVersion'])
-            {
+            if (options['incrementVersion']) {
                 if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender")
                 {
                     println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
@@ -633,26 +625,11 @@ def executePreBuild(Map options) {
         }
     }
 
-    if (env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop")) {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
-    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
-    }
-
     def tests = []
     options.groupsUMS = []
 
     withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-        dir('jobs_test_houdini')
-        {
+        dir('jobs_test_houdini') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_houdini.git')
             dir ('jobs_launcher') {
                 options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
@@ -660,8 +637,7 @@ def executePreBuild(Map options) {
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             println "[INFO] Test branch hash: ${options['testsBranch']}"
 
-            if(options.testsPackage != "none")
-            {
+            if (options.testsPackage != "none") {
                 // json means custom test suite. Split doesn't supported
                 def tempTests = readJSON file: "jobs/${options.testsPackage}"
                 tempTests["groups"].each() {
@@ -670,8 +646,7 @@ def executePreBuild(Map options) {
                 }
                 options.tests = tests
                 options.testsPackage = "none"
-            }
-            else {
+            }  else {
                 options.tests.split(" ").each()
                 {
                     tests << "${it}"
@@ -692,8 +667,7 @@ def executePreBuild(Map options) {
 def executeDeploy(Map options, List platformList, List testResultList)
 {
     try {
-        if(options['executeTests'] && testResultList)
-        {
+        if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_houdini.git")
             }
@@ -707,10 +681,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         try {
                             unstash "$it"
                         } catch(e) {
-                            echo "Can't unstash ${it}"
+                            println("Can't unstash ${it}")
                             lostStashes.add("'$it'".replace("testResult-", ""))
-                            println(e.toString());
-                            println(e.getMessage());
+                            println(e.toString())
+                            println(e.getMessage())
                         }
                     }
                 }
@@ -745,7 +719,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         dir("..\\summaryTestResults") {
-                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig())
                             writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
                         }                    
 
@@ -791,22 +765,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             }
 
-            try
-            {
+            try {
                 dir("jobs_launcher") {
                     archiveArtifacts "launcher.engine.log"
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println("[ERROR] during archiving launcher.engine.log")
                 println(e.toString())
                 println(e.getMessage())
             }
 
             Map summaryTestResults = [:]
-            try
-            {
+            try {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 summaryTestResults['passed'] = summaryReport.passed
                 summaryTestResults['failed'] = summaryReport.failed
@@ -823,9 +793,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
                     options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
                 println("[ERROR] CAN'T GET TESTS STATUS")
@@ -833,12 +801,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 currentBuild.result = "UNSTABLE"
             }
 
-            try
-            {
+            try {
                 options.testsStatus = readFile("summaryTestResults/slack_status.json")
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
                 options.testsStatus = ""
@@ -857,22 +822,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             }
         }
-    }
-    catch (e) {
-        println(e.toString());
-        println(e.getMessage());
+    } catch (e) {
+        println(e.toString())
+        println(e.getMessage())
         throw e
-    }
-    finally
-    {}
-
+    } finally {}
 }
 
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git",
         String projectBranch = "",
         String usdBranch = "master",
         String testsBranch = "master",
-        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7',
+        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7',
         String buildType = "Houdini",
         Boolean rebuildUSD = false,
         String houdiniVersion = "18.5.351",
@@ -903,14 +864,11 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             String PRJ_ROOT="rpr-plugins"
 
             gpusCount = 0
-            platforms.split(';').each()
-            { platform ->
+            platforms.split(';').each() { platform ->
                 List tokens = platform.tokenize(':')
-                if (tokens.size() > 1)
-                {
+                if (tokens.size() > 1) {
                     gpuNames = tokens.get(1)
-                    gpuNames.split(',').each()
-                    {
+                    gpuNames.split(',').each() {
                         gpusCount += 1
                     }
                 }
@@ -954,8 +912,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
-        println(e.toString());
-        println(e.getMessage());
+        println(e.toString())
+        println(e.getMessage())
         throw e
     } finally {
         problemMessageManager.publishMessages()

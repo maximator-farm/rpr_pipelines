@@ -32,8 +32,8 @@ def executeTests(String osName, String asicName, Map options)
             executeTestCommand(osName)
         }                
     } catch (e) {
-        println(e.toString());
-        println(e.getMessage());
+        println(e.toString())
+        println(e.getMessage())
         throw e
     } finally {
         archiveArtifacts "*.log"
@@ -124,9 +124,6 @@ def call(String projectBranch = "",
          Boolean enableNotifications = true) {
 
     String PRJ_ROOT="rpr-core"
-     
-    properties([[$class: 'BuildDiscarderProperty', strategy: 
-        [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]])
     
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, 
                            [projectRepo:projectRepo,
@@ -138,7 +135,6 @@ def call(String projectBranch = "",
                             PRJ_ROOT:PRJ_ROOT,
                             BUILD_TIMEOUT:'10',
                             TEST_TIMEOUT:'10',
-                            BUILDER_TAG:'Builder',
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
                             slackTocken:"${SLACK_BAIKAL_TOCKEN}",

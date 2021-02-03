@@ -52,8 +52,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
         title = "Building test report"
     }
 
-    for (int i = 0; i < tries; i++)
-    {
+    for (int i = 0; i < tries; i++) {
         String nodeName = ""
         options['currentTry'] = i
         options['nodeReallocateTries'] = tries
@@ -72,12 +71,9 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                     continue
                 }
             }
-            node(labels)
-            {
-                timeout(time: "${stageTimeout}", unit: 'MINUTES')
-                {
-                    ws("WS/${options.PRJ_NAME}_${stageName}") 
-                    {
+            node(labels) {
+                timeout(time: "${stageTimeout}", unit: 'MINUTES') {
+                    ws("WS/${options.PRJ_NAME}_${stageName}") {
                         nodeName = env.NODE_NAME
                         retringFunction(nodesList, i)
                         successCurrentNode = true

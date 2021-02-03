@@ -42,8 +42,7 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
 
         String blenderAddonCommitHash = ""
 
-        switch(osName)
-        {
+        switch(osName) {
             case 'Windows':
                 // Reading commit hash from installed addon
                 bat """
@@ -60,7 +59,7 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
                 """
 
                 blenderAddonCommitHash = python3("getInstallerCommitHash.py").split('\r\n')[2].trim()
-                break;
+                break
 
             case 'OSX':
                 // Reading commit hash from installed addon
@@ -78,7 +77,7 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
                 """ 
 
                 blenderAddonCommitHash = python3("getInstallerCommitHash.py").trim()
-                break;
+                break
 
             default:
                 // Reading commit hash from installed addon
@@ -102,7 +101,7 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
         return options.commitShortSHA == blenderAddonCommitHash
 
     } catch (e) {
-        echo "[ERROR] Failed to compare installed and built plugin. Reinstalling..."
+        println "[ERROR] Failed to compare installed and built plugin. Reinstalling..."
         println(e.toString())
         println(e.getMessage())
     }
@@ -128,12 +127,10 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
 {
     // Remove RadeonProRender Addon from Blender  
     try {
-        switch(osName)
-        {
+        switch(osName) {
             case 'Windows':
 
-                try 
-                {
+                try {
                     timeout(time: "5", unit: 'MINUTES') {
                         bat """
                             echo "Disabling RPR Addon for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
@@ -163,11 +160,10 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                     }
                 }
 
-                break;
+                break
             
             case 'OSX':
-                try 
-                {
+                try {
                     timeout(time: "5", unit: 'MINUTES') {
                         sh """
                             echo "Disabling RPR Addon for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
@@ -200,11 +196,10 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                     }
                 }
 
-                break;
+                break
 
             default:
-                try 
-                {
+                try {
                     timeout(time: "10", unit: 'MINUTES') {
                         sh """
                             echo "Disabling RPR Addon for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
@@ -237,10 +232,8 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                     }
                 }
         }
-    }
-    catch(e)
-    {
-        echo "[ERROR] Failed to delete RPR Addon from Blender"
+    } catch(e) {
+        println "[ERROR] Failed to delete RPR Addon from Blender"
         println(e.toString())
         println(e.getMessage())
     }
@@ -252,8 +245,7 @@ def installBlenderAddon(String osName, String tool_version, Map options)
 {
     // Installing RPR Addon in Blender
 
-    switch(osName)
-    {
+    switch(osName) {
         case "Windows":
             if (options['isPreBuilt']) {
                 addon_name = "${options.pluginWinSha}"
@@ -270,7 +262,7 @@ def installBlenderAddon(String osName, String tool_version, Map options)
 
                 "C:\\Program Files\\Blender Foundation\\Blender ${tool_version}\\blender.exe" -b -P registerRPRinBlender.py >> \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
-            break;
+            break
       
         case "OSX":
             if (options['isPreBuilt']) {
@@ -288,7 +280,7 @@ def installBlenderAddon(String osName, String tool_version, Map options)
 
                 blender${tool_version} -b -P registerRPRinBlender.py >> \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
-            break;
+            break
 
         default:
             if (options['isPreBuilt']) {

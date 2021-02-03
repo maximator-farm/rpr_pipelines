@@ -34,8 +34,8 @@ def executeTests(String osName, String asicName, Map options)
             executeTestCommand(osName)
         }                
     } catch (e) {
-        println(e.toString());
-        println(e.getMessage());
+        println(e.toString())
+        println(e.getMessage())
         throw e
     } finally {
         archiveArtifacts "*.log"
@@ -83,7 +83,6 @@ def executePreBuild(Map options)
     println "The last commit was written by ${options.commitAuthor}."
     println "Commit message: ${options.commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
-
 }
 
 def executeBuild(String osName, Map options)
@@ -137,7 +136,6 @@ def call(String projectBranch = "",
                             PRJ_ROOT:PRJ_ROOT,
                             BUILD_TIMEOUT:'10',
                             TEST_TIMEOUT:'10',
-                            BUILDER_TAG:'Builder',
                             projectRepo:projectRepo,
                             slackChannel:"${SLACK_BAIKAL_CHANNEL}",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",

@@ -3,16 +3,15 @@ def call(String osName, String tool, Map options, String credentialsId = '')
     String customBuildLink = ""
     String extension = ""
 
-    switch(osName)
-    {
+    switch(osName) {
         case 'Windows':
             customBuildLink = options['customBuildLinkWindows']
             extension = "msi"
-            break;
+            break
         case 'OSX':
             customBuildLink = options['customBuildLinkOSX']
             extension = "dmg"
-            break;
+            break
         default:
             customBuildLink = options['customBuildLinkLinux']
             extension = "run"
@@ -24,8 +23,7 @@ def call(String osName, String tool, Map options, String credentialsId = '')
 
     print "[INFO] Used specified pre built plugin for ${tool}."
 
-    if (customBuildLink.startsWith("https://builds.rpr"))
-    {
+    if (customBuildLink.startsWith("https://builds.rpr")) {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'builsRPRCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
             if (osName == "Windows") {
                 bat """
@@ -41,9 +39,7 @@ def call(String osName, String tool, Map options, String credentialsId = '')
                 """
             }
         }
-    } 
-    else if (customBuildLink.startsWith("https://rpr.cis")) 
-    {
+    } else if (customBuildLink.startsWith("https://rpr.cis")) {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsUser', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
             if (osName == "Windows") {
                 bat """
@@ -59,9 +55,7 @@ def call(String osName, String tool, Map options, String credentialsId = '')
                 """
             }
         }
-    }
-    else
-    {
+    } else {
         if (credentialsId) {
             withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
                 if (osName == "Windows") {
@@ -99,14 +93,13 @@ def call(String osName, String tool, Map options, String credentialsId = '')
     def pluginSha = sha1 "RadeonProRender${tool}_${osName}.${extension}"
     println "Downloaded plugin sha1: ${pluginSha}"
 
-    switch(osName)
-    {
+    switch(osName) {
         case 'Windows':
             options['pluginWinSha'] = pluginSha
-            break;
+            break
         case 'OSX':
             options['pluginOSXSha'] = pluginSha
-            break;
+            break
         default:
             options['pluginUbuntuSha'] = pluginSha
     }

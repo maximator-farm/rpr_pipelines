@@ -16,7 +16,7 @@ def executeBuildWindows(String osName, Map options)
     bat """
         mkdir release\\miopen
         xcopy /s/y/i build\\bin\\Release\\MIOpen.dll release
-        xcopy /s/y/i build\\bin\\Release\\MIOpen.lib release
+        xcopy /s/y/i build\\lib\\Release\\MIOpen.lib release
         xcopy /s/y/i build\\include\\miopen\\*.h release\\miopen
         xcopy /s/y/i include\\miopen\\*.h release\\miopen
     """
@@ -119,21 +119,7 @@ def executePreBuild(Map options)
     options.packageName = packageName.replaceAll('[^a-zA-Z0-9-_.]+','')
 
     if (env.CHANGE_URL) {
-        echo "branch was detected as Pull Request"
-    }
-
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
-    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
+        println("Build was detected as Pull Request")
     }
 
 }
@@ -143,39 +129,34 @@ def executeBuild(String osName, Map options)
 {
     cleanWS(osName)
 
-    try
-    {
+    try {
         checkOutBranchOrScm(options.projectBranch, options.projectRepo)
         outputEnvironmentInfo(osName)
 
         switch (osName) {
             case 'Windows':
-                executeBuildWindows(osName, options);
-                break;
+                executeBuildWindows(osName, options)
+                break
             case 'OSX':
-                executeBuildOSX(osName, options);
-                break;
+                executeBuildOSX(osName, options)
+                break
             case 'Ubuntu18':
-                executeBuildUbuntu(osName, options);
-                break;
+                executeBuildUbuntu(osName, options)
+                break
             default:
-                executeBuildCentOS(osName, options);
+                executeBuildCentOS(osName, options)
         }
 
         if (options.updateBinaries) {
             sendFiles("release/*", "${options.PRJ_ROOT}/${options.PRJ_NAME}/${osName}")
         }
 
-    }
-    catch (e)
-    {
+    } catch (e) {
         println(e.getMessage())
         error_message = e.getMessage()
         currentBuild.result = "FAILED"
         throw e
-    }
-    finally
-    {
+    } finally {
         archiveArtifacts "*.log"
     }
 }
@@ -204,8 +185,6 @@ def call(String projectRepo='git@github.com:BenjaminCoquelle/MIOpen.git',
                             updateBinaries:updateBinaries,
                             executeBuild:true,
                             executeTests:false,
-                            projectRepo:projectRepo,
-                            BUILDER_TAG:'Builder'
+                            projectRepo:projectRepo
                             ])
-
 }

@@ -1,9 +1,8 @@
 def executeTestCommand(String osName, String asicName, Map options) {
     timeout(time: options.TEST_TIMEOUT, unit: 'MINUTES') { 
-        dir('scripts')
-        {
+        dir('scripts') {
             bat"""
-            run.bat \"${options.testsPackage}\" \"${options.tests}\" >> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                run.bat \"${options.testsPackage}\" \"${options.tests}\" >> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
             """
         }
     }
@@ -45,8 +44,8 @@ def executeTests(String osName, String asicName, Map options)
         executeTestCommand(osName, asicName, options)
     }
     catch (e) {
-        println(e.toString());
-        println(e.getMessage());
+        println(e.toString())
+        println(e.getMessage())
         error_message = e.getMessage()
         currentBuild.result = "FAILED"
         throw e
@@ -58,8 +57,7 @@ def executeTests(String osName, String asicName, Map options)
             utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
         }
         archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
-        dir('Work')
-        {
+        dir('Work') {
             if (fileExists("Results/ML/session_report.json")) {
 
                 def sessionReport = null
@@ -135,20 +133,6 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
-    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master") {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3']]]);
-    } else {
-        properties([[$class: 'BuildDiscarderProperty', strategy:
-                         [$class: 'LogRotator', artifactDaysToKeepStr: '',
-                          artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
-    }
-
     options.testsList = ['']
 }
 
@@ -170,11 +154,11 @@ def executeBuild(String osName, Map options)
         withEnv(["CIS_OS=${osName}"]) {
             switch (osName) {
                 case 'Windows':
-                    executeBuildWindows(options);
-                    break;
+                    executeBuildWindows(options)
+                    break
                 case 'OSX':
                     print("[WARNING] ${osName} is not supported")
-                    break;
+                    break
                 default:
                     print("[WARNING] ${osName} is not supported")
             }
@@ -357,8 +341,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
         }
     }
     catch (e) {
-        println(e.toString());
-        println(e.getMessage());
+        println(e.toString())
+        println(e.getMessage())
         throw e
     }
     finally
@@ -369,7 +353,7 @@ def call(String projectBranch = "",
          String testsBranch = "master",
          String testsPackage = "",
          String tests = "",
-         String platforms = 'Windows:NVIDIA_RTX2080TI',
+         String platforms = 'Windows:NVIDIA_RTX2080',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
          Boolean enableNotifications = false,
          Boolean collectTrackedMetrics = true)
