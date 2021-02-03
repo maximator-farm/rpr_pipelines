@@ -79,7 +79,7 @@ public class GithubNotificator {
      * @param url Build url
      * @param hasDeployStage Specify that status for deploy stage should be created or not
      */
-    def initPR(Map options, String url, Boolean hasDeployStage = true) {
+    def initChecks(Map options, String url, Boolean hasDeployStage = true) {
         try {
             context.println("[INFO] Started initialization of PR notifications")
             this.hasDeployStage = hasDeployStage
