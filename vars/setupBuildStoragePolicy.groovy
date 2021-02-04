@@ -32,7 +32,7 @@ def call(String project = "")
                 [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '30', numToKeepStr: '10']]])
         }
 
-    } else  if (project in ["Blender", "Maya", "Max", "Core", "USDViewer"]) {
+    } else  if (project in ["Blender", "Maya", "Max", "Core"]) {
 
         if (isMasterBranch()) {
             properties([[$class: 'BuildDiscarderProperty', strategy:
