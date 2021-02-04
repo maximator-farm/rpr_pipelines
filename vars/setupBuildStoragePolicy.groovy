@@ -7,6 +7,7 @@ def call(String project = "")
     }
 
     if (isCisDevelopJob()) {
+        println("BuildDiscarderProperty will use settings for Dev CIS job.")
         if (isMasterBranch()) {
             properties([[$class: 'BuildDiscarderProperty', strategy:
                 [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '30', numToKeepStr: '10']]])
@@ -33,7 +34,7 @@ def call(String project = "")
         }
 
     } else  if (project in ["Blender", "Maya", "Max", "Core"]) {
-
+        println("BuildDiscarderProperty will use settings for plugins job.")
         if (isMasterBranch()) {
             properties([[$class: 'BuildDiscarderProperty', strategy:
                 [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '10']]])
@@ -65,7 +66,7 @@ def call(String project = "")
             [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5']]])
 
     } else {
-
+        println("BuildDiscarderProperty will use default settings.")
         if (isMasterBranch()) {
             properties([[$class: 'BuildDiscarderProperty', strategy:
                 [$class: 'LogRotator', artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '10']]])
@@ -142,5 +143,5 @@ def isPR(){
 
 
 def isCisDevelopJob(){
-    return env.JOB_NAME.startsWith("Dev") ? true : false
+    return env.JOB_NAME.startsWith("Dev")
 }
