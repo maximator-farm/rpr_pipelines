@@ -147,7 +147,10 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/HoudiniAssets/", 'HoudiniAssets')
+            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_usdplugin_autotests" : "C:\\TestResources\\rpr_usdplugin_autotests"
+            dir(assets_dir){
+                checkOutBranchOrScm(options.assetsBranch, options.assetsRepo, true, null, null, false, true, "radeonprorender-gitlab", true)
+            }
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
@@ -826,6 +829,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git",
         String projectBranch = "",
         String usdBranch = "master",
+        String assetsBranch = "master",
         String testsBranch = "master",
         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7',
         String buildType = "Houdini",
@@ -854,8 +858,14 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+
             String PRJ_NAME="RadeonProRenderUSDPlugin"
             String PRJ_ROOT="rpr-plugins"
+
+            def assetsRepo
+            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
+                assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_usdplugin_autotests"
+            }
 
             gpusCount = 0
             platforms.split(';').each() { platform ->
@@ -873,6 +883,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         usdBranch:usdBranch,
+                        assetsBranch:assetsBranch,
+                        assetsRepo:assetsRepo,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
