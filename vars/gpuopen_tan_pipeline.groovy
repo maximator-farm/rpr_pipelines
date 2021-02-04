@@ -1,7 +1,6 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
-def getTanTool(String osName, Map options)
-{
+def getTanTool(String osName, Map options) {
     switch(osName) {
         case 'Windows':
 
@@ -82,8 +81,7 @@ def getTanTool(String osName, Map options)
 }
 
 
-def executeTestCommand(String osName, Map options)
-{
+def executeTestCommand(String osName, Map options) {
     switch(osName) {
         case 'Windows':
             dir('Launcher') {
@@ -131,7 +129,10 @@ def executeTests(String osName, String asicName, Map options) {
             }
         }
 
-        downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/TanAssets/", 'TanAssets')
+        String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/gpuopen_tan_autotests" : "C:\\TestResources\\gpuopen_tan_autotests"
+        dir(assetsDir){
+            checkOutBranchOrScm(options.assetsBranch, options.assetsRepo, true, null, null, false, true, "radeonprorender-gitlab", true)
+        }
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
         String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
@@ -601,6 +602,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 
 def call(String projectBranch = "",
+    String assetsBranch = "master",
     String testsBranch = "master",
     String platforms = 'Windows;OSX;Ubuntu18',
     String buildConfiguration = "release",
@@ -628,6 +630,11 @@ def call(String projectBranch = "",
             }
         }
 
+        def assetsRepo
+        withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
+            assetsRepo = "${GITLAB_URL}/autotest_assets/gpuopen_tan_autotests"
+        }
+
         buildConfiguration = buildConfiguration.split(',')
         ipp = ipp.split(',')
         winTool = winTool.split(',')
@@ -644,6 +651,8 @@ def call(String projectBranch = "",
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
+                                assetsBranch:assetsBranch,
+                                assetsRepo:assetsRepo,
                                 testsBranch:testsBranch,
                                 enableNotifications:enableNotifications,
                                 incrementVersion:incrementVersion,
