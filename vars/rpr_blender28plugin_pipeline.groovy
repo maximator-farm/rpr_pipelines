@@ -176,7 +176,6 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
                     make_results_baseline.bat ${delete}
                 """
                 break
-            // OSX & Ubuntu18
             default:
                 sh """
                     ./make_results_baseline.sh ${delete}
@@ -549,7 +548,7 @@ def executeBuildOSX(Map options)
 def executeBuildLinux(String osName, Map options)
 {
     dir('RadeonProRenderBlenderAddon/BlenderPkg') {
-        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Ubuntu18.log")
+        GithubNotificator.updateStatus("Build", osName, "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         sh """
             ./build_linux.sh >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -640,11 +639,11 @@ def executePreBuild(Map options)
 {
 
     // manual job with prebuilt plugin
-    if (options.isPreBuilt) {
+    if (options['isPreBuilt']) {
         println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
         currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
-        options.executeBuild = false
-        options.executeTests = true
+        options['executeBuild'] = false
+        options['testsPackage'] = true
     // manual job
     } else if (options.forceBuild) {
         println "[INFO] Manual job launch detected"
@@ -654,9 +653,9 @@ def executePreBuild(Map options)
     } else {
         if (env.CHANGE_URL) {
             println "[INFO] Branch was detected as Pull Request"
-            options.executeBuild = true
-            options.executeTests = true
-            options.testsPackage = "regression.json"
+            options['executeBuild'] = true
+            options['executeTests'] = true
+            options['testsPackage'] = "regression.json"
             GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
             options.githubNotificator = githubNotificator
             githubNotificator.initPreBuild("${BUILD_URL}")
@@ -959,7 +958,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         String engine = "${it}"
                         def skippedTests = JsonOutput.toJson(options.skippedTests)
                         bat """
-                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${escapeCharsByUnicode(skippedTests.toString())}\"
+                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${escapeCharsByUnicode(skippedTests.toString())}\"
                         """
                     }
                 }
@@ -1139,7 +1138,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String projectBranch = "",
     String assetsBranch = "master",
     String testsBranch = "master",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;Ubuntu18:AMD_RadeonVII;OSX:AMD_RXVEGA',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;Ubuntu18:AMD_RadeonVII;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
