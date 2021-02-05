@@ -21,12 +21,15 @@ def executeBuildWindows(Map options)
 {
     dir('RadeonProRenderBlenderAddon\\BlenderPkg') {
         GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
-        bat """
-            set HDUSD_LIBS_DIR=..\\..\\libs
-            build_win.cmd >> ../../${STAGE_NAME}.log  2>&1
-        """
+        
+        withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;${PATH}"]) {
+            bat """
+                set HDUSD_LIBS_DIR=..\\..\\libs
+                python3 tools\\create_zip_addon.py >> ../../${STAGE_NAME}.log  2>&1
+            """
+        }
 
-        dir('.build') {
+        dir(".build") {
             bat """
                 rename hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_Windows.zip
             """
