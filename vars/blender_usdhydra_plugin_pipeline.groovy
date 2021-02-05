@@ -19,7 +19,7 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows(Map options)
 {
-    dir('RadeonProRenderBlenderAddon\\BlenderPkg') {
+    dir('RadeonProRenderBlenderAddon') {
         GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         
         withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;${PATH}"]) {
@@ -70,7 +70,7 @@ def executeBuildOSX(Map options)
 
 def executeBuildLinux(String osName, Map options)
 {
-    dir('RadeonProRenderBlenderAddon/BlenderPkg') {
+    dir('RadeonProRenderBlenderAddon') {
         GithubNotificator.updateStatus("Build", "${osName}", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
         sh """
