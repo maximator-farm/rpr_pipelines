@@ -643,7 +643,7 @@ def executePreBuild(Map options)
         println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
         currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
         options['executeBuild'] = false
-        options['testsPackage'] = true
+        options['executeTests'] = true
     // manual job
     } else if (options.forceBuild) {
         println "[INFO] Manual job launch detected"
