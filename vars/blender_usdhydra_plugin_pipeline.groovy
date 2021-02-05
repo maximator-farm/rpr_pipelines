@@ -47,7 +47,7 @@ def executeBuildWindows(Map options)
 
             if (options.sendToUMS) {
                 dir("../../../jobs_launcher") {
-                    sendToMINIO(options, "Windows", "..\\RadeonProRenderBlenderAddon\\BlenderPkg\\.build", BUILD_NAME)                            
+                    sendToMINIO(options, "Windows", "..\\RadeonProRenderBlenderAddon\\BlenderPkg\\build", BUILD_NAME)                            
                 }
             }
 
@@ -85,7 +85,7 @@ def executeBuildLinux(String osName, Map options)
 
             if (options.branch_postfix) {
                 sh """
-                    mv BlenderUSDHydraAddon*zip *.(${options.branch_postfix}).zip
+                    for i in BlenderUSDHydraAddon*; do name="\${i%.*}"; mv "\$i" "\${name}.(${options.branch_postfix})\${i#\$name}"; done
                 """
             }
 
@@ -96,7 +96,7 @@ def executeBuildLinux(String osName, Map options)
 
             if (options.sendToUMS) {
                 dir("../../../jobs_launcher") {
-                    sendToMINIO(options, "${osName}", "../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME)                            
+                    sendToMINIO(options, "${osName}", "../RadeonProRenderBlenderAddon/BlenderPkg/build", BUILD_NAME)                            
                 }
             }
 
@@ -291,7 +291,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git",
     String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows',
+    String platforms = 'Windows;Ubuntu18',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
