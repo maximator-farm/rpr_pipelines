@@ -79,13 +79,13 @@ def executeBuildLinux(String osName, Map options)
         """
 
         dir("build") {
-            bat """
+            sh """
                 rename hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip
             """
 
             if (options.branch_postfix) {
-                bat """
-                    rename BlenderUSDHydraAddon*zip *.(${options.branch_postfix}).zip
+                sh """
+                    mv BlenderUSDHydraAddon*zip *.(${options.branch_postfix}).zip
                 """
             }
 
@@ -100,8 +100,8 @@ def executeBuildLinux(String osName, Map options)
                 }
             }
 
-            bat """
-                rename BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
+            sh """
+                mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
             """
 
             stash includes: "BlenderUSDHydraAddon_${osName}.zip", name: "app${osName}"
