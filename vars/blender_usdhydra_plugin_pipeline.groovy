@@ -29,7 +29,7 @@ def executeBuildWindows(Map options)
             """
         }
 
-        dir(".build") {
+        dir("build") {
             bat """
                 rename hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_Windows.zip
             """
@@ -78,7 +78,7 @@ def executeBuildLinux(String osName, Map options)
             python3 tools/create_zip_addon.py >> ../../${STAGE_NAME}.log  2>&1
         """
 
-        dir(".build") {
+        dir("build") {
             bat """
                 rename hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip
             """
