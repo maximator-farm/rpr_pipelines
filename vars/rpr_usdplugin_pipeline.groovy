@@ -100,21 +100,50 @@ def executeTestCommand(String osName, Map options)
     dir('scripts') {
         switch(osName) {
             case 'Windows':
-                bat """
-                    run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                """
+                if (options.enableRIFTracing) {
+                    bat """
+                        mkdir -p "${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace"
+                        set RIF_TRACING_ENABLED=1
+                        set RIF_TRACING_PATH=${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                } else {
+                    bat """
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                }
                 break
             case 'OSX':
-                sh """
-                    chmod +x run.sh
-                    ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                """
+                if (options.enableRIFTracing) {
+                    sh """
+                        mkdir -p "${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace"
+                        export RIF_TRACING_ENABLED=1
+                        export RIF_TRACING_PATH=${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace
+                        chmod +x run.sh
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                } else {
+                    sh """
+                        chmod +x run.sh
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                }
                 break
             default:
-                sh """
-                    chmod +x run.sh
-                    ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                """
+                if (options.enableRIFTracing) {
+                    sh """
+                        mkdir -p "${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace"
+                        export RIF_TRACING_ENABLED=1
+                        export RIF_TRACING_PATH=${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace
+                        chmod +x run.sh
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                } else {
+                    sh """
+                        chmod +x run.sh
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                }
         }
     }
 }
@@ -223,6 +252,7 @@ def executeTests(String osName, String asicName, Map options)
                 utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
+            archiveArtifacts artifacts: "${env.STAGE_NAME}_RIF_Trace/**/*.*", allowEmptyArchive: true
             if (stashResults) {
                 dir('Work') {
                     if (fileExists("Results/Houdini/session_report.json")) {
@@ -839,6 +869,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String updateRefs = 'No',
         String testsPackage = "Full.json",
         String tests = "",
+        Boolean enableRIFTracing = false,
         String width = "0",
         String height = "0",
         String tester_tag = "Houdini",
@@ -907,6 +938,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         width:width,
                         gpusCount:gpusCount,
                         height:height,
+                        enableRIFTracing:enableRIFTracing,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
