@@ -25,7 +25,7 @@ def executeBuildWindows(Map options)
         withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;${PATH}"]) {
             bat """
                 set HDUSD_LIBS_DIR=..\\..\\libs
-                python3 tools\\create_zip_addon.py >> ../../${STAGE_NAME}.log  2>&1
+                python3 tools\\create_zip_addon.py >> ..\\..\\${STAGE_NAME}.log  2>&1
             """
         }
 
@@ -70,6 +70,45 @@ def executeBuildOSX(Map options)
 
 def executeBuildLinux(String osName, Map options)
 {
+    dir('RadeonProRenderBlenderAddon/BlenderPkg') {
+        GithubNotificator.updateStatus("Build", "${osName}", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
+        
+        sh """
+            set HDUSD_LIBS_DIR=../../libs
+            python3 tools/create_zip_addon.py >> ../../${STAGE_NAME}.log  2>&1
+        """
+
+        dir(".build") {
+            bat """
+                rename hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip
+            """
+
+            if (options.branch_postfix) {
+                bat """
+                    rename BlenderUSDHydraAddon*zip *.(${options.branch_postfix}).zip
+                """
+            }
+
+            archiveArtifacts "BlenderUSDHydraAddon*.zip"
+            String BUILD_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
+            String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
+            if (options.sendToUMS) {
+                dir("../../../jobs_launcher") {
+                    sendToMINIO(options, "${osName}", "../RadeonProRenderBlenderAddon/BlenderPkg/.build", BUILD_NAME)                            
+                }
+            }
+
+            bat """
+                rename BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
+            """
+
+            stash includes: "BlenderUSDHydraAddon_${osName}.zip", name: "app${osName}"
+
+            GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+        }
+    }
 }
 
 
@@ -77,7 +116,7 @@ def executeBuild(String osName, Map options)
 {
     try {
 
-        receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/libs/*", "libs")
+        receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/libs/*", "libs")
 
         dir("RadeonProRenderBlenderAddon") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
@@ -93,20 +132,11 @@ def executeBuild(String osName, Map options)
                     executeBuildWindows(options)
                     break
                 case "OSX":
-                    if (!fileExists("python3")) {
-                        sh "ln -s /usr/local/bin/python3.7 python3"
-                    }
-                    withEnv(["PATH=$WORKSPACE:$PATH"]) {
-                        executeBuildOSX(options)
-                    }
+                    println("Unsupported OS")
                     break
                 default:
-                    if (!fileExists("python3")) {
-                        sh "ln -s /usr/bin/python3.7 python3"
-                    }
-                    withEnv(["PATH=$PWD:$PATH"]) {
-                        executeBuildLinux(osName, options)
-                    }
+                    executeBuildLinux(osName, options)
+                    
             }
         }
     } catch (e) {
@@ -115,6 +145,7 @@ def executeBuild(String osName, Map options)
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
 }
+
 
 def executePreBuild(Map options)
 {
