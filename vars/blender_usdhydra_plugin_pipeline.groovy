@@ -183,11 +183,9 @@ def executePreBuild(Map options)
 
     // branch postfix
     options["branch_postfix"] = ""
-    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        options["branch_postfix"] = "release"
-    } else if(env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
+    if (env.BRANCH_NAME && env.BRANCH_NAME != "master") {
         options["branch_postfix"] = env.BRANCH_NAME.replace('/', '-')
-    } else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop") {
+    } else if (options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop") {
         options["branch_postfix"] = options.projectBranch.replace('/', '-')
     }
 
