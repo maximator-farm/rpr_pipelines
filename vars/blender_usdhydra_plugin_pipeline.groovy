@@ -24,8 +24,8 @@ def executeBuildWindows(Map options)
         
         withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;${PATH}"]) {
             bat """
-                set HDUSD_LIBS_DIR=..\\..\\libs
-                python tools\\create_zip_addon.py >> ..\\..\\${STAGE_NAME}.log  2>&1
+                set HDUSD_LIBS_DIR=..\\libs
+                python tools\\create_zip_addon.py >> ..\\${STAGE_NAME}.log  2>&1
             """
         }
 
@@ -74,13 +74,13 @@ def executeBuildLinux(String osName, Map options)
         GithubNotificator.updateStatus("Build", "${osName}", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
         sh """
-            export HDUSD_LIBS_DIR=../../libs
-            python3 tools/create_zip_addon.py >> ../../${STAGE_NAME}.log  2>&1
+            export HDUSD_LIBS_DIR=../libs
+            python3.7 tools/create_zip_addon.py >> ../${STAGE_NAME}.log  2>&1
         """
 
         dir("build") {
             sh """
-                rename hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip
+                mv hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip
             """
 
             if (options.branch_postfix) {
