@@ -74,7 +74,7 @@ def executeBuildLinux(String osName, Map options)
         GithubNotificator.updateStatus("Build", "${osName}", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
         sh """
-            set HDUSD_LIBS_DIR=../../libs
+            export HDUSD_LIBS_DIR=../../libs
             python3 tools/create_zip_addon.py >> ../../${STAGE_NAME}.log  2>&1
         """
 
