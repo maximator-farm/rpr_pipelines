@@ -9,6 +9,15 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static DELEGATES_PARAM = [
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Delegates parameter is required.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC
+            ]
+        ]
+    ]
+
     def static INITIALIZATION = [
         "exceptions": [
             [

@@ -10,7 +10,7 @@ def getMayaPluginInstaller(String osName, Map options)
                 clearBinariesWin()
                 
                 println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                downloadPlugin(osName, "Maya", options)
+                downloadPlugin(osName, "RadeonProRenderMaya", options)
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"

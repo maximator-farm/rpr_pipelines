@@ -27,7 +27,7 @@ def getMayaPluginInstaller(String osName, Map options)
                         clearBinariesWin()
 
                         println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "Maya", options)
+                        downloadPlugin(osName, "RadeonProRenderMaya", options)
 
                         bat """
                             IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -38,7 +38,7 @@ def getMayaPluginInstaller(String osName, Map options)
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "Maya", options)
+                    downloadPlugin(osName, "RadeonProRenderMaya", options)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -77,7 +77,7 @@ def getMayaPluginInstaller(String osName, Map options)
                         clearBinariesUnix()
 
                         println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "Maya", options)
+                        downloadPlugin(osName, "RadeonProRenderMaya", options)
 
                         sh """
                             mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -88,7 +88,7 @@ def getMayaPluginInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "Maya", options)
+                    downloadPlugin(osName, "RadeonProRenderMaya", options)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"

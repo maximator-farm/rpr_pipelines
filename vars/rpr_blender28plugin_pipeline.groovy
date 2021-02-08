@@ -28,7 +28,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                         clearBinariesWin()
 
                         println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "Blender", options)
+                        downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                         bat """
                             IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -39,7 +39,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "Blender", options)
+                    downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -78,7 +78,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                         clearBinariesUnix()
 
                         println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "Blender", options)
+                        downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                         sh """
                             mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -89,7 +89,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "Blender", options)
+                    downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -128,7 +128,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                         clearBinariesUnix()
 
                         println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "Blender", options)
+                        downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                         sh """
                             mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -139,7 +139,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "Blender", options)
+                    downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -273,7 +273,7 @@ def executeTests(String osName, String asicName, Map options)
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
                 timeout(time: "12", unit: "MINUTES") {
                     getBlenderAddonInstaller(osName, options)
-                    newPluginInstalled = installBlenderAddon(osName, options.toolVersion, options)
+                    newPluginInstalled = installBlenderAddon(osName, 'rprblender', options.toolVersion, options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
             }
@@ -296,7 +296,7 @@ def executeTests(String osName, String asicName, Map options)
             println(e.toString())
             println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
             // deinstalling broken addon
-            installBlenderAddon(osName, options.toolVersion, options, false, true)
+            installBlenderAddon(osName, 'rprblender', options.toolVersion, options, false, true)
             // remove installer of broken addon
             removeInstaller(osName: osName, options: options, extension: "zip")
             throw e
@@ -430,7 +430,7 @@ def executeTests(String osName, String asicName, Map options)
                             // check that group isn't fully skipped
                             if (sessionReport.summary.total != sessionReport.summary.skipped || sessionReport.summary.total == 0){
                                 collectCrashInfo(osName, options, options.currentTry)
-                                installBlenderAddon(osName, options.toolVersion, options, false, true)
+                                installBlenderAddon(osName, 'rprblender', options.toolVersion, options, false, true)
                                 // remove installer of broken addon
                                 removeInstaller(osName: osName, options: options, extension: "zip")
                                 String errorMessage
