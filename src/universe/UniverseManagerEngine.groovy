@@ -57,10 +57,10 @@ class UniverseManagerEngine extends UniverseManager  {
         context.withCredentials([context.string(credentialsId: "prodUniverseFrontURL", variable: "PROD_UMS_FRONT_URL"),
             context.string(credentialsId: "devUniverseProdURL", variable: "DEV_UMS_FRONT_URL")]) {
             if (universeClientParentProd) {
-                universeClientParentProd.createBuild("", "", false, options, context.PROD_UMS_FRONT_URL)
+                universeClientParentProd.createBuild("", "", false, options, context.PROD_UMS_FRONT_URL, "prod")
             }
             if (universeClientParentDev) {
-                universeClientParentDev.createBuild("", "", false, options, context.DEV_UMS_FRONT_URL)
+                universeClientParentDev.createBuild("", "", false, options, context.DEV_UMS_FRONT_URL, "dev")
             }
         }
 
