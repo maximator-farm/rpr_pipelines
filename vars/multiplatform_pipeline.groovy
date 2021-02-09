@@ -78,6 +78,12 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                     testName = getNextTest(testsIterator)
                                     continue
                                 }
+                                if (options["abort${osName}"]) {
+                                    println("Test group ${testName} on ${asicName}-${osName} aborted due to current context")
+                                    testName = getNextTest(testsIterator)
+                                    continue
+                                }
+
                                 println("Scheduling ${osName}:${asicName} ${testName}")
 
                                 Map newOptions = options.clone()
@@ -94,8 +100,17 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                         // save expected exception message for add it in report
                                         String expectedExceptionMessage = ""
                                         if (e instanceof ExpectedExceptionWrapper) {
+                                            if (e.abortCurrentOS) {
+                                                options["abort${osName}"] = true
+                                            }
                                             expectedExceptionMessage = e.getMessage()
-                                            e = e.getCause()
+                                            // check that cause isn't more specific expected exception
+                                            if (e.getCause() instanceof ExpectedExceptionWrapper) {
+                                                if (e.getCause().abortCurrentOS) {
+                                                    options["abort${osName}"] = true
+                                                }
+                                                expectedExceptionMessage = e.getCause().getMessage()
+                                            }
                                         }
 
                                         println "[ERROR] Failed during tests on ${env.NODE_NAME} node"

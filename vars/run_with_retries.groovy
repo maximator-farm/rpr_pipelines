@@ -87,6 +87,21 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                 }
             }
         } catch(Exception e) {
+            if (e instanceof ExpectedExceptionWrapper) {
+                if (e.abortCurrentOS) {
+                    println("[ERROR] Detected abortCurrentOS flag in catched exception. Abort next tests on ${osName} OS")
+                    i = tries + 1
+                }
+                e = e.getCause()
+                if (e instanceof ExpectedExceptionWrapper) {
+                    if (e.abortCurrentOS) {
+                        println("[ERROR] Detected abortCurrentOS flag in catched exception. Abort next tests on ${osName} OS")
+                        i = tries + 1
+                    }
+                    e = e.getCause()
+                }
+            }
+
             String exceptionClassName = e.getClass().toString()
 
             if (exceptionClassName.contains("FlowInterruptedException")) {
@@ -134,11 +149,11 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                 GithubNotificator.updateStatus(stageName, title, "failure", options, NotificationConfiguration.LOST_CONNECTION_WITH_MACHINE)
             }
 
-            println "[ERROR] Failed on ${env.NODE_NAME} node"
-            println "Exception: ${e.toString()}"
-            println "Exception message: ${e.getMessage()}"
-            println "Exception cause: ${e.getCause()}"
-            println "Exception stack trace: ${e.getStackTrace()}"
+            println("[ERROR] Failed on ${env.NODE_NAME} node")
+            println("Exception: ${e.toString()}")
+            println("Exception message: ${e.getMessage()}")
+            println("Exception cause: ${e.getCause()}")
+            println("Exception stack trace: ${e.getStackTrace()}")
 
             if (utils.isTimeoutExceeded(e)) {
                 GithubNotificator.updateStatus(stageName, title, "failure", options, NotificationConfiguration.STAGE_TIMEOUT_EXCEEDED)

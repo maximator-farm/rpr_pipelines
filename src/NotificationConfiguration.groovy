@@ -320,4 +320,10 @@ public class NotificationConfiguration {
 
     def static EXECUTE_UNIT_TESTS = "Executing unit tests."
 
+    def static INVALID_PLUGIN_SIZE = "Invalid plugin (size is less than 10Mb)."
+
+    def static CORRUPTED_ZIP_PLUGIN = "Corrupted .zip plugin."
+
+    def static CORRUPTED_MSI_PLUGIN = "Corrupted .msi plugin."
+
 }
