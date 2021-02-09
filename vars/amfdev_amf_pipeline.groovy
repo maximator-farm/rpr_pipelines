@@ -759,7 +759,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 bat """
                     set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
                     pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
-                    python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --commit_datetime "${options.commitDatetime}" --commit_message "${escapeCharsByUnicode(options.commitMessage)}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
+                    python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --commit_datetime "${options.commitDatetime}" --commit_message "${utils.escapeCharsByUnicode(options.commitMessage)}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
                 """
             }
         }

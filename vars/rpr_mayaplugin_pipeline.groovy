@@ -867,7 +867,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         def skippedTests = JsonOutput.toJson(options.skippedTests)
                         // \\\\ - prevent escape sequence '\N'
                         bat """
-                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${escapeCharsByUnicode(skippedTests.toString())}\"
+                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${utils.escapeCharsByUnicode(skippedTests.toString())}\"
                         """
                     }
                 }
@@ -919,11 +919,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
                                 if (options['isPreBuilt']) {
                                     // \\\\ - prevent escape sequence '\N'
                                     bat """
-                                        build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(engineName)}\"
+                                        build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\"
                                     """
                                 } else {
                                     bat """
-                                        build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(engineName)}\"
+                                        build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
                                     """
                                 }
                             } catch (e) {

@@ -287,4 +287,12 @@ class utils {
             (self.isUnix() ? it : it.split(" ").last()) as Double
         }
     }
+
+    static String escapeCharsByUnicode(String text) {
+        def unsafeCharsRegex = /['"\\&$ <>|:\n]/
+
+        return text.replaceAll(unsafeCharsRegex, {
+            "\\u${Integer.toHexString(it.codePointAt(0)).padLeft(4, '0')}"
+        })
+    }
 }

@@ -646,7 +646,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 dir("jobs_launcher") {
                     def skippedTests = JsonOutput.toJson(options.skippedTests)
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"${escapeCharsByUnicode(skippedTests.toString())}\"
+                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"${utils.escapeCharsByUnicode(skippedTests.toString())}\"
                     """
                 }
             } catch (e) {
@@ -668,7 +668,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
                         bat """
-                            build_reports.bat ..\\summaryTestResults "RprViewer" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                            build_reports.bat ..\\summaryTestResults "RprViewer" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                         """
                     }
                 }

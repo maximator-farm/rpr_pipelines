@@ -754,11 +754,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             def python3 = options.houdini_python3 ? "py3" : "py2.7"
                             def tool = "Houdini ${options.houdiniVersion} ${python3}"
                             bat """
-                                build_reports.bat ..\\summaryTestResults \"${escapeCharsByUnicode(tool)}\" ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults \"${utils.escapeCharsByUnicode(tool)}\" ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         } else {
                             bat """
-                                build_reports.bat ..\\summaryTestResults USD ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults USD ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }
 

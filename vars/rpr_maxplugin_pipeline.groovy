@@ -631,11 +631,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         if (options['isPreBuilt'])
                         {
                             bat """
-                                build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("3ds Max")} "PreBuilt" "PreBuilt" "PreBuilt"
+                                build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("3ds Max")} "PreBuilt" "PreBuilt" "PreBuilt"
                             """
                         } else {
                             bat """
-                                build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("3ds Max")} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("3ds Max")} ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }
                     }
