@@ -80,14 +80,22 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
 }
 
 def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry) {
-    dir("scripts") {
-        switch(osName) {
-            case 'Windows':
-                bat "build_cache.bat ${toolVersion} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
-                break
-            default:
-                sh "./build_cache.sh ${toolVersion} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"        
+    try {
+        dir("scripts") {
+            switch(osName) {
+                case 'Windows':
+                    bat "build_cache.bat ${toolVersion} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
+                    break
+                default:
+                    sh "./build_cache.sh ${toolVersion} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"        
+            }
         }
+    } catch (e) {
+        String cacheBuildingLog = readFile("${log_name}_${currentTry}.cb.log")
+        if (cacheBuildingLog.contains("engine not found 'HdUSD'")) {
+            throw new ExpectedExceptionWrapper(NotificationConfiguration.PLUGIN_NOT_FOUND, e)
+        }
+        throw e
     }
 }
 
@@ -171,8 +179,7 @@ def executeTests(String osName, String asicName, Map options) {
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
                         String cacheImgPath = "./Work/Results/BlenderUSDHydra/cache_building.jpg"
                         if (!fileExists(cacheImgPath)) {
-                            println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
-                            throw new ExpectedExceptionWrapper("No output image after cache building.", new Exception("No output image after cache building."))
+                            throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
                         }
                     }
                 }

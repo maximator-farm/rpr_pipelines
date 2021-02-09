@@ -1,4 +1,12 @@
 public class NotificationConfiguration {
+
+    def static PLUGIN_NOT_FOUND = "Plugin not found during cache building."
+
+    def static FAILED_TO_VERIFY_MATLIB = "Failed to verify installed MatLib."
+
+    def static FAILED_TO_INSTALL_MATLIB = "Failed to install MatLib."
+
+    def static NO_OUTPUT_IMAGE = "No output image after cache building."
     
     def static ENGINES_PARAM = [
         "exceptions": [
@@ -226,6 +234,26 @@ public class NotificationConfiguration {
             [
                 "class": "TimeoutExceeded", "problemMessage": "Failed to build cache due to timeout.", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ],
+            [
+                "class": Exception, "problemMessage": PLUGIN_NOT_FOUND, 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [PLUGIN_NOT_FOUND]
+            ],
+            [
+                "class": Exception, "problemMessage": FAILED_TO_VERIFY_MATLIB, 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [FAILED_TO_VERIFY_MATLIB]
+            ],
+            [
+                "class": Exception, "problemMessage": FAILED_TO_INSTALL_MATLIB, 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [FAILED_TO_INSTALL_MATLIB]
+            ],
+            [
+                "class": Exception, "problemMessage": NO_OUTPUT_IMAGE, 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [NO_OUTPUT_IMAGE]
             ],
             [
                 "class": Exception, "problemMessage": "Failed to build cache.", 
