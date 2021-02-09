@@ -109,37 +109,49 @@ def executePreBuild(Map options) {
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
-        options.commitSHA = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()      
-        // TODO get plugin version
-        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="')
+        options.commitSHA = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
-        println "The last commit was written by ${options.commitAuthor}."
-        println "Commit message: ${options.commitMessage}"
-        println "Commit SHA: ${options.commitSHA}"
+        // clone repo with version increment
+        dir("RadeonProRenderInventorPluginIncrement") {
+            checkOutBranchOrScm("master", "git@github.com:luxteam/RadeonProRenderInventorPluginIncrement.git", true)
+
+            options.pluginVersion = bat(script: "git describe --tags --abbrev=0", returnStdout: true)
+        }
+
+        println """
+            The last commit was written by ${options.commitAuthor}
+            Commit message: ${options.commitMessage}
+            Commit SHA: ${options.commitSHA}
+        """
 
         if (options.incrementVersion) {
             if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
                 
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
-                
-                println "[INFO] Current build version: ${options.pluginVersion}"
-                
-                options.pluginVersion = version_inc(options.pluginVersion, 4)
-                println "[INFO] New build version: ${options.pluginVersion}"
 
-                version_write("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="', options.pluginVersion)
-                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest", '<assemblyIdentity name="UsdConvertor" version="')
-                println "[INFO] Updated build version: ${options.pluginVersion}"
+                dir("RadeonProRenderInventorPluginIncrement") {
+                    // init submodule
+                    checkOutBranchOrScm("master", "git@github.com:luxteam/RadeonProRenderInventorPluginIncrement.git")
 
-                bat """
-                    git add RadeonProRenderInventorPlugin\\UsdConvertor.X.manifest
-                    git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                    git push origin HEAD:master
-                """
+                    println("[INFO] Current build version: ${options.pluginVersion}")
 
-                //get commit's sha which have to be build
-                options.projectBranch = bat (script: "git log --format=%%H -1", returnStdout: true).split('\r\n')[2].trim()
-            } 
+                    options.pluginVersion = utils.incrementVersion(currentVersion: options.pluginVersion)
+                    println "[INFO] New build version: ${options.pluginVersion}"
+
+                    dir("RadeonProRenderInventorPlugin") {
+                        bat """
+                            git pull
+                        """
+                    }
+
+                    bat """
+                        git add RadeonProRenderInventorPlugin
+                        git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                        git tag -a "${options.pluginVersion}" -m "version update to ${options.pluginVersion}"
+                        git push origin master --tags
+                    """
+                }
+            }
         }
 
         if (options.projectBranch){

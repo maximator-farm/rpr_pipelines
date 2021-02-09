@@ -295,4 +295,16 @@ class utils {
             "\\u${Integer.toHexString(it.codePointAt(0)).padLeft(4, '0')}"
         })
     }
+
+    static String incrementVersion(Map params) {
+        String currentVersion = params["currentVersion"]
+        Integer index = params["index"] ?: 1
+        String delimiter = params["delimiter"] ?: "."
+
+        String[] indexes = currentVersion.split(delimiter)
+        Integer targetIndex = indexes[index - 1] as Integer
+        indexes[index - 1] = "${targetIndex++}"
+
+        return indexes.join(delimiter)
+    }
 }
