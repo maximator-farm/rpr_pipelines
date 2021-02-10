@@ -266,7 +266,7 @@ def executeBuildWindows(Map options)
         }
 
         // delete files before zipping
-        withNotifications(title: "Ubuntu18", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        withNotifications(title: "Windows", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_Windows.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
             bat """
                 del RPRViewer\\binary\\inst\\pxrConfig.cmake
                 rmdir /Q /S RPRViewer\\binary\\inst\\cmake
