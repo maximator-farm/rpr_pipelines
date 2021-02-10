@@ -112,10 +112,10 @@ def executePreBuild(Map options) {
         options.commitSHA = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
         // clone repo with version increment
-        dir("RadeonProRenderInventorPluginIncrement") {
+        dir("../inc") {
             checkOutBranchOrScm("master", "git@github.com:luxteam/RadeonProRenderInventorPluginIncrement.git", true)
 
-            options.pluginVersion = bat(script: "git describe --tags --abbrev=0", returnStdout: true)
+            options.pluginVersion = bat(script: "@git describe --tags --abbrev=0", returnStdout: true).trim()
         }
 
         println """
@@ -129,18 +129,18 @@ def executePreBuild(Map options) {
                 
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
 
-                dir("RadeonProRenderInventorPluginIncrement") {
+                dir("../inc") {
                     // init submodule
                     checkOutBranchOrScm("master", "git@github.com:luxteam/RadeonProRenderInventorPluginIncrement.git")
 
                     println("[INFO] Current build version: ${options.pluginVersion}")
 
-                    options.pluginVersion = utils.incrementVersion(currentVersion: options.pluginVersion)
+                    options.pluginVersion = utils.incrementVersion(self: this, currentVersion: options.pluginVersion, index: 4)
                     println "[INFO] New build version: ${options.pluginVersion}"
 
                     dir("RadeonProRenderInventorPlugin") {
                         bat """
-                            git pull
+                            git checkout -B master origin/master
                         """
                     }
 
@@ -148,7 +148,7 @@ def executePreBuild(Map options) {
                         git add RadeonProRenderInventorPlugin
                         git commit -m "buildmaster: version update to ${options.pluginVersion}"
                         git tag -a "${options.pluginVersion}" -m "version update to ${options.pluginVersion}"
-                        git push origin master --tags
+                        git push origin --tags
                     """
                 }
             }
