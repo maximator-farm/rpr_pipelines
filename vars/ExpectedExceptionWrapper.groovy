@@ -1,5 +1,7 @@
 public class ExpectedExceptionWrapper extends RuntimeException {
 
+    Boolean abortCurrentOS
+
     public ExpectedExceptionWrapper() {
         super()
     }

@@ -627,7 +627,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         }               
 
                         bat """
-                            build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
+                            build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
                         """
 
                         bat "get_status.bat ..\\summaryTestResults"

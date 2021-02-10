@@ -58,10 +58,12 @@ class UniverseManagerDefault extends UniverseManager {
         context.withCredentials([context.string(credentialsId: "prodUniverseFrontURL", variable: "PROD_UMS_FRONT_URL"),
             context.string(credentialsId: "devUniverseProdURL", variable: "DEV_UMS_FRONT_URL")]) {
             if (universeClientProd) {
-                universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options, context.PROD_UMS_FRONT_URL)
+                universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options,
+                        context.PROD_UMS_FRONT_URL, "prod")
             }
             if (universeClientDev) {
-                universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options, context.DEV_UMS_FRONT_URL)
+                universeClientDev.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options,
+                        context.DEV_UMS_FRONT_URL, "dev")
             }
         }
 
@@ -124,14 +126,13 @@ class UniverseManagerDefault extends UniverseManager {
     }
 
     def updateIds(Map options) {
-        if (universeClientProd?.build){
+        if (universeClientProd?.build) {
             options.buildIdProd = universeClientProd.build["id"]
             options.jobIdProd = universeClientProd.build["job_id"]
         }
-        if (universeClientDev.build){
+        if (universeClientDev.build) {
             options.buildIdDev = universeClientDev.build["id"]
             options.jobIdDev = universeClientDev.build["job_id"]
         }
     }
-
 }

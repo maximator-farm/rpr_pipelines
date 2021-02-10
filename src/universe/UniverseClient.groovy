@@ -1,26 +1,26 @@
 package universe
 
-import groovy.json.JsonOutput;
-import groovy.json.JsonSlurperClassic;
-import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException;
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurperClassic
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 // imports for work with JSONs
-import java.util.Date;
+import java.util.Date
 // import date for get end time timestamp in set status
 
 /**
  * Client for Universal Monitoring System
  */
 class UniverseClient {
-    def context;
-    def url;
-    def product;
-    def token;
-    def build;
-    def env;
-    def is_url;
-    def is_parent;
-    def engine;
-    def child_of;
+    def context
+    def url
+    def product
+    def token
+    def build
+    def env
+    def is_url
+    def is_parent
+    def engine
+    def child_of
     
     def major_keys = [
         [
@@ -182,13 +182,13 @@ class UniverseClient {
      * @param product Name of product (example: "RPR_Maya")
      */
     UniverseClient(context, url, env, is_url, product) {
-        this.url = url;
-        this.context = context;
-        this.env = env;
-        this.is_url = is_url;
-        this.product = product;
-        this.child_of = false;
-        this.is_parent = false;
+        this.url = url
+        this.context = context
+        this.env = env
+        this.is_url = is_url
+        this.product = product
+        this.child_of = false
+        this.is_parent = false
     }
 
     /**
@@ -200,11 +200,11 @@ class UniverseClient {
      * @param product Name of product (example: "RPR_Maya")
      */
     UniverseClient(context, url, env, product) {
-        this.url = url;
-        this.context = context;
-        this.env = env;
-        this.product = product;
-        this.is_parent = true;
+        this.url = url
+        this.context = context
+        this.env = env
+        this.product = product
+        this.is_parent = true
     }
 
     /**
@@ -220,10 +220,10 @@ class UniverseClient {
      */
     UniverseClient(context, url, env, is_url, product, engine, child_of) {
         this(context, url, env, is_url, product)
-        this.is_parent = false;
-        this.engine = engine;
-        this.child_of = child_of.build.id;
-        this.token = child_of.token;
+        this.is_parent = false
+        this.engine = engine
+        this.child_of = child_of.build.id
+        this.token = child_of.token
     }
 
     /**
@@ -255,7 +255,7 @@ class UniverseClient {
                 switch(response.status){
                     case 401:
                         this.tokenSetup()
-                        break;
+                        break
                 }
                 return false // continue loop
             } catch(FlowInterruptedException error) {
@@ -304,7 +304,7 @@ class UniverseClient {
      * @param info info map ["key1": "value1", ... , "keyN": "valueN"]
      */
 
-    def createBuild(envs = "", suites = "", updRefs = false, options = null, front_url = "") {
+    def createBuild(envs = "", suites = "", updRefs = false, options = null, front_url = "", buildType = "") {
         def request = {
             // prepare build parameters
             def parameters = [:]
@@ -397,21 +397,22 @@ class UniverseClient {
             )
             
             def jsonSlurper = new JsonSlurperClassic()
-            def content = jsonSlurper.parseText(res.content);
-            this.build = content["build"];
-            this.context.echo content["msg"];
+            def content = jsonSlurper.parseText(res.content)
+            this.build = content["build"]
+            this.context.echo content["msg"]
             
             if (this.is_parent || (!this.child_of && !this.is_parent)) {
                 if (front_url) {
                     if (this.context.currentBuild.description == null) {
                         this.context.currentBuild.description = ""
                     }
-
-                    this.context.currentBuild.description += "<br><a href='${front_url}/products/${this.build.job_id}/${this.build.id}/summary' target='_blank'>UMS Report (${this.url.replaceAll('api','')})</a>"
+                    if (buildType) {
+                        this.context.createSummary("/userContent/ums_${buildType}.svg").appendText("<a href='${front_url}/products/${this.build.job_id}/${this.build.id}/summary'>Universal Monitoring System [${buildType.toUpperCase()}]</a>", false)
+                    }
                 }
             }
 
-            return res;
+            return res
         }
         retryWrapper(request)
     }
@@ -443,7 +444,7 @@ class UniverseClient {
                 url: "${this.url}/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
                 validResponseCodes: '0:599'
             )
-            return res;
+            return res
         }
         retryWrapper(request)
     }
@@ -494,7 +495,7 @@ class UniverseClient {
                 validResponseCodes: '0:599'
             )
 
-            return res;
+            return res
         }
         retryWrapper(request, [200], false)
     }
@@ -518,8 +519,23 @@ class UniverseClient {
                 url: "${this.url}/api/build?id=${this.build["id"]}&jobId=${this.build["job_id"]}",
                 validResponseCodes: '0:599'
             )
-            return res;
+            return res
         }
         retryWrapper(request)
+    }
+
+    String toString() {
+        return """
+            context: ${context}
+            url: ${url}
+            product: ${product}
+            token: ${token}
+            build: ${build}
+            env: ${env}
+            is_url: ${is_url}
+            is_parent: ${is_parent}
+            engine: ${engine}
+            child_of: ${child_of} 
+        """
     }
 }

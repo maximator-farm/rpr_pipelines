@@ -69,22 +69,22 @@ def getCoreSDK(String osName, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "Ubuntu18SDK"
+                unstash "${osName}SDK"
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    cp binUbuntu18.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                    cp bin${osName}.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
                 """
 
             } else {
 
                 println "[INFO] The plugin ${options.pluginUbuntuSha}.zip exists in the storage."
                 sh """
-                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip" binUbuntu18.zip
+                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip" bin${osName}.zip
                 """
             }
 
-            unzip zipFile: "binUbuntu18.zip", dir: "rprSdk", quiet: true
+            unzip zipFile: "bin${osName}.zip", dir: "rprSdk", quiet: true
     }
 }
 
@@ -280,7 +280,7 @@ def executeTests(String osName, String asicName, Map options)
                                 // remove brocken core package
                                 removeInstaller(osName: osName, options: options, extension: "zip")
                                 collectCrashInfo(osName, options, options.currentTry)
-                                if (osName == "Ubuntu18"){
+                                if (osName.contains("Ubuntu")) {
                                     sh """
                                         echo "Restarting Unix Machine...."
                                         hostname
@@ -344,16 +344,17 @@ def executeBuildOSX(Map options) {
     }
 }
 
-def executeBuildLinux(Map options) {
-    withNotifications(title: "Ubuntu18", options: options, logUrl: "${BUILD_URL}/artifact/Build-Ubuntu18.log",
-        artifactUrl: "${BUILD_URL}/artifact/binUbuntu18.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+def executeBuildLinux(String osName, Map options) {
+    withNotifications(title: "${osName}", options: options, logUrl: "${BUILD_URL}/artifact/Build-${osName}.log",
+        artifactUrl: "${BUILD_URL}/artifact/bin${osName}.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        // no artifacts in repo for ubuntu20
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
-            zip archive: true, dir: ".", glob: "", zipFile: "binUbuntu18.zip"
-            stash includes: "binUbuntu18.zip", name: "Ubuntu18SDK"
-            options.pluginUbuntuSha = sha1 "binUbuntu18.zip"
+            zip archive: true, dir: ".", glob: "", zipFile: "bin${osName}.zip"
+            stash includes: "bin${osName}.zip", name: "${osName}SDK"
+            options.pluginUbuntuSha = sha1 "bin${osName}.zip"
         }
         if (options.sendToUMS) {
-            options.universeManager.sendToMINIO(options, "Ubuntu18", "../RadeonProRenderSDK/RadeonProRender/binWin64", "binUbuntu18.zip", false)
+            options.universeManager.sendToMINIO(options, "${osName}", "../RadeonProRenderSDK/RadeonProRender/binUbuntu18", "bin${osName}.zip", false)
         }
     }
 }
@@ -365,8 +366,7 @@ def executeBuild(String osName, Map options)
     }
 
     try {
-        dir('RadeonProRenderSDK')
-        {
+        dir('RadeonProRenderSDK') {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git", false, options["prBranchName"], options["prRepoName"])
             }
@@ -381,7 +381,7 @@ def executeBuild(String osName, Map options)
                     executeBuildOSX(options)
                     break
                 default:
-                    executeBuildLinux(options)
+                    executeBuildLinux(osName, options)
             }
         }
     } catch (e) {
@@ -400,7 +400,7 @@ def executePreBuild(Map options)
     if (env.CHANGE_URL) {
         println "Branch was detected as Pull Request"
     } else if (env.BRANCH_NAME == "master") {
-        println "[INFO] ${env.BRANCH_NAME} branch was detected"
+        println("[INFO] ${env.BRANCH_NAME} branch was detected")
         options.collectTrackedMetrics = true
     }
 
@@ -413,9 +413,9 @@ def executePreBuild(Map options)
         options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
-        println "The last commit was written by ${options.commitAuthor}."
-        println "Commit message: ${options.commitMessage}"
-        println "Commit SHA: ${options.commitSHA}"
+        println("The last commit was written by ${options.commitAuthor}.")
+        println("Commit message: ${options.commitMessage}")
+        println("Commit SHA: ${options.commitSHA}")
 
         if (options.projectBranch){
             currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
@@ -448,7 +448,7 @@ def executePreBuild(Map options)
                 options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             }
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-            println "[INFO] Test branch hash: ${options['testsBranch']}"
+            println("[INFO] Test branch hash: ${options['testsBranch']}")
 
             if (options.testsPackage != "none") {
                 // json means custom test suite. Split doesn't supported
@@ -461,8 +461,7 @@ def executePreBuild(Map options)
                 options.testsPackage = "none"
                 options.groupsUMS = tests
             } else {
-                options.tests.split(" ").each()
-                {
+                options.tests.split(" ").each() {
                     tests << "${it}"
                 }
                 options.tests = tests
@@ -525,7 +524,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 dir("jobs_launcher") {
                     bat """
-                    count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -571,7 +570,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         }
 
                         bat """
-                            build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
+                            build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
                         """
 
                         bat "get_status.bat ..\\summaryTestResults"
@@ -682,7 +681,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectBranch = "",
          String assetsBranch = "master",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;Ubuntu20:AMD_RadeonVII',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String renderDevice = "gpu",

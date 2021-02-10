@@ -28,7 +28,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                         clearBinariesWin()
 
                         println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "Blender", options)
+                        downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                         bat """
                             IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -39,7 +39,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "Blender", options)
+                    downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -78,7 +78,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                         clearBinariesUnix()
 
                         println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "Blender", options)
+                        downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                         sh """
                             mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -89,7 +89,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "Blender", options)
+                    downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -128,7 +128,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                         clearBinariesUnix()
 
                         println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "Blender", options)
+                        downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                         sh """
                             mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -139,7 +139,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "Blender", options)
+                    downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -176,7 +176,6 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
                     make_results_baseline.bat ${delete}
                 """
                 break
-            // OSX & Ubuntu18
             default:
                 sh """
                     ./make_results_baseline.sh ${delete}
@@ -187,14 +186,22 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 
 def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry)
 {
-    dir("scripts") {
-        switch(osName) {
-            case 'Windows':
-                bat "build_rpr_cache.bat ${toolVersion} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
-                break
-            default:
-                sh "./build_rpr_cache.sh ${toolVersion} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"        
+    try {
+        dir("scripts") {
+            switch(osName) {
+                case 'Windows':
+                    bat "build_rpr_cache.bat ${toolVersion} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
+                    break
+                default:
+                    sh "./build_rpr_cache.sh ${toolVersion} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"        
+            }
         }
+    } catch (e) {
+        String cacheBuildingLog = readFile("${log_name}_${currentTry}.cb.log")
+        if (cacheBuildingLog.contains("engine not found 'RPR'")) {
+            throw new ExpectedExceptionWrapper(NotificationConfiguration.PLUGIN_NOT_FOUND, e)
+        }
+        throw e
     }
 }
 
@@ -274,7 +281,7 @@ def executeTests(String osName, String asicName, Map options)
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
                 timeout(time: "12", unit: "MINUTES") {
                     getBlenderAddonInstaller(osName, options)
-                    newPluginInstalled = installBlenderAddon(osName, options.toolVersion, options)
+                    newPluginInstalled = installBlenderAddon(osName, 'rprblender', options.toolVersion, options)
                     println "[INFO] Install function on ${env.NODE_NAME} return ${newPluginInstalled}"
                 }
             }
@@ -285,8 +292,7 @@ def executeTests(String osName, String asicName, Map options)
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
                         String cacheImgPath = "./Work/Results/Blender28/cache_building.jpg"
                         if(!fileExists(cacheImgPath)){
-                            println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
-                            throw new ExpectedExceptionWrapper("No output image after cache building.", new Exception("No output image after cache building."))
+                            throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
                         } else {
                             verifyMatlib("Blender", cacheImgPath, 70, osName, options)
                         }
@@ -297,7 +303,7 @@ def executeTests(String osName, String asicName, Map options)
             println(e.toString())
             println("[ERROR] Failed to install plugin on ${env.NODE_NAME}")
             // deinstalling broken addon
-            installBlenderAddon(osName, options.toolVersion, options, false, true)
+            installBlenderAddon(osName, 'rprblender', options.toolVersion, options, false, true)
             // remove installer of broken addon
             removeInstaller(osName: osName, options: options, extension: "zip")
             throw e
@@ -431,7 +437,7 @@ def executeTests(String osName, String asicName, Map options)
                             // check that group isn't fully skipped
                             if (sessionReport.summary.total != sessionReport.summary.skipped || sessionReport.summary.total == 0){
                                 collectCrashInfo(osName, options, options.currentTry)
-                                installBlenderAddon(osName, options.toolVersion, options, false, true)
+                                installBlenderAddon(osName, 'rprblender', options.toolVersion, options, false, true)
                                 // remove installer of broken addon
                                 removeInstaller(osName: osName, options: options, extension: "zip")
                                 String errorMessage
@@ -549,7 +555,7 @@ def executeBuildOSX(Map options)
 def executeBuildLinux(String osName, Map options)
 {
     dir('RadeonProRenderBlenderAddon/BlenderPkg') {
-        GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Ubuntu18.log")
+        GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         sh """
             ./build_linux.sh >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -640,11 +646,11 @@ def executePreBuild(Map options)
 {
 
     // manual job with prebuilt plugin
-    if (options.isPreBuilt) {
+    if (options['isPreBuilt']) {
         println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
         currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
-        options.executeBuild = false
-        options.executeTests = true
+        options['executeBuild'] = false
+        options['executeTests'] = true
     // manual job
     } else if (options.forceBuild) {
         println "[INFO] Manual job launch detected"
@@ -654,9 +660,9 @@ def executePreBuild(Map options)
     } else {
         if (env.CHANGE_URL) {
             println "[INFO] Branch was detected as Pull Request"
-            options.executeBuild = true
-            options.executeTests = true
-            options.testsPackage = "regression.json"
+            options['executeBuild'] = true
+            options['executeTests'] = true
+            options['testsPackage'] = "regression.json"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
@@ -963,7 +969,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         String engine = "${it}"
                         def skippedTests = JsonOutput.toJson(options.skippedTests)
                         bat """
-                        count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${escapeCharsByUnicode(skippedTests.toString())}\"
+                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${utils.escapeCharsByUnicode(skippedTests.toString())}\"
                         """
                     }
                 }
@@ -1014,11 +1020,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             try {
                                 if (options['isPreBuilt']) {
                                     bat """
-                                        build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(engineName)}\"
+                                        build_reports.bat ..\\summaryTestResults\\${engine} ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\"
                                     """
                                 } else {
                                     bat """
-                                        build_reports.bat ..\\summaryTestResults\\${engine} ${escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(engineName)}\"
+                                        build_reports.bat ..\\summaryTestResults\\${engine} ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
                                     """
                                 }
                             } catch (e) {
@@ -1143,7 +1149,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String projectBranch = "",
     String assetsBranch = "master",
     String testsBranch = "master",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;Ubuntu18:AMD_RadeonVII;OSX:AMD_RXVEGA',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI;Ubuntu18:AMD_RadeonVII;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,

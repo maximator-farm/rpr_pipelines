@@ -248,7 +248,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         options.commitMessage = options.commitMessage.replace('"', '')                  
 
                         bat """
-                        build_performance_reports.bat ..\\summaryTestResults ML ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${buildNumber}\"
+                        build_performance_reports.bat ..\\summaryTestResults ML ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${buildNumber}\"
                         """
 
                         bat "get_status.bat ..\\summaryTestResults"

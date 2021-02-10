@@ -1,9 +1,26 @@
 public class NotificationConfiguration {
+
+    def static PLUGIN_NOT_FOUND = "Plugin not found during cache building."
+
+    def static FAILED_TO_VERIFY_MATLIB = "Failed to verify installed MatLib."
+
+    def static FAILED_TO_INSTALL_MATLIB = "Failed to install MatLib."
+
+    def static NO_OUTPUT_IMAGE = "No output image after cache building."
     
     def static ENGINES_PARAM = [
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Engines parameter is required.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC
+            ]
+        ]
+    ]
+
+    def static DELEGATES_PARAM = [
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Delegates parameter is required.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC
             ]
         ]
@@ -210,6 +227,26 @@ public class NotificationConfiguration {
                 "githubNotification": ["status": "timed_out"]
             ],
             [
+                "class": Exception, "problemMessage": PLUGIN_NOT_FOUND, 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [PLUGIN_NOT_FOUND]
+            ],
+            [
+                "class": Exception, "problemMessage": FAILED_TO_VERIFY_MATLIB, 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [FAILED_TO_VERIFY_MATLIB]
+            ],
+            [
+                "class": Exception, "problemMessage": FAILED_TO_INSTALL_MATLIB, 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [FAILED_TO_INSTALL_MATLIB]
+            ],
+            [
+                "class": Exception, "problemMessage": NO_OUTPUT_IMAGE, 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [NO_OUTPUT_IMAGE]
+            ],
+            [
                 "class": Exception, "problemMessage": "Failed to build cache.", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
             ]
@@ -311,5 +348,11 @@ public class NotificationConfiguration {
     def static CAN_NOT_GET_TESTS_STATUS = "Can't get tests status."
 
     def static EXECUTE_UNIT_TESTS = "Executing unit tests."
+
+    def static INVALID_PLUGIN_SIZE = "Invalid plugin (size is less than 10Mb)."
+
+    def static CORRUPTED_ZIP_PLUGIN = "Corrupted .zip plugin."
+
+    def static CORRUPTED_MSI_PLUGIN = "Corrupted .msi plugin."
 
 }

@@ -27,7 +27,7 @@ def getMaxPluginInstaller(String osName, Map options)
                         clearBinariesWin()
 
                         println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "Max", options)
+                        downloadPlugin(osName, "RadeonProRenderMax", options)
 
                         bat """
                             IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -38,7 +38,7 @@ def getMaxPluginInstaller(String osName, Map options)
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "Max", options)
+                    downloadPlugin(osName, "RadeonProRenderMax", options)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -634,11 +634,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         if (options['isPreBuilt'])
                         {
                             bat """
-                                build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("3ds Max")} "PreBuilt" "PreBuilt" "PreBuilt"
+                                build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("3ds Max")} "PreBuilt" "PreBuilt" "PreBuilt"
                             """
                         } else {
                             bat """
-                                build_reports.bat ..\\summaryTestResults ${escapeCharsByUnicode("3ds Max")} ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("3ds Max")} ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }
                     }

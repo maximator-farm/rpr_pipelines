@@ -27,7 +27,7 @@ def getMayaPluginInstaller(String osName, Map options)
                         clearBinariesWin()
 
                         println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "Maya", options)
+                        downloadPlugin(osName, "RadeonProRenderMaya", options)
 
                         bat """
                             IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -38,7 +38,7 @@ def getMayaPluginInstaller(String osName, Map options)
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "Maya", options)
+                    downloadPlugin(osName, "RadeonProRenderMaya", options)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -77,7 +77,7 @@ def getMayaPluginInstaller(String osName, Map options)
                         clearBinariesUnix()
 
                         println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "Maya", options)
+                        downloadPlugin(osName, "RadeonProRenderMaya", options)
 
                         sh """
                             mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -88,7 +88,7 @@ def getMayaPluginInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "Maya", options)
+                    downloadPlugin(osName, "RadeonProRenderMaya", options)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -143,17 +143,25 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 
 def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry)
 {
-    dir("scripts") {
-        switch(osName) {
-            case 'Windows':
-                bat "build_rpr_cache.bat ${toolVersion} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
-                break
-            case 'OSX':
-                sh "./build_rpr_cache.sh ${toolVersion} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"
-                break
-            default:
-                println "[WARNING] ${osName} is not supported"
+    try {
+        dir("scripts") {
+            switch(osName) {
+                case 'Windows':
+                    bat "build_rpr_cache.bat ${toolVersion} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
+                    break
+                case 'OSX':
+                    sh "./build_rpr_cache.sh ${toolVersion} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"
+                    break
+                default:
+                    println "[WARNING] ${osName} is not supported"
+            }
         }
+    } catch (e) {
+        String cacheBuildingLog = readFile("${log_name}_${currentTry}.cb.log")
+        if (cacheBuildingLog.contains("Cannot open renderer description file \"FireRenderRenderer.xml\"")) {
+            throw new ExpectedExceptionWrapper(NotificationConfiguration.PLUGIN_NOT_FOUND, e)
+        }
+        throw e
     }
 }
 
@@ -243,8 +251,7 @@ def executeTests(String osName, String asicName, Map options)
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
                         String cacheImgPath = "./Work/Results/Maya/cache_building.jpg"
                         if(!fileExists(cacheImgPath)){
-                            println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
-                            throw new ExpectedExceptionWrapper("No output image after cache building.", new Exception("No output image after cache building."))
+                            throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
                         } else {
                             verifyMatlib("Maya", cacheImgPath, 50, osName, options)
                         }
@@ -870,7 +877,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         def skippedTests = JsonOutput.toJson(options.skippedTests)
                         // \\\\ - prevent escape sequence '\N'
                         bat """
-                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${escapeCharsByUnicode(skippedTests.toString())}\"
+                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${utils.escapeCharsByUnicode(skippedTests.toString())}\"
                         """
                     }
                 }
@@ -922,11 +929,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
                                 if (options['isPreBuilt']) {
                                     // \\\\ - prevent escape sequence '\N'
                                     bat """
-                                        build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${escapeCharsByUnicode(engineName)}\"
+                                        build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\"
                                     """
                                 } else {
                                     bat """
-                                        build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\" \"${escapeCharsByUnicode(engineName)}\"
+                                        build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
                                     """
                                 }
                             } catch (e) {

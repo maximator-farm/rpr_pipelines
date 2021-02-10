@@ -46,7 +46,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 						render_service_send_render_status("Downloading plugin", options.id, options.django_url)
 						clearBinariesWin()
 
-						downloadPlugin('Windows', toolName, installationOptions, 'renderServiceCredentials')
+						downloadPlugin('Windows', "RadeonProRender${toolName}", installationOptions, 'renderServiceCredentials')
 						win_addon_name = installationOptions.pluginWinSha
 					} catch(FlowInterruptedException e) {
 						throw e
@@ -66,7 +66,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 									move RadeonProRender*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${win_addon_name}.zip"
 								"""
 
-								installationStatus = installBlenderAddon('Windows', version, installationOptions)
+								installationStatus = installBlenderAddon('Windows', 'rprblender', version, installationOptions)
 								break
 
 							default:

@@ -10,7 +10,7 @@ def getMaxPluginInstaller(String osName, Map options)
                 clearBinariesWin()
                 
                 println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                downloadPlugin(osName, "Max", options)
+                downloadPlugin(osName, "RadeonProRenderMax", options)
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -340,7 +340,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
                     dir("jobs_launcher") {
                         bat """
-                            build_reports.bat ..\\summaryTestResults Vray2RPR ${options.commitSHA} ${branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                            build_reports.bat ..\\summaryTestResults Vray2RPR ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                         """
                     }
                 }

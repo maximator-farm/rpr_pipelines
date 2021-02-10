@@ -1,9 +1,19 @@
-def call(String osName, String tool_version, Map options, Boolean matlib=false, Boolean deinstall=false)
+def call(String osName, String pluginName, String tool_version, Map options, Boolean matlib=false, Boolean deinstall=false)
 {
+    List possiblePlugins = ["rprblender", "hdusd"]
+
+    // deintall other plugins
+    for (possiblePlugin in possiblePlugins) {
+        if (possiblePlugin != pluginName) {
+            println("[INFO] Uninstalling ${possiblePlugin} Blender Addon")
+            uninstallBlenderAddon(osName, possiblePlugin, tool_version, options)
+        }
+    }
+
     // deinstall plugin from tool pipeline
     if (deinstall) {
         println '[INFO] Uninstalling Blender addon'
-        uninstallBlenderAddon(osName, tool_version, options)
+        uninstallBlenderAddon(osName, pluginName, tool_version, options)
         return
     }
 
@@ -15,23 +25,23 @@ def call(String osName, String tool_version, Map options, Boolean matlib=false, 
 
     // Prebuilt plugin will be reinstalled in any cases
     if (options.isPreBuilt) { 
-        reinstallBlenderAddon(osName, tool_version, options, matlib)
+        reinstallBlenderAddon(osName, pluginName, tool_version, options, matlib)
         return true
 
     // Check installed plugin and reinstall if needed
     } else {
-        if (checkExistenceOfBlenderAddon(osName, tool_version, options)) {
+        if (checkExistenceOfBlenderAddon(osName, pluginName, tool_version, options)) {
             println '[INFO] Current plugin is already installed.'
             return false
         } else {
-            reinstallBlenderAddon(osName, tool_version, options, matlib)
+            reinstallBlenderAddon(osName, pluginName, tool_version, options, matlib)
             return true
         }
     }
 }
 
 
-def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options) 
+def checkExistenceOfBlenderAddon(String osName, String pluginName, String tool_version, Map options) 
 {
 
     println "[INFO] Checking existence of the Blender Addon on test PC."
@@ -48,7 +58,7 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
                 bat """
                     echo import os >> getInstallerCommitHash.py
                     echo commit_hash = "unknown" >> getInstallerCommitHash.py
-                    echo init_path = r"C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Blender Foundation\\Blender\\${tool_version}\\scripts\\addons\\rprblender\\__init__.py" >> getInstallerCommitHash.py
+                    echo init_path = r"C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Blender Foundation\\Blender\\${tool_version}\\scripts\\addons\\${pluginName}\\__init__.py" >> getInstallerCommitHash.py
                     echo if os.path.exists(init_path): >> getInstallerCommitHash.py
                     echo     with open(init_path) as f: >> getInstallerCommitHash.py
                     echo         lines = f.readlines() >> getInstallerCommitHash.py
@@ -66,7 +76,7 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
                 sh """
                     echo import os >> getInstallerCommitHash.py
                     echo commit_hash = '"unknown"' >> getInstallerCommitHash.py
-                    echo init_path = r'"/Users/${env.USERNAME}/Library/Application Support/Blender/${tool_version}/scripts/addons/rprblender/__init__.py"' >> getInstallerCommitHash.py
+                    echo init_path = r'"/Users/${env.USERNAME}/Library/Application Support/Blender/${tool_version}/scripts/addons/${pluginName}/__init__.py"' >> getInstallerCommitHash.py
                     echo if os.path.exists'(init_path)': >> getInstallerCommitHash.py
                     echo '    'with open'(init_path)' as f: >> getInstallerCommitHash.py
                     echo '        'lines = f.readlines'()' >> getInstallerCommitHash.py
@@ -84,7 +94,7 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
                 sh """
                     echo import os >> getInstallerCommitHash.py
                     echo commit_hash = '"unknown"' >> getInstallerCommitHash.py
-                    echo init_path = r'"/home/${env.USERNAME}/.config/blender/${tool_version}/scripts/addons/rprblender/__init__.py"' >> getInstallerCommitHash.py
+                    echo init_path = r'"/home/${env.USERNAME}/.config/blender/${tool_version}/scripts/addons/${pluginName}/__init__.py"' >> getInstallerCommitHash.py
                     echo if os.path.exists'(init_path)': >> getInstallerCommitHash.py
                     echo '    'with open'(init_path)' as f: >> getInstallerCommitHash.py
                     echo '        'lines = f.readlines'()' >> getInstallerCommitHash.py
@@ -110,12 +120,12 @@ def checkExistenceOfBlenderAddon(String osName, String tool_version, Map options
 }
 
 
-def reinstallBlenderAddon(String osName, String tool_version, Map options, Boolean matlib){
+def reinstallBlenderAddon(String osName, String pluginName, String tool_version, Map options, Boolean matlib){
     
     println '[INFO] Uninstalling Blender addon'
-    uninstallBlenderAddon(osName, tool_version, options)
+    uninstallBlenderAddon(osName, pluginName, tool_version, options)
     println '[INFO] Installing Blender addon'
-    installBlenderAddon(osName, tool_version, options)
+    installBlenderAddon(osName, pluginName, tool_version, options)
     if (matlib){
         installMatLib(osName, options)
     }
@@ -123,7 +133,7 @@ def reinstallBlenderAddon(String osName, String tool_version, Map options, Boole
 
 
 
-def uninstallBlenderAddon(String osName, String tool_version, Map options)
+def uninstallBlenderAddon(String osName, String pluginName, String tool_version, Map options)
 {
     // Remove RadeonProRender Addon from Blender  
     try {
@@ -133,15 +143,15 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                 try {
                     timeout(time: "5", unit: 'MINUTES') {
                         bat """
-                            echo "Disabling RPR Addon for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
+                            echo "Disabling ${pluginName} for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
                             echo import bpy >> disableRPRAddon.py
-                            echo bpy.ops.preferences.addon_disable(module="rprblender")  >> disableRPRAddon.py
+                            echo bpy.ops.preferences.addon_disable(module="${pluginName}")  >> disableRPRAddon.py
                             echo bpy.ops.wm.save_userpref() >> disableRPRAddon.py
                             "C:\\Program Files\\Blender Foundation\\Blender ${tool_version}\\blender.exe" -b -P disableRPRAddon.py >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
 
-                            echo "Removing RPR Addon for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
+                            echo "Removing ${pluginName} for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
                             echo import bpy >> removeRPRAddon.py
-                            echo bpy.ops.preferences.addon_remove(module="rprblender") >> removeRPRAddon.py
+                            echo bpy.ops.preferences.addon_remove(module="${pluginName}") >> removeRPRAddon.py
                             echo bpy.ops.wm.save_userpref() >> removeRPRAddon.py
                             "C:\\Program Files\\Blender Foundation\\Blender ${tool_version}\\blender.exe" -b -P removeRPRAddon.py >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
                         """
@@ -150,10 +160,10 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                     println "[ERROR] Failed to delete Blender Addon via python script."
                 } finally {
 
-                    if (fileExists("C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Blender Foundation\\Blender\\${tool_version}\\scripts\\addons\\rprblender")) {
+                    if (fileExists("C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Blender Foundation\\Blender\\${tool_version}\\scripts\\addons\\${pluginName}")) {
                         dir("C:\\Users\\${env.USERNAME}\\AppData\\Roaming\\Blender Foundation\\Blender\\${tool_version}\\scripts\\addons") {
                             bat """
-                                rmdir /s/q rprblender
+                                rmdir /s/q ${pluginName}
                             """
                         }
                         println "[INFO] Deleted using cmd command."
@@ -166,17 +176,17 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                 try {
                     timeout(time: "5", unit: 'MINUTES') {
                         sh """
-                            echo "Disabling RPR Addon for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
+                            echo "Disabling ${pluginName} for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
 
                             echo import bpy >> disableRPRAddon.py
-                            echo bpy.ops.preferences.addon_disable'(module="rprblender")'  >> disableRPRAddon.py
+                            echo bpy.ops.preferences.addon_disable'(module="${pluginName}")'  >> disableRPRAddon.py
                             echo bpy.ops.wm.save_userpref'()' >> disableRPRAddon.py
                             blender${tool_version} -b -P disableRPRAddon.py >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
 
-                            echo "Removing RPR Addon for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
+                            echo "Removing ${pluginName} for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
 
                             echo import bpy >> removeRPRAddon.py
-                            echo bpy.ops.preferences.addon_remove'(module="rprblender")' >> removeRPRAddon.py
+                            echo bpy.ops.preferences.addon_remove'(module="${pluginName}")' >> removeRPRAddon.py
                             echo bpy.ops.wm.save_userpref'()' >> removeRPRAddon.py
 
                             blender${tool_version} -b -P removeRPRAddon.py >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
@@ -186,10 +196,10 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                     println "[ERROR] Failed to delete Blender Addon via python script."
                 } finally {
 
-                    if (fileExists("/Users/${env.USERNAME}/Library/Application Support/Blender/${tool_version}/scripts/addons/rprblender")) {
+                    if (fileExists("/Users/${env.USERNAME}/Library/Application Support/Blender/${tool_version}/scripts/addons/${pluginName}")) {
                         dir("/Users/${env.USERNAME}/Library/Application Support/Blender/${tool_version}/scripts/addons") {
                             sh """
-                                rm -fdr rprblender
+                                rm -fdr ${pluginName}
                             """
                             println "[INFO] Deleted using sh command."
                         }
@@ -202,17 +212,17 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                 try {
                     timeout(time: "10", unit: 'MINUTES') {
                         sh """
-                            echo "Disabling RPR Addon for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
+                            echo "Disabling ${pluginName} for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
 
                             echo import bpy >> disableRPRAddon.py
-                            echo bpy.ops.preferences.addon_disable'(module="rprblender")'  >> disableRPRAddon.py
+                            echo bpy.ops.preferences.addon_disable'(module="${pluginName}")'  >> disableRPRAddon.py
                             echo bpy.ops.wm.save_userpref'()' >> disableRPRAddon.py
                             blender${tool_version} -b -P disableRPRAddon.py >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
 
-                            echo "Removing RPR Addon for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
+                            echo "Removing ${pluginName} for Blender." >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
 
                             echo import bpy >> removeRPRAddon.py
-                            echo bpy.ops.preferences.addon_remove'(module="rprblender")' >> removeRPRAddon.py
+                            echo bpy.ops.preferences.addon_remove'(module="${pluginName}")' >> removeRPRAddon.py
                             echo bpy.ops.wm.save_userpref'()' >> removeRPRAddon.py
 
                             blender${tool_version} -b -P removeRPRAddon.py >> \"${options.stageName}_${options.currentTry}.uninstall.log\" 2>&1
@@ -221,11 +231,11 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
                 } catch (e) {
                     println "[ERROR] Failed to delete Blender Addon via python script."
                 } finally {
-                    if (fileExists("/home/${env.USERNAME}/.config/blender/${tool_version}/scripts/addons/rprblender")) {
+                    if (fileExists("/home/${env.USERNAME}/.config/blender/${tool_version}/scripts/addons/${pluginName}")) {
 
                         dir("/home/${env.USERNAME}/.config/blender/${tool_version}/scripts/addons") {
                             sh """
-                                rm -fdr rprblender
+                                rm -fdr ${pluginName}
                             """
                         }
                         println "[INFO] Deleted using sh command."
@@ -241,9 +251,9 @@ def uninstallBlenderAddon(String osName, String tool_version, Map options)
     
 
 
-def installBlenderAddon(String osName, String tool_version, Map options)
+def installBlenderAddon(String osName, String pluginName, String tool_version, Map options)
 {
-    // Installing RPR Addon in Blender
+    // Installing Addon in Blender
 
     switch(osName) {
         case "Windows":
@@ -253,11 +263,11 @@ def installBlenderAddon(String osName, String tool_version, Map options)
                 addon_name = "${options.commitSHA}_Windows"
             }
             bat """
-                echo "Installing RPR Addon in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
+                echo "Installing ${pluginName} in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
                 echo import bpy >> registerRPRinBlender.py
                 echo addon_path = "${CIS_TOOLS}\\..\\PluginsBinaries\\\\${addon_name}.zip" >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_install(filepath=addon_path) >> registerRPRinBlender.py
-                echo bpy.ops.preferences.addon_enable(module="rprblender") >> registerRPRinBlender.py
+                echo bpy.ops.preferences.addon_enable(module="${pluginName}") >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref() >> registerRPRinBlender.py
 
                 "C:\\Program Files\\Blender Foundation\\Blender ${tool_version}\\blender.exe" -b -P registerRPRinBlender.py >> \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
@@ -271,11 +281,11 @@ def installBlenderAddon(String osName, String tool_version, Map options)
                 addon_name = "${options.commitSHA}_OSX"
             }
             sh """
-                echo "Installing RPR Addon in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
+                echo "Installing ${pluginName} in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
                 echo import bpy >> registerRPRinBlender.py
                 echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"' >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_install'(filepath=addon_path)' >> registerRPRinBlender.py
-                echo bpy.ops.preferences.addon_enable'(module="rprblender")' >> registerRPRinBlender.py
+                echo bpy.ops.preferences.addon_enable'(module="${pluginName}")' >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref'()' >> registerRPRinBlender.py
 
                 blender${tool_version} -b -P registerRPRinBlender.py >> \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
@@ -289,11 +299,11 @@ def installBlenderAddon(String osName, String tool_version, Map options)
                 addon_name = "${options.commitSHA}_${osName}"
             }
             sh """
-                echo "Installing RPR Addon in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
+                echo "Installing ${pluginName} in Blender" >> \"${options.stageName}_${options.currentTry}.install.log\"
                 echo import bpy >> registerRPRinBlender.py
                 echo addon_path = '"${CIS_TOOLS}/../PluginsBinaries/${addon_name}.zip"' >> registerRPRinBlender.py
                 echo bpy.ops.preferences.addon_install'(filepath=addon_path)' >> registerRPRinBlender.py
-                echo bpy.ops.preferences.addon_enable'(module="rprblender")' >> registerRPRinBlender.py
+                echo bpy.ops.preferences.addon_enable'(module="${pluginName}")' >> registerRPRinBlender.py
                 echo bpy.ops.wm.save_userpref'()' >> registerRPRinBlender.py
 
                 blender${tool_version} -b -P registerRPRinBlender.py >> \"${options.stageName}_${options.currentTry}.install.log\" 2>&1

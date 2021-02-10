@@ -100,21 +100,50 @@ def executeTestCommand(String osName, Map options)
     dir('scripts') {
         switch(osName) {
             case 'Windows':
-                bat """
-                    run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                """
+                if (options.enableRIFTracing) {
+                    bat """
+                        mkdir -p "${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace"
+                        set RIF_TRACING_ENABLED=1
+                        set RIF_TRACING_PATH=${env.WORKSPACE}\\${env.STAGE_NAME}_RIF_Trace
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                } else {
+                    bat """
+                        run.bat ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.win_tool_path}\\bin\\husk.exe\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                }
                 break
             case 'OSX':
-                sh """
-                    chmod +x run.sh
-                    ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                """
+                if (options.enableRIFTracing) {
+                    sh """
+                        mkdir -p "${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace"
+                        export RIF_TRACING_ENABLED=1
+                        export RIF_TRACING_PATH=${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace
+                        chmod +x run.sh
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                } else {
+                    sh """
+                        chmod +x run.sh
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"${options.osx_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                }
                 break
             default:
-                sh """
-                    chmod +x run.sh
-                    ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
-                """
+                if (options.enableRIFTracing) {
+                    sh """
+                        mkdir -p "${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace"
+                        export RIF_TRACING_ENABLED=1
+                        export RIF_TRACING_PATH=${env.WORKSPACE}/${env.STAGE_NAME}_RIF_Trace
+                        chmod +x run.sh
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                } else {
+                    sh """
+                        chmod +x run.sh
+                        ./run.sh ${options.testsPackage} \"${options.tests}\" ${options.width} ${options.height} ${options.updateRefs} \"/home/user/${options.unix_tool_path}/bin/husk\" >> \"../${STAGE_NAME}_${options.currentTry}.log\" 2>&1
+                    """
+                }
         }
     }
 }
@@ -147,7 +176,10 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/HoudiniAssets/", 'HoudiniAssets')
+            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_usdplugin_autotests" : "C:\\TestResources\\rpr_usdplugin_autotests"
+            dir(assets_dir){
+                checkOutBranchOrScm(options.assetsBranch, options.assetsRepo, true, null, null, false, true, "radeonprorender-gitlab", true)
+            }
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
@@ -220,6 +252,7 @@ def executeTests(String osName, String asicName, Map options)
                 utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
+            archiveArtifacts artifacts: "${env.STAGE_NAME}_RIF_Trace/**/*.*", allowEmptyArchive: true
             if (stashResults) {
                 dir('Work') {
                     if (fileExists("Results/Houdini/session_report.json")) {
@@ -724,11 +757,11 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             def python3 = options.houdini_python3 ? "py3" : "py2.7"
                             def tool = "Houdini ${options.houdiniVersion} ${python3}"
                             bat """
-                                build_reports.bat ..\\summaryTestResults \"${escapeCharsByUnicode(tool)}\" ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults \"${utils.escapeCharsByUnicode(tool)}\" ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         } else {
                             bat """
-                                build_reports.bat ..\\summaryTestResults USD ${options.commitSHA} ${options.branchName} \"${escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults USD ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }
 
@@ -829,6 +862,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git",
         String projectBranch = "",
         String usdBranch = "master",
+        String assetsBranch = "master",
         String testsBranch = "master",
         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7',
         String buildType = "Houdini",
@@ -838,6 +872,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String updateRefs = 'No',
         String testsPackage = "Full.json",
         String tests = "",
+        Boolean enableRIFTracing = false,
         String width = "0",
         String height = "0",
         String tester_tag = "Houdini",
@@ -857,8 +892,14 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+
             String PRJ_NAME="RadeonProRenderUSDPlugin"
             String PRJ_ROOT="rpr-plugins"
+
+            def assetsRepo
+            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
+                assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_usdplugin_autotests"
+            }
 
             gpusCount = 0
             platforms.split(';').each() { platform ->
@@ -876,6 +917,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         usdBranch:usdBranch,
+                        assetsBranch:assetsBranch,
+                        assetsRepo:assetsRepo,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
@@ -898,6 +941,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         width:width,
                         gpusCount:gpusCount,
                         height:height,
+                        enableRIFTracing:enableRIFTracing,
                         nodeRetry: nodeRetry,
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
