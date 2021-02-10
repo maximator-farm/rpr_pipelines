@@ -150,7 +150,7 @@ def executeUnitTests(String osName, String asicName, Map options)
     }
 
     try {
-        GithubNotificator.updateStatus("Test", options['stageName'], "pending", options, NotificationConfiguration.EXECUTE_UNIT_TESTS, "${BUILD_URL}")
+        GithubNotificator.updateStatus("Test", options['stageName'], "in_progress", options, NotificationConfiguration.EXECUTE_UNIT_TESTS, "${BUILD_URL}")
         executeUnitTestCommand(osName)
     } catch (e) {
         dir("HTML_Report") {
@@ -304,7 +304,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         if (sessionReport.summary.error > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
                         } else if (sessionReport.summary.failed > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_FAILED, "${BUILD_URL}")
                         } else {
@@ -439,13 +439,10 @@ def executePreBuild(Map options)
 {
     if (env.CHANGE_URL) {
         println "Branch was detected as Pull Request"
-        GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
-        options.githubNotificator = githubNotificator
-        githubNotificator.initPreBuild("${BUILD_URL}")
     }
 
     dir('RadeonProRenderSDK') {
-        withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+        withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             checkOutBranchOrScm(options["projectBranch"], "git@github.com:amdadvtech/RadeonProRenderSDKInternal.git")
         }
 
@@ -467,13 +464,22 @@ def executePreBuild(Map options)
         currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
         currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
         currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+        if (env.BRANCH_NAME) {
+            withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+                GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                githubNotificator.init(options)
+                options["githubNotificator"] = githubNotificator
+                githubNotificator.initPreBuild("${BUILD_URL}")
+            }
+        }
     }
 
 
     def tests = []
     options.groupsUMS = []
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_core') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_core.git')
             dir ('jobs_launcher') {
@@ -508,8 +514,8 @@ def executePreBuild(Map options)
             }
         }
 
-        if (env.CHANGE_URL) {
-            options.githubNotificator.initPR(options, "${BUILD_URL}")
+        if (env.BRANCH_NAME) {
+            options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
     }
 }
@@ -583,7 +589,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 def buildNumber = ""
                 if (options.collectTrackedMetrics) {
                     buildNumber = env.BUILD_NUMBER

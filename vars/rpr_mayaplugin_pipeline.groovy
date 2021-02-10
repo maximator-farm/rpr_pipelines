@@ -381,7 +381,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         if (sessionReport.summary.error > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
                         } else if (sessionReport.summary.failed > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_FAILED, "${BUILD_URL}")
                         } else {
@@ -433,7 +433,7 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     dir('RadeonProRenderMayaPlugin\\MayaPkg') {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -483,7 +483,7 @@ def executeBuildWindows(Map options)
 def executeBuildOSX(Map options)
 {
     dir('RadeonProRenderMayaPlugin/MayaPkg') {
-        GithubNotificator.updateStatus("Build", "OSX", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
+        GithubNotificator.updateStatus("Build", "OSX", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
         sh """
             ./build_osx_installer.sh >> ../../${STAGE_NAME}.log 2>&1
         """
@@ -574,9 +574,6 @@ def executePreBuild(Map options)
             options['executeBuild'] = true
             options['executeTests'] = true
             options['testsPackage'] = "regression.json"
-            GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
-            options.githubNotificator = githubNotificator
-            githubNotificator.initPreBuild("${BUILD_URL}")
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
@@ -600,7 +597,7 @@ def executePreBuild(Map options)
 
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderMayaPlugin') {
-            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
             }
 
@@ -620,10 +617,17 @@ def executePreBuild(Map options)
                 currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
 
-            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
+            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
 
                 if (options['incrementVersion']) {
+                    withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+                        GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                        githubNotificator.init(options)
+                        options["githubNotificator"] = githubNotificator
+                        githubNotificator.initPreBuild("${BUILD_URL}")
+                    }
+                    
                     if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
                         println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
@@ -665,7 +669,6 @@ def executePreBuild(Map options)
                 currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
                 currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
                 currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
-
             }
         }
     }
@@ -674,7 +677,7 @@ def executePreBuild(Map options)
     options.timeouts = [:]
     options.groupsUMS = []
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_maya')  {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
 
@@ -801,8 +804,8 @@ def executePreBuild(Map options)
             }
         }
 
-        if (env.CHANGE_URL) {
-            options.githubNotificator.initPR(options, "${BUILD_URL}")
+        if (env.BRANCH_NAME) {
+            options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
 
         options.testsList = options.tests
@@ -887,7 +890,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             List reportsNames = []
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 options.engines.each { engine ->
                     reports.add("${engine}/summary_report.html")
                 }

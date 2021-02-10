@@ -184,7 +184,7 @@ def executeTests(String osName, String asicName, Map options)
                         sessionReport = readJSON file: 'Results/USDViewer/session_report.json'
 
                         if (sessionReport.summary.error > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
                         } else if (sessionReport.summary.failed > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_FAILED, "${BUILD_URL}")
                         } else {
@@ -334,16 +334,13 @@ def executePreBuild(Map options)
     if (env.CHANGE_URL) {
         echo "[INFO] Branch was detected as Pull Request"
         options.testsPackage = "PR.json"
-        GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
-        options.githubNotificator = githubNotificator
-        githubNotificator.initPreBuild("${BUILD_URL}")
     } else if(env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         options.testsPackage = "master.json"
     } else if(env.BRANCH_NAME) {
         options.testsPackage = "smoke.json"
     }
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
     }
 
@@ -365,10 +362,19 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
+    if (env.BRANCH_NAME) {
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+            GithubNotificator githubNotificator = new GithubNotificator(this, options)
+            githubNotificator.init(options)
+            options["githubNotificator"] = githubNotificator
+            githubNotificator.initPreBuild("${BUILD_URL}")
+        }
+    }
+
     def tests = []
     options.timeouts = [:]
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdviewer') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_usdviewer.git')
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
@@ -476,8 +482,8 @@ def executePreBuild(Map options)
             }
         }
 
-        if (env.CHANGE_URL) {
-            options.githubNotificator.initPR(options, "${BUILD_URL}")
+        if (env.BRANCH_NAME) {
+            options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
 
         options.testsList = options.tests
@@ -527,7 +533,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             String branchName = env.BRANCH_NAME ?: options.projectBranch
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"])
                 {
                     dir("jobs_launcher") {
