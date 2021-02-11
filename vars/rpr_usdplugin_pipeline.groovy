@@ -688,7 +688,7 @@ def executePreBuild(Map options) {
             options.tests = tests.join(" ")
         }
 
-        if (env.BRANCH_NAME) {
+        if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
     }
