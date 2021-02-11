@@ -368,7 +368,7 @@ def executeBuild(String osName, Map options)
     try {
         dir('RadeonProRenderSDK') {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkOutBranchOrScm(options["projectBranch"], "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git", false, options["prBranchName"], options["prRepoName"])
+                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
             }
         }
 
@@ -406,7 +406,7 @@ def executePreBuild(Map options)
 
     dir('RadeonProRenderSDK') {
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            checkOutBranchOrScm(options["projectBranch"], "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git")
+            checkOutBranchOrScm(options["projectBranch"], options["projectRepo"])
         }
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -476,7 +476,7 @@ def executePreBuild(Map options)
             }
         }
 
-        if (env.BRANCH_NAME) {
+        if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
     }
@@ -700,6 +700,7 @@ def call(String projectBranch = "",
     Map options = [:]
     options["stage"] = "Init"
     options["problemMessageManager"] = problemMessageManager
+    options["projectRepo"] = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderSDK.git"
     
     def nodeRetry = []
     Map errorsInSuccession = [:]
