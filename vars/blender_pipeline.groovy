@@ -83,7 +83,7 @@ def executeBuild(String osName, Map options)
 
         dir("blender") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkOutBranchOrScm(options["projectBranch"], "git@github.com:Radeon-Pro/blender.git")
+                checkOutBranchOrScm(options["projectBranch"], options.projectRepo)
             }
         }
 
@@ -110,7 +110,7 @@ def executeBuild(String osName, Map options)
 def executePreBuild(Map options)
 {
     dir("blender") {
-        checkOutBranchOrScm(options.projectBranch, "git@github.com:blender/blender.git", true)
+        checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
     }
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -159,7 +159,8 @@ def call(String projectBranch = "master",
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
             println "Platforms: ${platforms}"
 
-            options << [projectBranch:projectBranch,
+            options << [projectRepo:"git@github.com:Radeon-Pro/blender",
+                        projectBranch:projectBranch,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         BUILDER_TAG:'PC-FACTORY-HAMBURG-WIN10',
