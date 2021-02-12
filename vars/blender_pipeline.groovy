@@ -83,7 +83,7 @@ def executeBuild(String osName, Map options)
 
         dir("blender") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkOutBranchOrScm(options["projectBranch"], "git@github.com:blender/blender.git")
+                checkOutBranchOrScm(options["projectBranch"], "git@github.com:Radeon-Pro/blender.git")
             }
         }
 
