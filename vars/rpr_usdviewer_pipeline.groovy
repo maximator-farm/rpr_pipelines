@@ -658,7 +658,7 @@ def call(String projectBranch = "",
          Boolean splitTestsExecution = true,
          String tester_tag = 'USDViewer',
          String parallelExecutionTypeString = "TakeAllNodes",
-         Integer testCaseRetries = 2)
+         Integer testCaseRetries = 3)
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]

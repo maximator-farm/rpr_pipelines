@@ -789,7 +789,7 @@ def call(String projectBranch = "",
          Boolean sendToUMS = true,
          String tester_tag = 'RprViewer',
          String parallelExecutionTypeString = "TakeAllNodes",
-         Integer testCaseRetries = 2)
+         Integer testCaseRetries = 3)
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
