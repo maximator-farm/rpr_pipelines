@@ -88,7 +88,7 @@ def call(String osName, String tool, Map options, String credentialsId = '') {
         }
     }
 
-    validatePlugin(osName, "RadeonProRender${tool}_${osName}.${extension}", options)
+    validatePlugin(osName, "${tool}_${osName}.${extension}", options)
 
     // We haven't any branch so we use sha1 for identifying plugin build
     def pluginSha = sha1 "${tool}_${osName}.${extension}"
