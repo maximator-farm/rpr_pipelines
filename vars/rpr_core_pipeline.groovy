@@ -11,82 +11,185 @@ import java.util.concurrent.atomic.AtomicInteger
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20Core"
 
 
-def getCoreSDK(String osName, Map options)
-{
+def getCoreSDK(String osName, Map options) {
     switch(osName) {
         case 'Windows':
 
-            if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip")) {
+            if (options['isPreBuilt']) {
+                println "[INFO] CoreSDKWinSha: ${options['pluginWinSha']}"
 
-                clearBinariesWin()
+                if (options['pluginWinSha']) {
+                    if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip")) {
+                        println "[INFO] The Core SDK ${options['pluginWinSha']}.zip exists in the storage."
+                    } else {
+                        clearBinariesWin()
 
-                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "WindowsSDK"
+                        println "[INFO] The Core SDK does not exist in the storage. Downloading and copying..."
+                        downloadPlugin(osName, "binWin64", options)
 
-                bat """
-                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    copy binWin64.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
-                """
+                        bat """
+                            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                            copy binWin64*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip"
+                        """
+                    }
+                } else {
+                    clearBinariesWin()
+
+                    println "[INFO] The Core SDK does not exist in the storage. PluginSha is unknown. Downloading and copying..."
+                    downloadPlugin(osName, "binWin64", options)
+
+                    bat """
+                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                        copy binWin64*.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
+                    """
+                }
+
+                unzip zipFile: "binWin64_Windows.zip", dir: "rprSdk", quiet: true
 
             } else {
-                println "[INFO] The plugin ${options.pluginWinSha}.zip exists in the storage."
-                bat """
-                    copy "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip" binWin64.zip
-                """
+                if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip")) {
+
+                    clearBinariesWin()
+
+                    println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
+                    unstash "WindowsSDK"
+
+                    bat """
+                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                        copy binWin64.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
+                    """
+
+                } else {
+                    println "[INFO] The Core SDK ${options.pluginWinSha}.zip exists in the storage."
+                    bat """
+                        copy "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip" binWin64.zip
+                    """
+                }
+                unzip zipFile: "binWin64.zip", dir: "rprSdk", quiet: true
             }
 
-            unzip zipFile: "binWin64.zip", dir: "rprSdk", quiet: true
             break
 
-        case 'OSX':
+        case "OSX":
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip")) {
+            if (options['isPreBuilt']) {
 
-                clearBinariesUnix()
+                println "[INFO] CoreSDKOSXSha: ${options['pluginOSXSha']}"
 
-                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "OSXSDK"
+                if (options['pluginOSXSha']) {
+                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip")) {
+                        println "[INFO] The Core SDK ${options['pluginOSXSha']}.zip exists in the storage."
+                    } else {
+                        clearBinariesUnix()
 
-                sh """
-                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    cp binMacOS.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
-                """
+                        println "[INFO] The Core SDK does not exist in the storage. Downloading and copying..."
+                        downloadPlugin(osName, "binMacOS", options)
+
+                        sh """
+                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                            cp binMacOS*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
+                        """
+                    }
+                } else {
+                    clearBinariesUnix()
+
+                    println "[INFO] The Core SDK does not exist in the storage. PluginSha is unknown. Downloading and copying..."
+                    downloadPlugin(osName, "binMacOS", options)
+
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        cp binMacOS*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
+                    """
+                }
+
+                unzip zipFile: "binMacOS_OSX.zip", dir: "rprSdk", quiet: true
 
             } else {
-                println "[INFO] The plugin ${options.pluginOSXSha}.zip exists in the storage."
-                sh """
-                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip" binMacOS.zip
-                """
+                if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip")) {
+
+                    clearBinariesUnix()
+
+                    println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
+                    unstash "OSXSDK"
+
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        cp binMacOS.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip"
+                    """
+
+                } else {
+                    println "[INFO] The Core SDK ${options.pluginOSXSha}.zip exists in the storage."
+                    sh """
+                        cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip" binMacOS.zip
+                    """
+                }
+
+                unzip zipFile: "binMacOS.zip", dir: "rprSdk", quiet: true
             }
 
-            unzip zipFile: "binMacOS.zip", dir: "rprSdk", quiet: true
             break
 
         default:
 
-            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
+            if (options['isPreBuilt']) {
 
-                clearBinariesUnix()
+                println "[INFO] CoreSDKUbuntuSha: ${options['pluginUbuntuSha']}"
 
-                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "${osName}SDK"
+                if (options['pluginUbuntuSha']) {
+                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
+                        println "[INFO] The Core SDK ${options['pluginUbuntuSha']}.zip exists in the storage."
+                    } else {
+                        clearBinariesUnix()
 
-                sh """
-                    mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
-                    cp bin${osName}.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
-                """
+                        println "[INFO] The Core SDK does not exist in the storage. Downloading and copying..."
+                        downloadPlugin(osName, "bin${osName}", options)
+
+                        sh """
+                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                            cp bin${osName}*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                        """
+                    }
+                } else {
+                    clearBinariesUnix()
+
+                    println "[INFO] The Core SDK does not exist in the storage. PluginSha is unknown. Downloading and copying..."
+                    downloadPlugin(osName, "bin${osName}", options)
+
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        cp bin${osName}*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                    """
+                }
+
+                unzip zipFile: "bin${osName}_${osName}.zip", dir: "rprSdk", quiet: true
 
             } else {
+                if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
 
-                println "[INFO] The plugin ${options.pluginUbuntuSha}.zip exists in the storage."
-                sh """
-                    cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip" bin${osName}.zip
-                """
+                    clearBinariesUnix()
+
+                    println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
+                    unstash "${osName}SDK"
+
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        cp bin${osName}.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                    """
+
+                } else {
+
+                    println "[INFO] The Core SDK ${options.pluginUbuntuSha}.zip exists in the storage."
+                    sh """
+                        cp "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip" bin${osName}.zip
+                    """
+                }
+
+                unzip zipFile: "bin${osName}.zip", dir: "rprSdk", quiet: true
             }
-
-            unzip zipFile: "bin${osName}.zip", dir: "rprSdk", quiet: true
     }
+
 }
+
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete)
 {
@@ -395,44 +498,50 @@ def executeBuild(String osName, Map options)
     }
 }
 
-def executePreBuild(Map options)
-{
-    if (env.CHANGE_URL) {
+def executePreBuild(Map options) {
+    if (options['isPreBuilt']) {
+        println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
+        currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
+        options['executeBuild'] = false
+        options['executeTests'] = true
+    } else if (env.CHANGE_URL) {
         println "Branch was detected as Pull Request"
     } else if (env.BRANCH_NAME == "master") {
         println("[INFO] ${env.BRANCH_NAME} branch was detected")
         options.collectTrackedMetrics = true
     }
 
-    dir('RadeonProRenderSDK') {
-        withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            checkOutBranchOrScm(options["projectBranch"], options["projectRepo"])
-        }
+    if (!options['isPreBuilt']) {
+        dir('RadeonProRenderSDK') {
+            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"])
+            }
 
-        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-        options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
-        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+            options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
+            options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
-        println("The last commit was written by ${options.commitAuthor}.")
-        println("Commit message: ${options.commitMessage}")
-        println("Commit SHA: ${options.commitSHA}")
+            println("The last commit was written by ${options.commitAuthor}.")
+            println("Commit message: ${options.commitMessage}")
+            println("Commit SHA: ${options.commitSHA}")
 
-        if (options.projectBranch){
-            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-        } else {
-            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-        }
+            if (options.projectBranch){
+                currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+            } else {
+                currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+            }
 
-        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+            currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-        if (env.BRANCH_NAME) {
-            withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
-                GithubNotificator githubNotificator = new GithubNotificator(this, options)
-                githubNotificator.init(options)
-                options["githubNotificator"] = githubNotificator
-                githubNotificator.initPreBuild("${BUILD_URL}")
+            if (env.BRANCH_NAME) {
+                withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+                    GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                    githubNotificator.init(options)
+                    options["githubNotificator"] = githubNotificator
+                    githubNotificator.initPreBuild("${BUILD_URL}")
+                }
             }
         }
     }
@@ -557,9 +666,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             options.branchName = "master"
                         }
 
-                        options.commitMessage = options.commitMessage.replace("'", "")
-                        options.commitMessage = options.commitMessage.replace('"', '')
-
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         dir("..\\summaryTestResults") {
                             JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig())
@@ -569,9 +675,15 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
 
-                        bat """
-                            build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
-                        """
+                        if (options['isPreBuilt']) {
+                            bat """
+                                build_reports.bat ..\\summaryTestResults Core "PreBuilt" "PreBuilt" "PreBuilt" \"\" \"${buildNumber}\"
+                            """
+                        } else {
+                            bat """
+                                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
+                            """
+                        }
 
                         bat "get_status.bat ..\\summaryTestResults"
                     }
@@ -677,6 +789,15 @@ def executeDeploy(Map options, List platformList, List testResultList)
     } finally {}
 }
 
+def appendPlatform(String filteredPlatforms, String platform) {
+    if (filteredPlatforms) {
+        filteredPlatforms +=  ";" + platform
+    } else {
+        filteredPlatforms += platform
+    }
+    return filteredPlatforms
+}
+
 
 def call(String projectBranch = "",
          String assetsBranch = "master",
@@ -691,6 +812,10 @@ def call(String projectBranch = "",
          String height = "0",
          String iterations = "0",
          Boolean sendToUMS = true,
+         String customBuildLinkWindows = "",
+         String customBuildLinkUbuntu18 = "",
+         String customBuildLinkUbuntu20 = "",
+         String customBuildLinkOSX = "",
          String tester_tag = 'Core',
          String mergeablePR = "",
          String parallelExecutionTypeString = "TakeOneNodePerGPU",
@@ -714,6 +839,42 @@ def call(String projectBranch = "",
             }
 
             sendToUMS = updateRefs.contains('Update') || sendToUMS
+
+            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkUbuntu18 || customBuildLinkUbuntu20
+
+            if (isPreBuilt) {
+                //remove platforms for which pre built plugin is not specified
+                String filteredPlatforms = ""
+
+                platforms.split(';').each() { platform ->
+                    List tokens = platform.tokenize(':')
+                    String platformName = tokens.get(0)
+
+                    switch(platformName) {
+                        case 'Windows':
+                            if (customBuildLinkWindows) {
+                                filteredPlatforms = appendPlatform(filteredPlatforms, platform)
+                            }
+                            break
+                        case 'OSX':
+                            if (customBuildLinkOSX) {
+                                filteredPlatforms = appendPlatform(filteredPlatforms, platform)
+                            }
+                            break
+                        case 'Ubuntu18':
+                            if (customBuildLinkUbuntu18) {
+                                filteredPlatforms = appendPlatform(filteredPlatforms, platform)
+                            }
+                        // Ubuntu20
+                        default:
+                            if (customBuildLinkUbuntu20) {
+                                filteredPlatforms = appendPlatform(filteredPlatforms, platform)
+                            }
+                        }
+                }
+
+                platforms = filteredPlatforms
+            }
 
             gpusCount = 0
             platforms.split(';').each() { platform ->
@@ -775,7 +936,12 @@ def call(String projectBranch = "",
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
-                        collectTrackedMetrics:collectTrackedMetrics
+                        collectTrackedMetrics:collectTrackedMetrics,
+                        isPreBuilt:isPreBuilt,
+                        customBuildLinkWindows: customBuildLinkWindows,
+                        customBuildLinkUbuntu18: customBuildLinkUbuntu18,
+                        customBuildLinkUbuntu20: customBuildLinkUbuntu20,
+                        customBuildLinkOSX: customBuildLinkOSX
                         ]
 
             if (sendToUMS) {
