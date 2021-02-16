@@ -837,7 +837,7 @@ def executePreBuild(Map options)
                     }
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
-            } else {
+            } else if (options.tests) {
                 options.groupsUMS = options.tests.split(" ") as List
                 options.tests.split(" ").each()
                 {
@@ -847,6 +847,8 @@ def executePreBuild(Map options)
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
+            } else {
+                options.executeTests = false
             }
             options.tests = tests
 
