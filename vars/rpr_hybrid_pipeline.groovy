@@ -187,6 +187,10 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
         archiveArtifacts "*.gtest.xml"
         junit "*.gtest.xml"
 
+        if (options['RENDER_QUALITY']) {
+            options['processedQualities'] << options['RENDER_QUALITY']
+        }
+
         if (options.testsQuality && env.CHANGE_ID) {
             String context = "[TEST] ${osName}-${asicName}-${options.RENDER_QUALITY}"
             String description = error_message ? "Testing finished with error message: ${error_message}" : "Testing finished"
@@ -214,8 +218,14 @@ def executeTests(String osName, String asicName, Map options)
         Boolean some_stage_fail = false
         options['testsQuality'].split(",").each() {
             try {
+                // create list with processed qualities for do not run them twice in case of retries
+                if (!options['processedQualities']) {
+                    options['processedQualities'] = []
+                }
                 options['RENDER_QUALITY'] = "${it}"
-                executeTestsCustomQuality(osName, asicName, options)
+                if (!options['processedQualities'].contains(options['RENDER_QUALITY'])) {
+                    executeTestsCustomQuality(osName, asicName, options)
+                }
             } catch (e) {
                 // suppress exception for start next quality test
                 some_stage_fail = true
@@ -489,6 +499,5 @@ def call(String projectBranch = "",
                             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
                             slackTocken:"${SLACK_BAIKAL_TOCKEN}",
                             TEST_TIMEOUT:30,
-                            cmakeKeys:cmakeKeys,
-                            retriesForTestStage:1])
+                            cmakeKeys:cmakeKeys])
 }
