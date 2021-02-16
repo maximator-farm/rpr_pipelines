@@ -1,3 +1,30 @@
+def runCurl(String curlCommand, Integer tries=5) {
+    Integer currentTry = 0
+    while (currentTry++ < tries) {
+        println("[INFO] Try to download plugin through curl (try #${currentTry})")
+        try {
+            timeout(time: 90, unit: "SECONDS") {
+                if (isUnix()) {
+                    sh """
+                        ${curlCommand}
+                    """
+                } else {
+                    bat """
+                        ${curlCommand}
+                    """
+                }
+            }
+            break
+        } catch (e) {
+            println("[ERROR] Failed to download plugin during try #${currentTry}: ${e.getMessage()}")
+            if (currentTry == tries) {
+                throw e
+            }
+        }
+    }
+}
+
+
 def call(String osName, String tool, Map options, String credentialsId = '') {
     String customBuildLink = ""
     String extension = ""
@@ -25,65 +52,41 @@ def call(String osName, String tool, Map options, String credentialsId = '') {
     if (customBuildLink.startsWith("https://builds.rpr")) {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'builsRPRCredentials', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
             if (osName == "Windows") {
-                bat """
-                    curl -L -o ${tool}_${osName}.${extension} -u %USERNAME%:%PASSWORD% "${options['customBuildLinkWindows']}"
-                """
+                runCurl("curl -L -o ${tool}_${osName}.${extension} -u %USERNAME%:%PASSWORD% \"${options['customBuildLinkWindows']}\"")
             } else if (osName == "OSX") {
-                sh """
-                    curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD "${options['customBuildLinkOSX']}"
-                """
+                runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${options['customBuildLinkOSX']}\"")
             } else {
-                sh """
-                    curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD "${options['customBuildLinkLinux']}"
-                """
+                runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${options['customBuildLinkLinux']}\"")
             }
         }
     } else if (customBuildLink.startsWith("https://rpr.cis")) {
         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsUser', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
             if (osName == "Windows") {
-                bat """
-                    curl -L -o ${tool}_${osName}.${extension} -u %USERNAME%:%PASSWORD% "${options['customBuildLinkWindows']}"
-                """
+                runCurl("curl -L -o ${tool}_${osName}.${extension} -u %USERNAME%:%PASSWORD% \"${options['customBuildLinkWindows']}\"")
             } else if (osName == "OSX") {
-                sh """
-                    curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD "${options['customBuildLinkOSX']}"
-                """
+                runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${options['customBuildLinkOSX']}\"")
             } else {
-                sh """
-                    curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD "${options['customBuildLinkLinux']}"
-                """
+                runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${options['customBuildLinkLinux']}\"")
             }
         }
     } else {
         if (credentialsId) {
             withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
                 if (osName == "Windows") {
-                    bat """
-                        curl -L -o ${tool}_${osName}.${extension} -u %USERNAME%:%PASSWORD% "${options['customBuildLinkWindows']}"
-                    """
+                    runCurl("curl -L -o ${tool}_${osName}.${extension} -u %USERNAME%:%PASSWORD% \"${options['customBuildLinkWindows']}\"")
                 } else if (osName == "OSX") {
-                    sh """
-                        curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD "${options['customBuildLinkOSX']}"
-                    """
+                    runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${options['customBuildLinkOSX']}\"")
                 } else {
-                    sh """
-                        curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD "${options['customBuildLinkLinux']}"
-                    """
+                    runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${options['customBuildLinkLinux']}\"")
                 }
             }
         } else {
             if (osName == "Windows") {
-                bat """
-                    curl -L -o ${tool}_${osName}.${extension} "${options['customBuildLinkWindows']}"
-                """
+                runCurl("curl -L -o ${tool}_${osName}.${extension} -u %USERNAME%:%PASSWORD% \"${options['customBuildLinkWindows']}\"")
             } else if (osName == "OSX") {
-                sh """
-                    curl -L -o ${tool}_${osName}.${extension} "${options['customBuildLinkOSX']}"
-                """
+                runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${options['customBuildLinkOSX']}\"")
             } else {
-                sh """
-                    curl -L -o ${tool}_${osName}.${extension} "${options['customBuildLinkLinux']}"
-                """
+                runCurl("curl -L -o ${tool}_${osName}.${extension} -u $USERNAME:$PASSWORD \"${options['customBuildLinkLinux']}\"")
             }
         }
     }
