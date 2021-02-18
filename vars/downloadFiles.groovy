@@ -17,10 +17,10 @@ def call(String server_path, String local_path, String remoteHost = "nasURL") {
             withCredentials([string(credentialsId: remoteHost, variable: 'REMOTE_HOST')]) {
                 if (isUnix()) {
                     status = sh(returnStatus: true, 
-                        script: "${CIS_TOOLS}/downloadFilesSync.sh \"${server_path}\" ${local_path} ${REMOTE_HOST}")
+                        script: "${CIS_TOOLS}/downloadFilesSync.sh \"${server_path}\" ${local_path} $REMOTE_HOST")
                 } else {
                     status = bat(returnStatus: true, 
-                        script: "%CIS_TOOLS%\\downloadFilesSync.bat ${server_path} ${local_path} ${REMOTE_HOST}")
+                        script: "%CIS_TOOLS%\\downloadFilesSync.bat ${server_path} ${local_path} %REMOTE_HOST%")
                 }
             }
             if (status != 24) {

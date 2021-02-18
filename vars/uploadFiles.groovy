@@ -16,13 +16,9 @@ def call(String local_path, String server_path, String remoteHost = "nasURL") {
         try {
             withCredentials([string(credentialsId: remoteHost, variable: 'REMOTE_HOST')]) {
                 if (isUnix()) {
-                    sh """
-                        ${CIS_TOOLS}/uploadFiles.sh \"${local_path}\" ${server_path} ${REMOTE_HOST}
-                    """
+                    sh "${CIS_TOOLS}/uploadFiles.sh \"${local_path}\" ${server_path} $REMOTE_HOST"
                 } else {
-                    bat """
-                        %CIS_TOOLS%\\uploadFiles.bat ${local_path} ${server_path} ${REMOTE_HOST}
-                    """
+                    bat "%CIS_TOOLS%\\uploadFiles.bat ${local_path} ${server_path} %REMOTE_HOST%"
                 }
             }
         } catch (FlowInterruptedException error) {
