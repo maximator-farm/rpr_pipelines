@@ -344,7 +344,7 @@ def executeTests(String osName, String asicName, Map options) {
 
 def executeBuildWindows(Map options) {
     dir('RadeonProRenderBlenderAddon') {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         
         withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;${PATH}"]) {
             bat """
@@ -387,7 +387,7 @@ def executeBuildOSX(Map options) {
 
 def executeBuildLinux(String osName, Map options) {
     dir('RadeonProRenderBlenderAddon') {
-        GithubNotificator.updateStatus("Build", "${osName}", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
+        GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
         sh """
             export HDUSD_LIBS_DIR=../libs
@@ -481,9 +481,6 @@ def executePreBuild(Map options)
             options.executeBuild = true
             options.executeTests = true
             options.testsPackage = "regression.json"
-            GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
-            options.githubNotificator = githubNotificator
-            githubNotificator.initPreBuild("${BUILD_URL}")
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
@@ -505,7 +502,7 @@ def executePreBuild(Map options)
 
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderBlenderAddon') {
-            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
             }
 
@@ -526,10 +523,17 @@ def executePreBuild(Map options)
                 currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
 
-            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
+            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
                 if (options['incrementVersion']) {
+                    withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+                        GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                        githubNotificator.init(options)
+                        options["githubNotificator"] = githubNotificator
+                        githubNotificator.initPreBuild("${BUILD_URL}")
+                    }
+                    
                     if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
                         options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ')
@@ -575,11 +579,15 @@ def executePreBuild(Map options)
         }
     }
 
+    if (env.BRANCH_NAME && options.githubNotificator) {
+        options.githubNotificator.initChecks(options, "${BUILD_URL}")
+    }
+
     def tests = []
     options.timeouts = [:]
     options.groupsUMS = []
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdblender') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_usdblender.git')
 
@@ -649,7 +657,7 @@ def executePreBuild(Map options)
                     }
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
-            } else {
+            } else if (options.tests) {
                 options.groupsUMS = options.tests.split(" ") as List
                 options.tests.split(" ").each() {
                     options.engines.each { engine ->
@@ -658,6 +666,8 @@ def executePreBuild(Map options)
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
+            } else {
+                options.executeTests = false
             }
             options.tests = tests
 
@@ -789,7 +799,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             List reportsNames = []
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 options.engines.each { engine ->
                     reports.add("${engine}/summary_report.html")
                 }
@@ -973,7 +983,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
     String toolVersion = "2.91",
     String mergeablePR = "",
     String parallelExecutionTypeString = "TakeAllNodes",
-    Integer testCaseRetries = 2
+    Integer testCaseRetries = 3
     )
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)

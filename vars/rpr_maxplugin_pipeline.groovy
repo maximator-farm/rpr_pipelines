@@ -132,10 +132,8 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_max_autotests" : "C:\\TestResources\\rpr_max_autotests"
-            dir(assets_dir){
-                checkOutBranchOrScm(options.assetsBranch, options.assetsRepo, true, null, null, false, true, "radeonprorender-gitlab", true)
-            }
+            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_max_autotests_assets" : "/mnt/c/TestResources/rpr_max_autotests_assets"
+            downloadFiles("/volume1/Assets/rpr_max_autotests/", assets_dir)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
@@ -147,8 +145,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
+        String REF_PATH_PROFILE="/volume1/Baselines/rpr_max_autotests/${asicName}-${osName}"
 
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
@@ -158,7 +155,7 @@ def executeTests(String osName, String asicName, Map options)
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, asicName, options)
                 executeGenTestRefCommand(osName, options, options["updateRefs"].contains("clean"))
-                sendFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
+                uploadFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
                 // delete generated baselines when they're sent 
                 switch(osName) {
                     case "Windows":
@@ -174,9 +171,9 @@ def executeTests(String osName, String asicName, Map options)
                 println "[INFO] Downloading reference images for ${options.tests}"
                 options.tests.split(" ").each() {
                     if (it.contains(".json")) {
-                        receiveFiles("${REF_PATH_PROFILE}/", baseline_dir)
+                        downloadFiles("${REF_PATH_PROFILE}/", baseline_dir)
                     } else {
-                        receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                        downloadFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
                     }
                 }
             }
@@ -242,7 +239,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         if (sessionReport.summary.error > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
                         } else if (sessionReport.summary.failed > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_FAILED, "${BUILD_URL}")
                         } else {
@@ -293,7 +290,7 @@ def executeTests(String osName, String asicName, Map options)
 def executeBuildWindows(Map options)
 {
     dir("RadeonProRenderMaxPlugin/Package") {
-        GithubNotificator.updateStatus("Build", "Windows", "pending", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
+        GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
             build_windows_installer.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
@@ -392,9 +389,6 @@ def executePreBuild(Map options)
             options['executeBuild'] = true
             options['executeTests'] = true
             options['testsPackage'] = "regression.json"
-            GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
-            options.githubNotificator = githubNotificator
-            githubNotificator.initPreBuild("${BUILD_URL}")
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
            println "[INFO] ${env.BRANCH_NAME} branch was detected"
            options['executeBuild'] = true
@@ -418,7 +412,7 @@ def executePreBuild(Map options)
 
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderMaxPlugin') {
-            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
             }
 
@@ -438,10 +432,17 @@ def executePreBuild(Map options)
                 currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
             }
 
-            withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
+            withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMaxPlugin\\version.h", '#define VERSION_STR')
 
                 if (options['incrementVersion']) {
+                    withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+                        GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                        githubNotificator.init(options)
+                        options["githubNotificator"] = githubNotificator
+                        githubNotificator.initPreBuild("${BUILD_URL}")
+                    }
+                    
                     if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
                         println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
@@ -483,7 +484,6 @@ def executePreBuild(Map options)
                 currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
                 currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
                 currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
-
             }
         }
     }
@@ -492,7 +492,7 @@ def executePreBuild(Map options)
     options.timeouts = [:]
     options.groupsUMS = []
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_max') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_max.git')
             dir ('jobs_launcher') {
@@ -565,8 +565,8 @@ def executePreBuild(Map options)
         }
     }
 
-    if (env.CHANGE_URL) {
-        options.githubNotificator.initPR(options, "${BUILD_URL}")
+    if (env.BRANCH_NAME && options.githubNotificator) {
+        options.githubNotificator.initChecks(options, "${BUILD_URL}")
     }
 
     println "timeouts: ${options.timeouts}"
@@ -617,7 +617,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
@@ -751,7 +751,6 @@ def appendPlatform(String filteredPlatforms, String platform) {
 
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderMaxPlugin.git",
         String projectBranch = "",
-        String assetsBranch = "master",
         String testsBranch = "master",
         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI',
         String updateRefs = 'No',
@@ -789,11 +788,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
-
-            def assetsRepo
-            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
-                assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_max_autotests"
-            }
 
             sendToUMS = updateRefs.contains('Update') || sendToUMS
 
@@ -852,8 +846,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
 
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
-                        assetsBranch:assetsBranch,
-                        assetsRepo:assetsRepo,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,

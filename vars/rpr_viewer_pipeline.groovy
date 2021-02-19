@@ -163,14 +163,11 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_viewer_autotests" : "C:\\TestResources\\rpr_viewer_autotests"
-            dir(assets_dir){
-                checkOutBranchOrScm(options.assetsBranch, options.assetsRepo, true, null, null, false, true, "radeonprorender-gitlab", true)
-            }
+            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_viewer_autotests_assets" : "/mnt/c/TestResources/rpr_viewer_autotests_assets"
+            downloadFiles("/volume1/Assets/rpr_viewer_autotests/", assets_dir)
         }
 
-        String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
+        String REF_PATH_PROFILE="/volume1/Baselines/rpr_viewer_autotests/${asicName}-${osName}"
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
         outputEnvironmentInfo(osName, "", options.currentTry)
@@ -179,7 +176,7 @@ def executeTests(String osName, String asicName, Map options)
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, asicName, options)
                 executeGenTestRefCommand(osName, options, options["updateRefs"].contains("clean"))
-                sendFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
+                uploadFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
                 // delete generated baselines when they're sent 
                 switch(osName) {
                     case "Windows":
@@ -195,9 +192,9 @@ def executeTests(String osName, String asicName, Map options)
                 println("[INFO] Downloading reference images for ${options.tests}")
                 options.tests.split(" ").each() {
                     if (it.contains(".json")) {
-                        receiveFiles("${REF_PATH_PROFILE}/", baseline_dir)
+                        downloadFiles("${REF_PATH_PROFILE}/", baseline_dir)
                     } else {
-                        receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                        downloadFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
                     }
                 }
             }
@@ -264,7 +261,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         if (sessionReport.summary.error > 0) {
-                            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
+                            GithubNotificator.updateStatus("Test", options['stageName'], "action_required", options, NotificationConfiguration.SOME_TESTS_ERRORED, "${BUILD_URL}")
                         } else if (sessionReport.summary.failed > 0) {
                             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.SOME_TESTS_FAILED, "${BUILD_URL}")
                         } else {
@@ -447,16 +444,13 @@ def executePreBuild(Map options)
     if (env.CHANGE_URL) {
         println("[INFO] Branch was detected as Pull Request")
         options.testsPackage = "PR.json"
-        GithubNotificator githubNotificator = new GithubNotificator(this, pullRequest)
-        options.githubNotificator = githubNotificator
-        githubNotificator.initPreBuild("${BUILD_URL}")
     } else if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         options.testsPackage = "master.json"
     } else if (env.BRANCH_NAME) {
         options.testsPackage = "smoke.json"
     }
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
     }
 
@@ -479,6 +473,13 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
     if (options['incrementVersion']) {
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+            GithubNotificator githubNotificator = new GithubNotificator(this, options)
+            githubNotificator.init(options)
+            options["githubNotificator"] = githubNotificator
+            githubNotificator.initPreBuild("${BUILD_URL}")
+        }
+        
         String testsFromCommit = utils.getTestsFromCommitMessage(options.commitMessage)
         if(env.BRANCH_NAME != "develop" && testsFromCommit) {
             // get a list of tests from commit message for auto builds
@@ -491,7 +492,7 @@ def executePreBuild(Map options)
     options.timeouts = [:]
     options.groupsUMS = []
 
-    withNotifications(title: "Version increment", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_rprviewer') {
             checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rprviewer.git')
             dir ('jobs_launcher') {
@@ -602,8 +603,8 @@ def executePreBuild(Map options)
             }
         }
 
-        if (env.CHANGE_URL) {
-            options.githubNotificator.initPR(options, "${BUILD_URL}")
+        if (env.BRANCH_NAME && options.githubNotificator) {
+            options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
 
         options.testsList = options.tests
@@ -656,7 +657,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             String branchName = env.BRANCH_NAME ?: options.projectBranch
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "pending", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
@@ -773,7 +774,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String assetsBranch = "master",
          String testsBranch = "master",
          String platforms = 'Windows:AMD_RadeonVII,AMD_RadeonVII_Beta,NVIDIA_RTX2080',
          String updateRefs = 'No',
@@ -785,7 +785,7 @@ def call(String projectBranch = "",
          Boolean sendToUMS = true,
          String tester_tag = 'RprViewer',
          String parallelExecutionTypeString = "TakeAllNodes",
-         Integer testCaseRetries = 2)
+         Integer testCaseRetries = 3)
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -797,11 +797,6 @@ def call(String projectBranch = "",
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
-
-            def assetsRepo
-            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
-                assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_viewer_autotests"
-            }
 
             sendToUMS = updateRefs.contains('Update') || sendToUMS
             
@@ -817,8 +812,6 @@ def call(String projectBranch = "",
             println "UMS platforms: ${universePlatforms}"
 
             options << [projectBranch:projectBranch,
-                        assetsBranch:assetsBranch,
-                        assetsRepo:assetsRepo,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,

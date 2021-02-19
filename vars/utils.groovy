@@ -264,9 +264,7 @@ class utils {
             self.withCredentials([self.usernamePassword(credentialsId: credentialsId, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
                 command += "-u ${self.USERNAME}:${self.PASSWORD} "
             }
-        if (extraParams) {
-            extraParams.each { command += "-${it.key} ${it.value} " }
-        }
+        extraParams?.each { command += "-${it.key} ${it.value} " }
         command += "${filelink}"
         if (self.isUnix()) {
             self.sh command
@@ -284,7 +282,7 @@ class utils {
      */
     static Double compareImages(Object self, String img1, String img2) {
         return self.python3("./jobs_launcher/common/scripts/CompareMetrics.py --img1 ${img1} --img2 ${img2}").with {
-            (self.isUnix() ? it : it.split(" ").last()) as Double
+            (self.isUnix() ?: it.split(" ").last()) as Double
         }
     }
 
@@ -307,5 +305,13 @@ class utils {
         indexes[index - 1] = targetIndex as String
 
         return indexes.join(delimiter.replace("\\", ""))
+    }
+
+    /**
+     * @param command - executable command
+     * @return clear bat stdout without original command
+     */
+    static String getBatOutput(Object self, String command) {
+        return self.bat(script: "@${command}", returnStdout: true).trim()
     }
 }

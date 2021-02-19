@@ -130,7 +130,7 @@ class UniverseManagerDefault extends UniverseManager {
             options.buildIdProd = universeClientProd.build["id"]
             options.jobIdProd = universeClientProd.build["job_id"]
         }
-        if (universeClientDev.build) {
+        if (universeClientDev?.build) {
             options.buildIdDev = universeClientDev.build["id"]
             options.jobIdDev = universeClientDev.build["job_id"]
         }
