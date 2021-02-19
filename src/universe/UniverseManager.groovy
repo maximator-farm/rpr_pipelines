@@ -238,4 +238,13 @@ abstract class UniverseManager {
             }
         }
     }
+
+    String toString() {
+        return """
+            productName: ${productName}
+            universeURLProd: ${universeURLProd}
+            universeURLDev: ${universeClientDev}
+            imageServiceURL: ${imageServiceURL}
+        """
+    }
 }

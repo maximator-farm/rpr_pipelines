@@ -321,7 +321,6 @@ class UniverseClient {
                     "major": this.major_keys
                 ]
 
-                println(parameters)
                 // prepare build info
                 info = [:]
                 for (key in this.info_keys) {info[key] = options[key]}
@@ -375,13 +374,10 @@ class UniverseClient {
                 }
             }
 
-            
             buildBody['upd_baselines'] = updRefs
             buildBody['parameters'] = parameters
             buildBody['references'] = references
             buildBody['info'] = info
-            
-            
 
             def res = this.context.httpRequest(
                 consoleLogResponseBody: true,
@@ -473,7 +469,6 @@ class UniverseClient {
             ]
             
             this.context.println("[INFO] Sending build status - \"${mapStatuses[status]}\"")
-
             long timeMilliseconds = new Date().getTime()
             long timestamp = (long) (timeMilliseconds / 1000)
 
