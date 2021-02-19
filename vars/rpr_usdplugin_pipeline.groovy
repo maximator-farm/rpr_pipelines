@@ -176,10 +176,8 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_usdplugin_autotests" : "C:\\TestResources\\rpr_usdplugin_autotests"
-            dir(assets_dir){
-                checkOutBranchOrScm(options.assetsBranch, options.assetsRepo, true, null, null, false, true, "radeonprorender-gitlab", true)
-            }
+            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_usdplugin_autotests_assets" : "/mnt/c/TestResources/rpr_usdplugin_autotests_assets"
+            downloadFiles("/volume1/Assets/rpr_usdplugin_autotests/", assets_dir)
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
@@ -198,7 +196,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        String REF_PATH_PROFILE="${options.PRJ_ROOT}/${options.PRJ_NAME}/rpr_houdini_autotests_baselines/${asicName}-${osName}"
+        String REF_PATH_PROFILE="/volume1/Baselines/rpr_usdplugin_autotests/${asicName}-${osName}"
         
         outputEnvironmentInfo(osName, options.stageName, options.currentTry)
 
@@ -206,7 +204,7 @@ def executeTests(String osName, String asicName, Map options)
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, options)
                 executeGenTestRefCommand(osName, options, options["updateRefs"].contains("clean"))
-                sendFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
+                uploadFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
                 // delete generated baselines when they're sent 
                 switch(osName) {
                     case "Windows":
@@ -221,7 +219,7 @@ def executeTests(String osName, String asicName, Map options)
                 String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_houdini_autotests_baselines" : "/mnt/c/TestResources/rpr_houdini_autotests_baselines"
                 println "[INFO] Downloading reference images for ${options.testsPackage}"
                 options.tests.split(" ").each() {
-                    receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                    downloadFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
                 }
             }
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
@@ -862,7 +860,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderUSD.git",
         String projectBranch = "",
         String usdBranch = "master",
-        String assetsBranch = "master",
         String testsBranch = "master",
         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7',
         String buildType = "Houdini",
@@ -893,14 +890,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
 
-            String PRJ_NAME="RadeonProRenderUSDPlugin"
-            String PRJ_ROOT="rpr-plugins"
-
-            def assetsRepo
-            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
-                assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_usdplugin_autotests"
-            }
-
             gpusCount = 0
             platforms.split(';').each() { platform ->
                 List tokens = platform.tokenize(':')
@@ -917,13 +906,11 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         usdBranch:usdBranch,
-                        assetsBranch:assetsBranch,
-                        assetsRepo:assetsRepo,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
-                        PRJ_NAME:PRJ_NAME,
-                        PRJ_ROOT:PRJ_ROOT,
+                        PRJ_NAME:"RadeonProRenderUSDPlugin",
+                        PRJ_ROOT:"rpr-plugins",
                         BUILDER_TAG:'BuilderHoudini',
                         TESTER_TAG:tester_tag,
                         incrementVersion:incrementVersion,
