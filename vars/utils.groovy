@@ -282,7 +282,7 @@ class utils {
      */
     static Double compareImages(Object self, String img1, String img2) {
         return self.python3("./jobs_launcher/common/scripts/CompareMetrics.py --img1 ${img1} --img2 ${img2}").with {
-            (self.isUnix() ?: it.split(" ").last()) as Double
+            (self.isUnix() ? it : it.split(" ").last()) as Double
         }
     }
 
