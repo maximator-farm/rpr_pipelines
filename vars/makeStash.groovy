@@ -1,11 +1,14 @@
 def call(Map params) {
 
+    String stashName
+
     try {
-        String name = params["name"]
+        stashName = params["name"]
         Boolean allowEmpty = params["allowEmpty"]
         String includes = params["includes"]
         String excludes = params["excludes"]
-        String debugPostfix = params["debug"] ? "Debug" : ""
+        Boolean debug = params["debug"]
+        String debugPostfix = debug ? "Debug" : ""
 
         def sendParams = []
 
@@ -36,18 +39,23 @@ def call(Map params) {
         withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
             if (isUnix()) {
                 stdout = sh(returnStdout: true, 
-                    script: "${CIS_TOOLS}/stash${debugPostfix}.sh $REMOTE_HOST \"${remotePath}\" \"${sendParams}\"")
+                    script: "${CIS_TOOLS}/stash${debugPostfix}.sh $REMOTE_HOST ${remotePath} \"${sendParams}\"")
             } else {
                 stdout = bat(returnStdout: true, 
-                    script: "%CIS_TOOLS%\\stash${debugPostfix}.bat %REMOTE_HOST% \"${remotePath}\" \"${sendParams}\"")
+                    script: "%CIS_TOOLS%\\stash${debugPostfix}.bat %REMOTE_HOST% ${remotePath} \"${sendParams}\"")
             }
         }
 
+        if (debugPostfix) {
+            println(stdout)
+        }
+
         if (stdout.contains("total size is 0 ") && !allowEmpty) {
-            
+            println("[ERROR] Stash is empty")
+            throw new Exception("Empty stash")
         }
     } catch (e) {
-        println("Failed to make stash with name '${stashName}'")
+        println("[ERROR] Failed to make stash with name '${stashName}'")
         println(e.toString())
         println(e.getMessage())
         throw e

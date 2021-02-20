@@ -7,10 +7,14 @@ def call(String stashName, Boolean debug = false) {
     try {
         withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
             if (isUnix()) {
-                status = sh(script: "${CIS_TOOLS}/unstash${debugPostfix}.sh $REMOTE_HOST \"${remotePath}\"")
+                status = sh(script: "${CIS_TOOLS}/unstash${debugPostfix}.sh $REMOTE_HOST ${remotePath}")
             } else {
-                status = bat(script: "%CIS_TOOLS%\\unstash${debugPostfix}.bat %REMOTE_HOST% \"${remotePath}\"")
+                status = bat(script: "%CIS_TOOLS%\\unstash${debugPostfix}.bat %REMOTE_HOST% ${remotePath}")
             }
+        }
+
+        if (debugPostfix) {
+            println(stdout)
         }
     } catch (e) {
         println("Failed to unstash stash with name '${stashName}'")
