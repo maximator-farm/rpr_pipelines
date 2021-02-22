@@ -3,13 +3,15 @@ def call(String stashName, Boolean debug = false) {
     String debugPostfix = debug ? "Debug" : ""
 
     String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}"
+    
+    String stdout
 
     try {
         withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
             if (isUnix()) {
-                status = sh(script: "${CIS_TOOLS}/unstash${debugPostfix}.sh $REMOTE_HOST ${remotePath}")
+                stdout = sh (returnStdout: true, script: "${CIS_TOOLS}/unstash${debugPostfix}.sh $REMOTE_HOST ${remotePath}")
             } else {
-                status = bat(script: "%CIS_TOOLS%\\unstash${debugPostfix}.bat %REMOTE_HOST% ${remotePath}")
+                stdout = bat(returnStdout: true, script: "%CIS_TOOLS%\\unstash${debugPostfix}.bat %REMOTE_HOST% ${remotePath}")
             }
         }
 
