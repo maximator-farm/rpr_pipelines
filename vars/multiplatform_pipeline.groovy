@@ -437,8 +437,9 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                         options["stage"] = "Deploy"
                         def retringFunction = { nodesList, currentTry ->
                             executeDeploy(options, platformList, testResultList)
-                            println("[INFO] Deploy stage finished without unexpected exception. Clean workspace")
+                            println("[INFO] Deploy stage finished without unexpected exception. Clean workspace and remove stashes")
                             cleanWS("Windows")
+                            removeStashes()
                         }
                         run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options, [], 2)
                     }
