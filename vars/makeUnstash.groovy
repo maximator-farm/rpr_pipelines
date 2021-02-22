@@ -2,7 +2,7 @@ def call(String stashName, Boolean debug = false) {
 
     String debugPostfix = debug ? "Debug" : ""
 
-    String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}"
+    String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
     
     String stdout
 
