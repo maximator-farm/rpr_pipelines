@@ -294,6 +294,19 @@ class utils {
         })
     }
 
+    static String incrementVersion(Map params) {
+        Object self = params["self"]
+        String currentVersion = params["currentVersion"]
+        Integer index = params["index"] ?: 1
+        String delimiter = params["delimiter"] ?: "\\."
+
+        String[] indexes = currentVersion.split(delimiter)
+        Integer targetIndex = (indexes[index - 1] as Integer) + 1
+        indexes[index - 1] = targetIndex as String
+
+        return indexes.join(delimiter.replace("\\", ""))
+    }
+
     /**
      * @param command - executable command
      * @return clear bat stdout without original command
