@@ -18,8 +18,8 @@ def installHoudiniPlugin(String osName, Map options) {
             bat """
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa e hdRpr_${osName}.tar.gz
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa x tmpPackage.tar 
-                cd ${options.win_build_name}
-                echo y | activateHoudiniPlugin.exe >> \"..\\${options.stageName}_${options.currentTry}.install.log\"  2>&1
+                cd hdRpr*
+                echo y | activateHoudiniPlugin.exe >> \"${options.stageName}_${options.currentTry}.install.log\"  2>&1
             """
             break
 
@@ -27,9 +27,9 @@ def installHoudiniPlugin(String osName, Map options) {
             unstash "appOSX"
             sh """
                 tar -xzf hdRpr_${osName}.tar.gz 
-                cd ${options.osx_build_name}
+                cd hdRpr*
                 chmod +x activateHoudiniPlugin
-                echo y | ./activateHoudiniPlugin >> \"../${options.stageName}_${options.currentTry}.install.log\" 2>&1
+                echo y | ./activateHoudiniPlugin >> \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
             break
 
@@ -37,9 +37,9 @@ def installHoudiniPlugin(String osName, Map options) {
             unstash "app${osName}"
             sh """
                 tar -xzf hdRpr_${osName}.tar.gz
-                cd ${options.ubuntu_build_name}
+                cd hdRpr*
                 chmod +x activateHoudiniPlugin
-                echo y | ./activateHoudiniPlugin \"../${options.stageName}_${options.currentTry}.install.log\" 2>&1
+                echo y | ./activateHoudiniPlugin \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
     }
 }
