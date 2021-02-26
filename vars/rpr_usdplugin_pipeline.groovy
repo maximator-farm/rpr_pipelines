@@ -19,7 +19,7 @@ def installHoudiniPlugin(String osName, Map options) {
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa e hdRpr_${osName}.tar.gz
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa x tmpPackage.tar 
                 cd hdRpr*
-                echo y | activateHoudiniPlugin.exe >> \"${options.stageName}_${options.currentTry}.install.log\"  2>&1
+                echo y | activateHoudiniPlugin.exe >> \"..\\${options.stageName}_${options.currentTry}.install.log\"  2>&1
             """
             break
 
@@ -29,7 +29,7 @@ def installHoudiniPlugin(String osName, Map options) {
                 tar -xzf hdRpr_${osName}.tar.gz 
                 cd hdRpr*
                 chmod +x activateHoudiniPlugin
-                echo y | ./activateHoudiniPlugin >> \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
+                echo y | ./activateHoudiniPlugin >> \"../${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
             break
 
@@ -39,7 +39,7 @@ def installHoudiniPlugin(String osName, Map options) {
                 tar -xzf hdRpr_${osName}.tar.gz
                 cd hdRpr*
                 chmod +x activateHoudiniPlugin
-                echo y | ./activateHoudiniPlugin \"${options.stageName}_${options.currentTry}.install.log\" 2>&1
+                echo y | ./activateHoudiniPlugin \"../${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
     }
 }
