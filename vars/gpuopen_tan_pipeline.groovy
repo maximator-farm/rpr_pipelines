@@ -129,11 +129,10 @@ def executeTests(String osName, String asicName, Map options) {
             }
         }
 
-        String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/gpuopen_tan_autotests" : "C:\\TestResources\\gpuopen_tan_autotests"
+        String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/gpuopen_tan_autotests_assets" : "C:\\TestResources\\gpuopen_tan_autotests_assets"
         downloadFiles("/volume1/Assets/gpuopen_tan_autotests/", assetsDir)
 
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
         outputEnvironmentInfo(osName)
