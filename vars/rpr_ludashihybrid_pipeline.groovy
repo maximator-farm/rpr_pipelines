@@ -50,8 +50,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
 {
     cleanWS(osName)
     String parsedAsicName = asicName.replace("_Beta", "")
-    String REF_PATH_PROFILE="${options.REF_PATH}/${options.RENDER_QUALITY}/${parsedAsicName}-${osName}"
-    String JOB_PATH_PROFILE="${options.JOB_PATH}/${options.RENDER_QUALITY}/${parsedAsicName}-${osName}"
+    String REF_PATH_PROFILE="/volume1/Baselines/rpr_ludashihybrid_autotests/${options.RENDER_QUALITY}/${parsedAsicName}-${osName}"
     String error_message = ""
 
     try {
@@ -68,10 +67,10 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
         if (options['updateRefs']) {
             println("Updating Reference Images")
             executeGenTestRefCommand(osName, options)
-            sendFiles('./BaikalNext/RprTest/ReferenceImages/*.*', "${REF_PATH_PROFILE}")
+            uploadFiles("./BaikalNext/RprTest/ReferenceImages/*.*", "${REF_PATH_PROFILE}")
         } else {
             println("Executing Tests")
-            receiveFiles("${REF_PATH_PROFILE}/*", './BaikalNext/RprTest/ReferenceImages/')
+            downloadFiles("${REF_PATH_PROFILE}/*", "./BaikalNext/RprTest/ReferenceImages/")
             executeTestCommand(osName, options)
         }
     } catch (e) {
