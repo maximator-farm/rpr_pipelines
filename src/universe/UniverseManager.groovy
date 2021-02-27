@@ -169,7 +169,7 @@ abstract class UniverseManager {
                     }
                 }
             } catch (e) {
-                if (utils.isTimeoutExceeded(e)) {
+                if (context.utils.isTimeoutExceeded(e)) {
                     context.println("[WARNING] Failed to send stubs to UMS due to timeout")
                 } else {
                     context.println("[WARNING] Failed to send stubs to UMS")
