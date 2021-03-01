@@ -154,27 +154,39 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                         }
 
                                         if (options.containsKey('nodeRetry')) {
-                                            Map tryInfo = [host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.retry_${currentTry}.crash.log", exception: expectedExceptionMessage, time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))]
+                                            // parse united suites
+                                            testsOrTestPackageParts = testsOrTestPackage.split("-")
+                                            for (failedSuite in testsOrTestPackageParts[0].split()) {
+                                                String suiteName
+                                                // check engine availability
+                                                if (testsOrTestPackageParts.length > 1) {
+                                                    suiteName = "${failedSuite}-${testsOrTestPackageParts[1]}"
+                                                } else {
+                                                    suiteName = "${failedSuite}"
+                                                }
+                                                Map tryInfo = [host:env.NODE_NAME, link:"${testsOrTestPackage}.${env.NODE_NAME}.retry_${currentTry}.crash.log", exception: expectedExceptionMessage, time: LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))]
 
-                                            retryLoops: for (testers in options['nodeRetry']) {
-                                                if (testers['Testers'].equals(nodesList)){
-                                                    for (group in testers['Tries']) {
-                                                        if (group[testsOrTestPackage]) {
-                                                            group[testsOrTestPackage].add(tryInfo)
-                                                            added = true
-                                                            break retryLoops
+                                                retryLoops: for (testers in options['nodeRetry']) {
+                                                    if (testers['Testers'].equals(nodesList)){
+                                                        for (suite in testers['Tries']) {
+                                                            if (suite[suiteName]) {
+                                                                suite[suiteName].add(tryInfo)
+                                                                added = true
+                                                                break retryLoops
+                                                            }
                                                         }
+                                                        // add list for test group if it doesn't exists
+                                                        testers['Tries'].add([(suiteName): [tryInfo]])
+                                                        added = true
+                                                        break retryLoops
                                                     }
-                                                    // add list for test group if it doesn't exists
-                                                    testers['Tries'].add([(testsOrTestPackage): [tryInfo]])
-                                                    added = true
-                                                    break retryLoops
+                                                }
+
+                                                if (!added){
+                                                    options['nodeRetry'].add([Testers: nodesList, gpuName: asicName, osName: osName, Tries: [[(suiteName): [tryInfo]]]])
                                                 }
                                             }
 
-                                            if (!added){
-                                                options['nodeRetry'].add([Testers: nodesList, gpuName: asicName, osName: osName, Tries: [[(testsOrTestPackage): [tryInfo]]]])
-                                            }
                                             println options['nodeRetry'].inspect()
                                         }
 

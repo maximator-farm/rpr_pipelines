@@ -208,13 +208,8 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    options.engine = options.tests.split("-")[-1]
-    List parsedTestNames = []
-    options.tests.split().each { test ->
-        List testNameParts = test.split("-") as List
-        parsedTestNames.add(testNameParts.subList(0, testNameParts.size() - 1).join("-"))
-    }
-    options.parsedTests = parsedTestNames.join(" ")
+    options.parsedTests = options.tests.split("-")[0]
+    options.engine = options.tests.split("-")[1]
 
     if (options.sendToUMS){
         options.universeManager.startTestsStage(osName, asicName, options)
@@ -727,7 +722,8 @@ def executePreBuild(Map options)
                         }
                     }
                 }
-                tempTests.each() {
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", tempTests)
+                options.tests.each() {
                     options.engines.each { engine ->
                         tests << "${it}-${engine}"
                     }
@@ -748,8 +744,8 @@ def executePreBuild(Map options)
                 }
             } else if (options.tests) {
                 options.groupsUMS = options.tests.split(" ") as List
-                options.tests.split(" ").each()
-                {
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
+                options.tests.each() {
                     options.engines.each { engine ->
                         tests << "${it}-${engine}"
                     }
@@ -760,50 +756,6 @@ def executePreBuild(Map options)
                 options.executeTests = false
             }
             options.tests = tests
-
-            options.skippedTests = [:]
-            if (options.updateRefs == "No") {
-                options.platforms.split(';').each() {
-                    if (it) {
-                        List tokens = it.tokenize(':')
-                        String osName = tokens.get(0)
-                        String gpuNames = ""
-                        if (tokens.size() > 1) {
-                            gpuNames = tokens.get(1)
-                        }
-
-                        if (gpuNames) {
-                            gpuNames.split(',').each() {
-                                for (test in options.tests) {
-                                    if (!test.contains(".json")) {
-                                        String[] testNameParts = test.split("-")
-                                        testName = testNameParts[0]
-                                        engine = testNameParts[1]
-                                        try {
-                                            dir ("jobs_launcher") {
-                                                String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
-                                                if (output.contains("True")) {
-                                                    if (!options.skippedTests.containsKey(test)) {
-                                                        options.skippedTests[test] = []
-                                                    }
-                                                    options.skippedTests[test].add("${it}-${osName}")
-                                                }
-                                            }
-                                        } catch(Exception e) {
-                                            println(e.toString())
-                                            println(e.getMessage())
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                println "Skipped test groups:"
-                println options.skippedTests.inspect()
-            } else {
-                println "Ignore searching of tested groups due to updating of baselines"
-            }
         }
 
         if (env.BRANCH_NAME && options.githubNotificator) {
@@ -864,22 +816,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
             
             try {
                 dir("jobs_launcher") {
-                    // delete engine name from names of test groups
-                    def tests = []
-                    options.tests.each { group ->
-                        List testNameParts = group.split("-") as List
-                        String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        if (!tests.contains(parsedTestName)) {
-                            tests.add(parsedTestName)
-                        }
-                    }
-                    tests = tests.toString().replace(" ", "")
                     options.engines.each {
-                        String engine = "${it}"
-                        def skippedTests = JsonOutput.toJson(options.skippedTests)
                         // \\\\ - prevent escape sequence '\N'
                         bat """
-                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${utils.escapeCharsByUnicode(skippedTests.toString())}\"
+                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"${it}\" \"{}\"
                         """
                     }
                 }

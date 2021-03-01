@@ -7,15 +7,19 @@ import groovy.json.JsonOutput
  */
 class utils {
 
-    static int getTimeoutFromXML(Object self, String test, String keyword, Integer additional_xml_timeout) {
+    static int getTimeoutFromXML(Object self, String tests, String keyword, Integer additional_xml_timeout) {
         try {
-            String xml = self.readFile("jobs/Tests/${test}/test.job-manifest.xml")
-            for (xml_string in xml.split("<")) {
-                if (xml_string.contains("${keyword}") && xml_string.contains("timeout")) {
-                    Integer xml_timeout = (Math.round((xml_string.findAll(/\d+/)[0] as Double).div(60)) + additional_xml_timeout)
-                    return xml_timeout
+            Integer xml_timeout = 0
+            for (test in tests.split()) {
+                String xml = self.readFile("jobs/Tests/${test}/test.job-manifest.xml")
+                for (xml_string in xml.split("<")) {
+                    if (xml_string.contains("${keyword}") && xml_string.contains("timeout")) {
+                        xml_timeout += Math.round((xml_string.findAll(/\d+/)[0] as Double).div(60))
+                    }
                 }
             }
+            
+            return xml_timeout + additional_xml_timeout
         } catch (e) {
             self.println(e)
             return -1
@@ -305,6 +309,58 @@ class utils {
         indexes[index - 1] = targetIndex as String
 
         return indexes.join(delimiter.replace("\\", ""))
+    }
+
+    /**
+     * Unite test suites to optimize execution of small suites
+     * @param weightsFile - path to file with weight of each suite
+     * @param suites - List of suites which will be executed during build
+     * @param maxWeight - maximum summary weight of united suites
+     * @param maxLength - maximum lenght of string with name of each united suite (it's necessary for prevent issues with to log path lengts on Deploy stage)
+     * @return Return List of String objects (each string contains united suites in one run). Return suites argument if some exception appears
+     */
+    static List uniteSuites(Object self, String weightsFile, List suites, Integer maxWeight=3600, Integer maxLength=75) {
+        List unitedSuites = []
+
+        try {
+            def weights = self.readJSON(file: weightsFile)
+            List suitesLeft = suites.clone()
+            weights["weights"].removeAll {
+                !suites.contains(it["suite_name"])
+            }
+            while (weights["weights"]) {
+                List buffer = []
+                Integer currentLength = 0
+                Integer currentWeight = 0
+                for (suite in weights["weights"]) {
+                    if (currentWeight == 0 || (currentWeight + suite["value"] <= maxWeight)) {
+                        buffer << suite["suite_name"]
+                        currentWeight += suite["value"]
+                        currentLength += suite["suite_name"].length() + 1
+                        if (currentLength > maxLength) {
+                            break
+                        }
+                    }
+                }
+                weights["weights"].removeAll {
+                    buffer.contains(it["suite_name"])
+                }
+                suitesLeft.removeAll {
+                    buffer.contains(it)
+                }
+                unitedSuites << buffer.join(" ")
+            }
+
+            // add split suites which doesn't have information about their weight
+            unitedSuites.addAll(suitesLeft)
+
+            return unitedSuites
+        } catch (e) {
+            self.println("[ERROR] Can't unit test suites")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+        return suites
     }
 
     /**
