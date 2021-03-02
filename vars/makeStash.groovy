@@ -1,11 +1,11 @@
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+
 def call(Map params) {
 
     String stashName
 
     try {
         stashName = params["name"]
-
-        println("[INFO] Make stash with name '${stashName}'")
 
         Boolean allowEmpty = params["allowEmpty"]
         String includes = params["includes"]
@@ -56,11 +56,27 @@ def call(Map params) {
             throw new Exception("Empty stash")
         }
 
-        withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
-            if (isUnix()) {
-                sh(script: '$CIS_TOOLS/stash.sh' + " ${zipName} ${remotePath} " + '$REMOTE_HOST')
-            } else {
-                bat(script: '%CIS_TOOLS%\\stash.bat' + " ${zipName} ${remotePath} " + '%REMOTE_HOST%')
+        int times = 3
+        int retries = 0
+        int status = 0
+
+        while (retries++ < times) {
+            try {
+                print("Try to make stash №${retries}")
+                withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
+                    if (isUnix()) {
+                        status = sh(returnStatus: true, script: '$CIS_TOOLS/stash.sh' + " ${zipName} ${remotePath} " + '$REMOTE_HOST')
+                    } else {
+                        status = bat(returnStatus: true, script: '%CIS_TOOLS%\\stash.bat' + " ${zipName} ${remotePath} " + '%REMOTE_HOST%')
+                    }
+                }
+            } catch (FlowInterruptedException e1) {
+                println("[INFO] Making of stash with name '${stashName}' was aborting.")
+                throw e1
+            } catch(e1) {
+                println(e1.toString())
+                println(e1.getMessage())
+                println(e1.getStackTrace())
             }
         }
 
@@ -68,6 +84,7 @@ def call(Map params) {
         println("[ERROR] Failed to make stash with name '${stashName}'")
         println(e.toString())
         println(e.getMessage())
+        println(e.getStackTrace())
         throw e
     }
 

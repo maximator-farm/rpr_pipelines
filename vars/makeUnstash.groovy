@@ -1,7 +1,5 @@
 def call(String stashName, Boolean debug = false) {
 
-    println("[INFO] Make unstash of stash with name '${stashName}'")
-
     String debugPostfix = debug ? "Debug" : ""
 
     String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
@@ -9,11 +7,27 @@ def call(String stashName, Boolean debug = false) {
     String stdout
 
     try {
-        withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
-            if (isUnix()) {
-                sh(script: '$CIS_TOOLS/unstash.sh' + " ${remotePath} " + '$REMOTE_HOST')
-            } else {
-                bat(script: '%CIS_TOOLS%\\unstash.bat' + " ${remotePath} " + '$REMOTE_HOST')
+        int times = 3
+        int retries = 0
+        int status = 0
+
+        while (retries++ < times) {
+            try {
+                print("Try to make unstash №${retries}")
+                withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
+                    if (isUnix()) {
+                        sh(script: '$CIS_TOOLS/unstash.sh' + " ${remotePath} " + '$REMOTE_HOST')
+                    } else {
+                        bat(script: '%CIS_TOOLS%\\unstash.bat' + " ${remotePath} " + '$REMOTE_HOST')
+                    }
+                }
+            } catch (FlowInterruptedException e1) {
+                println("[INFO] Making of unstash of stash with name '${stashName}' was aborting.")
+                throw e1
+            } catch(e1) {
+                println(e1.toString())
+                println(e1.getMessage())
+                println(e1.getStackTrace())
             }
         }
 
