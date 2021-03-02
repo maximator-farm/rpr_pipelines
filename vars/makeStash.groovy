@@ -37,7 +37,7 @@ def call(Map params) {
 
         String remoteZipName
 
-        if (!zipName.endsWith(".zip")) {
+        if (includes?.split(",") == 1 && includes?.endsWith(".zip")) {
             if (isUnix()) {
                 stdout = sh(returnStdout: true, script: "zip -r ${zipName} . ${zipParams}")
             } else {
@@ -48,8 +48,6 @@ def call(Map params) {
         } else {
             remoteZipName = "stash_${stashName}.ziped"
         }
-
-        zipName = "stash_${stashName}.ziped"
 
         if (debug) {
             println(stdout)

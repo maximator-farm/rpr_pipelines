@@ -1,3 +1,5 @@
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+
 def call(String stashName, Boolean debug = false) {
 
     String debugPostfix = debug ? "Debug" : ""
