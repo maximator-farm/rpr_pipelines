@@ -35,14 +35,18 @@ def call(Map params) {
 
         String zipName = "stash_${stashName}.zip"
 
+        String remoteZipName
+
         if (!zipName.endsWith(".zip")) {
             if (isUnix()) {
                 stdout = sh(returnStdout: true, script: "zip -r ${zipName} . ${zipParams}")
             } else {
                 stdout = bat(returnStdout: true, script: "bash -c \"zip -r ${zipName} . ${zipParams}\"")
             }
+
+            remoteZipName = zipName
         } else {
-            utils.renameFile(this, isUnix() ? "Windows" : "Unix", zipName, "stash_${stashName}.ziped")
+            remoteZipName = "stash_${stashName}.ziped"
         }
 
         zipName = "stash_${stashName}.ziped"
@@ -51,7 +55,7 @@ def call(Map params) {
             println(stdout)
         }
 
-        if (stdout.contains("Nothing to do!") && !allowEmpty) {
+        if (stdout?.contains("Nothing to do!") && !allowEmpty) {
             println("[ERROR] Stash is empty")
             throw new Exception("Empty stash")
         }
@@ -65,10 +69,16 @@ def call(Map params) {
                 print("Try to make stash №${retries}")
                 withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                     if (isUnix()) {
-                        status = sh(returnStatus: true, script: '$CIS_TOOLS/stash.sh' + " ${zipName} ${remotePath} " + '$REMOTE_HOST')
+                        status = sh(returnStatus: true, script: '$CIS_TOOLS/stash.sh' + " ${zipName} ${remotePath}/${remoteZipName} " + '$REMOTE_HOST')
                     } else {
-                        status = bat(returnStatus: true, script: '%CIS_TOOLS%\\stash.bat' + " ${zipName} ${remotePath} " + '%REMOTE_HOST%')
+                        status = bat(returnStatus: true, script: '%CIS_TOOLS%\\stash.bat' + " ${zipName} ${remotePath}/${remoteZipName} " + '%REMOTE_HOST%')
                     }
+                }
+
+                if (status != 24) {
+                    return
+                } else {
+                    print("[ERROR] Partial transfer due to vanished source files")
                 }
             } catch (FlowInterruptedException e1) {
                 println("[INFO] Making of stash with name '${stashName}' was aborting.")

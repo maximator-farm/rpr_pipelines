@@ -16,10 +16,16 @@ def call(String stashName, Boolean debug = false) {
                 print("Try to make unstash №${retries}")
                 withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                     if (isUnix()) {
-                        sh(script: '$CIS_TOOLS/unstash.sh' + " ${remotePath} " + '$REMOTE_HOST')
+                        status = sh(script: '$CIS_TOOLS/unstash.sh' + " ${remotePath} " + '$REMOTE_HOST')
                     } else {
-                        bat(script: '%CIS_TOOLS%\\unstash.bat' + " ${remotePath} " + '$REMOTE_HOST')
+                        status = bat(script: '%CIS_TOOLS%\\unstash.bat' + " ${remotePath} " + '$REMOTE_HOST')
                     }
+                }
+
+                if (status != 24) {
+                    return
+                } else {
+                    print("[ERROR] Partial transfer due to vanished source files")
                 }
             } catch (FlowInterruptedException e1) {
                 println("[INFO] Making of unstash of stash with name '${stashName}' was aborting.")
