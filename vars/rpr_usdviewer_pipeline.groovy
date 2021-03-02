@@ -239,6 +239,11 @@ def executeBuildWindows(Map options)
         // vcvars64.bat sets VS/msbuild env
         withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             bat """
+                call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
+                cd USDPixar
+                git apply ../usd_dev.patch  >> ${STAGE_NAME}.USDPixar.log 2>&1
+                cd ..
+
                 RPRViewer\\tools\\build_all_windows.bat >> ${STAGE_NAME}.HdRPRPlugin.log 2>&1
             """
         }
@@ -260,15 +265,12 @@ def executeBuildWindows(Map options)
 
             withEnv(["PYTHONPATH=%INST%\\lib\\python;%INST%\\lib"]) {
                 try {
-                    dir("RPRViewer") {
-                        bat """
-                            RPRViewer\\tools\\build_package_windows.bat >> ${STAGE_NAME}.USDViewerInstaller.log 2>&1
-                        """
+                    bat """
+                        RPRViewer\\tools\\build_package_windows.bat >> ${STAGE_NAME}.USDViewerInstaller.log 2>&1
+                    """
 
-                        utils.moveFiles(this, "Windows", "RPRViewer_Setup.exe", "RPRViewer_Setup_Windows.exe")
-                        dir("RPRViewer/binary/{platform}/inst/dist/RPRViewer") {
-                            archiveArtifacts artifacts: "RPRViewer_Setup_Windows.exe", allowEmptyArchive: false
-                        }
+                    dir("RPRViewer/binary/windows/inst/dist/RPRViewer") {
+                        archiveArtifacts artifacts: "RPRViewer.exe", allowEmptyArchive: false
                     }
                 } catch (e) {
                     println(e.toString())
