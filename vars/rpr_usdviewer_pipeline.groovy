@@ -410,7 +410,7 @@ def executePreBuild(Map options)
                         }
                     }
                 }
-                options.tests = utils.uniteSuites(this, "jobs/weights.json", tempTests)
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", tests)
                 options.tests.each() {
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
