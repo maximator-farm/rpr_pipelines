@@ -67,14 +67,14 @@ def call(Map params) {
                 print("Try to make stash №${retries}")
                 withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                     if (isUnix()) {
-                        status = sh(returnStatus: true, script: '$CIS_TOOLS/stash.sh' + " ${zipName} ${remotePath}/${remoteZipName} " + '$REMOTE_HOST')
+                        status = sh(returnStatus: true, script: '$CIS_TOOLS/stash.sh' + " ${zipName} ${remotePath} " + '$REMOTE_HOST')
                     } else {
-                        status = bat(returnStatus: true, script: '%CIS_TOOLS%\\stash.bat' + " ${zipName} ${remotePath}/${remoteZipName} " + '%REMOTE_HOST%')
+                        status = bat(returnStatus: true, script: '%CIS_TOOLS%\\stash.bat' + " ${zipName} ${remotePath} " + '%REMOTE_HOST%')
                     }
                 }
 
                 if (status != 24) {
-                    return
+                    break
                 } else {
                     print("[ERROR] Partial transfer due to vanished source files")
                 }

@@ -25,7 +25,7 @@ def call(String stashName, Boolean debug = false) {
                 }
 
                 if (status != 24) {
-                    return
+                    break
                 } else {
                     print("[ERROR] Partial transfer due to vanished source files")
                 }
