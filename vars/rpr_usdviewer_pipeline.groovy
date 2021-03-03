@@ -318,8 +318,8 @@ def executeBuildOSX(Map options)
     withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
         sh """
             export OS=Darwin
-            export QT_SYMLINKS_DIR=/Users/admin/Qt5.14.2/QtSymlinks
-            export PATH="/Users/admin/Qt5.14.2/5.14.2/clang_64/bin:$PATH"
+            export QT_SYMLINKS_DIR=/Users/admin/Qt5.15.2/QtSymlinks
+            export PATH="/Users/admin/Qt5.15.2/5.15.2/clang_64/bin:$PATH"
 
             rm -rf RPRViewer/binary/windows/inst
             rm -rf RPRViewer/binary/windows/deps
@@ -384,7 +384,7 @@ def executeBuildOSX(Map options)
                         \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                 """
 
-                //TODO implement building of installer
+                zip archive: true, dir: "RPRViewer/binary/mac/inst/dist/RPRViewer", glob: '', zipFile: "RadeonProUSDViewer_Package_OSX.zip"
             } catch (e) {
                 println(e.toString())
                 println(e.getMessage())
