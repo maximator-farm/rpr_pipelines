@@ -244,7 +244,14 @@ def executeBuildWindows(Map options)
                 git apply ../usd_dev.patch  >> ${STAGE_NAME}.USDPixar.log 2>&1
                 cd ..
 
-                RPRViewer\\tools\\build_all_windows.bat >> ${STAGE_NAME}.HdRPRPlugin.log 2>&1
+                python USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/windows/build --src RPRViewer/binary/windows/deps RPRViewer/binary/windows/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
+                
+                set PXR_DIR=%CD%\\USDPixar
+                set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
+                cd HdRPRPlugin
+                cmake -B build -G "Visual Studio 15 2017 Win64" -Dpxr_DIR=%PXR_DIR% -DCMAKE_INSTALL_PREFIX=%INSTALL_PREFIX_DIR% ^
+                    -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE -DPXR_USE_PYTHON_3=ON >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
+                cmake --build build --config Release --target install >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
             """
         }
 
@@ -263,15 +270,32 @@ def executeBuildWindows(Map options)
                 del RPRViewer\\binary\\windows\\inst\\plugin\\usd\\*.lib
             """
 
+            // TODO: filter files for archive
+            
+            zip archive: true, dir: "RPRViewer\\binary\\windows\\inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
+            stash includes: "RadeonProUSDViewer_Windows.zip", name: "appWindows"
+            options.pluginWinSha = sha1 "RadeonProUSDViewer_Windows.zip"
+
             withEnv(["PYTHONPATH=%INST%\\lib\\python;%INST%\\lib"]) {
                 try {
                     bat """
-                        RPRViewer\\tools\\build_package_windows.bat >> ${STAGE_NAME}.USDViewerInstaller.log 2>&1
+                        set INSTALL_PREFIX_DIR=%CD%/RPRViewer/binary/windows/inst
+                        set PACKAGE_PATH=%INSTALL_PREFIX_DIR%/dist
+                        set PYTHONPATH=%INSTALL_PREFIX_DIR%/lib/python;%INSTALL_PREFIX_DIR%/lib;%INSTALL_PREFIX_DIR%/lib/python/pxr/Usdviewq/HdRPRPlugin/python
+
+                        pyinstaller %CD%/RPRViewer/tools/usdview_windows.spec --noconfirm --clean --distpath %PACKAGE_PATH% ^
+                            --workpath %INSTALL_PREFIX_DIR%/build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                     """
 
-                    dir("RPRViewer/binary/windows/inst/dist/RPRViewer") {
-                        archiveArtifacts artifacts: "RPRViewer.exe", allowEmptyArchive: false
+                    // It's required additional changes from dev team to set correct path to package
+                    /*
+                    dir("RPRViewer") {
+                        bat """
+                            "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log 2>&1
+                        """
+                        archiveArtifacts artifacts: "RPRViewer_Setup.exe", allowEmptyArchive: false
                     }
+                    */
                 } catch (e) {
                     println(e.toString())
                     println(e.getMessage())
@@ -280,11 +304,6 @@ def executeBuildWindows(Map options)
                     println "[ERROR] Failed to build USD Viewer installer"
                 }
             }
-
-            // TODO: filter files for archive
-            zip archive: true, dir: "RPRViewer\\binary\\windows\\inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
-            stash includes: "RadeonProUSDViewer_Windows.zip", name: "appWindows"
-            options.pluginWinSha = sha1 "RadeonProUSDViewer_Windows.zip"
         }
     }
 }
@@ -302,41 +321,61 @@ def executeBuildOSX(Map options)
             export QT_SYMLINKS_DIR=/Users/admin/Qt5.14.2/QtSymlinks
             export PATH="/Users/admin/Qt5.14.2/5.14.2/clang_64/bin:$PATH"
 
-            # USD
-            python3.7 USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst \
-                --build-args USD,"-DQT_SYMLINKS_DIR=\$QT_SYMLINKS_DIR" >> ${STAGE_NAME}.USDPixar.log 2>&1
+            rm -rf RPRViewer/binary/windows/inst
+            rm -rf RPRViewer/binary/windows/deps
+            rm -rf RPRViewer/binary/windows/build
+            rm -rf RPRViewer/binary/mac/inst
+            rm -rf RPRViewer/binary/mac/deps
+            rm -rf RPRViewer/binary/mac/build
 
+            # USD
+            python3.7 USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
             # HdRprPlugin
             PXR_DIR=\$(pwd)/USDPixar
             INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
-
             cd HdRPRPlugin
             cmake -B build -Dpxr_DIR=\$PXR_DIR -DCMAKE_INSTALL_PREFIX=\$INSTALL_PREFIX_DIR -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE \
                 -DPXR_USE_PYTHON_3=ON >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
             cmake --build build --config Release --target install >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
-           
         """
     }
 
     // delete files before zipping
     withNotifications(title: "OSX", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_OSX.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
-        // bat """
-        //     rm RPRViewer/binary/inst/pxrConfig.cmake
-        //     rm -rf RPRViewer/binary/inst/cmake
-        //     rm -rf RPRViewer/binary/inst/include
-        //     rm -rf RPRViewer/binary/inst/lib/cmake
-        //     rm -rf RPRViewer/binary/inst/lib/pkgconfig
-        //     del RPRViewer/binary/inst/bin/*.lib
-        //     del RPRViewer/binary/inst/bin/*.pdb
-        //     del RPRViewer/binary/inst/lib/*.lib
-        //     del RPRViewer/binary/inst/lib/*.pdb
-        //     del RPRViewer/binary/inst/plugin/usd/*.lib
-        // """
+        sh """
+            rm RPRViewer/binary/mac/inst/pxrConfig.cmake
+            rm -rf RPRViewer/binary/mac/inst/cmake
+            rm -rf RPRViewer/binary/mac/inst/include
+            rm -rf RPRViewer/binary/mac/inst/lib/cmake
+            rm -rf RPRViewer/binary/mac/inst/lib/pkgconfig
+            rm -rf RPRViewer/binary/mac/inst/bin/*.lib
+            rm -rf RPRViewer/binary/mac/inst/bin/*.pdb
+            rm -rf RPRViewer/binary/mac/inst/lib/*.lib
+            rm -rf RPRViewer/binary/mac/inst/lib/*.pdb
+            rm -rf RPRViewer/binary/mac/inst/plugin/usd/*.lib
+        """
 
         // TODO: filter files for archive
+
         zip archive: true, dir: "RPRViewer/binary/mac/inst", glob: '', zipFile: "RadeonProUSDViewer_OSX.zip"
         // stash includes: "RadeonProUSDViewer_OSX.zip", name: "appOSX"
         // options.pluginOSXSha = sha1 "RadeonProUSDViewer_OSX.zip"
+
+        withEnv(["PYTHONPATH=%INST%/lib/python;%INST%/lib"]) {
+            try {
+                sh """
+                    RPRViewer/tools/build_package_mac.sh >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                """
+
+                //TODO implement building of installer
+            } catch (e) {
+                println(e.toString())
+                println(e.getMessage())
+                println(e.getStackTrace())
+                //currentBuild.result = "FAILURE"
+                println "[ERROR] Failed to build USD Viewer installer"
+            }
+        }
     }
     
 }
@@ -473,6 +512,8 @@ def executePreBuild(Map options)
                     }
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
+
+                options.tests = tests
             } else {
                 options.groupsUMS = options.tests.split(" ") as List
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
@@ -481,7 +522,6 @@ def executePreBuild(Map options)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
             }
-            options.tests = tests
 
             options.skippedTests = [:]
             if (options.updateRefs == "No") {
