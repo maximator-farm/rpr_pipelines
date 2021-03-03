@@ -554,6 +554,8 @@ def executePreBuild(Map options)
                     tests << modifiedPackageName
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
+
+                options.tests = tests
             } else {
                 options.groupsUMS = options.tests.split(" ") as List
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
@@ -562,7 +564,6 @@ def executePreBuild(Map options)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
             }
-            options.tests = tests
         }
     }
 
