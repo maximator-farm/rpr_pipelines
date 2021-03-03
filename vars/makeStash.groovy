@@ -43,7 +43,7 @@ def call(Map params) {
             if (isUnix()) {
                 stdout = sh(returnStdout: true, script: "zip -r ${zipName} . ${zipParams}")
             } else {
-                stdout = bat(returnStdout: true, script: "bash -c \"zip -r ${zipName} . ${zipParams}\"")
+                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " stash_${stashName}.zip .")
             }
 
             remoteZipName = zipName

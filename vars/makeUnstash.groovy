@@ -20,7 +20,7 @@ def call(String stashName, Boolean debug = false) {
                     if (isUnix()) {
                         status = sh(script: '$CIS_TOOLS/unstash.sh' + " ${remotePath} " + '$REMOTE_HOST')
                     } else {
-                        status = bat(script: '%CIS_TOOLS%\\unstash.bat' + " ${remotePath} " + '$REMOTE_HOST')
+                        status = bat(script: '%CIS_TOOLS%\\unstash.bat' + " ${remotePath} " + '%REMOTE_HOST%')
                     }
                 }
 
@@ -45,7 +45,7 @@ def call(String stashName, Boolean debug = false) {
             if (isUnix()) {
                 stdout = sh(returnStdout: true, script: "unzip -u stash_${stashName}.zip")
             } else {
-                stdout = bat(returnStdout: true, script: "bash -c \"unzip -u stash_${stashName}.zip\"")
+                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " stash_${stashName}.zip\"")
             }
         } else {
             println("[ERROR] Could not find any suitable archive with stash content")
