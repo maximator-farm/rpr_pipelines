@@ -364,7 +364,24 @@ def executeBuildOSX(Map options)
         withEnv(["PYTHONPATH=%INST%/lib/python;%INST%/lib"]) {
             try {
                 sh """
-                    RPRViewer/tools/build_package_mac.sh >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                    export INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
+                    export MATERIALX_DIR=\$(python3 -c "import MaterialX as _; import os; print(os.path.dirname(_.__file__))")/
+                    export PYTHONPATH=\$INSTALL_PREFIX_DIR/lib/python:\$INSTALL_PREFIX_DIR/lib:\$INSTALL_PREFIX_DIR/lib/python/pxr/Usdviewq/HdRPRPlugin/python
+                    PACKAGE_PATH=\$INSTALL_PREFIX_DIR/dist
+
+                    python3.7 -m PyInstaller \$(pwd)/RPRViewer/tools/usdview_mac.spec --noconfirm --clean --distpath \
+                        \$PACKAGE_PATH --workpath \$INSTALL_PREFIX_DIR/build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+
+                    install_name_tool -add_rpath @loader_path/../../.. \$PACKAGE_PATH/RPRViewer/hdrpr/plugin/usd/hdRpr.dylib
+                    rm \$PACKAGE_PATH/RPRViewer/librprUsd.dylib
+                    install_name_tool -change @loader_path/../../librprUsd.dylib @loader_path/../../hdrpr/lib/librprUsd.dylib \
+                        \$PACKAGE_PATH/RPRViewer/rpr/RprUsd/_rprUsd.so >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                    install_name_tool -add_rpath @loader_path/../.. \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib
+                    cp \$PACKAGE_PATH/RPRViewer/hdrpr/lib/*.dylib \$PACKAGE_PATH/RPRViewer/
+                    install_name_tool -change \$INSTALL_PREFIX_DIR/lib/libGLEW.2.0.0.dylib @rpath/libGLEW.2.0.0.dylib \
+                        \$PACKAGE_PATH/RPRViewer/hdrpr/plugin/usd/hdRpr.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                    install_name_tool -change \$INSTALL_PREFIX_DIR/lib/libGLEW.2.0.0.dylib @rpath/libGLEW.2.0.0.dylib \
+                        \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                 """
 
                 //TODO implement building of installer
