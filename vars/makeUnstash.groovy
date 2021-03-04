@@ -1,8 +1,6 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
-def call(String stashName, Boolean debug = false) {
-
-    String debugPostfix = debug ? "Debug" : ""
+def call(String stashName, Boolean unzip = true, Boolean debug = false) {
 
     String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
     
@@ -12,6 +10,8 @@ def call(String stashName, Boolean debug = false) {
         int times = 3
         int retries = 0
         int status = 0
+
+        String zipName = "stash_${stashName}.zip"
 
         while (retries++ < times) {
             try {
@@ -39,17 +39,12 @@ def call(String stashName, Boolean debug = false) {
             }
         }
 
-        if (fileExists("stash_${stashName}.ziped")) {
-            utils.renameFile(this, isUnix() ? "Windows" : "Unix", "stash_${stashName}.ziped", "stash_${stashName}.zip")
-        } else if (fileExists("stash_${stashName}.zip")) {
+        if (unzip) {
             if (isUnix()) {
-                stdout = sh(returnStdout: true, script: "unzip -u stash_${stashName}.zip")
+                stdout = sh(returnStdout: true, script: "unzip -u ${zipName}")
             } else {
-                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " stash_${stashName}.zip\"")
+                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " ${zipName}\"")
             }
-        } else {
-            println("[ERROR] Could not find any suitable archive with stash content")
-            throw new Exception("Could not find any suitable archive with stash content")
         }
 
         if (debugPostfix) {

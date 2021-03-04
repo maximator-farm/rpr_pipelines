@@ -54,7 +54,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash("appWindows")
+                    makeUnstash("appWindows", false)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -104,7 +104,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash("appOSX")
+                    makeUnstash("appOSX", false)
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -154,7 +154,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash("app${osName}")
+                    makeUnstash("app${osName}", false)
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -501,7 +501,7 @@ def executeBuildWindows(Map options)
                 rename RadeonProRender*.zip RadeonProRenderBlender_Windows.zip
             """
 
-            makeStash(includes: "RadeonProRenderBlender_Windows.zip", name: "appWindows")
+            makeStash(includes: "RadeonProRenderBlender_Windows.zip", name: "appWindows", zip: false)
 
             GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
@@ -542,7 +542,7 @@ def executeBuildOSX(Map options)
                 mv RadeonProRender*zip RadeonProRenderBlender_MacOS.zip
             """
 
-            makeStash(includes: "RadeonProRenderBlender_MacOS.zip", name: "appOSX")
+            makeStash(includes: "RadeonProRenderBlender_MacOS.zip", name: "appOSX", zip: false)
 
             GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
@@ -584,7 +584,7 @@ def executeBuildLinux(String osName, Map options)
                 mv RadeonProRender*zip RadeonProRenderBlender_${osName}.zip
             """
 
-            makeStash(includes: "RadeonProRenderBlender_${osName}.zip", name: "app${osName}")
+            makeStash(includes: "RadeonProRenderBlender_${osName}.zip", name: "app${osName}", zip: false)
 
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }

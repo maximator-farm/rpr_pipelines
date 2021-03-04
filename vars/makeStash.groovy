@@ -11,23 +11,34 @@ def call(Map params) {
         String includes = params["includes"]
         String excludes = params["excludes"]
         Boolean debug = params["debug"]
-        String debugPostfix = debug ? "Debug" : ""
+        Boolean zip = params["zip"] ?: true
 
-        def zipParams = []
+        def includeParams = []
+        def excludeParams = []
 
         if (includes) {
             for (include in includes.split(",")) {
-                zipParams << "-i '${include}'"
+                if (isUnix()) {
+                    includeParams << "-i '${include}'"
+                } else {
+                    includeParams << "'${include.replace('/**/', '/').replace('**/', '').replace('/**', '')}'"
+                }
             }
         }
 
         if (excludes) {
             for (exclude in excludes.split(",")) {
-                zipParams << "-x '${exclude}'"
+                if (isUnix()) {
+                    excludeParams << "-x '${exclude}'"
+                } else {
+                    excludeParams << "-xr!'${exclude.replace('/**/', '/').replace('**/', '').replace('/**', '')}'"
+                }
+                
             }
         }
 
-        zipParams = zipParams.join(" ")
+        includeParams = includeParams.join(" ")
+        excludeParams = excludeParams.join(" ")
 
         String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
 
@@ -35,18 +46,12 @@ def call(Map params) {
 
         String zipName = "stash_${stashName}.zip"
 
-        String remoteZipName
-
-        if (includes?.split(",") == 1 && includes?.endsWith(".zip")) {
-            remoteZipName = "stash_${stashName}.ziped"
-        } else {
+        if (zip) {
             if (isUnix()) {
-                stdout = sh(returnStdout: true, script: "zip -r ${zipName} . ${zipParams}")
+                stdout = sh(returnStdout: true, script: "zip -r ${zipName} . ${includeParams} ${excludeParams}")
             } else {
-                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " stash_${stashName}.zip .")
+                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " stash_${stashName}.zip ${includeParams ?: '.')} ${excludeParams}")
             }
-
-            remoteZipName = zipName
         }
 
         if (debug) {
