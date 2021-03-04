@@ -405,12 +405,6 @@ def executePreBuild(Map options) {
                 }
             }
 
-            def extractTimeouts = {
-                it.each {
-                    def xml_timeout = utils.getTimeoutFromXML(this, it, "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                    options.timeouts[it] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
-                }
-            }
             if (options.testsPackage != "none") {
                 if (options.isPackageSplitted) {
                     println "[INFO] Tests package '${options.testsPackage}' can be splitted"
