@@ -232,9 +232,7 @@ def executeTests(String osName, String asicName, Map options)
             downloadAssets("${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/", "CoreAssets")
         }
 
-        String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
-
+        String REF_PATH_PROFILE="/volume1/Baselines/rpr_core_autotests/${asicName}-${osName}"
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
         outputEnvironmentInfo(osName, "", options.currentTry)
@@ -243,7 +241,7 @@ def executeTests(String osName, String asicName, Map options)
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, asicName, options)
                 executeGenTestRefCommand(osName, options, options["updateRefs"].contains("clean"))
-                sendFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
+                uploadFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
                 // delete generated baselines when they're sent 
                 switch(osName) {
                     case "Windows":
@@ -258,7 +256,7 @@ def executeTests(String osName, String asicName, Map options)
                 String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_core_autotests_baselines" : "/mnt/c/TestResources/rpr_core_autotests_baselines"
                 println "[INFO] Downloading reference images for ${options.tests}"
                 options.tests.split(" ").each() {
-                    receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                    downloadFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
                 }
             }
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
@@ -571,7 +569,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 withCredentials([string(credentialsId: 'buildsRemoteHost', variable: 'REMOTE_HOST')]) {
                     dir("core_tests_configuration") {
-                        bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat ${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/ . ${REMOTE_HOST}")
+                        bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat  . ${REMOTE_HOST}")
+                        downloadFiles("/volume1/Assets/rpr_core_autotests/", ".", "--include='*.json' --include='*/' --exclude='*'")
                     }
                 }
             } catch (e) {
@@ -589,13 +588,14 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
+                String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/${env.JOB_NAME}"
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 def buildNumber = ""
                 if (options.collectTrackedMetrics) {
                     buildNumber = env.BUILD_NUMBER
                     try {
                         dir("summaryTestResults/tracked_metrics") {
-                            receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}/", ".")
+                            downloadFiles("${metricsRemoteDir}/", ".")
                         }
                     } catch (e) {
                         println("[WARNING] Failed to download history of tracked metrics.")
@@ -636,7 +636,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 if (options.collectTrackedMetrics) {
                     try {
                         dir("summaryTestResults/tracked_metrics") {
-                            sendFiles(".", "${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}")
+                            uploadFiles(".", "${metricsRemoteDir}")
                         }
                     } catch (e) {
                         println("[WARNING] Failed to update history of tracked metrics.")
