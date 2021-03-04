@@ -47,7 +47,7 @@ def call(String stashName, Boolean unzip = true, Boolean debug = false) {
             }
         }
 
-        if (debugPostfix) {
+        if (debug) {
             println(stdout)
         }
 

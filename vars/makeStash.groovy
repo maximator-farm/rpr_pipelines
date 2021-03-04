@@ -11,29 +11,31 @@ def call(Map params) {
         String includes = params["includes"]
         String excludes = params["excludes"]
         Boolean debug = params["debug"]
-        Boolean zip = params["zip"] ?: true
+        Boolean zip = params.containsKey("zip") ? params["zip"] : true
 
         def includeParams = []
         def excludeParams = []
 
-        if (includes) {
-            for (include in includes.split(",")) {
-                if (isUnix()) {
-                    includeParams << "-i '${include}'"
-                } else {
-                    includeParams << "'${include.replace('/**/', '/').replace('**/', '').replace('/**', '')}'"
+        if (zip) {
+            if (includes) {
+                for (include in includes.split(",")) {
+                    if (isUnix()) {
+                        includeParams << "-i '${include}'"
+                    } else {
+                        includeParams << "${include.replace('/**/', '/').replace('**/', '').replace('/**', '')}"
+                    }
                 }
             }
-        }
 
-        if (excludes) {
-            for (exclude in excludes.split(",")) {
-                if (isUnix()) {
-                    excludeParams << "-x '${exclude}'"
-                } else {
-                    excludeParams << "-xr!'${exclude.replace('/**/', '/').replace('**/', '').replace('/**', '')}'"
+            if (excludes) {
+                for (exclude in excludes.split(",")) {
+                    if (isUnix()) {
+                        excludeParams << "-x '${exclude}'"
+                    } else {
+                        excludeParams << "-xr!${exclude.replace('/**/', '/').replace('**/', '').replace('/**', '')}"
+                    }
+                    
                 }
-                
             }
         }
 
@@ -50,7 +52,7 @@ def call(Map params) {
             if (isUnix()) {
                 stdout = sh(returnStdout: true, script: "zip -r ${zipName} . ${includeParams} ${excludeParams}")
             } else {
-                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " stash_${stashName}.zip ${includeParams ?: '.')} ${excludeParams}")
+                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " stash_${stashName}.zip ${includeParams ?: '.'} ${excludeParams}")
             }
         }
 
@@ -72,9 +74,17 @@ def call(Map params) {
                 print("Try to make stash №${retries}")
                 withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                     if (isUnix()) {
-                        status = sh(returnStatus: true, script: '$CIS_TOOLS/stash.sh' + " ${zipName} ${remotePath} " + '$REMOTE_HOST')
+                        if (zip) {
+                            status = sh(returnStatus: true, script: '$CIS_TOOLS/stash.sh' + " ${zipName} ${remotePath} " + '$REMOTE_HOST')
+                        } else {
+                            status = sh(returnStatus: true, script: '$CIS_TOOLS/stash.sh' + " ${includes} ${remotePath} " + '$REMOTE_HOST')
+                        }
                     } else {
-                        status = bat(returnStatus: true, script: '%CIS_TOOLS%\\stash.bat' + " ${zipName} ${remotePath} " + '%REMOTE_HOST%')
+                        if (zip) {
+                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\stash.bat' + " ${zipName} ${remotePath} " + '%REMOTE_HOST%')
+                        } else {
+                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\stash.bat' + " ${includes} ${remotePath} " + '%REMOTE_HOST%')
+                        }
                     }
                 }
 
