@@ -88,12 +88,12 @@ class utils {
 
     static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "") {
         Map params = [allowMissing: false,
-                     alwaysLinkToLastBuild: false,
-                     keepAll: true,
-                     reportDir: reportDir,
-                     reportFiles: reportFiles,
-                     // TODO: custom reportName (issues with escaping)
-                     reportName: reportName]
+                      alwaysLinkToLastBuild: false,
+                      keepAll: true,
+                      reportDir: reportDir,
+                      reportFiles: reportFiles,
+                      // TODO: custom reportName (issues with escaping)
+                      reportName: reportName]
         if (reportTitles) {
             params['reportTitles'] = reportTitles
         }

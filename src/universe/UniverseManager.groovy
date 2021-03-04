@@ -193,7 +193,7 @@ abstract class UniverseManager {
         downloadJobsLauncher(osName, options)
 
         context.dir("jobs_launcher") {
-            context.timeout(time: "3", unit: 'MINUTES') {
+            context.timeout(time: "8", unit: 'MINUTES') {
                 try {
                     context.withCredentials([context.string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
                         context.usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')]) {
