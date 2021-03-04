@@ -146,8 +146,8 @@ def executeBuild(String osName, Map options)
     {
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
-        receiveFiles("rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
-        receiveFiles("rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
+        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
+        downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
 
         outputEnvironmentInfo(osName)
 
@@ -218,12 +218,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
+                String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/${env.JOB_NAME}"
                 def buildNumber = ""
                 if (options.collectTrackedMetrics) {
                     buildNumber = env.BUILD_NUMBER
                     try {
                         dir("summaryTestResults/tracked_metrics") {
-                            receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}/", ".")
+                            rdownloadFiles("${metricsRemoteDir}/", ".")
                         }
                     } catch (e) {
                         println("[WARNING] Failed to download history of tracked metrics.")
@@ -257,7 +258,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 if (options.collectTrackedMetrics) {
                     try {
                         dir("summaryTestResults/tracked_metrics") {
-                            sendFiles(".", "${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}")
+                            uploadFiles(".", "${metricsRemoteDir}")
                         }
                     } catch (e) {
                         println("[WARNING] Failed to update history of tracked metrics.")
