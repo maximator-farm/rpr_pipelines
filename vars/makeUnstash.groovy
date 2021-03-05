@@ -50,6 +50,14 @@ def call(String stashName, Boolean unzip = true, Boolean debug = false) {
         if (debug) {
             println(stdout)
         }
+        
+        if (unzip) {
+            if (isUnix()) {
+                sh "rm -rf ${zipName}"
+            } else {
+                bat "del ${zipName}"
+            }
+        }
 
     } catch (e) {
         println("Failed to unstash stash with name '${stashName}'")

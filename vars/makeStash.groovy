@@ -102,6 +102,14 @@ def call(Map params) {
                 println(e1.getStackTrace())
             }
         }
+        
+        if (zip) {
+            if (isUnix()) {
+                sh "rm -rf ${zipName}"
+            } else {
+                bat "del ${zipName}"
+            }
+        }
 
     } catch (e) {
         println("[ERROR] Failed to make stash with name '${stashName}'")
