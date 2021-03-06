@@ -169,7 +169,7 @@ abstract class UniverseManager {
                     }
                 }
             } catch (e) {
-                if (utils.isTimeoutExceeded(e)) {
+                if (context.utils.isTimeoutExceeded(e)) {
                     context.println("[WARNING] Failed to send stubs to UMS due to timeout")
                 } else {
                     context.println("[WARNING] Failed to send stubs to UMS")
@@ -193,7 +193,7 @@ abstract class UniverseManager {
         downloadJobsLauncher(osName, options)
 
         context.dir("jobs_launcher") {
-            context.timeout(time: "3", unit: 'MINUTES') {
+            context.timeout(time: "8", unit: 'MINUTES') {
                 try {
                     context.withCredentials([context.string(credentialsId: 'minioEndpoint', variable: 'MINIO_ENDPOINT'),
                         context.usernamePassword(credentialsId: 'minioService', usernameVariable: 'MINIO_ACCESS_KEY', passwordVariable: 'MINIO_SECRET_KEY')]) {

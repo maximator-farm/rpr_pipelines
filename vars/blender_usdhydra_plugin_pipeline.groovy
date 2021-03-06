@@ -137,13 +137,8 @@ def executeTestCommand(String osName, String asicName, Map options) {
 
 
 def executeTests(String osName, String asicName, Map options) {
-    options.engine = options.tests.split("-")[-1]
-    List parsedTestNames = []
-    options.tests.split().each { test ->
-        List testNameParts = test.split("-") as List
-        parsedTestNames.add(testNameParts.subList(0, testNameParts.size() - 1).join("-"))
-    }
-    options.parsedTests = parsedTestNames.join(" ")
+    options.parsedTests = options.tests.split("-")[0]
+    options.engine = options.tests.split("-")[1]
 
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
@@ -157,10 +152,8 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_blenderusdhydra_autotests" : "C:\\TestResources\\rpr_blenderusdhydra_autotests"
-            dir(assets_dir) {
-                checkOutBranchOrScm(options.assetsBranch, options.assetsRepo, true, null, null, false, true, "radeonprorender-gitlab", true)
-            }
+            String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_blender_autotests_assets" : "/mnt/c/TestResources/usd_blender_autotests_assets"
+            downloadFiles("/volume1/Assets/usd_blender_autotests/", assets_dir)
         }
 
         try {
@@ -195,7 +188,7 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         String enginePostfix = ""
-        String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
+        String REF_PATH_PROFILE="/volume1/Baselines/usd_blender_autotests/${asicName}-${osName}"
         switch(options.engine) {
             case 'HdRprPlugin':
                 enginePostfix = "RPR"
@@ -214,7 +207,7 @@ def executeTests(String osName, String asicName, Map options) {
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 executeTestCommand(osName, asicName, options)
                 executeGenTestRefCommand(osName, options, options["updateRefs"].contains("clean"))
-                sendFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
+                uploadFiles("./Work/GeneratedBaselines/", REF_PATH_PROFILE)
                 // delete generated baselines when they're sent 
                 switch(osName) {
                     case 'Windows':
@@ -227,14 +220,14 @@ def executeTests(String osName, String asicName, Map options) {
         } else {
             // TODO: receivebaseline for json suite
             withNotifications(title: options["stageName"], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
-                String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_blenderusdhydra_autotests_baselines" : "/mnt/c/TestResources/rpr_blenderusdhydra_autotests_baselines"
+                String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_blender_autotests_baselines" : "/mnt/c/TestResources/usd_blender_autotests_baselines"
                 baseline_dir = enginePostfix ? "${baseline_dir}-${enginePostfix}" : baseline_dir
                 println "[INFO] Downloading reference images for ${options.parsedTests}"
                 options.parsedTests.split(" ").each() {
                     if (it.contains(".json")) {
-                        receiveFiles("${REF_PATH_PROFILE}/", baseline_dir)
+                        downloadFiles("${REF_PATH_PROFILE}/", baseline_dir)
                     } else {
-                        receiveFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
+                        downloadFiles("${REF_PATH_PROFILE}/${it}", baseline_dir)
                     }
                 }
             }
@@ -430,7 +423,7 @@ def executeBuildLinux(String osName, Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
-        receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/libs/*", "libs")
+        downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/libs/*", "libs")
 
         dir("RadeonProRenderBlenderAddon") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
@@ -638,7 +631,8 @@ def executePreBuild(Map options)
                     }
                 }
 
-                tempTests.each() {
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", tempTests)
+                options.tests.each() {
                     options.engines.each { engine ->
                         tests << "${it}-${engine}"
                     }
@@ -659,7 +653,8 @@ def executePreBuild(Map options)
                 }
             } else if (options.tests) {
                 options.groupsUMS = options.tests.split(" ") as List
-                options.tests.split(" ").each() {
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
+                options.tests.each() {
                     options.engines.each { engine ->
                         tests << "${it}-${engine}"
                     }
@@ -670,52 +665,6 @@ def executePreBuild(Map options)
                 options.executeTests = false
             }
             options.tests = tests
-
-            options.skippedTests = [:]
-            if (options.updateRefs == "No") {
-                options.platforms.split(';').each() {
-                    if (it) {
-                        List tokens = it.tokenize(':')
-                        String osName = tokens.get(0)
-                        String gpuNames = ""
-                        if (tokens.size() > 1) {
-                            gpuNames = tokens.get(1)
-                        }
-
-                        if (gpuNames) {
-                            gpuNames.split(',').each() {
-                                for (test in options.tests) {
-                                    if (!test.contains(".json")) {
-                                        String testName = ""
-                                        String engine = ""
-                                        String[] testNameParts = test.split("-")
-                                        testName = testNameParts[0]
-                                        engine = testNameParts[1]
-                                        dir("jobs_launcher") {
-                                            try {
-                                                String output = bat(script: "is_group_skipped.bat ${it} ${osName} ${engine} \"..\\jobs\\Tests\\${testName}\\test_cases.json\"", returnStdout: true).trim()
-                                                if (output.contains("True")) {
-                                                    if (!options.skippedTests.containsKey(test)) {
-                                                        options.skippedTests[test] = []
-                                                    }
-                                                    options.skippedTests[test].add("${it}-${osName}")
-                                                }
-                                            } catch(Exception e) {
-                                                println(e.toString())
-                                                println(e.getMessage())
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                println "Skipped test groups:"
-                println options.skippedTests.inspect()
-            } else {
-                println "Ignore searching of tested groups due to updating of baselines"
-            }
         }
 
         if (env.CHANGE_URL) {
@@ -772,21 +721,9 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             try {
                 dir("jobs_launcher") {
-                    // delete engine name from names of test groups
-                    def tests = []
-                    options.tests.each { group ->
-                        List testNameParts = group.split("-") as List
-                        String parsedTestName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                        if (!tests.contains(parsedTestName)) {
-                            tests.add(parsedTestName)
-                        }
-                    }
-                    tests = tests.toString().replace(" ", "")
                     options.engines.each {
-                        String engine = "${it}"
-                        def skippedTests = JsonOutput.toJson(options.skippedTests)
                         bat """
-                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${tests}\" \"${engine}\" \"${utils.escapeCharsByUnicode(skippedTests.toString())}\"
+                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"${it}\" \"{}\"
                         """
                     }
                 }
@@ -963,7 +900,6 @@ def appendPlatform(String filteredPlatforms, String platform) {
 
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git",
     String projectBranch = "",
-    String assetsBranch = "master",
     String testsBranch = "master",
     String platforms = 'Windows;Ubuntu18',
     String updateRefs = 'No',
@@ -1002,11 +938,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                 if (!enginesNames) {
                     throw new Exception()
                 }
-            }
-
-            def assetsRepo
-            withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]) {
-                assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_blenderusdhydra_autotests"
             }
 
             enginesNames = enginesNames.split(",") as List
@@ -1078,8 +1009,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
 
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
-                        assetsBranch:assetsBranch,
-                        assetsRepo:assetsRepo,
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,

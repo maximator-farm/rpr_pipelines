@@ -540,7 +540,8 @@ def executePreBuild(Map options)
                     }
                 }
 
-                tests.each() {
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", tempTests)
+                options.tests.each() {
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
@@ -553,15 +554,16 @@ def executePreBuild(Map options)
                     tests << modifiedPackageName
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
+
+                options.tests = tests
             } else {
-                tests = options.tests.split(" ") as List
-                tests.each() {
-                    options.groupsUMS << it
+                options.groupsUMS = options.tests.split(" ") as List
+                options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
+                options.tests.each() {
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
             }
-            options.tests = tests
         }
     }
 
@@ -608,7 +610,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"{}\"
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"\" \"{}\"
                     """
                 }
             } catch (e) {

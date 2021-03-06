@@ -619,7 +619,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 withCredentials([string(credentialsId: 'buildsRemoteHost', variable: 'REMOTE_HOST')]) {
                     dir("core_tests_configuration") {
-                        bat(returnStatus: false, script: "%CIS_TOOLS%\\receiveFilesCoreConf.bat ${options.PRJ_ROOT}/${options.PRJ_NAME}/CoreAssets/ . ${REMOTE_HOST}")
+                        downloadFiles("/volume1/Assets/rpr_core_autotests/", ".", "--include='*.json' --include='*/' --exclude='*'")
                     }
                 }
             } catch (e) {
@@ -637,13 +637,14 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
+                String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/${env.JOB_NAME}"
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 def buildNumber = ""
                 if (options.collectTrackedMetrics) {
                     buildNumber = env.BUILD_NUMBER
                     try {
                         dir("summaryTestResults/tracked_metrics") {
-                            receiveFiles("${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}/", ".")
+                            downloadFiles("${metricsRemoteDir}/", ".")
                         }
                     } catch (e) {
                         println("[WARNING] Failed to download history of tracked metrics.")
@@ -687,7 +688,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 if (options.collectTrackedMetrics) {
                     try {
                         dir("summaryTestResults/tracked_metrics") {
-                            sendFiles(".", "${options.PRJ_ROOT}/${options.PRJ_NAME}/TrackedMetrics/${env.JOB_NAME}")
+                            uploadFiles(".", "${metricsRemoteDir}")
                         }
                     } catch (e) {
                         println("[WARNING] Failed to update history of tracked metrics.")
@@ -910,6 +911,7 @@ def call(String projectBranch = "",
                         executeTests:true,
                         reportName:'Test_20Report',
                         TEST_TIMEOUT:180,
+                        DEPLOY_TIMEOUT:30,
                         width:width,
                         gpusCount:gpusCount,
                         height:height,

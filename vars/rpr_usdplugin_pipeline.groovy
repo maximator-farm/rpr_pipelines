@@ -18,7 +18,7 @@ def installHoudiniPlugin(String osName, Map options) {
             bat """
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa e hdRpr_${osName}.tar.gz
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa x tmpPackage.tar 
-                cd ${options.win_build_name}
+                cd hdRpr*
                 echo y | activateHoudiniPlugin.exe >> \"..\\${options.stageName}_${options.currentTry}.install.log\"  2>&1
             """
             break
@@ -27,7 +27,7 @@ def installHoudiniPlugin(String osName, Map options) {
             unstash "appOSX"
             sh """
                 tar -xzf hdRpr_${osName}.tar.gz 
-                cd ${options.osx_build_name}
+                cd hdRpr*
                 chmod +x activateHoudiniPlugin
                 echo y | ./activateHoudiniPlugin >> \"../${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
@@ -37,7 +37,7 @@ def installHoudiniPlugin(String osName, Map options) {
             unstash "app${osName}"
             sh """
                 tar -xzf hdRpr_${osName}.tar.gz
-                cd ${options.ubuntu_build_name}
+                cd hdRpr*
                 chmod +x activateHoudiniPlugin
                 echo y | ./activateHoudiniPlugin \"../${options.stageName}_${options.currentTry}.install.log\" 2>&1
             """
@@ -827,7 +827,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080,AMD_RX6800;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7',
         String buildType = "Houdini",
         Boolean rebuildUSD = false,
-        String houdiniVersion = "18.5.351",
+        String houdiniVersion = "18.5.462",
         Boolean houdini_python3 = false,
         String updateRefs = 'No',
         String testsPackage = "Full.json",
