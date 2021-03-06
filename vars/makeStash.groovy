@@ -20,9 +20,9 @@ def call(Map params) {
             if (includes) {
                 for (include in includes.split(",")) {
                     if (isUnix()) {
-                        includeParams << "-i '${include}'"
+                        includeParams << "-i '${include.trim()}'"
                     } else {
-                        includeParams << "${include.replace('/**/', '/').replace('**/', '').replace('/**', '')}"
+                        includeParams << "${include.replace('/**/', '/').replace('**/', '').replace('/**', '').trim()}"
                     }
                 }
             }
@@ -30,9 +30,9 @@ def call(Map params) {
             if (excludes) {
                 for (exclude in excludes.split(",")) {
                     if (isUnix()) {
-                        excludeParams << "-x '${exclude}'"
+                        excludeParams << "-x '${exclude.trim()}'"
                     } else {
-                        excludeParams << "-xr!${exclude.replace('/**/', '/').replace('**/', '').replace('/**', '')}"
+                        excludeParams << "-xr!${exclude.replace('/**/', '/').replace('**/', '').replace('/**', '').trim()}"
                     }
                     
                 }
