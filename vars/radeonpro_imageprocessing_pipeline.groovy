@@ -45,7 +45,7 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
     try {
         checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git')
         outputEnvironmentInfo(osName, "${STAGE_NAME}.${libType}")
-        unstash "app_${libType}_${osName}"
+        makeUnstash("app_${libType}_${osName}")
         executeTestCommand(osName, libType, options.testPerformance)
     } catch (e) {
         println(e.toString())
@@ -72,7 +72,7 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
                     """
                     break
             }
-            stash includes: "${STAGE_NAME}.${libType}.gtest.xml, ${STAGE_NAME}.${libType}.csv", name: "${options.testResultsName}.${libType}", allowEmpty: true
+            makeStash(includes: "${STAGE_NAME}.${libType}.gtest.xml, ${STAGE_NAME}.${libType}.csv", name: "${options.testResultsName}.${libType}", allowEmpty: true)
         }
         junit "*.gtest.xml"
     }
@@ -129,11 +129,11 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
     """
 
     dir("${options.packageName}-${osName}-dynamic") {
-        stash includes: "bin/*", name: "app_dynamic_${osName}"
+        makeStash(includes: "bin/*", name: "app_dynamic_${osName}")
     }
 
     dir("${options.packageName}-${osName}-static") {
-        stash includes: "bin/*", name: "app_static_${osName}"
+        makeStash(includes: "bin/*", name: "app_static_${osName}")
     }
 
     bat """
@@ -150,19 +150,19 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
     """
 
     dir("${options.packageName}-${osName}-dynamic/bin") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}"
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}")
     }
 
     dir("${options.packageName}-${osName}-static/bin") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-${osName}"
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-${osName}")
     }
 
-    stash includes: "models/**/*", name: "models"
-    stash includes: "samples/**/*", name: "samples"
-    stash includes: "include/**/*", name: "include"
+    makeStash(includes: "models/**/*", name: "models")
+    makeStash(includes: "samples/**/*", name: "samples")
+    makeStash(includes: "include/**/*", name: "include")
 
     dir ('src') {
-        stash includes: "License.txt", name: "txtFiles"
+        makeStash(includes: "License.txt", name: "txtFiles")
     }
 
     bat """
@@ -210,11 +210,11 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
     """
 
     dir("${options.packageName}-${osName}-dynamic") {
-        stash includes: "bin/*", name: "app_dynamic_${osName}"
+        makeStash(includes: "bin/*", name: "app_dynamic_${osName}")
     }
 
     dir("${options.packageName}-${osName}-static") {
-        stash includes: "bin/*", name: "app_static_${osName}"
+        makeStash(includes: "bin/*", name: "app_static_${osName}")
     }
 
     sh """
@@ -237,11 +237,11 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
     archiveArtifacts "${options.packageName}-${osName}*.tar"
 
     dir("${options.packageName}-${osName}-dynamic/bin/") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}"
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}")
     }
 
     dir("${options.packageName}-${osName}-static/bin/") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-${osName}"
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-${osName}")
     }
 
     rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-dynamic.tar">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static.tar">static</a></h4>"""
@@ -328,8 +328,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             testResultList.each() {
 
                 try {
-                    unstash "${it}.dynamic"
-                    unstash "${it}.static"
+                    makeUnstash("${it}.dynamic")
+                    makeUnstash("${it}.static")
                 } catch(e) {
                     echo "[ERROR] Failed to unstash ${it}"
                     println(e.toString());
@@ -362,18 +362,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
         platformList.each() {
             dir("${it}") {
                 dir("Dynamic"){
-                    unstash "deploy-dynamic-${it}"
+                    makeUnstash("deploy-dynamic-${it}")
                 }
                 dir("Static"){
-                    unstash "deploy-static-${it}"
+                    makeUnstash("deploy-static-${it}")
                 }
             }
         }
 
-        unstash "models"
-        unstash "samples"
-        unstash "txtFiles"
-        unstash "include"
+        makeUnstash("models")
+        makeUnstash("samples")
+        makeUnstash("txtFiles")
+        makeUnstash("include")
 
         bat """
             git add --all
