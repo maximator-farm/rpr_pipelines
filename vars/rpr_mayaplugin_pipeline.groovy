@@ -53,7 +53,7 @@ def getMayaPluginInstaller(String osName, Map options)
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appWindows"
+                    makeUnstash("appWindows", false)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -103,7 +103,7 @@ def getMayaPluginInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appOSX"
+                    makeUnstash("appOSX", false)
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -385,7 +385,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         println("Stashing test results to : ${options.testResultsName}")
-                        stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+                        makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
 
                         // deinstalling broken addon
                         // if test group is fully errored or number of test cases is equal to zero
@@ -470,7 +470,7 @@ def executeBuildWindows(Map options)
 
         //options.productCode = "unknown"
         options.pluginWinSha = sha1 'RadeonProRenderMaya.msi'
-        stash includes: 'RadeonProRenderMaya.msi', name: 'appWindows'
+        makeStash(includes: 'RadeonProRenderMaya.msi', name: 'appWindows', zip: false)
 
         GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
     }
@@ -503,7 +503,7 @@ def executeBuildOSX(Map options)
             }
 
             sh "cp RadeonProRender*.dmg RadeonProRenderMaya.dmg"
-            stash includes: 'RadeonProRenderMaya.dmg', name: "appOSX"
+            makeStash(includes: 'RadeonProRenderMaya.dmg', name: "appOSX", zip: false)
 
             // TODO: detect ID of installed plugin
             options.pluginOSXSha = sha1 'RadeonProRenderMaya.dmg'
@@ -802,7 +802,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     dir(engine) {
                         dir(testName.replace("testResult-", "")) {
                             try {
-                                unstash "$it"
+                                makeUnstash("$it")
                             } catch(e) {
                                 println "[ERROR] Failed to unstash ${it}"
                                 lostStashes[engine].add("'${testName}'".replace("testResult-", ""))

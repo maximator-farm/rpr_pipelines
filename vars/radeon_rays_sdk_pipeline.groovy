@@ -26,7 +26,7 @@ def executeTests(String osName, String asicName, Map options)
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
         outputEnvironmentInfo(osName)
-        unstash "app${osName}"
+        makeUnstash("app${osName}")
 
         dir('UnitTest') {
             executeTestCommand(osName)
@@ -104,7 +104,7 @@ def executeBuild(String osName, Map options)
                 executeBuildLinux()
         }
        
-        stash includes: 'Build/bin/**/*', name: "app${osName}"
+        makeStash(includes: 'Build/bin/**/*', name: "app${osName}")
     } catch (e) {
         currentBuild.result = "FAILED"
         throw e

@@ -16,7 +16,7 @@ def getViewerTool(String osName, Map options) {
             if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip")) {
                 clearBinariesWin()
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "appWindows"
+                makeUnstash("appWindows", false)
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
                     copy RadeonProUSDViewer_Windows.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
@@ -201,7 +201,7 @@ def executeTests(String osName, String asicName, Map options) {
                         }
 
                         println "Stashing test results to : ${options.testResultsName}"
-                        stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+                        makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
                         // reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
                             if (sessionReport.summary.total != sessionReport.summary.skipped) {
@@ -306,7 +306,7 @@ def executeBuildWindows(Map options) {
                 // WARNING! call sendToMinio in build stage only from parent directory
                 options.universeManager.sendToMINIO(options, "Windows", "..", buildName, false)
             }*/
-            stash includes: buildName, name: "appWindows"
+            makeStash(includes: buildName, name: "appWindows", zip: false)
             options.pluginWinSha = sha1 "RadeonProUSDViewer_Windows.zip"
         }
     }
@@ -519,7 +519,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 testResultList.each {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            unstash "$it"
+                            makeUnstash("$it")
                         } catch (e) {
                             println """
                                 [ERROR] Failed to unstash ${it}

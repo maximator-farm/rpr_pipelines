@@ -14,7 +14,7 @@ def getAmfTool(String osName, String build_name, Map options)
                 clearBinariesWin()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "AMF_Windows_${build_name}"
+                makeUnstash("AMF_Windows_${build_name}", false)
                 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -38,7 +38,7 @@ def getAmfTool(String osName, String build_name, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "AMF_OSX_${build_name}"
+                makeUnstash("AMF_OSX_${build_name}", false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -62,7 +62,7 @@ def getAmfTool(String osName, String build_name, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "AMF_Linux_${build_name}"
+                makeUnstash("AMF_Linux_${build_name}", false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -197,7 +197,7 @@ def executeTests(String osName, String asicName, Map options) {
         throw e
     } finally {
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-        stash includes: "${STAGE_NAME}.*.json, *.log", name: "${options.testResultsName}", allowEmpty: true
+        makeStash(includes: "${STAGE_NAME}.*.json, *.log", name: "${options.testResultsName}", allowEmpty: true)
         try {
             archiveArtifacts artifacts: "*.json", allowEmptyArchive: false
         } catch (e) {
@@ -444,7 +444,7 @@ def executeBuildWindows(Map options) {
                         bat """
                             rename Windows_${win_build_name}.zip binWindows.zip
                         """
-                        stash includes: "binWindows.zip", name: "AMF_Windows_${win_build_name}"
+                        makeStash(includes: "binWindows.zip", name: "AMF_Windows_${win_build_name}", zip: false)
                         options[win_build_name + 'sha'] = sha1 "binWindows.zip"
                         println "[INFO] Saved sha: ${options[win_build_name + 'sha']}"
 
@@ -546,7 +546,7 @@ def executeBuildOSX(Map options) {
                         sh """
                             mv OSX_${osx_build_name}.zip binOSX.zip
                         """
-                        stash includes: "binOSX.zip", name: "AMF_OSX_${osx_build_name}"
+                        makeStash(includes: "binOSX.zip", name: "AMF_OSX_${osx_build_name}", zip: false)
                         options[osx_build_name + 'sha'] = sha1 "binOSX.zip"
                         println "[INFO] Saved sha: ${options[osx_build_name + 'sha']}"
 
@@ -631,7 +631,7 @@ def executeBuildLinux(String osName, Map options) {
                     sh """
                         mv Linux_${linux_build_name}.zip binLinux.zip
                     """
-                    stash includes: "binLinux.zip", name: "AMF_Linux_${linux_build_name}"
+                    makeStash(includes: "binLinux.zip", name: "AMF_Linux_${linux_build_name}", zip: false)
                     options[linux_build_name + 'sha'] = sha1 "binLinux.zip"
                     println "[INFO] Saved sha: ${options[linux_build_name + 'sha']}"
 
@@ -741,7 +741,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             testResultList.each() {
 
                 try {
-                    unstash "$it"
+                    makeUnstash("$it")
                 } catch(e) {
                     println("[ERROR] Failed to unstash ${it}")
                     println(e.toString())
