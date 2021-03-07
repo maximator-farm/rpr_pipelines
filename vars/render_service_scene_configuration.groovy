@@ -70,7 +70,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
                 try {
                     switch(tool) {
                         case 'Blender':
-                            if (options["sampleJobParams"]) {
+                            if (options["id_render"] && options["django_render_url"]) {
                                 bat """
                                     copy "render_service_scripts\\blender_render.py" "."
                                     copy "render_service_scripts\\launch_blender.py" "."
@@ -90,7 +90,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
                             """
                             // Launch render
                             withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-                                python3("launch_blender_scan.py --tool \"2.91\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --action \"${options.Action}\" --configuration_options \"${options.ConfigurationOptions}\" --options_structure \"${options.OptionsStructure}\" ")
+                                python3("launch_blender_scan.py --tool \"2.91\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --action \"${options.action}\" --configuration_options \"${options.configurationOptions}\" --options_structure \"${options.optionsStructure}\" ")
                             }
                             if (options['Action'] == 'Write') {
                                 String updatedSceneHash = sha1 scene_name
