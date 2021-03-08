@@ -50,7 +50,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
                         print("[INFO] Scene wasn't found in Render Service Storage on this PC. Downloading it.")
                         withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
                             bat """
-                                curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.Scene}"
+                                curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.scene}"
                             """
                         }
                         if (options['action'] == 'Read') {
@@ -92,7 +92,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
                             withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
                                 python3("launch_blender_scan.py --tool \"2.91\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --action \"${options.action}\" --configuration_options \"${options.configurationOptions}\" --options_structure \"${options.optionsStructure}\" ")
                             }
-                            if (options['Action'] == 'Write') {
+                            if (options['action'] == 'Write') {
                                 String updatedSceneHash = sha1 scene_name
                                 bat """
                                     if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
