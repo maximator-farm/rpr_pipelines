@@ -18,9 +18,9 @@ def call(String stashName, Boolean unzip = true, Boolean debug = false) {
                 print("Try to make unstash №${retries}")
                 withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                     if (isUnix()) {
-                        status = sh(script: '$CIS_TOOLS/unstash.sh' + " ${remotePath} " + '$REMOTE_HOST')
+                        status = sh(returnStatus: true, script: '$CIS_TOOLS/unstash.sh' + " ${remotePath} " + '$REMOTE_HOST')
                     } else {
-                        status = bat(script: '%CIS_TOOLS%\\unstash.bat' + " ${remotePath} " + '%REMOTE_HOST%')
+                        status = bat(returnStatus: true, script: '%CIS_TOOLS%\\unstash.bat' + " ${remotePath} " + '%REMOTE_HOST%')
                     }
                 }
 

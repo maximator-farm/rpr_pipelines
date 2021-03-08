@@ -38,7 +38,7 @@ def executeTests(String osName, String asicName, Map options)
     try {
         outputEnvironmentInfo(osName, "${STAGE_NAME}")
         dir("RadeonML") {
-            makeUnstash("app${osName}")
+            makeUnstash("app${osName}", false)
         }
 
         executeTestCommand(osName, asicName, options)
@@ -224,7 +224,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     buildNumber = env.BUILD_NUMBER
                     try {
                         dir("summaryTestResults/tracked_metrics") {
-                            rdownloadFiles("${metricsRemoteDir}/", ".")
+                            downloadFiles("${metricsRemoteDir}/", ".")
                         }
                     } catch (e) {
                         println("[WARNING] Failed to download history of tracked metrics.")

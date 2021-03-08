@@ -88,7 +88,14 @@ def call(Map params) {
                     }
                 }
 
-                if (status != 24) {
+                if (status == 23) {
+                    if (allowEmpty) {
+                        break
+                    } else {
+                        println("[ERROR] Stash is empty")
+                        throw new Exception("Empty stash")
+                    }
+                } else if (status != 24) {
                     break
                 } else {
                     print("[ERROR] Partial transfer due to vanished source files")
