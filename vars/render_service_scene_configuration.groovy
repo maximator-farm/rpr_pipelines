@@ -85,8 +85,6 @@ def executeConfiguration(osName, attemptNum, Map options) {
                                 copy "render_service_scripts\\scene_scanning\\read_blender_configuration.py" "."
                                 copy "render_service_scripts\\scene_scanning\\write_blender_configuration.py" "."
                                 copy "render_service_scripts\\scene_scanning\\launch_blender_scan.py" "."
-                                copy "render_service_scripts\\launch_blender.py" "."
-                                copy "render_service_scripts\\blender_render.py" "."
                             """
                             // Launch render
                             withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
