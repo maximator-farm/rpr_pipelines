@@ -50,9 +50,9 @@ def call(Map params) {
 
         if (zip) {
             if (isUnix()) {
-                stdout = sh(returnStdout: true, script: "zip -r ${zipName} . ${includeParams} ${excludeParams}")
+                stdout = sh(returnStdout: true, script: "zip -r ${zipName} . ${includeParams} ${excludeParams} -x '*@tmp*'")
             } else {
-                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " stash_${stashName}.zip ${includeParams ?: '.'} ${excludeParams}")
+                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " stash_${stashName}.zip ${includeParams ?: '.'} ${excludeParams} -xr!*@tmp*")
             }
         }
 
