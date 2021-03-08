@@ -679,7 +679,7 @@ def call(String projectBranch = "",
                 Platforms: ${platforms}
                 Tests: ${tests}
                 Tests package: ${testsPackage}
-                Tests execution type: ${parallelExecutionType}
+                Tests execution type: ${parallelExecutionTypeString}
             """
             options << [projectBranch: projectBranch,
                         testsBranch: testsBranch,
