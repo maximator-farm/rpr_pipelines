@@ -234,7 +234,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
                     def retringFunction = { nodesList, currentTry ->
                         executeBuild(osName, options)
                     }
-                    run_with_retries(builderLabels, options.BUILD_TIMEOUT, retringFunction, false, "Build", options, ['FlowInterruptedException'], -1, osName, true)
+                    run_with_retries(builderLabels, options.BUILD_TIMEOUT, retringFunction, false, "Build", options, ['FlowInterruptedException', 'IOException'], -1, osName, true)
                 }
             }
 
