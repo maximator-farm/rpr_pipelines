@@ -500,7 +500,7 @@ def executeBuildOSX(Map options) {
                             }
                             sh """
                                 chmod u+x generate-mac-${osx_lib_type}.sh
-                                ./generate-mac-${osx_lib_type}.sh ${osx_build_conf.capitalize()} >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                                ./generate-mac-${osx_lib_type}.sh ${osx_build_conf.capitalize()} \"-DCMAKE_OSX_SYSROOT=$MACOS_SDK_10_15\" >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                             """
                         } else if (osx_tool == "xcode") {
                             // skip double building if release and debug were chosen
