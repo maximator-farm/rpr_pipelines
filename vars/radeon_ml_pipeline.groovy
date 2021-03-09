@@ -264,7 +264,7 @@ def executeOSXBuildCommand(Map options, String buildType){
         #export DIRECTML_LIBRARY_PATH="./DirectML"
         mkdir build-${buildType}
         cd build-${buildType}
-        cmake -DCMAKE_buildType=${buildType} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
+        cmake -DCMAKE_OSX_SYSROOT=$MACOS_SDK_10_15 -DCMAKE_buildType=${buildType} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
         make -j 4 >> ../${STAGE_NAME}_${buildType}.log 2>&1
     """
     
