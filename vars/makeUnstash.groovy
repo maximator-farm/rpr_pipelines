@@ -1,5 +1,12 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
+/**
+ * Implementation of stashes through custom machine
+ *
+ * @param stashName Name of stash which will be unstashed
+ * @param unzip Unzip content of stash
+ * @param debug Print more info about making of stash (default - false)
+ */
 def call(String stashName, Boolean unzip = true, Boolean debug = false) {
 
     String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"

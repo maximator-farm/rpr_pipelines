@@ -1,5 +1,17 @@
 import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
+/**
+ * Implementation of stashes through custom machine
+ *
+ * @param params Map with parameters
+ * Possible elements:
+ *     name - Name of stash
+ *     allowEmpty - Can stash be empty or not (throws exception if it's empty and allowEmpty is false)
+ *     includes (optional) - String of comma separated patters of files which must be included
+ *     excludes (optional) - String of comma separated patters of files which must be excluded
+ *     debug (optional) - Print more info about making of stash (default - false)
+ *     zip (optional) - Make zip archive for stash (default - true)
+ */
 def call(Map params) {
 
     String stashName
