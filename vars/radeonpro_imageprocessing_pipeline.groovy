@@ -123,7 +123,7 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
 
         mkdir build-${options.packageName}-${osName}-static
         cd build-${options.packageName}-${osName}-static
-        cmake .. -DADL_PROFILING=ON -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static -DRIF_STATIC_LIB=ON >> ..\\${STAGE_NAME}.static.log 2>&1
+        cmake .. -DADL_PROFILING=ON -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static -DRIF_STATIC_RUNTIME_LIB=ON -DRIF_STATIC_LIB=ON >> ..\\${STAGE_NAME}.static.log 2>&1
         %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.static.log 2>&1
         cd ..
     """
