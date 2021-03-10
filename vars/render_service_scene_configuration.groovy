@@ -156,7 +156,7 @@ def startConfiguration(osName, options) {
         stage("Send Build Number") {
             render_service_send_build_number(currentBuild.number, options.id, options.django_url)
             if (options["id_render"] && options["django_render_url"]) {
-                render_service_send_build_number(currentBuild.number, options.id_render, options.django_render_url)
+                render_service_send_build_number(currentBuild.number, options.id_render.toString(), options.django_render_url)
             }
         }
     }
