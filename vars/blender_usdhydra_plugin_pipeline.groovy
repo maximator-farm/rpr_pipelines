@@ -692,14 +692,14 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             }
 
             dir("summaryTestResults") {
+                options.engines.each { currentEngine ->
+                    dir(currentEngine) {
+                        unstashCrashInfo(options['nodeRetry'], currentEngine)
+                    }
+                }
                 testResultList.each() {
                     String engine
                     String testName
-                    options.engines.each { currentEngine ->
-                        dir(currentEngine) {
-                            unstashCrashInfo(options['nodeRetry'], currentEngine)
-                        }
-                    }
                     List testNameParts = it.split("-") as List
                     engine = testNameParts[-1]
                     testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")

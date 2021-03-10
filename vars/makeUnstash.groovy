@@ -31,7 +31,10 @@ def call(String stashName, Boolean unzip = true, Boolean debug = false) {
                     }
                 }
 
-                if (status != 24) {
+                if (status == 23) {
+                    println("[ERROR] Nothing to unstash. Stash is empty")
+                    throw new Exception("Nothing to unstash. Stash is empty")
+                } else if (status != 24) {
                     break
                 } else {
                     print("[ERROR] Partial transfer due to vanished source files")
