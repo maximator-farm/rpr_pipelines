@@ -71,33 +71,47 @@ def executeConfiguration(osName, attemptNum, Map options) {
                     switch(tool) {
                         case 'Blender':
                             if (options["id_render"] && options["django_render_url"]) {
+                                try {
+                                    bat """
+                                        copy "render_service_scripts\\blender_render.py" "."
+                                        copy "render_service_scripts\\launch_blender.py" "."
+                                    """
+                                    // Launch render
+                                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+                                        python3("launch_blender.py --tool \"2.91\" --django_ip \"${options.django_render_url}/\" --scene_name \"${scene_name}\" --id ${options.id_render} --min_samples 16 --max_samples 32 --noise_threshold 0.1 --height 150 --width 150 --startFrame 1 --endFrame 1 --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout 120 ")
+                                    }
+                                } catch(FlowInterruptedException e) {
+                                    throw e
+                                } catch(e) {
+                                    fail_reason = "Failed sample render. Maybe incorrect scene or node problems. Check logs."
+                                    throw e
+                                }
+                            }
+                            try {
+                                // copy necessary scripts for render and start read process
                                 bat """
-                                    copy "render_service_scripts\\blender_render.py" "."
-                                    copy "render_service_scripts\\launch_blender.py" "."
+                                    copy "render_service_scripts\\scene_scanning\\read_blender_configuration.py" "."
+                                    copy "render_service_scripts\\scene_scanning\\write_blender_configuration.py" "."
+                                    copy "render_service_scripts\\scene_scanning\\launch_blender_scan.py" "."
                                 """
                                 // Launch render
                                 withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-                                    python3("launch_blender.py --tool \"2.91\" --django_ip \"${options.django_render_url}/\" --scene_name \"${scene_name}\" --id ${options.id_render} --min_samples 16 --max_samples 32 --noise_threshold 0.1 --height 150 --width 150 --startFrame 1 --endFrame 1 --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout 120 ")
+                                    python3("launch_blender_scan.py --tool \"2.91\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --action \"${options.action}\" --configuration_options \"${options.configurationOptions}\" --options_structure \"${options.optionsStructure}\" ")
                                 }
+                                if (options['action'] == 'Write') {
+                                    String updatedSceneHash = sha1 scene_name
+                                    bat """
+                                        if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
+                                        copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${updatedSceneHash}"
+                                    """
+                                }
+                                break;
+                            } catch(FlowInterruptedException e) {
+                                throw e
+                            } catch(e) {
+                                fail_reason = "Failed configuration" 
+                                throw e
                             }
-                            // copy necessary scripts for render and start read process
-                            bat """
-                                copy "render_service_scripts\\scene_scanning\\read_blender_configuration.py" "."
-                                copy "render_service_scripts\\scene_scanning\\write_blender_configuration.py" "."
-                                copy "render_service_scripts\\scene_scanning\\launch_blender_scan.py" "."
-                            """
-                            // Launch render
-                            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-                                python3("launch_blender_scan.py --tool \"2.91\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --action \"${options.action}\" --configuration_options \"${options.configurationOptions}\" --options_structure \"${options.optionsStructure}\" ")
-                            }
-                            if (options['action'] == 'Write') {
-                                String updatedSceneHash = sha1 scene_name
-                                bat """
-                                    if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
-                                    copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${updatedSceneHash}"
-                                """
-                            }
-                            break;
                     }
 
                 } catch(FlowInterruptedException e) {
@@ -107,7 +121,6 @@ def executeConfiguration(osName, attemptNum, Map options) {
                         mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
                         copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
                     """
-                    fail_reason = "Unknown" 
                     throw e
                 }
             } catch(FlowInterruptedException e) {
