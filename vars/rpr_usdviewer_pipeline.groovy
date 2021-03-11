@@ -319,22 +319,23 @@ def executeBuildOSX(Map options)
         sh """
             export OS=Darwin
             export QT_SYMLINKS_DIR=/Users/admin/Qt5.15.2/QtSymlinks
-            export PATH="/Users/admin/Qt5.15.2/5.15.2/clang_64/bin:$PATH"
+            export PATH="/usr/local/bin/python3.7:/Users/admin/Qt5.15.2/5.15.2/clang_64/bin:\$PATH"
 
-            rm -rf RPRViewer/binary/windows/inst
-            rm -rf RPRViewer/binary/windows/deps
-            rm -rf RPRViewer/binary/windows/build
-            rm -rf RPRViewer/binary/mac/inst
-            rm -rf RPRViewer/binary/mac/deps
-            rm -rf RPRViewer/binary/mac/build
+            rm -rf RPRViewer/binary/mac/*
+
+            export PYENV_ROOT="\$HOME/.pyenv"
+            export PATH="\$PYENV_ROOT/shims:\$PYENV_ROOT/bin:\$PATH"
+            pyenv rehash
 
             # USD
-            python3.7 USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
+            python USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
             # HdRprPlugin
-            PXR_DIR=\$(pwd)/USDPixar
-            INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
+            export PXR_DIR=\$(pwd)/USDPixar
+            export INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
+            
             cd HdRPRPlugin
             cmake -B build -Dpxr_DIR=\$PXR_DIR -DCMAKE_INSTALL_PREFIX=\$INSTALL_PREFIX_DIR -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE \
+                -DMATERIALX_PYTHON_PYBIND11_DIR=\$(pwd)/deps/MaterialX/source/PyMaterialX/PyBind11 \
                 -DPXR_USE_PYTHON_3=ON -DMATERIALX_BUILD_PYTHON=ON -DMATERIALX_INSTALL_PYTHON=ON >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
             cmake --build build --config Release --target install >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
         """
@@ -342,22 +343,6 @@ def executeBuildOSX(Map options)
 
     // delete files before zipping
     withNotifications(title: "OSX", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_OSX.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
-        sh """
-            rm RPRViewer/binary/mac/inst/pxrConfig.cmake
-            rm -rf RPRViewer/binary/mac/inst/cmake
-            rm -rf RPRViewer/binary/mac/inst/include
-            rm -rf RPRViewer/binary/mac/inst/lib/cmake
-            rm -rf RPRViewer/binary/mac/inst/lib/pkgconfig
-            rm -rf RPRViewer/binary/mac/inst/bin/*.lib
-            rm -rf RPRViewer/binary/mac/inst/bin/*.pdb
-            rm -rf RPRViewer/binary/mac/inst/lib/*.lib
-            rm -rf RPRViewer/binary/mac/inst/lib/*.pdb
-            rm -rf RPRViewer/binary/mac/inst/plugin/usd/*.lib
-        """
-
-        // TODO: filter files for archive
-
-        zip archive: true, dir: "RPRViewer/binary/mac/inst", glob: '', zipFile: "RadeonProUSDViewer_OSX.zip"
         // stash includes: "RadeonProUSDViewer_OSX.zip", name: "appOSX"
         // options.pluginOSXSha = sha1 "RadeonProUSDViewer_OSX.zip"
 
@@ -365,11 +350,11 @@ def executeBuildOSX(Map options)
             try {
                 sh """
                     export INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
-                    export MATERIALX_DIR=\$(python3 -c "import MaterialX as _; import os; print(os.path.dirname(_.__file__))")/
+                    export MATERIALX_DIR=\$(python -c "import MaterialX as _; import os; print(os.path.dirname(_.__file__))")/
                     export PYTHONPATH=\$INSTALL_PREFIX_DIR/lib/python:\$INSTALL_PREFIX_DIR/lib:\$INSTALL_PREFIX_DIR/lib/python/pxr/Usdviewq/HdRPRPlugin/python
-                    PACKAGE_PATH=\$INSTALL_PREFIX_DIR/dist
+                    export PACKAGE_PATH=\$INSTALL_PREFIX_DIR/dist
 
-                    python3.7 -m PyInstaller \$(pwd)/RPRViewer/tools/usdview_mac.spec --noconfirm --clean --distpath \
+                    python -m PyInstaller \$(pwd)/RPRViewer/tools/usdview_mac.spec --noconfirm --clean --distpath \
                         \$PACKAGE_PATH --workpath \$INSTALL_PREFIX_DIR/build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
 
                     install_name_tool -add_rpath @loader_path/../../.. \$PACKAGE_PATH/RPRViewer/hdrpr/plugin/usd/hdRpr.dylib
@@ -393,6 +378,23 @@ def executeBuildOSX(Map options)
                 println "[ERROR] Failed to build USD Viewer installer"
             }
         }
+        
+        sh """
+            rm RPRViewer/binary/mac/inst/pxrConfig.cmake
+            rm -rf RPRViewer/binary/mac/inst/cmake
+            rm -rf RPRViewer/binary/mac/inst/include
+            rm -rf RPRViewer/binary/mac/inst/lib/cmake
+            rm -rf RPRViewer/binary/mac/inst/lib/pkgconfig
+            rm -rf RPRViewer/binary/mac/inst/bin/*.lib
+            rm -rf RPRViewer/binary/mac/inst/bin/*.pdb
+            rm -rf RPRViewer/binary/mac/inst/lib/*.lib
+            rm -rf RPRViewer/binary/mac/inst/lib/*.pdb
+            rm -rf RPRViewer/binary/mac/inst/plugin/usd/*.lib
+        """
+
+        // TODO: filter files for archive
+
+        zip archive: true, dir: "RPRViewer/binary/mac/inst", glob: '', zipFile: "RadeonProUSDViewer_OSX.zip"
     }
     
 }
