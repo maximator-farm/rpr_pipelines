@@ -725,11 +725,13 @@ def executePreBuild(Map options)
                 }
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", tempTests)
                 options.tests.each() {
-                    options.engines.each { engine ->
-                        tests << "${it}-${engine}"
-                    }
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+                }
+                options.engines.each { engine ->
+                    options.tests.each() {
+                        tests << "${it}-${engine}"
+                    }
                 }
 
                 modifiedPackageName = modifiedPackageName.replace('~,', '~')
@@ -773,39 +775,31 @@ def executePreBuild(Map options)
     }
 }
 
-def executeDeploy(Map options, List platformList, List testResultList)
+def executeDeploy(Map options, List platformList, List testResultList, String engine)
 {
     cleanWS()
     try {
+        String engineName = options.enginesNames[options.engines.indexOf(engine)]
+
         if (options['executeTests'] && testResultList) {
-            withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            withNotifications(title: "Building test report for ${engineName} engine", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_maya.git")
             }
 
-            Map lostStashes = [:]
-            options.engines.each { engine ->
-                lostStashes[engine] = []
-            }
+            List lostStashes = []
 
             dir("summaryTestResults") {
+                unstashCrashInfo(options['nodeRetry'], engine)
                 testResultList.each() {
-                    String engine
-                    String testName
-                    options.engines.each { currentEngine ->
-                        dir(currentEngine) {
-                            unstashCrashInfo(options['nodeRetry'], currentEngine)
-                        }
-                    }
-                    List testNameParts = it.split("-") as List
-                    engine = testNameParts[-1]
-                    testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                    dir(engine) {
+                    if (it.endsWith(engine)) {
+                        List testNameParts = it.split("-") as List
+                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
                                 unstash "$it"
                             } catch(e) {
                                 println "[ERROR] Failed to unstash ${it}"
-                                lostStashes[engine].add("'${testName}'".replace("testResult-", ""))
+                                lostStashes.add("'${testName}'".replace("testResult-", ""))
                                 println(e.toString())
                                 println(e.getMessage())
                             }
@@ -817,77 +811,61 @@ def executeDeploy(Map options, List platformList, List testResultList)
             
             try {
                 dir("jobs_launcher") {
-                    options.engines.each {
-                        // \\\\ - prevent escape sequence '\N'
-                        bat """
-                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"${it}\" \"{}\"
-                        """
-                    }
+                    bat """
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"${it}\" \"{}\"
+                    """
                 }
             } catch (e) {
                 println("[ERROR] Can't generate number of lost tests")
             }
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
-            List reports = []
-            List reportsNames = []
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                options.engines.each { engine ->
-                    reports.add("${engine}/summary_report.html")
-                }
-                options.enginesNames.each { engine ->
-                    reportsNames.add("Summary Report (${engine})")
-                }
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
-                        for (int i = 0; i < options.engines.size(); i++) {
-                            String engine = options.engines[i]
-                            String engineName = options.enginesNames[i]
-                            List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
-                            retryInfoList.each{ gpu ->
-                                gpu['Tries'].each{ group ->
-                                    group.each{ groupKey, retries ->
-                                        if (groupKey.endsWith(engine)) {
-                                            List testNameParts = groupKey.split("-") as List
-                                            String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                                            group[parsedName] = retries
-                                        }
-                                        group.remove(groupKey)
+                        List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
+                        retryInfoList.each{ gpu ->
+                            gpu['Tries'].each{ group ->
+                                group.each{ groupKey, retries ->
+                                    if (groupKey.endsWith(engine)) {
+                                        List testNameParts = groupKey.split("-") as List
+                                        String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                                        group[parsedName] = retries
                                     }
+                                    group.remove(groupKey)
                                 }
-                                gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
                             }
-                            def retryInfo = JsonOutput.toJson(retryInfoList)
-                            dir("..\\summaryTestResults\\${engine}") {
-                                JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
-                                writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                            gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
+                        }
+                        def retryInfo = JsonOutput.toJson(retryInfoList)
+                        dir("..\\summaryTestResults") {
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                        }
+                        if (options.sendToUMS) {
+                            options.engine = engine
+                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
+                        }
+                        try {
+                            if (options['isPreBuilt']) {
+                                bat """
+                                    build_reports.bat ..\\summaryTestResults "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\"
+                                """
+                            } else {
+                                bat """
+                                    build_reports.bat ..\\summaryTestResults "Maya" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
+                                """
                             }
-                            if (options.sendToUMS) {
-                                options.engine = engine
-                                options.universeManager.sendStubs(options, "..\\summaryTestResults\\${engine}\\lost_tests.json", "..\\summaryTestResults\\${engine}\\skipped_tests.json", "..\\summaryTestResults\\${engine}\\retry_info.json")
-                            }
-                            try {
-                                if (options['isPreBuilt']) {
-                                    // \\\\ - prevent escape sequence '\N'
-                                    bat """
-                                        build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\"
-                                    """
-                                } else {
-                                    bat """
-                                        build_reports.bat ..\\summaryTestResults\\\\${engine} "Maya" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
-                                    """
-                                }
-                            } catch (e) {
-                                String errorMessage = utils.getReportFailReason(e.getMessage())
-                                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
-                                if (utils.isReportFailCritical(e.getMessage())) {
-                                    throw e
-                                } else {
-                                    currentBuild.result = "FAILURE"
-                                    options.problemMessageManager.saveGlobalFailReason(errorMessage)
-                                }
+                        } catch (e) {
+                            String errorMessage = utils.getReportFailReason(e.getMessage())
+                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
+                            if (utils.isReportFailCritical(e.getMessage())) {
+                                throw e
+                            } else {
+                                currentBuild.result = "FAILURE"
+                                options.problemMessageManager.saveGlobalFailReason(errorMessage)
                             }
                         }
                     }
@@ -895,14 +873,14 @@ def executeDeploy(Map options, List platformList, List testResultList)
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
                 options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
                 println("[ERROR] Failed to build test report.")
                 println(e.toString())
                 println(e.getMessage())
                 if (!options.testDataSaved) {
                     try {
                         // Save test data for access it manually anyway
-                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
+                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
                         options.testDataSaved = true 
                     } catch(e1) {
                         println("[WARNING] Failed to publish test data.")
@@ -915,7 +893,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             try {
                 dir("jobs_launcher") {
-                    bat "get_status.bat ..\\summaryTestResults True"
+                    bat "get_status.bat ..\\summaryTestResults"
                 }
             } catch(e) {
                 println("[ERROR] during slack status generation")
@@ -960,22 +938,22 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             try {
-                options.testsStatus = readFile("summaryTestResults/slack_status.json")
+                options["testsStatus-${engine}"] = readFile("summaryTestResults/slack_status.json")
             } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
-                options.testsStatus = ""
+                options["testsStatus-${engine}"] = ""
             }
 
-            withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
+            withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
             }
         }
@@ -1109,9 +1087,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 prBranchName = prInfo[1]
             }
 
-            Integer deployTimeout = 150 * enginesNames.size()
-            println "Calculated deploy timeout: ${deployTimeout}"
-
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         testsBranch:testsBranch,
@@ -1135,7 +1110,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         TEST_TIMEOUT:150,
                         ADDITIONAL_XML_TIMEOUT:30,
                         NON_SPLITTED_PACKAGE_TIMEOUT:105,
-                        DEPLOY_TIMEOUT:deployTimeout,
+                        DEPLOY_TIMEOUT:150,
                         TESTER_TAG:tester_tag,
                         universePlatforms: universePlatforms,
                         resX: resX,
