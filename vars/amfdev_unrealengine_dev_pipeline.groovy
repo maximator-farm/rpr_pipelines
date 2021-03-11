@@ -311,7 +311,7 @@ def executeBuildWindows(Map options)
             if (fileExists("Deploy\\Tests")) {
                 zip archive: false, dir: "Deploy", glob: '', zipFile: "WindowsTests.zip"
 
-                stash(includes: "WindowsTests.zip", name: "UEWindowsTests", zip: false)
+                makeStash(includes: "WindowsTests.zip", name: "UEWindowsTests", zip: false)
             } else {
                 println "[ERROR] Can't find folder with tests!"
                 currentBuild.result = "FAILURE"
