@@ -272,7 +272,7 @@ def executeBuildWindows(Map options)
 
             // TODO: filter files for archive
             
-            zip archive: true, dir: "RPRViewer\\binary\\windows\\inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
+            zip archive: false, dir: "RPRViewer\\binary\\windows\\inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
             stash includes: "RadeonProUSDViewer_Windows.zip", name: "appWindows"
             options.pluginWinSha = sha1 "RadeonProUSDViewer_Windows.zip"
 
@@ -287,20 +287,17 @@ def executeBuildWindows(Map options)
                             --workpath %INSTALL_PREFIX_DIR%/build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                     """
 
-                    // It's required additional changes from dev team to set correct path to package
-                    /*
                     dir("RPRViewer") {
                         bat """
                             "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log 2>&1
                         """
                         archiveArtifacts artifacts: "RPRViewer_Setup.exe", allowEmptyArchive: false
                     }
-                    */
                 } catch (e) {
                     println(e.toString())
                     println(e.getMessage())
                     println(e.getStackTrace())
-                    //currentBuild.result = "FAILURE"
+                    currentBuild.result = "FAILURE"
                     println "[ERROR] Failed to build USD Viewer installer"
                 }
             }
@@ -318,8 +315,9 @@ def executeBuildOSX(Map options)
     withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
         sh """
             export OS=Darwin
-            export QT_SYMLINKS_DIR=/Users/admin/Qt5.15.2/QtSymlinks
-            export PATH="/usr/local/bin/python3.7:/Users/admin/Qt5.15.2/5.15.2/clang_64/bin:\$PATH"
+            export PATH="/usr/local/bin/python3.7:~/Qt/5.15.2/clang_64/bin:\$PATH"
+            
+            echo \$PATH
 
             rm -rf RPRViewer/binary/mac/*
 
@@ -343,12 +341,15 @@ def executeBuildOSX(Map options)
 
     // delete files before zipping
     withNotifications(title: "OSX", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_OSX.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
-        // stash includes: "RadeonProUSDViewer_OSX.zip", name: "appOSX"
-        // options.pluginOSXSha = sha1 "RadeonProUSDViewer_OSX.zip"
-
-        withEnv(["PYTHONPATH=%INST%/lib/python;%INST%/lib"]) {
+        withEnv(["%INST%/lib"]) {
             try {
                 sh """
+                    export PYENV_ROOT="\$HOME/.pyenv"
+                    export PATH="\$PYENV_ROOT/shims:\$PYENV_ROOT/bin:\$PATH"
+                    pyenv rehash
+                    
+                    python --version
+                
                     export INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
                     export MATERIALX_DIR=\$(python -c "import MaterialX as _; import os; print(os.path.dirname(_.__file__))")/
                     export PYTHONPATH=\$INSTALL_PREFIX_DIR/lib/python:\$INSTALL_PREFIX_DIR/lib:\$INSTALL_PREFIX_DIR/lib/python/pxr/Usdviewq/HdRPRPlugin/python
@@ -374,27 +375,10 @@ def executeBuildOSX(Map options)
                 println(e.toString())
                 println(e.getMessage())
                 println(e.getStackTrace())
-                //currentBuild.result = "FAILURE"
-                println "[ERROR] Failed to build USD Viewer installer"
+                currentBuild.result = "FAILURE"
+                println "[ERROR] Failed to build USD Viewer Package"
             }
         }
-        
-        sh """
-            rm RPRViewer/binary/mac/inst/pxrConfig.cmake
-            rm -rf RPRViewer/binary/mac/inst/cmake
-            rm -rf RPRViewer/binary/mac/inst/include
-            rm -rf RPRViewer/binary/mac/inst/lib/cmake
-            rm -rf RPRViewer/binary/mac/inst/lib/pkgconfig
-            rm -rf RPRViewer/binary/mac/inst/bin/*.lib
-            rm -rf RPRViewer/binary/mac/inst/bin/*.pdb
-            rm -rf RPRViewer/binary/mac/inst/lib/*.lib
-            rm -rf RPRViewer/binary/mac/inst/lib/*.pdb
-            rm -rf RPRViewer/binary/mac/inst/plugin/usd/*.lib
-        """
-
-        // TODO: filter files for archive
-
-        zip archive: true, dir: "RPRViewer/binary/mac/inst", glob: '', zipFile: "RadeonProUSDViewer_OSX.zip"
     }
     
 }
