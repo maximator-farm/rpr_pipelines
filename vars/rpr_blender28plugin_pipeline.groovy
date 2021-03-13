@@ -1205,7 +1205,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 prBranchName = prInfo[1]
             }
 
-            Integer deployTimeout = 150 * enginesNames.size()
+            Integer deployTimeout = 180 * enginesNames.size()
             println "Calculated deploy timeout: ${deployTimeout}"
 
             options << [projectRepo:projectRepo,
