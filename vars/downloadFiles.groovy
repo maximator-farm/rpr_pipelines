@@ -4,10 +4,11 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
      * Download files using sh/bat from CIS_TOOLS (based on ssh & rsync)
      * @param server_path - full path to the folder on the server
      * @param local_path - full path to the folder on the target PC 
+     * @param customKeys - custom keys of rsync command (e.g. include/exclude)
      * @param remoteHost - remote host url (default - NAS)
 */
 
-def call(String server_path, String local_path, String remoteHost = "nasURL") {
+def call(String server_path, String local_path, String customKeys = "", String remoteHost = "nasURL") {
     int times = 3
     int retries = 0
     int status = 0
@@ -19,10 +20,10 @@ def call(String server_path, String local_path, String remoteHost = "nasURL") {
                 // See docs for more details: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#string-interpolation
                 if (isUnix()) {
                     status = sh(returnStatus: true, 
-                        script: '$CIS_TOOLS/downloadFilesSync.sh' + " \"${server_path}\" ${local_path} " + '$REMOTE_HOST')
+                        script: '$CIS_TOOLS/downloadFilesSync.sh' + " \"${server_path}\" ${local_path} " + '$REMOTE_HOST' + " \"${customKeys}\"")
                 } else {
                     status = bat(returnStatus: true, 
-                        script: '%CIS_TOOLS%\\downloadFilesSync.bat' + " \"${server_path}\" ${local_path} " + '%REMOTE_HOST%')
+                        script: '%CIS_TOOLS%\\downloadFilesSync.bat' + " \"${server_path}\" ${local_path} " + '%REMOTE_HOST%' + " \"${customKeys}\"")
                 }
             }
             if (status != 24) {

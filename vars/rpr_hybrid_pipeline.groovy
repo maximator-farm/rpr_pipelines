@@ -114,15 +114,12 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
     cleanWS(osName)
     String error_message = ""
     String REF_PATH_PROFILE
-    String JOB_PATH_PROFILE
 
     if (options.testsQuality) {
-        REF_PATH_PROFILE="${options.REF_PATH}/${options.RENDER_QUALITY}/${asicName}-${osName}"
-        JOB_PATH_PROFILE="${options.JOB_PATH}/${options.RENDER_QUALITY}/${asicName}-${osName}"
+        REF_PATH_PROFILE="/volume1/Baselines/rpr_hybrid_autotests/${options.RENDER_QUALITY}/${asicName}-${osName}"
         outputEnvironmentInfo(osName, "${STAGE_NAME}.${options.RENDER_QUALITY}")
     } else {
-        REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
-        JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
+        REF_PATH_PROFILE="/volume1/Baselines/rpr_hybrid_autotests/${asicName}-${osName}"
         outputEnvironmentInfo(osName, "${STAGE_NAME}")
     }
     
@@ -139,10 +136,10 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
         if (options['updateRefs']) {
             println "Updating Reference Images"
             executeGenTestRefCommand(asicName, osName, options)
-            sendFiles('./BaikalNext/RprTest/ReferenceImages/*.*', "${REF_PATH_PROFILE}")
+            uploadFiles('./BaikalNext/RprTest/ReferenceImages/*.*', REF_PATH_PROFILE)
         } else {
             println "Execute Tests"
-            receiveFiles("${REF_PATH_PROFILE}/*", './BaikalNext/RprTest/ReferenceImages/')
+            downloadFiles("${REF_PATH_PROFILE}/*", "./BaikalNext/RprTest/ReferenceImages/")
             executeTestCommand(asicName, osName, options)
         }
     } catch (e) {
@@ -281,17 +278,13 @@ def executePerfTestCommand(String asicName, String osName, Map options) {
 def executePerfTests(String osName, String asicName, Map options) {
     String error_message = ""
     String REF_PATH_PROFILE
-    String JOB_PATH_PROFILE
 
-    REF_PATH_PROFILE="${options.REF_PATH}/perf/${asicName}-${osName}"
-    JOB_PATH_PROFILE="${options.JOB_PATH}/perf/${asicName}-${osName}"
+    REF_PATH_PROFILE="/volume1/Baselines/rpr_hybrid_autotests/perf/${asicName}-${osName}"
     outputEnvironmentInfo(osName, "${STAGE_NAME}.perf")
     
     try {
-        String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_hybrid_perftests" : "C:\\TestResources\\rpr_hybrid_perftests"
-        dir(assetsDir) {
-            checkOutBranchOrScm(options["assetsBranch"], options["assetsRepo"], true, null, null, false, true, "radeonprorender-gitlab", true)
-        }
+        String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_hybrid_autotests_assets" : "/mnt/c/TestResources/rpr_hybrid_autotests_assets"
+        downloadFiles("/volume1/Assets/rpr_hybrid_autotests/", assetsDir)
 
         dir("BaikalNext") {
             dir("bin") {
@@ -323,10 +316,10 @@ def executePerfTests(String osName, String asicName, Map options) {
         if (options["updateRefsPerf"]) {
             println "Updating references for performance tests"
             executeGenPerfTestRefCommand(asicName, osName, options)
-            sendFiles('./BaikalNext/RprPerfTest/Telemetry/*.*', "${REF_PATH_PROFILE}")
+            uploadFiles('./BaikalNext/RprPerfTest/Telemetry/*.*', REF_PATH_PROFILE)
         } else {
             println "Execute Tests"
-            receiveFiles("${REF_PATH_PROFILE}/*", './BaikalNext/RprPerfTest/References/')
+            downloadFiles("${REF_PATH_PROFILE}/*", "./BaikalNext/RprPerfTest/References/")
             executePerfTestCommand(asicName, osName, options)
         }
     } catch (e) {
@@ -697,7 +690,6 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 }
 
 def call(String projectBranch = "",
-         String assetsBranch = "master",
          String platforms = "Windows:NVIDIA_RTX2070S;Ubuntu18:NVIDIA_RTX2070",
          String testsQuality = "none",
          String scenarios = "all",
@@ -720,18 +712,11 @@ def call(String projectBranch = "",
     println "Test quality: ${testsQuality}"
     println "[INFO] Performance tests which will be executed: ${scenarios}"
 
-    def assetsRepo
-    withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL')]){
-        assetsRepo = "${GITLAB_URL}/autotest_assets/rpr_hybrid_perftests"
-    }
-
     Map successfulTests = ["unit": true, "perf": true]
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                            [platforms:platforms,
                             projectBranch:projectBranch,
-                            assetsBranch:assetsBranch,
-                            assetsRepo:assetsRepo,
                             scenarios:scenarios,
                             updateRefs:updateRefs,
                             updateRefsPerf:updateRefsPerf,

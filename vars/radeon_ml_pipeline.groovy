@@ -105,9 +105,9 @@ def executeUnitTestsCommand(String osName, Map options)
 }
 
 def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
-    ws("WS/${options.PRJ_NAME}-TestAssets") {
-        checkOutBranchOrScm(options['assetsBranch'], "${options.gitlabURL}/rml/models.git", true, null, null, false, true, "radeonprorender-gitlab", true)
-    }
+    String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_ml_autotests_assets" : "/mnt/c/TestResources/rpr_ml_autotests_assets"
+    downloadFiles("/volume1/Assets/rpr_ml_assets/", assetsDir)
+
     ws("WS/${options.PRJ_NAME}-FT") {
         checkOutBranchOrScm(options['testsBranch'], "${options.gitlabURL}/rml/ft_engine.git", true, null, null, false, true, "radeonprorender-gitlab", false)
         try {
@@ -117,22 +117,24 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
             outputEnvironmentInfo(osName, "${STAGE_NAME}.ft")
             switch (osName) {
                 case 'Windows':
+                    assetsDir = "C:\\TestResources\\rpr_ml_autotests_assets"
+
                     withEnv(["PATH=C:\\Python38;C:\\Python38\\Scripts;${PATH}"]) {
                         bat """
                         pip install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                         python -V >> ${STAGE_NAME}.ft.log 2>&1
-                        python run_tests.py -t ../${options.PRJ_NAME}-TestAssets -e rml_release/test_app.exe -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                        python run_tests.py -t ${assetsDir} -e rml_release/test_app.exe -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
                         rename ft-executor.log ${STAGE_NAME}.engine.log
                         """
                     }
                     break
                 default:
                     sh """
-                        export LD_LIBRARY_PATH=\$PWD/../${options.PRJ_NAME}-TestAssets:\$LD_LIBRARY_PATH
+                        export LD_LIBRARY_PATH=${assetsDir}:\$LD_LIBRARY_PATH
                         pip3.8 install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
                         python3.8 -V >> ${STAGE_NAME}.ft.log 2>&1
                         env >> ${STAGE_NAME}.ft.log 2>&1
-                        python3.8 run_tests.py -t ../${options.PRJ_NAME}-TestAssets -e rml_release/test_app -i ../${options.PRJ_NAME}-TestAssets -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                        python3.8 run_tests.py -t ${assetsDir} -e rml_release/test_app -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
                         mv ft-executor.log ${STAGE_NAME}.engine.log
                     """
             }
@@ -211,6 +213,8 @@ def executeWindowsBuildCommand(Map options, String buildType){
     outputEnvironmentInfo("Windows", "${STAGE_NAME}_${buildType}")
 
     bat """
+        :: SET DIRECTML_INCLUDE_PATH=".\\DirectML"
+        :: SET DIRECTML_LIBRARY_PATH=".\\DirectML"
         mkdir build-${buildType}
         cd build-${buildType}
         cmake ${options.cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
@@ -258,9 +262,11 @@ def executeOSXBuildCommand(Map options, String buildType){
     outputEnvironmentInfo("OSX", "${STAGE_NAME}_${buildType}")
 
     sh """
+        #export DIRECTML_INCLUDE_PATH="./DirectML"
+        #export DIRECTML_LIBRARY_PATH="./DirectML"
         mkdir build-${buildType}
         cd build-${buildType}
-        cmake -DCMAKE_buildType=${buildType} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
+        cmake -DCMAKE_OSX_SYSROOT=$MACOS_SDK_10_15 -DCMAKE_buildType=${buildType} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
         make -j 4 >> ../${STAGE_NAME}_${buildType}.log 2>&1
     """
     
@@ -303,6 +309,8 @@ def executeLinuxBuildCommand(Map options, String buildType){
     outputEnvironmentInfo("Linux", "${STAGE_NAME}_${buildType}")
 
     sh """
+        #export DIRECTML_INCLUDE_PATH="./DirectML"
+        #export DIRECTML_LIBRARY_PATH="./DirectML"
         mkdir build-${buildType}
         cd build-${buildType}
         cmake -DCMAKE_buildType=${buildType} ${options.cmakeKeysLinux[CIS_OS]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
@@ -405,8 +413,9 @@ def executeBuild(String osName, Map options)
     try {
         checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
 
-        receiveFiles("rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
-        receiveFiles("rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
+        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
+        downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
+        //downloadFiles("/volume1/CIS/rpr-ml/DirectML/*", "./DirectML")
 
         withEnv(["CIS_OS=${osName}"]) {
             switch (osName) {
@@ -452,7 +461,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String assestsBranch = "master",
          String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7;OSX:AMD_RXVEGA',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
          Boolean enableNotifications = true,
@@ -475,7 +483,6 @@ def call(String projectBranch = "",
             [platforms:platforms,
              projectBranch:projectBranch,
              testsBranch:testsBranch,
-             assetsBranch:assestsBranch,
              enableNotifications:enableNotifications,
              PRJ_NAME:PRJ_NAME,
              PRJ_ROOT:PRJ_ROOT,
