@@ -30,8 +30,8 @@ def getViewerTool(String osName, Map options) {
             unzip zipFile: "RadeonProUSDViewer_Windows.zip", dir: "USDViewer", quiet: true
             break
 
-        case "MacOS":
-            println "MacOS isn't supported"
+        case "OSX":
+            println "OSX isn't supported"
             break
 
         default:
@@ -49,8 +49,8 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
                 """
                 break
 
-            case "MacOS":
-                println "MacOS isn't supported"
+            case "OSX":
+                println "OSX isn't supported"
                 break
 
             default:
@@ -86,8 +86,8 @@ def executeTestCommand(String osName, String asicName, Map options) {
                     }
                     break
 
-                case "MacOS":
-                    println "MacOS isn't supported"
+                case "OSX":
+                    println "OSX isn't supported"
                     break
 
                 default:
@@ -328,7 +328,7 @@ def executeBuildOSX(Map options)
     withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
         sh """
             export OS=Darwin
-            export PATH="/usr/local/bin/python3.7:~/Qt/5.15.2/clang_64/bin:\$PATH"
+            export PATH="~/Qt/5.15.2/clang_64/bin:\$PATH"
             
             echo \$PATH
 
@@ -354,7 +354,7 @@ def executeBuildOSX(Map options)
 
     // delete files before zipping
     withNotifications(title: "OSX", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_OSX.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
-        withEnv(["%INST%/lib"]) {
+        withEnv(["PYTHONPATH=%INST%/lib/python;%INST%/lib"]) {
             try {
                 sh """
                     export PYENV_ROOT="\$HOME/.pyenv"
@@ -416,10 +416,9 @@ def executeBuild(String osName, Map options) {
                 case "Windows":
                     executeBuildWindows(options)
                     break
-                case "MacOS":
+                case "OSX":
                     executeBuildOSX(options)
                     break
-
                 default:
                     println "Linux isn't supported"
             }
@@ -750,7 +749,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_WX9100,AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT',
+         String platforms = 'Windows:AMD_WX9100,AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT;OSX',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
