@@ -3,7 +3,8 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 def executeConfiguration(osName, attemptNum, Map options) {
     currentBuild.result = 'SUCCESS'
 
-    String tool = options['tool']
+    String tool = options['tool'].split(':')[0].trim()
+    String version = options['Tool'].split(':')[1].trim()
     String scene_name = options['sceneName']
     String scene_user = options['sceneUser']
     String fail_reason = "Unknown"
@@ -30,7 +31,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
 
                 // download and install plugin
                 if (options["pluginLink"]) {
-                    render_service_install_plugin(options["pluginLink"], options["pluginHash"], tool, "2.83", options.id, options.django_url)
+                    render_service_install_plugin(options["pluginLink"], options["pluginHash"], tool, version, options.id, options.django_url)
                 }
 
                 // download scene, check if it is already downloaded
@@ -78,7 +79,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
                                     """
                                     // Launch render
                                     withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-                                        python3("launch_blender.py --tool \"2.91\" --django_ip \"${options.django_render_url}/\" --scene_name \"${scene_name}\" --id ${options.id_render} --min_samples 16 --max_samples 32 --noise_threshold 0.1 --height 150 --width 150 --startFrame 1 --endFrame 1 --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout 120 ")
+                                        python3("launch_blender.py --tool ${version} --django_ip \"${options.django_render_url}/\" --scene_name \"${scene_name}\" --id ${options.id_render} --min_samples 16 --max_samples 32 --noise_threshold 0.1 --height 150 --width 150 --startFrame 1 --endFrame 1 --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout 120 ")
                                     }
                                 } catch(FlowInterruptedException e) {
                                     throw e
@@ -96,7 +97,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
                                 """
                                 // Launch render
                                 withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-                                    python3("launch_blender_scan.py --tool \"2.91\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --action \"${options.action}\" --configuration_options \"${options.configurationOptions}\" --options_structure \"${options.optionsStructure}\" ")
+                                    python3("launch_blender_scan.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --action \"${options.action}\" --configuration_options \"${options.configurationOptions}\" --options_structure \"${options.optionsStructure}\" ")
                                 }
                                 if (options['action'] == 'Write') {
                                     String updatedSceneHash = sha1 scene_name
