@@ -286,12 +286,14 @@ def executeBuildWindows(Map options) {
             withEnv(["PYTHONPATH=%INST%\\lib\\python;%INST%\\lib"]) {
                 try {
                     bat """
-                        set INSTALL_PREFIX_DIR=%CD%/RPRViewer/binary/windows/inst
-                        set PACKAGE_PATH=%INSTALL_PREFIX_DIR%/dist
-                        set PYTHONPATH=%INSTALL_PREFIX_DIR%/lib/python;%INSTALL_PREFIX_DIR%/lib;%INSTALL_PREFIX_DIR%/lib/python/pxr/Usdviewq/HdRPRPlugin/python
+                        set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
+                        set PACKAGE_PATH=%INSTALL_PREFIX_DIR%\\dist
+                        set PYTHONPATH=%INSTALL_PREFIX_DIR%\\lib\\python;%INSTALL_PREFIX_DIR%\\lib;%INSTALL_PREFIX_DIR%\\lib\\python\\pxr\\Usdviewq\\HdRPRPlugin\\python
 
-                        pyinstaller %CD%/RPRViewer/tools/usdview_windows.spec --noconfirm --clean --distpath %PACKAGE_PATH% ^
-                            --workpath %INSTALL_PREFIX_DIR%/build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                        pyinstaller %CD%\\RPRViewer\\tools\\usdview_windows.spec --noconfirm --clean --distpath %PACKAGE_PATH% ^
+                            --workpath %INSTALL_PREFIX_DIR%\\build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                            
+                        XCOPY %PACKAGE_PATH%\\RPRViewer\\hdrpr\\lib\\* %PACKAGE_PATH%\\RPRViewer\\ /Y
                     """
 
                     dir("RPRViewer") {
