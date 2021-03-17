@@ -4,7 +4,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
     currentBuild.result = 'SUCCESS'
 
     String tool = options['tool'].split(':')[0].trim()
-    String version = options['Tool'].split(':')[1].trim()
+    String version = options['tool'].split(':')[1].trim()
     String scene_name = options['sceneName']
     String scene_user = options['sceneUser']
     String fail_reason = "Unknown"
