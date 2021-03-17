@@ -326,7 +326,7 @@ def executeBuild(String osName, Map options)
         outputEnvironmentInfo(osName, "${STAGE_NAME}.static")
         outputEnvironmentInfo(osName, "${STAGE_NAME}.static-runtime")
 
-        switch(osName) {
+        switch (osName) {
             case 'Windows':
                 executeBuildWindows(options.cmakeKeys, osName, options)
                 break
@@ -336,11 +336,11 @@ def executeBuild(String osName, Map options)
             case 'CentOS7':
                 executeBuildUnix(options.cmakeKeys, osName, options)
                 break
+            case 'CentOS7-Clang':
+                executeBuildUnix("${options.cmakeKeys} -DRIF_UNITTEST=OFF -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, options, 'clang-5.0')
+                break
             case 'Ubuntu18':
                 executeBuildUnix(options.cmakeKeys, osName, options)
-                break
-            case 'Ubuntu18-Clang':
-                executeBuildUnix("${options.cmakeKeys} -DRIF_UNITTEST=OFF -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, options, 'clang-5.0')
                 break
             default:
                 println('Unsupported OS')
@@ -421,7 +421,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT;Ubuntu18:NVIDIA_RTX2070;OSX:AMD_RXVEGA;CentOS7;Ubuntu18-Clang',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu18:NVIDIA_RTX2070;OSX:AMD_RXVEGA;CentOS7;CentOS7-Clang',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = '',
