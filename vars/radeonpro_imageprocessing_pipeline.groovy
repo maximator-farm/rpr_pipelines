@@ -215,6 +215,7 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
         ${EXPORT_CXX}
         mkdir build-${options.packageName}-${osName}-dynamic
         cd build-${options.packageName}-${osName}-dynamic
+        update-alternatives --config c++
         cmake .. -DADL_PROFILING=ON ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-dynamic >> ../${STAGE_NAME}.dynamic.log 2>&1
         make -j 8 ${SRC_BUILD} >> ../${STAGE_NAME}.dynamic.log 2>&1
         make install >> ../${STAGE_NAME}.dynamic.log 2>&1
