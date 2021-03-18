@@ -143,6 +143,9 @@ def executeBuild(String osName, Map options)
             case 'Ubuntu18':
                 executeBuildUbuntu(osName, options)
                 break
+            case 'Ubuntu20':
+                executeBuildUbuntu(osName, options)
+                break
             default:
                 executeBuildCentOS(osName, options)
         }
