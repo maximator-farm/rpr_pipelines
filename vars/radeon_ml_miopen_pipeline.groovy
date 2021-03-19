@@ -34,6 +34,7 @@ def executeBuildOSX(String osName, Map options)
 def executeBuildUbuntu(String osName, Map options)
 {
     sh """
+        export BOOST_ROOT=/usr/local
         mkdir build
         cd build
         cmake -DRIF_BUILD=1 -DMIOPEN_BACKEND=OpenCL .. >> ../${STAGE_NAME}.log 2>&1
