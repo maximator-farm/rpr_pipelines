@@ -201,6 +201,43 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static INSTALL_PLUGIN_DIRT = [
+        "begin": ["message": "Installing the plugin (dirt install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to install the plugin due to timeout (dirt install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "FFailed to install new plugin (dirt install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
+    def static INSTALL_PLUGIN_CLEAN = [
+        "begin": ["message": "Installing the plugin (clean install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to install the plugin due to timeout (clean install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to uninstall old plugin (clean install).", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": ["Failed to uninstall old plugin"]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to install the plugin (clean install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
     def static INSTALL_HOUDINI = [
         "begin": ["message": "Installing Houdini."],
 
@@ -248,6 +285,48 @@ public class NotificationConfiguration {
             ],
             [
                 "class": Exception, "problemMessage": "Failed to build cache.", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
+    def static BUILD_CACHE_DIRT = [
+        "begin": ["message": "Building cache (dirt install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to build cache due to timeout (dirt install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "No output image after cache building (dirt install).", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [NO_OUTPUT_IMAGE]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to build cache (dirt install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
+    def static BUILD_CACHE_CLEAN = [
+        "begin": ["message": "Building cache (clean install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to build cache due to timeout (clean install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "No output image after cache building (clean install).", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [NO_OUTPUT_IMAGE]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to build cache (clean install).", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
             ]
         ]
