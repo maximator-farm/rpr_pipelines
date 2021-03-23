@@ -112,7 +112,7 @@ def buildRenderCache(String osName, String toolVersion, Map options, Boolean cle
     dir("scripts") {
         switch(osName) {
             case 'Windows':
-                bat "check_installation.bat ${toolVersion} >> \"..\\${options.stageName}_${logPostfix}_${options.currentTry}.cb.log\"  2>&1"
+                bat "build_usd_cache.bat ${toolVersion} >> \"..\\${options.stageName}_${logPostfix}_${options.currentTry}.cb.log\"  2>&1"
                 break
             case "OSX":
                 println "OSX isn't supported"
@@ -224,14 +224,17 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
             timeout(time: "10", unit: "MINUTES") {
                 buildRenderCache(osName, "2022", options, false)
-                String cacheImgPath = "./scripts/check_installation/RESULT.png"
-                if(!fileExists(cacheImgPath)){
-                    throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                dir("scripts") {
+                    utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_${options.currentTry}")
+                    archiveArtifacts artifacts: "${options.stageName}/*.png", allowEmptyArchive: true
+                    String cacheImgPath = "./${options.stageName}_${options.currentTry}/RESULT.png"
+                    if(!fileExists(cacheImgPath)){
+                        throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                    }
                 }
             }
         }
 
-        Boolean newPluginInstalled = false
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
             timeout(time: "5", unit: "MINUTES") {
                 installInventorPlugin(osName, options, true)
@@ -241,9 +244,13 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_CLEAN) {                        
             timeout(time: "10", unit: "MINUTES") {
                 buildRenderCache(osName, "2022", options, true)
-                String cacheImgPath = "./scripts/check_installation/RESULT.png"
-                if(!fileExists(cacheImgPath)){
-                    throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                dir("scripts") {
+                    utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_${options.currentTry}")
+                    archiveArtifacts artifacts: "${options.stageName}/*.png", allowEmptyArchive: true
+                    String cacheImgPath = "./${options.stageName}_${options.currentTry}/RESULT.png"
+                    if(!fileExists(cacheImgPath)){
+                        throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                    }
                 }
             }
         }
