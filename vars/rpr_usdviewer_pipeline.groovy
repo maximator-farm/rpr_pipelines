@@ -72,6 +72,13 @@ def getViewerTool(String osName, Map options) {
 }
 
 
+def checkExistenceOfPlugin(String osName, Map options) {
+    String uninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
+
+    return fileExists(uninstallerPath)
+}
+
+
 def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true) {
     String logPostfix = cleanInstall ? "clean" : "dirt"
 
