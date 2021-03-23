@@ -65,7 +65,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true)
     String uninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
 
     try {
-        if (cleanInstall) {
+        if (cleanInstall && checkExistenceOfPlugin(osName, options)) {
             println "[INFO] Uninstalling Inventor Plugin"
             bat """
                 start "" /wait "C:\\Program Files\\RPRViewer\\unins000.exe" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall.log
@@ -192,7 +192,7 @@ def executeTests(String osName, String asicName, Map options) {
             }
         }
 
-        if (checkExistenceOfPlugin(osName, tool, options)) {
+        if (checkExistenceOfPlugin(osName, options)) {
             println "Old plugin exists. Start \"dirt\" installation"
 
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
@@ -206,22 +206,22 @@ def executeTests(String osName, String asicName, Map options) {
                     installInventorPlugin(osName, options, false)
                 }
             }
-        } else {
-            println "Old plugin doesn't installed. Skip \"dirt\" installation"
-        }
-    
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
-            timeout(time: "10", unit: "MINUTES") {
-                buildRenderCache(osName, "2022", options, false)
-                dir("scripts") {
-                    utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_${options.currentTry}")
-                    archiveArtifacts artifacts: "${options.stageName}/*.png", allowEmptyArchive: true
-                    String cacheImgPath = "./${options.stageName}_${options.currentTry}/RESULT.png"
-                    if(!fileExists(cacheImgPath)){
-                        throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
+                timeout(time: "10", unit: "MINUTES") {
+                    buildRenderCache(osName, "2022", options, false)
+                    dir("scripts") {
+                        utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_${options.currentTry}")
+                        archiveArtifacts artifacts: "${options.stageName}/*.jpg", allowEmptyArchive: true
+                        String cacheImgPath = "./${options.stageName}_${options.currentTry}/RESULT.jpg"
+                        if(!fileExists(cacheImgPath)){
+                            throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                        }
                     }
                 }
             }
+        } else {
+            println "Old plugin doesn't installed. Skip \"dirt\" installation"
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
@@ -235,8 +235,8 @@ def executeTests(String osName, String asicName, Map options) {
                 buildRenderCache(osName, "2022", options, true)
                 dir("scripts") {
                     utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_${options.currentTry}")
-                    archiveArtifacts artifacts: "${options.stageName}/*.png", allowEmptyArchive: true
-                    String cacheImgPath = "./${options.stageName}_${options.currentTry}/RESULT.png"
+                    archiveArtifacts artifacts: "${options.stageName}/*.jpg", allowEmptyArchive: true
+                    String cacheImgPath = "./${options.stageName}_${options.currentTry}/RESULT.jpg"
                     if(!fileExists(cacheImgPath)){
                         throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
                     }
