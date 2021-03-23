@@ -15,35 +15,15 @@ def getViewerTool(String osName, Map options) {
         case "Windows":
 
             if (options['isPreBuilt']) {
+                clearBinariesWin()
 
-                println "[INFO] PluginWinSha: ${options['pluginWinSha']}"
+                println "[INFO] PreBuilt plugin specified. Downloading and copying..."
+                downloadPlugin(osName, "RPRViewer_Setup", options, "", 600)
 
-                if (options['pluginWinSha']) {
-                    if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.exe")) {
-                        println "[INFO] The plugin ${options['pluginWinSha']}.exe exists in the storage."
-                    } else {
-                        clearBinariesWin()
-
-                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
-                        downloadPlugin(osName, "RPRViewer_Setup", options)
-
-                        bat """
-                            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                            move RPRViewer_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.exe"
-                        """
-                    }
-                } else {
-                    clearBinariesWin()
-
-                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
-                    downloadPlugin(osName, "RPRViewer_Setup", options)
-
-                    bat """
-                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move RPRViewer_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.exe"
-                    """
-                }
-
+                bat """
+                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                    move RPRViewer_Setup_${osName}.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.exe"
+                """
             } else {
                 if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}.exe")) {
                     println "[INFO] The plugin ${options.commitSHA}.exe exists in the storage."
@@ -55,7 +35,7 @@ def getViewerTool(String osName, Map options) {
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move RPRViewer_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}.exe"
+                        move RPRViewer_Setup_${osName}.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}.exe"
                     """
                 }
             }
@@ -97,8 +77,17 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true)
 
     try {
         println "[INFO] Install Inventor Plugin"
+
+        String installerName = ""
+
+        if (options['isPreBuilt']) {
+            installerName = "${options.pluginWinSha}.exe"
+        } else {
+            installerName = "${options.commitSHA}.exe"
+        }
+
         bat """
-            start /wait RPRViewer_Setup.exe /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.install.log
+            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.install.log
         """
     } catch (e) {
         throw new Exception("Failed to install new plugin")
