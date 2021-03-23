@@ -13,20 +13,53 @@ import universe.*
 def getViewerTool(String osName, Map options) {
     switch (osName) {
         case "Windows":
-            if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.exe")) {
-                clearBinariesWin()
-                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "appWindows"
-                bat """
-                    IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    copy RPRViewer_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.exe"
-                """
+
+            if (options['isPreBuilt']) {
+
+                println "[INFO] PluginWinSha: ${options['pluginWinSha']}"
+
+                if (options['pluginWinSha']) {
+                    if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.exe")) {
+                        println "[INFO] The plugin ${options['pluginWinSha']}.exe exists in the storage."
+                    } else {
+                        clearBinariesWin()
+
+                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                        downloadPlugin(osName, "RPRViewer_Setup", options)
+
+                        bat """
+                            IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                            move RPRViewer_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.exe"
+                        """
+                    }
+                } else {
+                    clearBinariesWin()
+
+                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
+                    downloadPlugin(osName, "RPRViewer_Setup", options)
+
+                    bat """
+                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                        move RPRViewer_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.exe"
+                    """
+                }
+
             } else {
-                println "[INFO] The plugin ${options.pluginWinSha}.exe exists in the storage."
-                bat """
-                    copy "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.exe" RPRViewer_Setup.exe
-                """
+                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}.exe")) {
+                    println "[INFO] The plugin ${options.commitSHA}.exe exists in the storage."
+                } else {
+                    clearBinariesWin()
+
+                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                    unstash "appWindows"
+
+                    bat """
+                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                        move RPRViewer_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}.exe"
+                    """
+                }
             }
+
             break
 
         case "OSX":
@@ -521,31 +554,43 @@ def executeBuild(String osName, Map options) {
 
 
 def executePreBuild(Map options) {
-    if (env.CHANGE_URL) {
-        echo "[INFO] Branch was detected as Pull Request"
-        options.testsPackage = "PR.json"
+    if (options['isPreBuilt']) {
+        println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
+        currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
+        options['executeBuild'] = false
+        options['executeTests'] = true
+    // manual job
+    } else if (options.forceBuild) {
+        println "[INFO] Manual job launch detected"
+        options['executeBuild'] = true
+        options['executeTests'] = true
+    // auto job (master)
     } else if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        options.testsPackage = "master.json"
+        //options.testsPackage = "master.json"
+    // auto job
     } else if (env.BRANCH_NAME) {
-        options.testsPackage = "smoke.json"
+        //options.testsPackage = "smoke.json"
     }
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
     }
-    options.commitAuthor = utils.getBatOutput(this, "git show -s --format=%%an HEAD ")
-    options.commitMessage = utils.getBatOutput(this, "git log --format=%%s -n 1").replace('\n', '')
-    options.commitSHA = utils.getBatOutput(this, "git log --format=%%H -1 ")
-    println """
-        The last commit was written by ${options.commitAuthor}.
-        Commit message: ${options.commitMessage}
-        Commit SHA: ${options.commitSHA}
-    """
 
-    currentBuild.description = "<b>Project branch:</b> ${options.projectBranch ?: env.BRANCH_NAME}<br/>"
-    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+    if (!options['isPreBuilt']) {
+        options.commitAuthor = utils.getBatOutput(this, "git show -s --format=%%an HEAD ")
+        options.commitMessage = utils.getBatOutput(this, "git log --format=%%s -n 1").replace('\n', '')
+        options.commitSHA = utils.getBatOutput(this, "git log --format=%%H -1 ")
+        println """
+            The last commit was written by ${options.commitAuthor}.
+            Commit message: ${options.commitMessage}
+            Commit SHA: ${options.commitSHA}
+        """
+
+        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch ?: env.BRANCH_NAME}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+    }
 
     if (env.BRANCH_NAME) {
         withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
@@ -807,6 +852,7 @@ def call(String projectBranch = "",
          String tests = "",
          Boolean splitTestsExecution = true,
          String tester_tag = 'USDViewer',
+         String customBuildLinkWindows = "",
          String parallelExecutionTypeString = "TakeAllNodes",
          Integer testCaseRetries = 3,
          Boolean sendToUMS = true) {
@@ -814,6 +860,9 @@ def call(String projectBranch = "",
     Map options = [stage: "Init", problemMessageManager: problemMessageManager]
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+
+            Boolean isPreBuilt = customBuildLinkWindows
+
             println """
                 Platforms: ${platforms}
                 Tests: ${tests}
@@ -828,6 +877,7 @@ def call(String projectBranch = "",
                         PRJ_ROOT: 'rpr-core',
                         projectRepo: 'git@github.com:Radeon-Pro/RPRViewer.git',
                         BUILDER_TAG: 'BuilderUSDViewer',
+                        isPreBuilt:isPreBuilt,
                         TESTER_TAG: tester_tag,
                         executeBuild: true,
                         executeTests: true,
@@ -840,6 +890,7 @@ def call(String projectBranch = "",
                         NON_SPLITTED_PACKAGE_TIMEOUT: 45,
                         DEPLOY_TIMEOUT: 45,
                         tests: tests,
+                        customBuildLinkWindows: customBuildLinkWindows,
                         nodeRetry: [],
                         problemMessageManager: problemMessageManager,
                         platforms: platforms,
