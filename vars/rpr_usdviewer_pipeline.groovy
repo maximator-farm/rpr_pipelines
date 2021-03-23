@@ -42,11 +42,13 @@ def getViewerTool(String osName, Map options) {
 def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true) {
     String logPostfix = cleanInstall ? "clean" : "dirt"
 
+    String uninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
+
     try {
         if (cleanInstall) {
             println "[INFO] Uninstalling Inventor Plugin"
             bat """
-                start /wait "C:\\Program Files\\RPRViewer\\unins.exe" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall.log
+                start "" /wait "C:\\Program Files\\RPRViewer\\unins000.exe" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall.log
             """
         }
     } catch (e) {
@@ -161,16 +163,22 @@ def executeTests(String osName, String asicName, Map options) {
             }
         }
 
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_inventor_autotests_assets" : "/mnt/c/TestResources/usd_inventor_autotests_assets"
-            downloadFiles("/volume1/Assets/usd_inventor_autotests/", assetsDir)
-        }
+        if (checkExistenceOfPlugin(osName, tool, options)) {
+            println "Old plugin exists. Start \"dirt\" installation"
 
-        Boolean newPluginInstalled = false
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_DIRT) {
-            timeout(time: "5", unit: "MINUTES") {
-                installInventorPlugin(osName, options, false)
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
+                String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_inventor_autotests_assets" : "/mnt/c/TestResources/usd_inventor_autotests_assets"
+                downloadFiles("/volume1/Assets/usd_inventor_autotests/", assetsDir)
             }
+
+            Boolean newPluginInstalled = false
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_DIRT) {
+                timeout(time: "5", unit: "MINUTES") {
+                    installInventorPlugin(osName, options, false)
+                }
+            }
+        } else {
+            println "Old plugin doesn't installed. Skip \"dirt\" installation"
         }
     
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
