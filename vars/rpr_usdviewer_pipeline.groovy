@@ -35,7 +35,7 @@ def getViewerTool(String osName, Map options) {
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                        move RPRViewer_Setup_${osName}.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}.exe"
+                        move RPRViewer_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}.exe"
                     """
                 }
             }
@@ -286,7 +286,10 @@ def executeTests(String osName, String asicName, Map options) {
     } catch (e) {
         if (options.currentTry < options.nodeReallocateTries) {
             stashResults = false
-        } 
+        } else {
+            options.problemMessageManager.saveGeneralFailReason(NotificationConfiguration.SOME_TESTS_FAILED, options["stageName"], osName)
+            currentBuild.result = "FAILURE"
+        }
         println e.toString()
         if (e instanceof ExpectedExceptionWrapper) {
             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()}", "${BUILD_URL}")
@@ -425,7 +428,7 @@ def executeBuildWindows(Map options) {
                             options.universeManager.sendToMINIO(options, "Windows", "..", "RPRViewer_Setup.exe", false)
                         }*/
 
-                        stash includes: "PRViewer_Setup.exe", name: "appWindows"
+                        stash includes: "RPRViewer_Setup.exe", name: "appWindows"
                         options.pluginWinSha = sha1 "PRViewer_Setup.exe"
                     }
                 } catch (e) {
