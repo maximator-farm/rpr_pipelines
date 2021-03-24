@@ -537,7 +537,7 @@ def executeBuildOSX(Map options)
             
                 if (options.branch_postfix) {
                     sh """
-                        mv RadeonProUSDViewer_Package_OSX.zip RadeonProUSDViewer_Package_OSX.(${options.branch_postfix}).zip
+                        mv RadeonProUSDViewer_Package_OSX.zip "RadeonProUSDViewer_Package_OSX.(${options.branch_postfix}).zip"
                     """
                 }
 
