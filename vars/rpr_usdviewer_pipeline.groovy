@@ -742,8 +742,6 @@ def executePreBuild(Map options) {
 
 
 def executeDeploy(Map options, List platformList, List testResultList) {
-    return
-
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
@@ -959,7 +957,7 @@ def call(String projectBranch = "",
                 options["universeManager"] = manager
             }
         }
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
         println e.toString()
