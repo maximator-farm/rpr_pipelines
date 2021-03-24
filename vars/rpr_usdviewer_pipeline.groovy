@@ -609,9 +609,11 @@ def executePreBuild(Map options) {
     // auto job (master)
     } else if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
         //options.testsPackage = "master.json"
+        options.tests = "Smoke"
     // auto job
     } else if (env.BRANCH_NAME) {
         //options.testsPackage = "smoke.json"
+        options.tests = "Smoke"
     }
 
     options["branch_postfix"] = ""
@@ -896,7 +898,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows;OSX',
+         String platforms = 'Windows:AMD_WX9100,AMD_RX5700XT;OSX',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
