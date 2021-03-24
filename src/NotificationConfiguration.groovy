@@ -211,7 +211,7 @@ public class NotificationConfiguration {
                 "githubNotification": ["status": "timed_out"]
             ],
             [
-                "class": Exception, "problemMessage": "FFailed to install new plugin (dirt install).", 
+                "class": Exception, "problemMessage": "Failed to install new plugin (dirt install).", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
             ]
         ]
