@@ -211,9 +211,9 @@ def executeTests(String osName, String asicName, Map options) {
                 timeout(time: "10", unit: "MINUTES") {
                     buildRenderCache(osName, "2022", options, false)
                     dir("scripts") {
-                        utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_${options.currentTry}")
-                        archiveArtifacts artifacts: "${options.stageName}/*.jpg", allowEmptyArchive: true
-                        String cacheImgPath = "./${options.stageName}_${options.currentTry}/RESULT.jpg"
+                        utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_dirt_${options.currentTry}")
+                        archiveArtifacts artifacts: "${options.stageName}_dirt_${options.currentTry}/*.jpg", allowEmptyArchive: true
+                        String cacheImgPath = "./${options.stageName}_dirt_${options.currentTry}/RESULT.jpg"
                         if(!fileExists(cacheImgPath)){
                             throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
                         }
@@ -234,9 +234,9 @@ def executeTests(String osName, String asicName, Map options) {
             timeout(time: "10", unit: "MINUTES") {
                 buildRenderCache(osName, "2022", options, true)
                 dir("scripts") {
-                    utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_${options.currentTry}")
-                    archiveArtifacts artifacts: "${options.stageName}/*.jpg", allowEmptyArchive: true
-                    String cacheImgPath = "./${options.stageName}_${options.currentTry}/RESULT.jpg"
+                    utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_clean_${options.currentTry}")
+                    archiveArtifacts artifacts: "${options.stageName}_clean_${options.currentTry}/*.jpg", allowEmptyArchive: true
+                    String cacheImgPath = "./${options.stageName}_clean_${options.currentTry}/RESULT.jpg"
                     if(!fileExists(cacheImgPath)){
                         throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
                     }
@@ -284,10 +284,9 @@ def executeTests(String osName, String asicName, Map options) {
         options.executeTestsFinished = true
 
     } catch (e) {
-        if (options.currentTry < options.nodeReallocateTries) {
+        if (options.currentTry < options.nodeReallocateTries - 1) {
             stashResults = false
         } else {
-            options.problemMessageManager.saveGeneralFailReason(NotificationConfiguration.SOME_TESTS_FAILED, options["stageName"], osName)
             currentBuild.result = "FAILURE"
         }
         println e.toString()
