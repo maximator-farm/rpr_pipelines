@@ -436,16 +436,25 @@ def executeBuildWindows(Map options) {
                         bat """
                             "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log 2>&1
                         """
-                        archiveArtifacts artifacts: "RPRViewer_Setup.exe", allowEmptyArchive: false
-                    
+                        stash includes: "RPRViewer_Setup.exe", name: "appWindows"
+                        options.pluginWinSha = sha1 "RPRViewer_Setup.exe"
+
+                        if (options.branch_postfix) {
+                            bat """
+                                rename RPRViewer_Setup.exe RPRViewer_Setup.(${options.branch_postfix}).exe
+                            """
+                        }
+
+                        archiveArtifacts artifacts: "RPRViewer_Setup*.exe", allowEmptyArchive: false
+                        String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup.(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
+                        String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+                        rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
                         /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
                         if (options.sendToUMS) {
                             // WARNING! call sendToMinio in build stage only from parent directory
                             options.universeManager.sendToMINIO(options, "Windows", "..", "RPRViewer_Setup.exe", false)
                         }*/
-
-                        stash includes: "RPRViewer_Setup.exe", name: "appWindows"
-                        options.pluginWinSha = sha1 "PRViewer_Setup.exe"
                     }
                 } catch (e) {
                     println(e.toString())
@@ -524,8 +533,19 @@ def executeBuildOSX(Map options)
                         \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                 """
 
-                zip archive: true, dir: "RPRViewer/binary/mac/inst/dist/RPRViewer", glob: '', zipFile: "RadeonProUSDViewer_Package_OSX.zip"
+                zip archive: false, dir: "RPRViewer/binary/mac/inst/dist/RPRViewer", glob: '', zipFile: "RadeonProUSDViewer_Package_OSX.zip"
             
+                if (options.branch_postfix) {
+                    sh """
+                        mv RadeonProUSDViewer_Package_OSX.zip RadeonProUSDViewer_Package_OSX.(${options.branch_postfix}).zip
+                    """
+                }
+
+                archiveArtifacts artifacts: "RadeonProUSDViewer_Package*.zip", allowEmptyArchive: false
+                String BUILD_NAME = options.branch_postfix ? "RadeonProUSDViewer_Package_OSX.(${options.branch_postfix}).zip" : "RadeonProUSDViewer_Package_OSX.zip"
+                String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+                rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
                 /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
                 if (options.sendToUMS) {
                     // WARNING! call sendToMinio in build stage only from parent directory
@@ -592,6 +612,15 @@ def executePreBuild(Map options) {
     // auto job
     } else if (env.BRANCH_NAME) {
         //options.testsPackage = "smoke.json"
+    }
+
+    options["branch_postfix"] = ""
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        options["branch_postfix"] = "release"
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
+        options["branch_postfix"] = env.BRANCH_NAME.replace('/', '-')
+    } else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop") {
+        options["branch_postfix"] = options.projectBranch.replace('/', '-')
     }
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
