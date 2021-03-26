@@ -4,10 +4,10 @@ import hudson.AbortException
 
 
 def call(String branchName, String repoName, Boolean disableSubmodules=false, String prBranchName = '', String prRepoName = '', Boolean polling=false, Boolean changelog=true, \
-    String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false) {
+    String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false, Boolean recursiveSubmodules=true) {
     
     try {
-        executeCheckout(branchName, repoName, disableSubmodules, prBranchName, prRepoName, polling, changelog, credId, useLFS)
+        executeCheckout(branchName, repoName, disableSubmodules, prBranchName, prRepoName, polling, changelog, credId, useLFS, wipeWorkspace, recursiveSubmodules)
     } catch (FlowInterruptedException e) {
         println "[INFO] Task was aborted during checkout"
         throw e
@@ -24,13 +24,13 @@ def call(String branchName, String repoName, Boolean disableSubmodules=false, St
             wipeWorkspace=true
         }
         
-        executeCheckout(branchName, repoName, disableSubmodules, prBranchName, prRepoName, polling, changelog, credId, useLFS, wipeWorkspace)
+        executeCheckout(branchName, repoName, disableSubmodules, prBranchName, prRepoName, polling, changelog, credId, useLFS, wipeWorkspace, recursiveSubmodules)
     }
 }
 
 
 def executeCheckout(String branchName, String repoName, Boolean disableSubmodules=false, String prBranchName = '', String prRepoName = '', Boolean polling=false, Boolean changelog=true, \
-    String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false) {
+    String credId='radeonprorender', Boolean useLFS=false, Boolean wipeWorkspace=false, Boolean recursiveSubmodules=true) {
 
     def repoBranch = branchName ? [[name: branchName]] : scm.branches
 
@@ -50,7 +50,7 @@ def executeCheckout(String branchName, String repoName, Boolean disableSubmodule
             [$class: 'AuthorInChangelog'],
             [$class: 'CloneOption', timeout: 60, noTags: false],
             [$class: 'SubmoduleOption', disableSubmodules: disableSubmodules,
-             parentCredentials: true, recursiveSubmodules: true, shallow: true, depth: 2,
+             parentCredentials: true, recursiveSubmodules: recursiveSubmodules, shallow: true, depth: 2,
              timeout: 60, reference: '', trackingSubmodules: false],
     ]
     if (prBranchName) {

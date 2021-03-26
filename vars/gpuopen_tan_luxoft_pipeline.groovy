@@ -164,116 +164,102 @@ def executeTests(String osName, String asicName, Map options) {
 
 def executeBuildWindows(Map options) {
 
-    downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/OpenCL-Headers/", "./thirdparty/OpenCL-Headers")
-    downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/portaudio/*", "./thirdparty/portaudio")
-    downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/fftw-3.3.5-dll64/*", "./tan/tanlibrary/src/fftw-3.3.5-dll64")
-
     bat """
         mkdir thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64
         xcopy C:\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 /s/y/i
     """
 
     options.buildConfiguration.each() { win_build_conf ->
-        options.ipp.each() { win_cur_ipp ->
-            options.winTool.each() { win_tool ->
-                options.winVisualStudioVersion.each() { vs_ver ->
-                    options.winRTQ.each() { win_cur_rtq ->
-    
-                        win_build_conf = win_build_conf.capitalize()
-
-                        println "Current build configuration: ${win_build_conf}."
-                        println "Current ipp: ${win_cur_ipp}."
-                        println "Current tool: ${win_tool}."
-                        println "Current VS version: ${vs_ver}."
-                        println "Current rtq: ${win_cur_rtq}."
-
-                        win_build_name = "${win_build_conf}_vs${vs_ver}_${win_tool}_ipp-${win_cur_ipp}_rtq-${win_cur_rtq}"
-
-                        if (win_cur_ipp == "on"){
-                            println "add ipp flag"
-                        } else {
-                            println "nothing to do"
-                        }
-
-                        if (win_cur_rtq == "on"){
-                            win_cur_rtq = 1
-                        } else {
-                            win_cur_rtq = 0
-                        }
-
-                        switch(vs_ver) {
-                            case '2015':
-                                options.visualStudio = "Visual Studio 14 2015"
-                                options.msBuildPath = "C:\\Program Files (x86)\\MSBuild\\14.0\\Bin\\MSBuild.exe"
-                                break
-                            case '2017':
-                                options.visualStudio = "Visual Studio 15 2017"
-                                options.msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe"
-                                break
-                            case '2019':
-                                options.visualStudio = "Visual Studio 16 2019"
-                                options.msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
-                        }
-
-                        dir('tan\\build\\cmake') {
-
-                            if(fileExists("vs${vs_ver}")){
-                                bat """
-                                    rd /s /q "vs${vs_ver}"
-                                    mkdir "vs${vs_ver}"
-                                """
-                            }
+        options.winTool.each() { win_tool ->
                             
-                            options.win_openCL_dir = "..\\..\\..\\..\\thirdparty\\OpenCL-Headers"
-                            options.win_portaudio_dir = "..\\..\\..\\..\\..\\thirdparty\\portaudio"
+            win_build_conf = win_build_conf.capitalize()
 
-                            try {
-                                dir ("vs${vs_ver}") {
-                                    bat """
-                                        SET CMAKE_PREFIX_PATH=..\\..\\..\\..\\thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64\\lib\\cmake\\Qt5Widgets
-                                        cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} -DOpenCL_INCLUDE_DIR="${options.win_openCL_dir}" -DPortAudio_DIR="${options.win_portaudio_dir}" -DDEFINE_AMD_OPENCL_EXTENSION=1 -DRTQ_ENABLED=${win_cur_rtq} >> ..\\..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
-                                    """
-                                }
-          
-                                if (win_tool == "msbuild") {
-                                    dir ("vs${vs_ver}") {
-                                        bat """
-                                            set msbuild="${options.msBuildPath}"
-                                            %msbuild% TAN.sln /target:build /maxcpucount /property:Configuration=${win_build_conf};Platform=x64 >> ..\\..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
-                                        """
-                                    }
-                                } else if (win_tool == "cmake") {
-                                    bat """
-                                        cmake --build vs${vs_ver} --config ${win_build_conf} >> ..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
-                                    """
-                                }
+            println "Current build configuration: ${win_build_conf}."
+            println "Current tool: ${win_tool}."
 
-                                bat """
-                                    mkdir binWindows
-                                    xcopy /s/y/i vs${vs_ver}\\cmake-TALibTestConvolution-bin\\${win_build_conf} binWindows\\cmake-TALibTestConvolution-bin
-                                    xcopy /s/y/i vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${win_build_conf} binWindows\\cmake-TALibDopplerTest-bin
-                                    xcopy /s/y/i vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${win_build_conf} binWindows\\cmake-RoomAcousticQT-bin
-                                """
-                                
-                                zip archive: true, dir: "binWindows", glob: '', zipFile: "Windows_${win_build_name}.zip"
+            win_build_name = "${win_build_conf}_${win_tool}"
 
-                                bat """
-                                    rename Windows_${win_build_name}.zip binWindows.zip
-                                """
-                                stash includes: "binWindows.zip", name: 'TAN_Windows'
-                                options.pluginWinSha = sha1 "binWindows.zip"
+            switch (options.winVisualStudioVersion) {
+                case '2017':
+                    options.visualStudio = "Visual Studio 15 2017"
+                    options.msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe"
+                    break
+                case '2019':
+                    options.visualStudio = "Visual Studio 16 2019"
+                    options.msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
+            }
 
-                            } catch (FlowInterruptedException error) {
-                                println "[INFO] Job was aborted during build stage"
-                                throw error
-                            } catch (e) {
-                                println(e.toString())
-                                println(e.getMessage())
-                                currentBuild.result = "FAILED"
-                                println "[ERROR] Failed to build TAN on Windows"
-                            }
-                        }
+            dir('tan\\build\\cmake') {
+
+                if (fileExists(win_build_name)){
+                    bat """
+                        rd /s /q ${win_build_name}
+                        mkdir ${win_build_name}
+                    """
+                }
+                
+                opencl_flag = "-DOpenCL_INCLUDE_DIR=../../../thirdparty/OpenCL-Headers"
+                portaudio_flag = "-DPortAudio_DIR=../../../thirdparty/portaudio"
+
+                String fftw_flag =""
+                if (options.FFTW_DIR == "on") {
+                    fftw_flag = "-DFFTW_DIR=../../thirdparty/fftw "
+                }
+
+                String tan_no_opencl_flag ="-DTAN_NO_OPENCL=0"
+                if (options.TAN_NO_OPENCL == "on") {
+                    tan_no_opencl_flag = "-DTAN_NO_OPENCL=1"
+                }
+
+                String amf_core_static_flag ="-DAMF_CORE_STATIC=0"
+                if (options.AMF_CORE_STATIC == "on") {
+                    amf_core_static_flag = "-DAMF_CORE_STATIC=1"
+                }
+
+                try {
+                    dir (win_build_name) {
+                        bat """
+                            SET CMAKE_PREFIX_PATH=../../../thirdparty/Qt/Qt5.9.9/5.9.9/msvc2017_64/lib/cmake/Qt5Widgets
+                            cmake .. -G "${options.visualStudio}" -A x64 -DCMAKE_BUILD_TYPE=${win_build_conf} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DAMF_OPEN_DIR=../../../amfOpen -DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} >> ..\\..\\..\\..\\${STAGE_NAME}.${win_build_name}.log 2>&1
+                        """
                     }
+
+                    if (win_tool == "msbuild") {
+                        dir (win_build_name) {
+                            bat """
+                                set msbuild="${options.msBuildPath}"
+                                %msbuild% TAN-CL.sln /target:build /maxcpucount /property:Configuration=${win_build_conf};Platform=x64 >> ../../../../${STAGE_NAME}.${win_build_name}.log 2>&1
+                            """
+                        }
+                    } else if (win_tool == "cmake") {
+                        bat """
+                            cmake --build ${win_build_name} --config ${win_build_conf} >> ../../../${STAGE_NAME}.${win_build_name}.log 2>&1
+                        """
+                    }
+
+                    bat """
+                        mkdir binWindows
+                        xcopy /s/y/i vs${vs_ver}\\cmake-TALibTestConvolution-bin\\${win_build_conf} binWindows\\cmake-TALibTestConvolution-bin
+                        xcopy /s/y/i vs${vs_ver}\\cmake-TALibDopplerTest-bin\\${win_build_conf} binWindows\\cmake-TALibDopplerTest-bin
+                        xcopy /s/y/i vs${vs_ver}\\cmake-RoomAcousticQT-bin\\${win_build_conf} binWindows\\cmake-RoomAcousticQT-bin
+                    """
+                    
+                    zip archive: true, dir: "binWindows", glob: '', zipFile: "Windows_${win_build_name}.zip"
+
+                    bat """
+                        rename Windows_${win_build_name}.zip binWindows.zip
+                    """
+                    stash includes: "binWindows.zip", name: 'TAN_Windows'
+                    options.pluginWinSha = sha1 "binWindows.zip"
+
+                } catch (FlowInterruptedException error) {
+                    println "[INFO] Job was aborted during build stage"
+                    throw error
+                } catch (e) {
+                    println(e.toString())
+                    println(e.getMessage())
+                    currentBuild.result = "FAILED"
+                    println "[ERROR] Failed to build TAN on Windows"
                 }
             }
         }
@@ -282,82 +268,87 @@ def executeBuildWindows(Map options) {
 
 def executeBuildOSX(Map options) {
 
-    downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/OpenCL-Headers/", "./thirdparty/OpenCL-Headers")
-    downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/portaudio/*", "./thirdparty/portaudio")
-    downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/fftw-3.3.5-dll64/*", "./tan/tanlibrary/src/fftw-3.3.5-dll64")
-
     options.buildConfiguration.each() { osx_build_conf ->
-        options.ipp.each() { osx_cur_ipp ->
-            options.osxTool.each() { osx_tool ->
+        options.osxTool.each() { osx_tool ->
 
-                osx_build_conf = osx_build_conf.capitalize()
+            osx_build_conf = osx_build_conf.capitalize()
 
-                println "Current build configuration: ${osx_build_conf}."
-                println "Current ipp: ${osx_cur_ipp}."
-                println "Current tool: ${osx_tool}."
+            println "Current build configuration: ${osx_build_conf}."
+            println "Current tool: ${osx_tool}."
 
-                osx_build_name = "${osx_build_conf}_${osx_tool}_ipp-${osx_cur_ipp}"
+            osx_build_name = "${osx_build_conf}_${osx_tool}"
 
-                if (osx_cur_ipp == "ipp"){
-                    println "add ipp flag"
-                } else {
-                    println "add fftw"
-                }
+            dir('tan\\build\\cmake') {
 
-                dir('tan\\build\\cmake') {
-                    sh """
-                        rm -rf ./macos
-                        mkdir macos
-                    """
-                    dir("macos") {
-                        try {
-                            options.osx_cmake = "/usr/local/Cellar/qt/5.13.1"
-                            options.osx_opencl_headers = "../../../../thirdparty/OpenCL-Headers"
-                            options.osx_portaudio = "../../../../../thirdparty/portaudio"
+                sh """
+                    rm -rf ./macos
+                    mkdir macos
+                """
 
-                            if (osx_tool == "cmake") {
-                                sh """
-                                    cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} -DCMAKE_PREFIX_PATH="${options.osx_cmake}" -DOpenCL_INCLUDE_DIR="${options.osx_opencl_headers}" -DPortAudio_DIR="${options.osx_portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
-                                """
-                            } else if (osx_tool == "xcode") {
-                                sh """
-                                    cmake -G "Xcode" .. -DCMAKE_PREFIX_PATH="${options.osx_cmake}" -DOpenCL_INCLUDE_DIR="${options.osx_opencl_headers}" -DPortAudio_DIR="${options.osx_portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1  >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
-                                """
-                            }
-                            
+                dir("macos") {
+                    try {
+
+                        cmake_flag = "-DCMAKE_PREFIX_PATH=/usr/local/Cellar/qt/5.13.1"
+                        opencl_flag = "-DOpenCL_INCLUDE_DIR=../../../thirdparty/OpenCL-Headers"
+                        portaudio_flag = "-DPortAudio_DIR=../../../thirdparty/portaudio"
+
+                        String fftw_flag =""
+                        if (options.FFTW_DIR == "on") {
+                            fftw_flag = "-DFFTW_DIR=../../thirdparty/fftw "
+                        }
+
+                        String tan_no_opencl_flag ="-DTAN_NO_OPENCL=0"
+                        if (options.TAN_NO_OPENCL == "on") {
+                            tan_no_opencl_flag = "-DTAN_NO_OPENCL=1"
+                        }
+
+                        String amf_core_static_flag ="-DAMF_CORE_STATIC=0"
+                        if (options.AMF_CORE_STATIC == "on") {
+                            amf_core_static_flag = "-DAMF_CORE_STATIC=1"
+                        }
+
+                        if (osx_tool == "cmake") {
                             sh """
-                                make VERBOSE=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                                cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                             """
-
+                        } else if (osx_tool == "xcode") {
                             sh """
-                                mkdir binMacOS
-                                cp -rf cmake-TALibTestConvolution-bin binMacOS/cmake-TALibTestConvolution-bin
-                                cp -rf cmake-TALibDopplerTest-bin binMacOS/cmake-TALibDopplerTest-bin
-                                cp -rf cmake-RoomAcousticQT-bin binMacOS/cmake-RoomAcousticQT-bin
+                                cmake -G "Xcode" .. ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                             """
+                        }
+                        
+                        sh """
+                            make VERBOSE=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                        """
 
-                            sh """
-                                tar -czvf "MacOS_${osx_build_name}.tar.gz" ./binMacOS
-                            """
-                            
-                            archiveArtifacts "MacOS_${osx_build_name}.tar.gz"
+                        sh """
+                            mkdir binMacOS
+                            cp -rf cmake-TALibTestConvolution-bin binMacOS/cmake-TALibTestConvolution-bin
+                            cp -rf cmake-TALibDopplerTest-bin binMacOS/cmake-TALibDopplerTest-bin
+                            cp -rf cmake-RoomAcousticQT-bin binMacOS/cmake-RoomAcousticQT-bin
+                        """
 
-                            sh """
-                                mv MacOS_${osx_build_name}.tar.gz binMacOS.tar.gz
-                            """
-                            stash includes: "binMacOS.tar.gz", name: 'TAN_OSX'
-                            options.pluginOSXSha = sha1 "binMacOS.tar.gz"
+                        sh """
+                            tar -czvf "MacOS_${osx_build_name}.tar.gz" ./binMacOS
+                        """
+                        
+                        archiveArtifacts "MacOS_${osx_build_name}.tar.gz"
 
-                        } catch (FlowInterruptedException error) {
-                            println "[INFO] Job was aborted during build stage"
-                            throw error
-                        } catch (e) {
-                            println(e.toString());
-                            println(e.getMessage());
-                            currentBuild.result = "FAILED"
-                            println "[ERROR] Failed to build TAN on OSX"
-                        } 
-                    }
+                        sh """
+                            mv MacOS_${osx_build_name}.tar.gz binMacOS.tar.gz
+                        """
+                        stash includes: "binMacOS.tar.gz", name: 'TAN_OSX'
+                        options.pluginOSXSha = sha1 "binMacOS.tar.gz"
+
+                    } catch (FlowInterruptedException error) {
+                        println "[INFO] Job was aborted during build stage"
+                        throw error
+                    } catch (e) {
+                        println(e.toString());
+                        println(e.getMessage());
+                        currentBuild.result = "FAILED"
+                        println "[ERROR] Failed to build TAN on OSX"
+                    } 
                 }
             }
         }
@@ -366,74 +357,82 @@ def executeBuildOSX(Map options) {
 
 def executeBuildLinux(String osName, Map options) {
 
-    downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/OpenCL-Headers/", "./thirdparty/OpenCL-Headers")
-    downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/portaudio/*", "./thirdparty/portaudio")
-    downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/fftw-3.3.5-dll64/*", "./tan/tanlibrary/src/fftw-3.3.5-dll64")
-
     options.buildConfiguration.each() { ub18_build_conf ->
-        options.ipp.each() { ub18_cur_ipp ->
 
-            ub18_build_conf = ub18_build_conf.capitalize()
+        ub18_build_conf = ub18_build_conf.capitalize()
 
-            println "Current build configuration: ${ub18_build_conf}."
-            println "Current ipp: ${ub18_cur_ipp}."
+        println "Current build configuration: ${ub18_build_conf}."
 
-            ub18_build_name = "${ub18_build_conf}_ipp-${ub18_cur_ipp}"
+        ub18_build_name = "${ub18_build_conf}"
 
-            if (ub18_cur_ipp == "ipp"){
-                println "add ipp flag"
-            } else {
-                println "add fftw"
-            }
+        dir('tan\\build\\cmake') {
 
-            dir('tan\\build\\cmake') {
-                sh """
-                    rm -rf ./linux
-                    mkdir linux
-                """
-                dir ("linux") {
-                    try {
-                        options.ub18_cmake = "/usr/bin/gcc"
-                        options.ub18_opencl_headers = "../../../../thirdparty/OpenCL-Headers"
-                        options.ub18_opencl_lib = "/usr/lib/x86_64-linux-gnu/libOpenCL.so"
-                        options.ub18_portaudio = "../../../../../thirdparty/portaudio"
+            sh """
+                rm -rf ./linux
+                mkdir linux
+            """
 
-                        sh """
-                            cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH="${options.ub18_cmake}" -DOpenCL_INCLUDE_DIR="${options.ub18_opencl_headers}" -DOpenCL_LIBRARY="${options.ub18_opencl_lib}" -DPortAudio_DIR="${options.ub18_portaudio}" -DDEFINE_AMD_OPENCL_EXTENSION=1 >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
-                        """
+            dir ("linux") {
+                try {
 
-                        sh """
-                            make VERBOSE=1 >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
-                        """
+                    opencl_flag = "-DOpenCL_INCLUDE_DIR=../../../../thirdparty/OpenCL-Headers"
+                    opencl_lib_flag = "-DOpenCL_LIBRARY=/usr/lib/x86_64-linux-gnu/libOpenCL.so"
+                    portaudio_flag = "-DPortAudio_DIR=../../../../../thirdparty/portaudio"
 
-                        sh """
-                            mkdir binUbuntu18
-                            cp -rf cmake-TALibTestConvolution-bin binUbuntu18/cmake-TALibTestConvolution-bin
-                            cp -rf cmake-TALibDopplerTest-bin binUbuntu18/cmake-TALibDopplerTest-bin
-                            cp -rf cmake-RoomAcousticQT-bin binUbuntu18/cmake-RoomAcousticQT-bin
-                        """
+                    String fftw_flag =""
+                    if (options.FFTW_DIR == "on") {
+                        fftw_flag = "-DFFTW_DIR=../../thirdparty/fftw "
+                    }
 
-                        sh """
-                            tar -czvf "Ubuntu18_${ub18_build_name}.tar.gz" ./binUbuntu18
-                        """
-                        
-                        archiveArtifacts "Ubuntu18_${ub18_build_name}.tar.gz"
+                    String tan_no_opencl_flag ="-DTAN_NO_OPENCL=0"
+                    if (options.TAN_NO_OPENCL == "on") {
+                        tan_no_opencl_flag = "-DTAN_NO_OPENCL=1"
+                    }
 
-                        sh """
-                            mv Ubuntu18_${ub18_build_name}.tar.gz binUbuntu18.tar.gz
-                        """
-                        stash includes: "binUbuntu18.tar.gz", name: 'TAN_Ubuntu18'
-                        options.pluginUbuntuSha = sha1 "binUbuntu18.tar.gz"
+                    String amf_core_static_flag ="-DAMF_CORE_STATIC=0"
+                    if (options.AMF_CORE_STATIC == "on") {
+                        amf_core_static_flag = "-DAMF_CORE_STATIC=1"
+                    }
 
-                    } catch (FlowInterruptedException error) {
-                        println "[INFO] Job was aborted during build stage"
-                        throw error
-                    } catch (e) {
-                        println(e.getMessage())
-                        currentBuild.result = "FAILED"
-                        println "[ERROR] Failed to build TAN on Ubuntu18"
-                    } 
-                }
+                    opencl_headers = "../../../../thirdparty/OpenCL-Headers"
+                    options.ub18_opencl_lib = "/usr/lib/x86_64-linux-gnu/libOpenCL.so"
+                    options.ub18_portaudio = "../../../../../thirdparty/portaudio"
+
+                    sh """
+                        cmake .. -DCMAKE_BUILD_TYPE=${ub18_build_conf} -DCMAKE_PREFIX_PATH=/usr/bin/gcc ${opencl_flag} ${opencl_lib_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
+                    """
+
+                    sh """
+                        make VERBOSE=1 >> ../../../../${STAGE_NAME}.${ub18_build_name}.log 2>&1
+                    """
+
+                    sh """
+                        mkdir binUbuntu18
+                        cp -rf cmake-TALibTestConvolution-bin binUbuntu18/cmake-TALibTestConvolution-bin
+                        cp -rf cmake-TALibDopplerTest-bin binUbuntu18/cmake-TALibDopplerTest-bin
+                        cp -rf cmake-RoomAcousticQT-bin binUbuntu18/cmake-RoomAcousticQT-bin
+                    """
+
+                    sh """
+                        tar -czvf "Ubuntu18_${ub18_build_name}.tar.gz" ./binUbuntu18
+                    """
+                    
+                    archiveArtifacts "Ubuntu18_${ub18_build_name}.tar.gz"
+
+                    sh """
+                        mv Ubuntu18_${ub18_build_name}.tar.gz binUbuntu18.tar.gz
+                    """
+                    stash includes: "binUbuntu18.tar.gz", name: 'TAN_Ubuntu18'
+                    options.pluginUbuntuSha = sha1 "binUbuntu18.tar.gz"
+
+                } catch (FlowInterruptedException error) {
+                    println "[INFO] Job was aborted during build stage"
+                    throw error
+                } catch (e) {
+                    println(e.getMessage())
+                    currentBuild.result = "FAILED"
+                    println "[ERROR] Failed to build TAN on Ubuntu18"
+                } 
             }
         }
     }
@@ -444,9 +443,9 @@ def executeBuild(String osName, Map options) {
     try {
 
         cleanWS(osName)
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:imatyushin/TAN.git', true)
+        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:imatyushin/TAN.git', false, '', '', false, true, 'radeonprorender', false, false, false)
         
-        switch(osName) {
+        switch (osName) {
             case 'Windows':
                 executeBuildWindows(options)
                 break
@@ -606,16 +605,21 @@ def call(String projectBranch = "",
     String testsBranch = "master",
     String platforms = 'Windows;OSX;Ubuntu18',
     String buildConfiguration = "release",
-    String ipp = "off",
+    String IPP = "off",
+    String OMP = "off",
+    String FFTW = "off",
+    String TAN_NO_OPENCL = "off",
+    String AMF_CORE_STATIC = "off",
     String winTool = "msbuild",
     String winVisualStudioVersion = "2017",
-    String winRTQ = "on",
     String osxTool = "cmake",
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
     Boolean forceBuild = false,
     String tests = "") {
+
     try {
+
         String PRJ_NAME="TAN"
         String PRJ_ROOT="gpuopen"
 
@@ -631,17 +635,17 @@ def call(String projectBranch = "",
         }
 
         buildConfiguration = buildConfiguration.split(',')
-        ipp = ipp.split(',')
         winTool = winTool.split(',')
-        winVisualStudioVersion = winVisualStudioVersion.split(',')
-        winRTQ = winRTQ.split(',')
         osxTool = osxTool.split(',')
 
         println "Build configuration: ${buildConfiguration}"
-        println "IPP: ${ipp}"
+        println "IPP: ${IPP}"
+        println "OMP: ${OMP}"
+        println "FFTW: ${FFTW}"
+        println "TAN_NO_OPENCL: ${TAN_NO_OPENCL}"
+        println "AMF_CORE_STATIC: ${AMF_CORE_STATIC}"
         println "Win visual studio version: ${winVisualStudioVersion}"
         println "Win tool: ${winTool}"
-        println "Win RQT: ${winRTQ}"
         println "OSX tool: ${osxTool}"
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
@@ -653,23 +657,25 @@ def call(String projectBranch = "",
                                 PRJ_NAME:PRJ_NAME,
                                 PRJ_ROOT:PRJ_ROOT,
                                 buildConfiguration:buildConfiguration,
-                                ipp:ipp,
+                                IPP:IPP,
+                                OMP:OMP,
+                                FFTW:FFTW,
+                                TAN_NO_OPENCL:TAN_NO_OPENCL,
+                                AMF_CORE_STATIC:AMF_CORE_STATIC,
                                 winTool:winTool,
                                 winVisualStudioVersion:winVisualStudioVersion,
-                                winRTQ:winRTQ,
                                 osxTool:osxTool,
                                 tests:tests,
                                 gpusCount:gpusCount,
                                 TEST_TIMEOUT:90,
                                 DEPLOY_TIMEOUT:150
                                 ])
-    } catch(e) {
+    } catch (e) {
         currentBuild.result = "FAILED"
         failureMessage = "INIT FAILED"
         failureError = e.getMessage()
         println(e.toString())
         println(e.getMessage())
-
         throw e
     }
 }
