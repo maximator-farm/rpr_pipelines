@@ -309,11 +309,11 @@ def executeBuildOSX(Map options) {
 
                         if (osx_tool == "cmake") {
                             sh """
-                                cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                                cmake .. -DCMAKE_BUILD_TYPE=${osx_build_conf} ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                             """
                         } else if (osx_tool == "xcode") {
                             sh """
-                                cmake -G "Xcode" .. ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
+                                cmake -G "Xcode" .. ${cmake_flag} ${opencl_flag} ${portaudio_flag} ${fftw_flag}-DDEFINE_AMD_OPENCL_EXTENSION=1 ${tan_no_opencl_flag} ${amf_core_static_flag} -DENABLE_METAL=1 >> ../../../../${STAGE_NAME}.${osx_build_name}.log 2>&1
                             """
                         }
                         
