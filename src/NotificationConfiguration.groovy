@@ -87,6 +87,18 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static DOWNLOAD_SVN_REPO = [
+        "begin": ["message": "Downloading the SVN repository."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to download the SVN repository.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
     def static INCREMENT_VERSION = [
         "exceptions": [
             [

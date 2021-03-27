@@ -339,9 +339,10 @@ def executeBuildWindows(Map options) {
     dir('RadeonProRenderBlenderAddon') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         
-        withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;${PATH}"]) {
+        withEnv(["PATH=c:\\python39\\;c:\\python39\\scripts\\;${PATH}"]) {
             bat """
                 set HDUSD_LIBS_DIR=..\\libs
+                python tools\\generate_mx_classes.py >> ..\\${STAGE_NAME}.log  2>&1
                 python tools\\create_zip_addon.py >> ..\\${STAGE_NAME}.log  2>&1
             """
         }
