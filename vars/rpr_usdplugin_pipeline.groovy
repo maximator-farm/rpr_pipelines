@@ -340,7 +340,7 @@ def executeBuildWindows(String osName, Map options) {
             }
             archiveArtifacts "hdRpr*.tar.gz"
             String buildName = "${options.win_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}/artifact/${buildName}"
+            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
@@ -402,7 +402,7 @@ def executeBuildOSX(String osName, Map options) {
             }
             archiveArtifacts "hdRpr*.tar.gz"
             String buildName = "${options.osx_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}/artifact/${buildName}"
+            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
@@ -479,7 +479,7 @@ def executeBuildUnix(String osName, Map options) {
             if (osName == "Ubuntu18") options.unix_build_name = options.ubuntu_build_name else options.unix_build_name = options.centos_build_name
             archiveArtifacts "hdRpr*.tar.gz"
             String buildName = "${options.unix_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}/artifact/${buildName}"
+            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory

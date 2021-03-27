@@ -442,7 +442,7 @@ def executeBuildWindows(Map options)
 
         archiveArtifacts "RadeonProRender*.msi"
         String BUILD_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).msi" : "RadeonProRenderMaya_${options.pluginVersion}.msi"
-        String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+        String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
         rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
         if (options.sendToUMS) {
@@ -493,7 +493,7 @@ def executeBuildOSX(Map options)
 
             archiveArtifacts "RadeonProRender*.dmg"
             String BUILD_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).dmg" : "RadeonProRenderMaya_${options.pluginVersion}.dmg"
-            String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             if (options.sendToUMS) {

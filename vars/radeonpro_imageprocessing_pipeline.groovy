@@ -201,9 +201,9 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
     zip archive: true, dir: 'RIF_Samples', glob: '', zipFile: "${options.samplesName}.zip"
     zip archive: true, dir: 'RIF_Models', glob: '', zipFile: "${options.modelsName}.zip"
 
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-dynamic.zip">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static.zip">static</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.zip">static-runtime</a> </h4>"""
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Samples: <a href="${BUILD_URL}/artifact/${options.samplesName}.zip">${options.samplesName}.zip</a></h4>"""
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Models: <a href="${BUILD_URL}/artifact/${options.modelsName}.zip">${options.modelsName}.zip</a></h4>"""
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}artifact/${options.packageName}-${osName}-dynamic.zip">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static.zip">static</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.zip">static-runtime</a> </h4>"""
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Samples: <a href="${BUILD_URL}artifact/${options.samplesName}.zip">${options.samplesName}.zip</a></h4>"""
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Models: <a href="${BUILD_URL}artifact/${options.modelsName}.zip">${options.modelsName}.zip</a></h4>"""
 }
 
 def executeBuildUnix(String cmakeKeys, String osName, Map options, String compilerName="gcc")
@@ -278,7 +278,7 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
         stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}"
     }
 
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-dynamic.tar">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static.tar">static</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.tar">static-runtime</a> </h4>"""
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}artifact/${options.packageName}-${osName}-dynamic.tar">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static.tar">static</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.tar">static-runtime</a> </h4>"""
 }
 
 

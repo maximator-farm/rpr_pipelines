@@ -303,7 +303,7 @@ def executeBuildWindows(Map options)
 
         archiveArtifacts "RadeonProRender3dsMax*.msi"
         String BUILD_NAME = options.branch_postfix ? "RadeonProRender3dsMax_${options.pluginVersion}.(${options.branch_postfix}).msi" : "RadeonProRender3dsMax_${options.pluginVersion}.msi"
-        String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+        String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
         rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
         if (options.sendToUMS) {
