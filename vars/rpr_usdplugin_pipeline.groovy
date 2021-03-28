@@ -650,14 +650,13 @@ def executePreBuild(Map options) {
             if (options.testsPackage != "none") {
                 def groupNames = readJSON(file: "jobs/${options.testsPackage}")["groups"].collect { it.key }
                 // json means custom test suite. Split doesn't supported
-                options.tests = groupNames
+                options.tests = groupNames.join(" ")
                 options.groupsUMS = groupNames
                 options.testsPackage = "none"
             } else {
                 options.groupsUMS = options.tests.split(" ")
             }
             options.testsList = ['']
-            options.tests = options.tests.join(" ")
         }
         if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
