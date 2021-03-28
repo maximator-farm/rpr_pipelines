@@ -85,7 +85,7 @@ def executeTests(String osName, String asicName, Map options)
         timeout(time: "5", unit: 'MINUTES') {
             try {
                 cleanWS(osName)
-                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
                 dir('jobs/Scripts') {
                     unstash "conversionScript"
                 }
@@ -225,8 +225,7 @@ def executePreBuild(Map options)
     }
 
     dir('Vray2RPRConvertTool-Maya') {
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/Vray2RPRConvertTool-Maya.git')
-
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: 'git@github.com:luxteam/Vray2RPRConvertTool-Maya.git')
         stash includes: "convertVR2RPR.py", name: "conversionScript"
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -285,7 +284,7 @@ def executePreBuild(Map options)
     def tests = []
     if (options.testsPackage != "none") {
         dir('jobs_test_vr2rpr_maya') {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
             // json means custom test suite. Split doesn't supported
             if(options.testsPackage.endsWith('.json'))
             {
@@ -314,7 +313,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 {
     try {
         if (options['executeTests'] && testResultList) {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
 
             dir("summaryTestResults") {
                 testResultList.each() {

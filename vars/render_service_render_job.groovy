@@ -19,7 +19,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 				// Download render service scripts
 				try {
 					render_service_send_render_status("Downloading scripts and install requirements", options.id, options.django_url)
-					checkOutBranchOrScm(options['scripts_branch'], 'git@github.com:luxteam/render_service_scripts.git')
+					checkoutScm(branchName: options.scripts_branch, repositoryUrl: 'git@github.com:luxteam/render_service_scripts.git')
 					dir(".\\install"){
 						bat '''
 						install_pylibs.bat

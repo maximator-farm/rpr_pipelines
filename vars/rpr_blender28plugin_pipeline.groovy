@@ -260,7 +260,7 @@ def executeTests(String osName, String asicName, Map options)
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_blender.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_blender.git")
             }
         }
 
@@ -595,7 +595,7 @@ def executeBuild(String osName, Map options)
     try {
         dir('RadeonProRenderBlenderAddon') {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
             }
         }
 
@@ -679,7 +679,7 @@ def executePreBuild(Map options)
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderBlenderAddon') {
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
             }
 
             options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -761,7 +761,7 @@ def executePreBuild(Map options)
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_blender') {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_blender.git')
 
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             dir ('jobs_launcher') {
@@ -866,7 +866,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_blender.git')
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_blender.git')
             }
 
             Map lostStashes = [:]

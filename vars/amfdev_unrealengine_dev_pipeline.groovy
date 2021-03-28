@@ -324,7 +324,7 @@ def executeBuild(String osName, Map options)
 {
     try {        
         dir('U') {
-            checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/UnrealEngine_dev.git')
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
             outputEnvironmentInfo(osName)
         }
 
@@ -361,7 +361,7 @@ def executePreBuild(Map options)
 
     if(!env.CHANGE_URL){
 
-        checkOutBranchOrScm(options.projectBranch, 'git@github.com:luxteam/UnrealEngine_dev.git', true)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
         if (options.projectBranch) {
             currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
@@ -434,6 +434,7 @@ def call(String projectBranch = "",
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
+                                projectRepo:'git@github.com:luxteam/UnrealEngine_dev.git',
                                 targets:targets,
                                 versions:versions,
                                 pluginType:pluginType,

@@ -23,7 +23,7 @@ def executeTestCommand(String osName)
 def executeTests(String osName, String asicName, Map options)
 {
     try {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
 
         outputEnvironmentInfo(osName)
         unstash "app${osName}"
@@ -43,10 +43,6 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows()
 {
-    /*set msbuild=\"C:\\Program Files (x86)\\MSBuild\\14.0\\Bin\\MSBuild.exe\"
-    if not exist %msbuild% (
-        set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
-    )*/
     bat """
         mkdir Build
         cd Build
@@ -77,7 +73,7 @@ def executeBuildLinux()
 
 def executePreBuild(Map options)
 {
-    checkOutBranchOrScm(options.projectBranch, options.projectRepo)
+    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat ( script: "git log --format=%%B -n 1", returnStdout: true ).split('\r\n')[2].trim()
@@ -90,7 +86,7 @@ def executePreBuild(Map options)
 def executeBuild(String osName, Map options)
 {
     try {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
 
         switch(osName) {

@@ -11,9 +11,8 @@ import java.util.concurrent.atomic.AtomicInteger
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20Maya"
 
 
-def getMayaPluginInstaller(String osName, Map options)
-{
-    switch(osName) {
+def getMayaPluginInstaller(String osName, Map options) {
+    switch (osName) {
         case 'Windows':
 
             if (options['isPreBuilt']) {
@@ -222,7 +221,7 @@ def executeTests(String osName, String asicName, Map options)
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_maya.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_maya.git")
             }
         }
 
@@ -523,7 +522,7 @@ def executeBuild(String osName, Map options)
     try {
         dir("RadeonProRenderMayaPlugin") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
             }
         }
 
@@ -594,7 +593,7 @@ def executePreBuild(Map options)
     if (!options['isPreBuilt']) {
         dir('RadeonProRenderMayaPlugin') {
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
             }
 
             options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -675,7 +674,7 @@ def executePreBuild(Map options)
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_maya')  {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_maya.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_maya.git")
 
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             dir ('jobs_launcher') {
@@ -779,7 +778,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_maya.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_maya.git")
             }
 
             Map lostStashes = [:]

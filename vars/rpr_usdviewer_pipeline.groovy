@@ -109,7 +109,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_usdviewer.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdviewer.git")
             }
         }
 
@@ -411,7 +411,7 @@ def executeBuild(String osName, Map options) {
     }
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            checkOutBranchOrScm(options["projectBranch"], options["projectRepo"])
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         }
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch (osName) {
@@ -447,7 +447,7 @@ def executePreBuild(Map options) {
     }
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-        checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
     options.commitAuthor = utils.getBatOutput(this, "git show -s --format=%%an HEAD ")
     options.commitMessage = utils.getBatOutput(this, "git log --format=%%s -n 1").replace('\n', '')
@@ -478,7 +478,7 @@ def executePreBuild(Map options) {
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdviewer') {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_usdviewer.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdviewer.git")
             options['testsBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
             dir('jobs_launcher') {
                 options['jobsLauncherBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
@@ -600,7 +600,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_usdviewer.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdviewer.git")
             }
 
             List lostStashes = []

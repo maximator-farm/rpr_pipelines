@@ -153,7 +153,7 @@ def executeTests(String osName, String asicName, Map options)
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_rprviewer.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_rprviewer.git")
                 
             }
         }
@@ -411,7 +411,7 @@ def executeBuild(String osName, Map options)
 
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            checkOutBranchOrScm(options["projectBranch"], options["projectRepo"])
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         }
 
         outputEnvironmentInfo(osName)
@@ -451,7 +451,7 @@ def executePreBuild(Map options)
     }
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-        checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -494,7 +494,7 @@ def executePreBuild(Map options)
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_rprviewer') {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_rprviewer.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_rprviewer.git')
             dir ('jobs_launcher') {
                 options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             }
@@ -623,7 +623,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_rprviewer.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_rprviewer.git")
             }
 
             List lostStashes = []

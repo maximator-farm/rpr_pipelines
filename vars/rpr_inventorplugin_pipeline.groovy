@@ -54,7 +54,7 @@ def executeBuildWindows(Map options) {
 def executeBuild(String osName, Map options) {
     try {
         dir('RadeonProRenderInventorPlugin') {
-            checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: "git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git")
         }
         
         switch(osName) {
@@ -105,7 +105,7 @@ def executePreBuild(Map options) {
     }
 
     dir ('RadeonProRenderInventorPlugin') {
-        checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git', true)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: "git@github.com:Radeon-Pro/RadeonProRenderInventorPlugin.git", disableSubmodules: true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
@@ -113,8 +113,7 @@ def executePreBuild(Map options) {
 
         // clone repo with version increment
         dir("../inc") {
-            checkOutBranchOrScm("master", "git@github.com:luxteam/RadeonProRenderInventorPluginIncrement.git", true)
-
+            checkoutScm(branchName: "master", repositoryUrl: "git@github.com:luxteam/RadeonProRenderInventorPluginIncrement.git", disableSubmodules: true)
             options.pluginVersion = bat(script: "@git describe --tags --abbrev=0", returnStdout: true).trim()
         }
 
@@ -130,7 +129,7 @@ def executePreBuild(Map options) {
 
                 dir("../inc") {
                     // init submodule
-                    checkOutBranchOrScm("master", "git@github.com:luxteam/RadeonProRenderInventorPluginIncrement.git")
+                    checkoutScm(branchName: "master", repositoryUrl: "git@github.com:luxteam/RadeonProRenderInventorPluginIncrement.git")
 
                     println("[INFO] Current build version: ${options.pluginVersion}")
 

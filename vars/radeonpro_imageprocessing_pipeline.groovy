@@ -43,7 +43,7 @@ def executeTestCommand(String osName, String libType, Boolean testPerformance)
 def executeTestsForCustomLib(String osName, String libType, Map options)
 {
     try {
-        checkOutBranchOrScm(options.projectBranch, 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git')
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName, "${STAGE_NAME}.${libType}")
         unstash "app_${libType}_${osName}"
         executeTestCommand(osName, libType, options.testPerformance)
@@ -290,7 +290,7 @@ def getArtifactName(String name, String branch, String commit) {
 
 def executePreBuild(Map options)
 {
-    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git', true)
+    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
@@ -321,7 +321,7 @@ def executePreBuild(Map options)
 def executeBuild(String osName, Map options)
 {
     try {
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProImageProcessing.git')
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName, "${STAGE_NAME}.dynamic")
         outputEnvironmentInfo(osName, "${STAGE_NAME}.static")
         outputEnvironmentInfo(osName, "${STAGE_NAME}.static-runtime")
@@ -373,7 +373,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
         }
 
         dir("rif-report") {
-            checkOutBranchOrScm("master", "git@github.com:luxteam/rif_report.git")
+            checkoutScm(branchName: "master", repositoryUrl: "git@github.com:luxteam/rif_report.git")
 
             bat """
                 set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
@@ -385,8 +385,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
         utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report")
 
     } else {
-
-        checkOutBranchOrScm("master", "git@github.com:Radeon-Pro/RadeonProImageProcessingSDK.git")
+        checkoutScm(branchName: "master", repositoryUrl: "git@github.com:Radeon-Pro/RadeonProImageProcessingSDK.git")
 
         bat """
             git rm -r *
@@ -437,6 +436,7 @@ def call(String projectBranch = "",
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, deployStage,
                            [projectBranch:projectBranch,
+                            projectRepo:'git@github.com:Radeon-Pro/RadeonProImageProcessing.git',
                             enableNotifications:enableNotifications,
                             TESTER_TAG:tester_tag,
                             BUILD_TIMEOUT:'40',
