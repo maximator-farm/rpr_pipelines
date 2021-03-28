@@ -308,6 +308,11 @@ def executeBuildOSX(Map options) {
 
             osx_build_name = "${osx_build_conf}_${osx_tool}"
 
+            // download IPP for build
+            if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/m_ipp_oneapi_p_2021.1.1.45_offline.dmg")) {
+                downloadFiles("/volume1/CIS/bin-storage/IPP/m_ipp_oneapi_p_2021.1.1.45_offline.dmg", "${CIS_TOOLS}/../PluginsBinaries")
+            }
+
             dir('tan\\build\\cmake') {
 
                 sh """
@@ -394,6 +399,11 @@ def executeBuildLinux(String osName, Map options) {
         println "Current build configuration: ${ub18_build_conf}."
 
         ub18_build_name = "${ub18_build_conf}"
+
+        // download IPP for build
+        if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/l_ipp_oneapi_p_2021.1.1.47_offline.sh")) {
+            downloadFiles("/volume1/CIS/bin-storage/IPP/l_ipp_oneapi_p_2021.1.1.47_offline.sh", "${CIS_TOOLS}/../PluginsBinaries")
+        }
 
         dir('tan\\build\\cmake') {
 

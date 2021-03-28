@@ -26,7 +26,7 @@ def call(Map checkoutOptions) {
     checkoutOptions['credentialsId'] = checkoutOptions['credentialsId'] ?: 'radeonprorender'
     
     checkoutOptions['disableSubmodules'] = checkoutOptions['disableSubmodules'] ?: false
-    checkoutOptions['recursiveSubmodules'] = checkoutOptions['recursiveSubmodules'] ?: true
+    checkoutOptions['recursiveSubmodules'] = checkoutOptions.containsKey('recursiveSubmodules') ? checkoutOptions['recursiveSubmodules'] : true
     checkoutOptions['submoduleDepth'] = checkoutOptions['submoduleDepth'] ?: 2
 
     checkoutOptions['useLFS'] = checkoutOptions['useLFS'] ?: false
