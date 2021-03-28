@@ -342,6 +342,7 @@ def executeBuildWindows(Map options) {
         withEnv(["PATH=c:\\python39\\;c:\\python39\\scripts\\;${PATH}"]) {
             bat """
                 set HDUSD_LIBS_DIR=..\\libs
+                python --version >> ..\\${STAGE_NAME}.log  2>&1
                 python tools\\generate_mx_classes.py >> ..\\${STAGE_NAME}.log  2>&1
                 python tools\\create_zip_addon.py >> ..\\${STAGE_NAME}.log  2>&1
             """
