@@ -119,9 +119,6 @@ def executeTests(String osName, String asicName, Map options) {
             try {
                 cleanWS(osName)
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_tan.git')
-                if (options.sendToRBS) {
-                    options.rbs_prod.setTester(options)
-                }
                 getTanTool(osName, options)
             } catch(e) {
                 println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
@@ -165,8 +162,10 @@ def executeTests(String osName, String asicName, Map options) {
 def executeBuildWindows(Map options) {
 
     bat """
+        @echo off
         mkdir thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64
-        xcopy C:\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 /s/y/i
+        echo Copying Qt to thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64
+        xcopy C:\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 thirdparty\\Qt\\Qt5.9.9\\5.9.9\\msvc2017_64 /s/y/i >nul 2>&1
     """
 
     options.buildConfiguration.each() { win_build_conf ->
@@ -179,6 +178,37 @@ def executeBuildWindows(Map options) {
 
             win_build_name = "${win_build_conf}_${win_tool}"
 
+            // download IPP for build
+            if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\ipp_installer\\bootstrapper.exe")) {
+                downloadFiles("/volume1/CIS/bin-storage/IPP/w_ipp_oneapi_p_2021.1.1.47_offline.exe", "/mnt/c/JN//PluginsBinaries")
+                dir ("${CIS_TOOLS}\\..\\PluginsBinaries") {
+                    bat """
+                        w_ipp_oneapi_p_2021.1.1.47_offline.exe -s -f ipp_installer -x
+                    """
+                }
+            }
+
+            timeout(time: "5", unit: 'MINUTES') {
+                try {
+                    ipp_installed = powershell(script: """Get-WmiObject -Class Win32_Product -Filter \"Name LIKE 'Intel%Integrated Performance Primitives'\"""", returnStdout: true).trim()
+                    println "[INFO] IPP: ${ipp_installed}"
+                    dir ("${CIS_TOOLS}\\..\\PluginsBinaries\\ipp_installer") {
+                        if (ipp_installed && options.IPP == "off") {
+                            bat """
+                                bootstrapper.exe --action remove --silent --log-dir logs --eula accept
+                            """
+                        } else if (!ipp_installed && options.IPP == "on") {
+                            bat """
+                                bootstrapper.exe --action install --silent --log-dir logs --eula accept
+                            """
+                        }
+                    }
+                } catch(e) {
+                    println("[ERROR] Failed to install/remove IPP on ${env.NODE_NAME}")
+                    println(e.toString())
+                }
+            }
+            
             switch (options.winVisualStudioVersion) {
                 case '2017':
                     options.visualStudio = "Visual Studio 15 2017"
@@ -197,7 +227,7 @@ def executeBuildWindows(Map options) {
                         mkdir ${win_build_name}
                     """
                 }
-                
+
                 opencl_flag = "-DOpenCL_INCLUDE_DIR=../../../thirdparty/OpenCL-Headers"
                 portaudio_flag = "-DPortAudio_DIR=../../../thirdparty/portaudio"
 
@@ -522,7 +552,7 @@ def executePreBuild(Map options) {
         currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
         
         if (options.incrementVersion) {
-            if ("${options.commitAuthor}" != "radeonprorender") {
+            if (options.commitAuthor != "radeonprorender") {
                 
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 
@@ -620,9 +650,6 @@ def call(String projectBranch = "",
 
     try {
 
-        String PRJ_NAME="TAN"
-        String PRJ_ROOT="gpuopen"
-
         gpusCount = 0
         platforms.split(';').each() { platform ->
             List tokens = platform.tokenize(':')
@@ -655,8 +682,8 @@ def call(String projectBranch = "",
                                 enableNotifications:enableNotifications,
                                 incrementVersion:incrementVersion,
                                 forceBuild:forceBuild,
-                                PRJ_NAME:PRJ_NAME,
-                                PRJ_ROOT:PRJ_ROOT,
+                                PRJ_NAME:"TAN",
+                                PRJ_ROOT:"gpuopen",
                                 buildConfiguration:buildConfiguration,
                                 IPP:IPP,
                                 OMP:OMP,
