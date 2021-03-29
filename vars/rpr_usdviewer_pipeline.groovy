@@ -13,21 +13,33 @@ import universe.*
 def getViewerTool(String osName, Map options) {
     switch (osName) {
         case "Windows":
-            if (!fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip")) {
+
+            if (options['isPreBuilt']) {
                 clearBinariesWin()
-                println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "appWindows"
+
+                println "[INFO] PreBuilt plugin specified. Downloading and copying..."
+                downloadPlugin(osName, "RPRViewer_Setup", options, "", 600)
+
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
-                    copy RadeonProUSDViewer_Windows.zip "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip"
+                    move RPRViewer_Setup_${osName}.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.exe"
                 """
             } else {
-                println "[INFO] The plugin ${options.pluginWinSha}.zip exists in the storage."
-                bat """
-                    copy "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.pluginWinSha}.zip" RadeonProUSDViewer_Windows.zip
-                """
+                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}.exe")) {
+                    println "[INFO] The plugin ${options.commitSHA}.exe exists in the storage."
+                } else {
+                    clearBinariesWin()
+
+                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                    unstash "appWindows"
+
+                    bat """
+                        IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
+                        move RPRViewer_Setup.exe "${CIS_TOOLS}\\..\\PluginsBinaries\\${options.commitSHA}.exe"
+                    """
+                }
             }
-            unzip zipFile: "RadeonProUSDViewer_Windows.zip", dir: "USDViewer", quiet: true
+
             break
 
         case "OSX":
@@ -36,6 +48,67 @@ def getViewerTool(String osName, Map options) {
 
         default:
             println "Linux isn't supported"
+    }
+}
+
+
+def checkExistenceOfPlugin(String osName, Map options) {
+    String uninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
+
+    return fileExists(uninstallerPath)
+}
+
+
+def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true) {
+    String logPostfix = cleanInstall ? "clean" : "dirt"
+
+    String uninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
+
+    try {
+        if (cleanInstall && checkExistenceOfPlugin(osName, options)) {
+            println "[INFO] Uninstalling Inventor Plugin"
+            bat """
+                start "" /wait "C:\\Program Files\\RPRViewer\\unins000.exe" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall.log
+            """
+        }
+    } catch (e) {
+        throw new Exception("Failed to uninstall old plugin")
+    } 
+
+    try {
+        println "[INFO] Install Inventor Plugin"
+
+        String installerName = ""
+
+        if (options['isPreBuilt']) {
+            installerName = "${options.pluginWinSha}.exe"
+        } else {
+            installerName = "${options.commitSHA}.exe"
+        }
+
+        bat """
+            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.install.log
+        """
+    } catch (e) {
+        throw new Exception("Failed to install new plugin")
+    } 
+}
+
+
+def buildRenderCache(String osName, String toolVersion, Map options, Boolean cleanInstall=true) {
+    String logPostfix = cleanInstall ? "clean" : "dirt"
+
+    dir("scripts") {
+        switch(osName) {
+            case 'Windows':
+                bat "build_usd_cache.bat ${toolVersion} >> \"..\\${options.stageName}_${logPostfix}_${options.currentTry}.cb.log\"  2>&1"
+                break
+            case "OSX":
+                println "OSX isn't supported"
+                break
+            default:
+                println "Linux isn't supported"   
+        }
     }
 }
 
@@ -109,7 +182,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdviewer.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_inventor.git")
             }
         }
 
@@ -119,12 +192,78 @@ def executeTests(String osName, String asicName, Map options) {
             }
         }
 
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
-            String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_usdviewer_autotests_assets" : "/mnt/c/TestResources/rpr_usdviewer_autotests_assets"
-            downloadFiles("/volume1/Assets/rpr_usdviewer_autotests/", assetsDir)
+        if (checkExistenceOfPlugin(osName, options)) {
+            println "Old plugin exists. Start \"dirt\" installation"
+
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
+                String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_inventor_autotests_assets" : "/mnt/c/TestResources/usd_inventor_autotests_assets"
+                downloadFiles("/volume1/Assets/usd_inventor_autotests/", assetsDir)
+            }
+
+            Boolean newPluginInstalled = false
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_DIRT) {
+                timeout(time: "5", unit: "MINUTES") {
+                    installInventorPlugin(osName, options, false)
+                }
+            }
+
+            withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
+                timeout(time: "10", unit: "MINUTES") {
+                    try {
+                        buildRenderCache(osName, "2022", options, false)
+                    } catch (e) {
+                        throw e
+                    } finally {
+                        dir("scripts") {
+                            utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_dirt_${options.currentTry}")
+                            archiveArtifacts artifacts: "${options.stageName}_dirt_${options.currentTry}/*.jpg", allowEmptyArchive: true
+                        }
+                    }
+                    dir("scripts") {
+                        String cacheImgPath = "./${options.stageName}_dirt_${options.currentTry}/RESULT.jpg"
+                        if(!fileExists(cacheImgPath)){
+                            throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                        }
+                    }
+                }
+            }
+        } else {
+            println "Old plugin doesn't installed. Skip \"dirt\" installation"
         }
 
-        String REF_PATH_PROFILE="/volume1/Baselines/rpr_usdviewer_autotests/${asicName}-${osName}"
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
+            timeout(time: "5", unit: "MINUTES") {
+                installInventorPlugin(osName, options, true)
+            }
+        }
+    
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_CLEAN) {                        
+            timeout(time: "10", unit: "MINUTES") {
+                try {
+                    buildRenderCache(osName, "2022", options, true)
+                } catch (e) {
+                    throw e
+                } finally {
+                    dir("scripts") {
+                        utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_clean_${options.currentTry}")
+                        archiveArtifacts artifacts: "${options.stageName}_clean_${options.currentTry}/*.jpg", allowEmptyArchive: true
+                    }
+                }
+                dir("scripts") {
+                    utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_clean_${options.currentTry}")
+                    archiveArtifacts artifacts: "${options.stageName}_clean_${options.currentTry}/*.jpg", allowEmptyArchive: true
+                    String cacheImgPath = "./${options.stageName}_clean_${options.currentTry}/RESULT.jpg"
+                    if(!fileExists(cacheImgPath)){
+                        throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                    }
+                }
+            }
+        }
+
+        //Do not implemented yet
+        return
+
+        String REF_PATH_PROFILE="/volume1/Baselines/usd_inventor_autotests/${asicName}-${osName}"
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
         outputEnvironmentInfo(osName, "", options.currentTry)
@@ -150,7 +289,7 @@ def executeTests(String osName, String asicName, Map options) {
             }
         } else {
             withNotifications(title: options["stageName"], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
-                String baselineDir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_viewer_autotests_baselines" : "/mnt/c/TestResources/usd_viewer_autotests_baselines"
+                String baselineDir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_inventor_autotests_baselines" : "/mnt/c/TestResources/usd_inventor_autotests_baselines"
                 println "[INFO] Downloading reference images for ${options.tests}"
                 options.tests.split(" ").each { downloadFiles("${REF_PATH_PROFILE}/${it.contains(".json") ? "" : it}", baselineDir) }
             }
@@ -161,9 +300,12 @@ def executeTests(String osName, String asicName, Map options) {
         options.executeTestsFinished = true
 
     } catch (e) {
-        if (options.currentTry < options.nodeReallocateTries) {
+        options.problemMessageManager.saveSpecificFailReason("${e.getMessage()} (try #${options.currentTry})", options["stageName"], osName)
+        if (options.currentTry < options.nodeReallocateTries - 1) {
             stashResults = false
-        } 
+        } else {
+            currentBuild.result = "FAILURE"
+        }
         println e.toString()
         if (e instanceof ExpectedExceptionWrapper) {
             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()}", "${BUILD_URL}")
@@ -277,12 +419,6 @@ def executeBuildWindows(Map options) {
                 del RPRViewer\\binary\\windows\\inst\\plugin\\usd\\*.lib
             """
 
-            // TODO: filter files for archive
-            
-            zip archive: false, dir: "RPRViewer\\binary\\windows\\inst", glob: '', zipFile: "RadeonProUSDViewer_Windows.zip"
-            stash includes: "RadeonProUSDViewer_Windows.zip", name: "appWindows"
-            options.pluginWinSha = sha1 "RadeonProUSDViewer_Windows.zip"
-
             withEnv(["PYTHONPATH=%INST%\\lib\\python;%INST%\\lib"]) {
                 try {
                     bat """
@@ -300,8 +436,20 @@ def executeBuildWindows(Map options) {
                         bat """
                             "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log 2>&1
                         """
-                        archiveArtifacts artifacts: "RPRViewer_Setup.exe", allowEmptyArchive: false
-                    
+                        stash includes: "RPRViewer_Setup.exe", name: "appWindows"
+                        options.pluginWinSha = sha1 "RPRViewer_Setup.exe"
+
+                        if (options.branch_postfix) {
+                            bat """
+                                rename RPRViewer_Setup.exe RPRViewer_Setup.(${options.branch_postfix}).exe
+                            """
+                        }
+
+                        archiveArtifacts artifacts: "RPRViewer_Setup*.exe", allowEmptyArchive: false
+                        String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup.(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
+                        String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+                        rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
                         /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
                         if (options.sendToUMS) {
                             // WARNING! call sendToMinio in build stage only from parent directory
@@ -385,8 +533,19 @@ def executeBuildOSX(Map options)
                         \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                 """
 
-                zip archive: true, dir: "RPRViewer/binary/mac/inst/dist/RPRViewer", glob: '', zipFile: "RadeonProUSDViewer_Package_OSX.zip"
+                zip archive: false, dir: "RPRViewer/binary/mac/inst/dist/RPRViewer", glob: '', zipFile: "RadeonProUSDViewer_Package_OSX.zip"
             
+                if (options.branch_postfix) {
+                    sh """
+                        mv RadeonProUSDViewer_Package_OSX.zip "RadeonProUSDViewer_Package_OSX.(${options.branch_postfix}).zip"
+                    """
+                }
+
+                archiveArtifacts artifacts: "RadeonProUSDViewer_Package*.zip", allowEmptyArchive: false
+                String BUILD_NAME = options.branch_postfix ? "RadeonProUSDViewer_Package_OSX.(${options.branch_postfix}).zip" : "RadeonProUSDViewer_Package_OSX.zip"
+                String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+                rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
                 /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
                 if (options.sendToUMS) {
                     // WARNING! call sendToMinio in build stage only from parent directory
@@ -437,31 +596,54 @@ def executeBuild(String osName, Map options) {
 
 
 def executePreBuild(Map options) {
-    if (env.CHANGE_URL) {
-        echo "[INFO] Branch was detected as Pull Request"
-        options.testsPackage = "PR.json"
+    if (options['isPreBuilt']) {
+        println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
+        currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
+        options['executeBuild'] = false
+        options['executeTests'] = true
+    // manual job
+    } else if (options.forceBuild) {
+        println "[INFO] Manual job launch detected"
+        options['executeBuild'] = true
+        options['executeTests'] = true
+    // auto job (master)
     } else if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        options.testsPackage = "master.json"
+        //options.testsPackage = "master.json"
+        options.tests = "Smoke"
+    // auto job
     } else if (env.BRANCH_NAME) {
-        options.testsPackage = "smoke.json"
+        //options.testsPackage = "smoke.json"
+        options.tests = "Smoke"
+    }
+
+    options["branch_postfix"] = ""
+    if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        options["branch_postfix"] = "release"
+    } else if (env.BRANCH_NAME && env.BRANCH_NAME != "master" && env.BRANCH_NAME != "develop") {
+        options["branch_postfix"] = env.BRANCH_NAME.replace('/', '-')
+    } else if(options.projectBranch && options.projectBranch != "master" && options.projectBranch != "develop") {
+        options["branch_postfix"] = options.projectBranch.replace('/', '-')
     }
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
-    options.commitAuthor = utils.getBatOutput(this, "git show -s --format=%%an HEAD ")
-    options.commitMessage = utils.getBatOutput(this, "git log --format=%%s -n 1").replace('\n', '')
-    options.commitSHA = utils.getBatOutput(this, "git log --format=%%H -1 ")
-    println """
-        The last commit was written by ${options.commitAuthor}.
-        Commit message: ${options.commitMessage}
-        Commit SHA: ${options.commitSHA}
-    """
 
-    currentBuild.description = "<b>Project branch:</b> ${options.projectBranch ?: env.BRANCH_NAME}<br/>"
-    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+    if (!options['isPreBuilt']) {
+        options.commitAuthor = utils.getBatOutput(this, "git show -s --format=%%an HEAD ")
+        options.commitMessage = utils.getBatOutput(this, "git log --format=%%s -n 1").replace('\n', '')
+        options.commitSHA = utils.getBatOutput(this, "git log --format=%%H -1 ")
+        println """
+            The last commit was written by ${options.commitAuthor}.
+            Commit message: ${options.commitMessage}
+            Commit SHA: ${options.commitSHA}
+        """
+
+        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch ?: env.BRANCH_NAME}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+    }
 
     if (env.BRANCH_NAME) {
         withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
@@ -478,7 +660,7 @@ def executePreBuild(Map options) {
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdviewer') {
-            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdviewer.git")
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_inventor.git")
             options['testsBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
             dir('jobs_launcher') {
                 options['jobsLauncherBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
@@ -547,41 +729,6 @@ def executePreBuild(Map options) {
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
-            }
-
-            options.skippedTests = [:]
-            if (options.updateRefs == "No") {
-                options.platforms.split(';')
-                        .findAll { it }
-                        .collect { it.tokenize(':') }
-                        .findAll { it.size() > 1 && it.get(1) != '' }
-                        .collectEntries { [it.get(0), it.get(1).split(',')] }
-                        .each {
-                            def osName = it.key
-                            it.value.each { gpuName ->
-                                options.tests.each { test ->
-                                    try {
-                                        dir("jobs_launcher") {
-                                            String output = bat(script: "is_group_skipped.bat ${gpuName} ${osName} \"\" \"..\\jobs\\Tests\\${test}\\test.cases.json\"", returnStdout: true).trim()
-                                            if (output.contains("True")) {
-                                                if (!options.skippedTests.containsKey(test)) {
-                                                    options.skippedTests[test] = []
-                                                }
-                                                options.skippedTests[test].add("${gpuName}-${osName}")
-                                            }
-                                        }
-                                    } catch (Exception e) {
-                                        println e.toString()
-                                    }
-                                }
-                            }
-                        }
-                println """
-                    Skipped test groups:
-                    ${options.skippedTests.inspect()}
-                """
-            } else {
-                println "Ignore searching of tested groups due to updating of baselines"
             }
         }
         if (env.BRANCH_NAME && options.githubNotificator) {
@@ -751,13 +898,14 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows;OSX',
+         String platforms = 'Windows:AMD_WX9100,AMD_RX5700XT;OSX',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
          String tests = "",
          Boolean splitTestsExecution = true,
          String tester_tag = 'USDViewer',
+         String customBuildLinkWindows = "",
          String parallelExecutionTypeString = "TakeAllNodes",
          Integer testCaseRetries = 3,
          Boolean sendToUMS = true) {
@@ -765,6 +913,9 @@ def call(String projectBranch = "",
     Map options = [stage: "Init", problemMessageManager: problemMessageManager]
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
+
+            Boolean isPreBuilt = customBuildLinkWindows
+
             println """
                 Platforms: ${platforms}
                 Tests: ${tests}
@@ -779,6 +930,7 @@ def call(String projectBranch = "",
                         PRJ_ROOT: 'rpr-core',
                         projectRepo: 'git@github.com:Radeon-Pro/RPRViewer.git',
                         BUILDER_TAG: 'BuilderUSDViewer',
+                        isPreBuilt:isPreBuilt,
                         TESTER_TAG: tester_tag,
                         executeBuild: true,
                         executeTests: true,
@@ -791,6 +943,7 @@ def call(String projectBranch = "",
                         NON_SPLITTED_PACKAGE_TIMEOUT: 45,
                         DEPLOY_TIMEOUT: 45,
                         tests: tests,
+                        customBuildLinkWindows: customBuildLinkWindows,
                         nodeRetry: [],
                         problemMessageManager: problemMessageManager,
                         platforms: platforms,
@@ -806,7 +959,7 @@ def call(String projectBranch = "",
                 options["universeManager"] = manager
             }
         }
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
         println e.toString()
