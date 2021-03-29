@@ -711,7 +711,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows;OSX;Ubuntu18',
+    String platforms = 'Windows;OSX;Ubuntu20',
     String buildConfiguration = "release",
     String IPP = "off",
     String OMP = "off",
