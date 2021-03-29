@@ -501,7 +501,7 @@ class UniverseClient {
             def buildBody = [
                 'problem_message': msg
             ]
-
+            
             def res = this.context.httpRequest(
                 consoleLogResponseBody: true,
                 contentType: 'APPLICATION_JSON',
