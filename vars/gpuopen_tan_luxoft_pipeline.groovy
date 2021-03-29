@@ -339,7 +339,6 @@ def executeBuildOSX(Map options) {
                 """
             } else {
                 sh """
-                    HOMEBREW_NO_AUTO_UPDATE=1
                     brew uninstall --ignore-dependencies libomp
                 """
             }
