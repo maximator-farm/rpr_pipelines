@@ -414,16 +414,14 @@ def executeBuildLinux(String osName, Map options) {
             try {
                 ipp_installed = fileExists("/opt/intel/oneapi")
                 println "[INFO] IPP installed: ${ipp_installed}"
-                dir ("${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline") {
-                    if (ipp_installed && options.IPP == "off") {
-                        sh """
-                            sudo ./ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline remove
-                        """
-                    } else if (!ipp_installed && options.IPP == "on") {
-                        sh """
-                            sudo ./ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline install
-                        """
-                    }
+                if (ipp_installed && options.IPP == "off") {
+                    sh """
+                        sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline remove
+                    """
+                } else if (!ipp_installed && options.IPP == "on") {
+                    sh """
+                        sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline install
+                    """
                 }
             } catch(e) {
                 println("[ERROR] Failed to install/remove IPP on ${env.NODE_NAME}")
