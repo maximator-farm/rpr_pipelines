@@ -334,10 +334,12 @@ def executeBuildOSX(Map options) {
 
             if (options.OMP == "on") {
                 sh """
+                    HOMEBREW_NO_AUTO_UPDATE=1
                     brew install libomp
                 """
             } else {
                 sh """
+                    HOMEBREW_NO_AUTO_UPDATE=1
                     brew uninstall --ignore-dependencies libomp
                 """
             }
