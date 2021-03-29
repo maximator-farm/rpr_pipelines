@@ -313,6 +313,35 @@ def executeBuildOSX(Map options) {
                 downloadFiles("/volume1/CIS/bin-storage/IPP/m_ipp_oneapi_p_2021.1.1.45_offline.dmg", "${CIS_TOOLS}/../PluginsBinaries")
             }
 
+            timeout(time: "5", unit: 'MINUTES') {
+                try {
+                    ipp_installed = fileExists("/opt/intel/oneapi")
+                    println "[INFO] IPP installed: ${ipp_installed}"
+                    if (ipp_installed && options.IPP == "off") {
+                        sh """
+                            sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/m_ipp_oneapi_p_2021.1.1.45_offline.dmg remove
+                        """
+                    } else if (!ipp_installed && options.IPP == "on") {
+                        sh """
+                            sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/m_ipp_oneapi_p_2021.1.1.45_offline.dmg install
+                        """
+                    }
+                } catch (e) {
+                    println("[ERROR] Failed to install/remove IPP on ${env.NODE_NAME}")
+                    println(e.toString())
+                }
+            }
+
+            if (options.OMP == "on") {
+                sh """
+                    echo y | sudo ${CIS_TOOLS}/ompInstaller.sh install
+                """
+            } else {
+                sh """
+                    echo y | sudo ${CIS_TOOLS}/ompInstaller.sh remove
+                """
+            }
+
             dir('tan\\build\\cmake') {
 
                 sh """
@@ -416,17 +445,27 @@ def executeBuildLinux(String osName, Map options) {
                 println "[INFO] IPP installed: ${ipp_installed}"
                 if (ipp_installed && options.IPP == "off") {
                     sh """
-                        echo y | sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline remove
+                        sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline remove
                     """
                 } else if (!ipp_installed && options.IPP == "on") {
                     sh """
-                        echo y | sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline install
+                        sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline install
                     """
                 }
             } catch(e) {
                 println("[ERROR] Failed to install/remove IPP on ${env.NODE_NAME}")
                 println(e.toString())
             }
+        }
+
+        if (options.OMP == "on") {
+            sh """
+                echo y | sudo ${CIS_TOOLS}/ompInstaller.sh install
+            """
+        } else {
+            sh """
+                echo y | sudo ${CIS_TOOLS}/ompInstaller.sh remove
+            """
         }
 
         dir('tan\\build\\cmake') {
