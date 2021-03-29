@@ -415,6 +415,10 @@ def executeBuildOSX(Map options) {
                     } 
                 }
             }
+            // Turn back libomp
+            sh """
+                brew install libomp
+            """
         }
     }
 }
