@@ -334,7 +334,7 @@ def executeBuildOSX(Map options) {
 
             if (options.OMP == "on") {
                 sh """
-                    HOMEBREW_NO_AUTO_UPDATE=1
+                    export HOMEBREW_NO_AUTO_UPDATE=1
                     brew install libomp
                 """
             } else {
@@ -417,7 +417,7 @@ def executeBuildOSX(Map options) {
                 }
             }
             sh """
-                HOMEBREW_NO_AUTO_UPDATE=1
+                export HOMEBREW_NO_AUTO_UPDATE=1
                 brew install libomp
             """
         }
