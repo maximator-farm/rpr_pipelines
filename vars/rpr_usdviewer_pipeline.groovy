@@ -250,8 +250,6 @@ def executeTests(String osName, String asicName, Map options) {
                     }
                 }
                 dir("scripts") {
-                    utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_clean_${options.currentTry}")
-                    archiveArtifacts artifacts: "${options.stageName}_clean_${options.currentTry}/*.jpg", allowEmptyArchive: true
                     String cacheImgPath = "./${options.stageName}_clean_${options.currentTry}/RESULT.jpg"
                     if(!fileExists(cacheImgPath)){
                         throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
@@ -324,9 +322,9 @@ def executeTests(String osName, String asicName, Map options) {
             }
             if (stashResults) {
                 dir('Work') {
-                    if (fileExists("Results/USDViewer/session_report.json")) {
+                    if (fileExists("Results/Inventor/session_report.json")) {
 
-                        def sessionReport = readJSON file: 'Results/USDViewer/session_report.json'
+                        def sessionReport = readJSON file: 'Results/Inventor/session_report.json'
                         if (options.sendToUMS) {
                             options.universeManager.finishTestsStage(osName, asicName, options)
                         }
@@ -744,7 +742,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_usdviewer.git")
+                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_inventor.git")
             }
 
             List lostStashes = []
@@ -787,9 +785,15 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         if (options.sendToUMS) {
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
-                        bat """
-                            build_reports.bat ..\\summaryTestResults "USDViewer" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
-                        """
+                        if (options['isPreBuilt']) {
+                            bat """
+                                build_reports.bat ..\\summaryTestResults "USDViewer" "PreBuilt" "PreBuilt" "PreBuilt"
+                            """
+                        } else {
+                            bat """
+                                build_reports.bat ..\\summaryTestResults "USDViewer" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
+                            """
+                        }                        
                     }
                 }
             } catch (e) {
