@@ -191,7 +191,7 @@ def executeBuildWindows(Map options) {
             timeout(time: "5", unit: 'MINUTES') {
                 try {
                     ipp_installed = powershell(script: """Get-WmiObject -Class Win32_Product -Filter \"Name LIKE 'Intel%Integrated Performance Primitives'\"""", returnStdout: true).trim()
-                    println "[INFO] IPP: ${ipp_installed}"
+                    println "[INFO] PW script return about IPP: ${ipp_installed}"
                     dir ("${CIS_TOOLS}\\..\\PluginsBinaries\\ipp_installer") {
                         if (ipp_installed && options.IPP == "off") {
                             bat """
@@ -403,6 +403,32 @@ def executeBuildLinux(String osName, Map options) {
         // download IPP for build
         if (!fileExists("${CIS_TOOLS}/../PluginsBinaries/l_ipp_oneapi_p_2021.1.1.47_offline.sh")) {
             downloadFiles("/volume1/CIS/bin-storage/IPP/l_ipp_oneapi_p_2021.1.1.47_offline.sh", "${CIS_TOOLS}/../PluginsBinaries")
+            dir("${CIS_TOOLS}/../PluginsBinaries"){
+                sh """
+                    ./l_ipp_oneapi_p_2021.1.1.47_offline.sh -f ipp_installer -x
+                """
+            }
+        }
+
+        timeout(time: "5", unit: 'MINUTES') {
+            try {
+                ipp_installed = fileExists("/opt/intel/oneapi")
+                println "[INFO] IPP installed: ${ipp_installed}"
+                dir ("${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline") {
+                    if (ipp_installed && options.IPP == "off") {
+                        bat """
+                            sudo ./ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline remove
+                        """
+                    } else if (!ipp_installed && options.IPP == "on") {
+                        bat """
+                            sudo ./ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline install
+                        """
+                    }
+                }
+            } catch(e) {
+                println("[ERROR] Failed to install/remove IPP on ${env.NODE_NAME}")
+                println(e.toString())
+            }
         }
 
         dir('tan\\build\\cmake') {
