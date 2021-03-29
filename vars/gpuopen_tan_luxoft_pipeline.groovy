@@ -416,11 +416,11 @@ def executeBuildLinux(String osName, Map options) {
                 println "[INFO] IPP installed: ${ipp_installed}"
                 if (ipp_installed && options.IPP == "off") {
                     sh """
-                        sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline remove
+                        echo y | sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline remove
                     """
                 } else if (!ipp_installed && options.IPP == "on") {
                     sh """
-                        sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline install
+                        echo y | sudo ${CIS_TOOLS}/ippInstaller.sh ${CIS_TOOLS}/../PluginsBinaries/ipp_installer/l_ipp_oneapi_p_2021.1.1.47_offline install
                     """
                 }
             } catch(e) {
