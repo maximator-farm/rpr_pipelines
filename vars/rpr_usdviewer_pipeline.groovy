@@ -154,7 +154,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                 case "Windows":
                     dir('scripts') {
                         bat """
-                            run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                            run.bat \"${testsPackageName}\" \"${testsNames}\" 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                         """
                     }
                     break
@@ -259,9 +259,6 @@ def executeTests(String osName, String asicName, Map options) {
                 }
             }
         }
-
-        //Do not implemented yet
-        return
 
         String REF_PATH_PROFILE="/volume1/Baselines/usd_inventor_autotests/${asicName}-${osName}"
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
@@ -959,7 +956,7 @@ def call(String projectBranch = "",
                 options["universeManager"] = manager
             }
         }
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
         println e.toString()
