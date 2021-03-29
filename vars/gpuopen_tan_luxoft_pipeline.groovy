@@ -334,11 +334,11 @@ def executeBuildOSX(Map options) {
 
             if (options.OMP == "on") {
                 sh """
-                    echo y | sudo ${CIS_TOOLS}/ompInstaller.sh install
+                    brew install libomp
                 """
             } else {
                 sh """
-                    echo y | sudo ${CIS_TOOLS}/ompInstaller.sh remove
+                    brew uninstall --ignore-dependencies libomp
                 """
             }
 

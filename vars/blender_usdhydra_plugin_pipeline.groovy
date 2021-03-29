@@ -386,7 +386,9 @@ def executeBuildLinux(String osName, Map options) {
         
         sh """
             export HDUSD_LIBS_DIR=../libs
-            python3.7 tools/create_zip_addon.py >> ../${STAGE_NAME}.log  2>&1
+            python3.9 --version >> ../${STAGE_NAME}.log  2>&1
+            python3.9 tools/generate_mx_classes.py >> ../${STAGE_NAME}.log  2>&1
+            python3.9 tools/create_zip_addon.py >> ../${STAGE_NAME}.log  2>&1
         """
 
         dir("build") {
