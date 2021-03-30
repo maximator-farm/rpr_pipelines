@@ -484,7 +484,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                         if (!testsLeft.containsKey(engine)) {
                                             testsLeft[engine] = 0
                                         }
-                                        testsLeft[engine] += options.testsInfo["testsPer-${engine}"]
+                                        testsLeft[engine] += (options.testsInfo["testsPer-${engine}"] ?: 0)
                                     }
                                 }
                             }
