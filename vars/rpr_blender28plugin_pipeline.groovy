@@ -1083,7 +1083,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String iter = '50',
     String theshold = '0.05',
     String customBuildLinkWindows = "",
-    String customBuildLinkLinux = "",
+    String customBuildLinkUbuntu18 = "",
+    String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
     String enginesNames = "Northstar,Tahoe",
     String tester_tag = "Blender2.8",
@@ -1125,7 +1126,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                 }
             }
 
-            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkLinux
+            Boolean isPreBuilt = customBuildLinkWindows || customBuildLinkOSX || customBuildLinkUbuntu18 || customBuildLinkUbuntu20
 
             if (isPreBuilt) {
                 //remove platforms for which pre built plugin is not specified
@@ -1146,8 +1147,13 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                                 filteredPlatforms = appendPlatform(filteredPlatforms, platform)
                             }
                             break
+                        case 'Ubuntu18':
+                            if (customBuildLinkUbuntu18) {
+                                filteredPlatforms = appendPlatform(filteredPlatforms, platform)
+                            }
+                        // Ubuntu20
                         default:
-                            if (customBuildLinkLinux) {
+                            if (customBuildLinkUbuntu20) {
                                 filteredPlatforms = appendPlatform(filteredPlatforms, platform)
                             }
                         }
@@ -1217,7 +1223,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         iter: iter,
                         theshold: theshold,
                         customBuildLinkWindows: customBuildLinkWindows,
-                        customBuildLinkLinux: customBuildLinkLinux,
+                        customBuildLinkUbuntu18: customBuildLinkUbuntu18,
+                        customBuildLinkUbuntu20: customBuildLinkUbuntu20,
                         customBuildLinkOSX: customBuildLinkOSX,
                         engines: formattedEngines,
                         enginesNames:enginesNames,
