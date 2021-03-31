@@ -153,12 +153,10 @@ def main(Map options) {
 }
 
 def startConfiguration(osName, options) {
-    node("RenderService || Windows && Builder") {
-        stage("Send Build Number") {
-            render_service_send_build_number(currentBuild.number, options.id, options.django_url)
-            if (options["id_render"] && options["django_render_url"]) {
-                render_service_send_build_number(currentBuild.number, options.id_render.toString(), options.django_render_url)
-            }
+    stage("Send Build Number") {
+        render_service_send_build_number(currentBuild.number, options.id, options.django_url)
+        if (options["id_render"] && options["django_render_url"]) {
+            render_service_send_build_number(currentBuild.number, options.id_render.toString(), options.django_render_url)
         }
     }
     
@@ -200,9 +198,7 @@ def startConfiguration(osName, options) {
     }
 
     if (!successfullyDone) {
-        node("RenderService") {
-            render_service_send_render_status('Failure', options.id, options.django_url)
-        }
+        render_service_send_render_status('Failure', options.id, options.django_url)
         throw new Exception("Job was failed by all used nodes!")
     } else {
         currentBuild.result = 'SUCCESS'
