@@ -59,6 +59,54 @@ def getBlenderAddonInstaller(String osName, Map options) {
             }
 
             break
+            
+        default:
+
+            if (options['isPreBuilt']) {
+
+                println "[INFO] PluginOSXSha: ${options['pluginUbuntuSha']}"
+
+                if (options['pluginUbuntuSha']) {
+                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
+                        println "[INFO] The plugin ${options['pluginUbuntuSha']}.zip exists in the storage."
+                    } else {
+                        clearBinariesUnix()
+
+                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                        downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+
+                        sh """
+                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                            mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                        """
+                    }
+                } else {
+                    clearBinariesUnix()
+
+                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
+                    downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                    """
+                }
+
+            } else {
+                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
+                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
+                } else {
+                    clearBinariesUnix()
+
+                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                    unstash "app${osName}"
+                   
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"
+                    """
+                }
+            }
     }
 }
 
@@ -336,7 +384,7 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(Map options) {
-    dir('RadeonProRenderBlenderAddon') {
+    dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         
         withEnv(["PATH=c:\\python39\\;c:\\python39\\scripts\\;${PATH}"]) {
@@ -381,7 +429,7 @@ def executeBuildOSX(Map options) {
 
 
 def executeBuildLinux(String osName, Map options) {
-    dir('RadeonProRenderBlenderAddon') {
+    dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
         sh """
@@ -409,7 +457,7 @@ def executeBuildLinux(String osName, Map options) {
 
             if (options.sendToUMS) {
                 dir("../../../jobs_launcher") {
-                    sendToMINIO(options, "${osName}", "../RadeonProRenderBlenderAddon/BlenderPkg/build", BUILD_NAME)                            
+                    sendToMINIO(options, "${osName}", "../BlenderUSDHydraAddon/BlenderPkg/build", BUILD_NAME)                            
                 }
             }
 
@@ -429,7 +477,7 @@ def executeBuild(String osName, Map options) {
     try {
         downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/libs/*", "libs")
 
-        dir("RadeonProRenderBlenderAddon") {
+        dir("BlenderUSDHydraAddon") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
             }
@@ -498,7 +546,7 @@ def executePreBuild(Map options)
     }
 
     if (!options['isPreBuilt']) {
-        dir('RadeonProRenderBlenderAddon') {
+        dir('BlenderUSDHydraAddon') {
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
             }
@@ -521,7 +569,7 @@ def executePreBuild(Map options)
             }
 
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
-                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ').replace(', ', '.')
+                options.pluginVersion = version_read("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
                 if (options['incrementVersion']) {
                     withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
@@ -533,15 +581,15 @@ def executePreBuild(Map options)
                     
                     if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
-                        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ')
+                        options.pluginVersion = version_read("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', ', ')
                         println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                         println "[INFO] Current build version: ${options.pluginVersion}"
 
                         def new_version = version_inc(options.pluginVersion, 3, ', ')
                         println "[INFO] New build version: ${new_version}"
-                        version_write("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', new_version, ', ')
+                        version_write("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', new_version, ', ')
 
-                        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ', "true").replace(', ', '.')
+                        options.pluginVersion = version_read("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', ', ', "true").replace(', ', '.')
                         println "[INFO] Updated build version: ${options.pluginVersion}"
 
                         bat """
