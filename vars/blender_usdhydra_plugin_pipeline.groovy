@@ -891,7 +891,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git",
     String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu18',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080,AMD_RX6800;Ubuntu20:AMD_RadeonVII',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
