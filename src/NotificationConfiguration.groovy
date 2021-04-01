@@ -159,6 +159,20 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static BUILD_PACKAGE_USD_VIEWER = [
+        "begin": ["message": "Creating USD Viewer package."],
+
+        "end": ["message": "USD Viewer package was successfully created."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to create USD Viewer package.", 
+                "rethrow": ExceptionThrowType.RETHROW,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
     def static DOWNLOAD_SCENES = [
         "begin": ["message": "Downloading test scenes."],
 
