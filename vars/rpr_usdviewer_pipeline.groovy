@@ -258,9 +258,6 @@ def executeTests(String osName, String asicName, Map options) {
             }
         }
 
-        //Do not implemented yet
-        return
-
         String REF_PATH_PROFILE="/volume1/Baselines/usd_inventor_autotests/${asicName}-${osName}"
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
 
@@ -942,7 +939,7 @@ def call(String projectBranch = "",
                 options["universeManager"] = manager
             }
         }
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
         println e.toString()
