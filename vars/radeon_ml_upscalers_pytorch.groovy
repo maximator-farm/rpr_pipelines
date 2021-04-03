@@ -194,7 +194,8 @@ def call(String projectBranch = "",
 
     println "Selected tests: ${tests}"
     println "Additional tests: ${customTests}"
-    tests += " " + customTests
+    tests = tests.replace(",", " ") + " " + customTests.replace(", ", " ")
+    println "All tests to be run: ${tests}"
 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
