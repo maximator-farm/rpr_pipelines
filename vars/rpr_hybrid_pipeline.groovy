@@ -151,7 +151,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
             println("Exception during [${options.RENDER_QUALITY}] quality tests execution")
             try {
                 dir('HTML_Report') {
-                    checkOutBranchOrScm('master', 'git@github.com:luxteam/HTMLReportsShared')
+                    checkoutScm(branchName: "master", repositoryUrl: "git@github.com:luxteam/HTMLReportsShared")
                     python3("-m pip install --user -r requirements.txt")
                     python3("hybrid_report.py --xml_path ../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-${options.RENDER_QUALITY}_failures")
                 }
@@ -168,7 +168,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
             println("Exception during tests execution")
             try {
                 dir('HTML_Report') {
-                    checkOutBranchOrScm('master', 'git@github.com:luxteam/HTMLReportsShared')
+                    checkoutScm(branchName: "master", repositoryUrl: "git@github.com:luxteam/HTMLReportsShared")
                     python3("-m pip install -r requirements.txt")
                     python3("hybrid_report.py --xml_path ../${STAGE_NAME}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-Failures")
                 }
@@ -474,7 +474,7 @@ def executeBuild(String osName, Map options) {
     String error_message = ""
     String context = "[BUILD] ${osName}"
     try {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
 
         if (env.CHANGE_ID) {
@@ -513,7 +513,7 @@ def executeBuild(String osName, Map options) {
 
 def executePreBuild(Map options) {
    
-    checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
+    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
@@ -641,7 +641,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             }
 
             if (options.scenarios && !options.updateRefsPerf) {
-                checkOutBranchOrScm("master", "git@github.com:luxteam/HTMLReportsShared")
+                checkoutScm(branchName: "master", repositoryUrl: "git@github.com:luxteam/HTMLReportsShared")
 
                 dir("performanceReports") {
                     testResultList.each() {

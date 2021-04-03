@@ -6,7 +6,7 @@ def call(String command, String version = "") {
     println(command)
     String ret
 
-    if(isUnix()) {
+    if (isUnix()) {
         version = version.isEmpty() ? 3 : version
         ret = sh(returnStdout: true, script:"python${version} ${command}")
     } else {

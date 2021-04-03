@@ -34,21 +34,37 @@ def call(String buildStatus = 'STARTED', String channel = '', String baseUrl = '
     // if reportName not empty display link to html report
     String HTML_REPORT_LINK = options.reportName ? "${env.BUILD_URL}${options.reportName}" : ''
 
-    String testsStatus = """
-    ,{
-      "mrkdwn_in": ["text"],
-      "title": "Brief info",
-      "pretext": "AutoTests Results",
-      "text": ${options.testsStatus},
-      "footer": "LUX CIS",
-      "actions": [
-        {"text": "Report",
-        "type": "button",
-        "url": "${HTML_REPORT_LINK}"
-        }]
-    }"""
+    List reports = []
+    if (options.engines) {
+      options.engines.each { engine ->
+        reports << "${engine}"
+      }
+    } else {
+      if (options['testsStatus']) {
+        reports << ""
+      }
+    }
 
-    testsStatus = options.testsStatus ? testsStatus  : ''
+    String testsStatus = ""
+
+    for (report in reports) {
+      String pretext = report ? options.enginesNames[options.engines.indexOf(report)] : ""
+      String text = report ? options['testsStatus-' + report] : options['testsStatus']
+
+      testsStatus += """
+      ,{
+        "mrkdwn_in": ["text"],
+        "title": "Brief info",
+        "pretext": "AutoTests Results ${pretext}",
+        "text": ${text},
+        "footer": "LUX CIS",
+        "actions": [
+          {"text": "Report",
+          "type": "button",
+          "url": "${HTML_REPORT_LINK}"
+          }]
+      }"""
+    }
 
     String slackMessage = """[{
     "fallback": "${buildStatus} ${env.JOB_NAME}",

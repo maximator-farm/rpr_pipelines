@@ -133,7 +133,7 @@ abstract class UniverseManager {
         context.timeout(time: "5", unit: 'MINUTES') {
             context.dir("jobs_launcher") {
                 context.withNotifications(title: osName, printMessage: true, options: options, configuration: NotificationConfiguration.DOWNLOAD_JOBS_LAUNCHER) {
-                    context.checkOutBranchOrScm(options["jobsLauncherBranch"], "git@github.com:luxteam/jobs_launcher.git")
+                    context.checkoutScm(branchName: options.jobsLauncherBranch, repositoryUrl: "git@github.com:luxteam/jobs_launcher.git")
                 }
             }
         }

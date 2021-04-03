@@ -122,25 +122,19 @@ class UniverseManagerEngine extends UniverseManager  {
     def closeBuild(String problemMessage, Map options) {
         try {
             String status = options.buildWasAborted ? "ABORTED" : context.currentBuild.result
-
             if (universeClientParentProd?.build) {
                 universeClientParentProd.problemMessage(problemMessage)
                 universeClientParentProd.changeStatus(status)
-                for (client in universeClientsProd) {
-                    client.value.changeStatus(status)
-                }
+                universeClientsProd.each { it.value.changeStatus(status) }
             }
             if (universeClientParentDev?.build) {
                 universeClientParentDev.problemMessage(problemMessage)
                 universeClientParentDev.changeStatus(status)
-                for (client in universeClientsDev) {
-                    client.value.changeStatus(status)
-                }
+                universeClientsDev.each { it.value.changeStatus(status) }
             }
-        } catch (e){
+        } catch (e) {
             context.println("[ERROR] Failed to close UMS build")
             context.println(e.toString())
-            context.println(e.getMessage())
         }
     }
 

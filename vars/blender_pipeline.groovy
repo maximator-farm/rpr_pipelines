@@ -21,21 +21,13 @@ def executeBuildWindows(String osName, Map options)
 {
     dir("lib\\win64_vc15"){
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SVN_REPO) {
-            checkout([$class: 'SubversionSCM', additionalCredentials: [], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', 
-                excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', 
-                locations: [[cancelProcessOnExternalsFail: true, credentialsId: '', depthOption: 'infinity', 
-                ignoreExternalsOption: true, local: '.', remote: 'https://svn.blender.org/svnroot/bf-blender/trunk/lib/win64_vc15']], 
-                quietOperation: true, workspaceUpdater: [$class: 'UpdateUpdater']])
+            checkoutScm(checkoutClass: 'SubversionSCM', repositoryUrl: 'https://svn.blender.org/svnroot/bf-blender/trunk/lib/win64_vc15')
         }
     }
 
     dir("lib\\tests"){
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SVN_REPO) {
-            checkout([$class: 'SubversionSCM', additionalCredentials: [], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', 
-                excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', 
-                locations: [[cancelProcessOnExternalsFail: true, credentialsId: '', depthOption: 'infinity', 
-                ignoreExternalsOption: true, local: '.', remote: 'https://svn.blender.org/svnroot/bf-blender/trunk/lib/tests']], 
-                quietOperation: true, workspaceUpdater: [$class: 'UpdateUpdater']])
+            checkoutScm(checkoutClass: 'SubversionSCM', repositoryUrl: 'https://svn.blender.org/svnroot/bf-blender/trunk/lib/tests')
         }
     }
 
@@ -83,7 +75,7 @@ def executeBuild(String osName, Map options)
 
         dir("blender") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkOutBranchOrScm(options["projectBranch"], options.projectRepo)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
             }
         }
 
@@ -110,28 +102,27 @@ def executeBuild(String osName, Map options)
 def executePreBuild(Map options)
 {
     dir("blender") {
-        checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+    
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${options.commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
+
+        currentBuild.description = "<b>GitHub repo:</b> ${options.projectRepo}<br/>"
+
+        if (options.projectBranch){
+            currentBuild.description += "<b>Project branch:</b> ${options.projectBranch}<br/>"
+        } else {
+            currentBuild.description += "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+        }
+
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
     }
-
-    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
-    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-    println "The last commit was written by ${options.commitAuthor}."
-    println "Commit message: ${options.commitMessage}"
-    println "Commit SHA: ${options.commitSHA}"
-
-    currentBuild.description = "<b>GitHub repo:</b> ${options.projectRepo}<br/>"
-
-    if (options.projectBranch){
-        currentBuild.description += "<b>Project branch:</b> ${options.projectBranch}<br/>"
-    } else {
-        currentBuild.description += "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-    }
-
-    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
-
 }
 
 
@@ -142,19 +133,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 
 def call(String projectBranch = "master",
-    String testsBranch = "master",
-    String platforms = "Windows",
-    String updateRefs = 'No'
-    )
-{
-    ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
-    Map options = [:]
-    options["stage"] = "Init"
-    options["problemMessageManager"] = problemMessageManager
- 
-    String PRJ_NAME="Blender"
-    String PRJ_ROOT="rpr-plugins"
+         String testsBranch = "master",
+         String platforms = "Windows",
+         String updateRefs = 'No') {
 
+    ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
+    Map options = [stage: "Init", problemMessageManager: problemMessageManager]
+ 
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
             println "Platforms: ${platforms}"
@@ -165,8 +150,8 @@ def call(String projectBranch = "master",
                         updateRefs:updateRefs,
                         BUILDER_TAG:'PC-FACTORY-HAMBURG-WIN10',
                         BUILD_TIMEOUT:1440,
-                        PRJ_NAME:PRJ_NAME,
-                        PRJ_ROOT:PRJ_ROOT,
+                        PRJ_NAME:"Blender",
+                        PRJ_ROOT:"rpr-plugins",
                         problemMessageManager: problemMessageManager,
                         platforms:platforms,
                         executeBuild:true,

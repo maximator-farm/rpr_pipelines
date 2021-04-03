@@ -44,7 +44,7 @@ def executeBuildLinux()
 
 def executePreBuild(Map options)
 {
-    checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRender-GLTF.git')
+    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
@@ -58,7 +58,7 @@ def executePreBuild(Map options)
 def executeBuild(String osName, Map options)
 {
     try {
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:Radeon-Pro/RadeonProRender-GLTF.git')
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
 
         switch(osName) {
@@ -80,24 +80,20 @@ def executeBuild(String osName, Map options)
     }
 }
 
-def executeDeploy(Map options, List platformList, List testResultList)
-{ 
-}
+def executeDeploy(Map options, List platformList, List testResultList) {}
 
 
 def call(String projectBranch = "",
          String platforms = 'Windows;OSX',
          Boolean updateRefs = false, Boolean enableNotifications = true) {
 
-    String PRJ_NAME="RadeonProRender-GLTF"
-    String PRJ_ROOT="rpr-core"
-
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, this.&executeDeploy,
                            [projectBranch:projectBranch,
+                            projectRepo:'git@github.com:Radeon-Pro/RadeonProRender-GLTF.git',
                             enableNotifications:enableNotifications,
                             BUILD_TIMEOUT:'10',
                             executeBuild:true,
                             executeTests:false,
-                            PRJ_NAME:PRJ_NAME,
-                            PRJ_ROOT:PRJ_ROOT])
+                            PRJ_NAME:"RadeonProRender-GLTF",
+                            PRJ_ROOT:"rpr-core"])
 }

@@ -59,6 +59,54 @@ def getBlenderAddonInstaller(String osName, Map options) {
             }
 
             break
+            
+        default:
+
+            if (options['isPreBuilt']) {
+
+                println "[INFO] PluginOSXSha: ${options['pluginUbuntuSha']}"
+
+                if (options['pluginUbuntuSha']) {
+                    if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
+                        println "[INFO] The plugin ${options['pluginUbuntuSha']}.zip exists in the storage."
+                    } else {
+                        clearBinariesUnix()
+
+                        println "[INFO] The plugin does not exist in the storage. Downloading and copying..."
+                        downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+
+                        sh """
+                            mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                            mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                        """
+                    }
+                } else {
+                    clearBinariesUnix()
+
+                    println "[INFO] The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying..."
+                    downloadPlugin(osName, "BlenderUSDHydraAddon", options)
+
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip"
+                    """
+                }
+
+            } else {
+                if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
+                    println "[INFO] The plugin ${options.commitSHA}_${osName}.zip exists in the storage."
+                } else {
+                    clearBinariesUnix()
+
+                    println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
+                    unstash "app${osName}"
+                   
+                    sh """
+                        mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
+                        mv BlenderUSDHydraAddon*.zip "${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip"
+                    """
+                }
+            }
     }
 }
 
@@ -147,7 +195,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_usdblender.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdblender.git")
             }
         }
 
@@ -336,12 +384,14 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(Map options) {
-    dir('RadeonProRenderBlenderAddon') {
+    dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         
-        withEnv(["PATH=c:\\python37\\;c:\\python37\\scripts\\;${PATH}"]) {
+        withEnv(["PATH=c:\\python39\\;c:\\python39\\scripts\\;${PATH}"]) {
             bat """
                 set HDUSD_LIBS_DIR=..\\libs
+                python --version >> ..\\${STAGE_NAME}.log  2>&1
+                python tools\\generate_mx_classes.py >> ..\\${STAGE_NAME}.log  2>&1
                 python tools\\create_zip_addon.py >> ..\\${STAGE_NAME}.log  2>&1
             """
         }
@@ -359,7 +409,7 @@ def executeBuildWindows(Map options) {
 
             archiveArtifacts "BlenderUSDHydraAddon*.zip"
             String BUILD_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.zip"
-            String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             bat """
@@ -379,12 +429,14 @@ def executeBuildOSX(Map options) {
 
 
 def executeBuildLinux(String osName, Map options) {
-    dir('RadeonProRenderBlenderAddon') {
+    dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
         sh """
             export HDUSD_LIBS_DIR=../libs
-            python3.7 tools/create_zip_addon.py >> ../${STAGE_NAME}.log  2>&1
+            python3.9 --version >> ../${STAGE_NAME}.log  2>&1
+            python3.9 tools/generate_mx_classes.py >> ../${STAGE_NAME}.log  2>&1
+            python3.9 tools/create_zip_addon.py >> ../${STAGE_NAME}.log  2>&1
         """
 
         dir("build") {
@@ -400,12 +452,12 @@ def executeBuildLinux(String osName, Map options) {
 
             archiveArtifacts "BlenderUSDHydraAddon*.zip"
             String BUILD_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
-            String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             if (options.sendToUMS) {
                 dir("../../../jobs_launcher") {
-                    sendToMINIO(options, "${osName}", "../RadeonProRenderBlenderAddon/BlenderPkg/build", BUILD_NAME)                            
+                    sendToMINIO(options, "${osName}", "../BlenderUSDHydraAddon/BlenderPkg/build", BUILD_NAME)                            
                 }
             }
 
@@ -425,9 +477,9 @@ def executeBuild(String osName, Map options) {
     try {
         downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/libs/*", "libs")
 
-        dir("RadeonProRenderBlenderAddon") {
+        dir("BlenderUSDHydraAddon") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], false, options["prBranchName"], options["prRepoName"])
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
             }
         }
 
@@ -494,9 +546,9 @@ def executePreBuild(Map options)
     }
 
     if (!options['isPreBuilt']) {
-        dir('RadeonProRenderBlenderAddon') {
+        dir('BlenderUSDHydraAddon') {
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
             }
 
             options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -517,7 +569,7 @@ def executePreBuild(Map options)
             }
 
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
-                options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ').replace(', ', '.')
+                options.pluginVersion = version_read("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
                 if (options['incrementVersion']) {
                     withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
@@ -529,15 +581,15 @@ def executePreBuild(Map options)
                     
                     if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
-                        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ')
+                        options.pluginVersion = version_read("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', ', ')
                         println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                         println "[INFO] Current build version: ${options.pluginVersion}"
 
                         def new_version = version_inc(options.pluginVersion, 3, ', ')
                         println "[INFO] New build version: ${new_version}"
-                        version_write("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', new_version, ', ')
+                        version_write("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', new_version, ', ')
 
-                        options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\hdusd\\__init__.py", '"version": (', ', ', "true").replace(', ', '.')
+                        options.pluginVersion = version_read("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', ', ', "true").replace(', ', '.')
                         println "[INFO] Updated build version: ${options.pluginVersion}"
 
                         bat """
@@ -582,7 +634,7 @@ def executePreBuild(Map options)
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdblender') {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_usdblender.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdblender.git")
 
             options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             dir('jobs_launcher') {
@@ -633,11 +685,13 @@ def executePreBuild(Map options)
 
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", tempTests)
                 options.tests.each() {
-                    options.engines.each { engine ->
-                        tests << "${it}-${engine}"
-                    }
                     def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
                     options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+                }
+                options.engines.each { engine ->
+                    options.tests.each() {
+                        tests << "${it}-${engine}"
+                    }
                 }
 
                 modifiedPackageName = modifiedPackageName.replace('~,', '~')
@@ -655,11 +709,13 @@ def executePreBuild(Map options)
                 options.groupsUMS = options.tests.split(" ") as List
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
                 options.tests.each() {
-                    options.engines.each { engine ->
+                    def xml_timeout = utils.getTimeoutFromXML(this, it, "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
+                    options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
+                }
+                options.engines.each { engine ->
+                    options.tests.each() {
                         tests << "${it}-${engine}"
                     }
-                    def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                    options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
                 }
             } else {
                 options.executeTests = false
@@ -668,7 +724,7 @@ def executePreBuild(Map options)
         }
 
         if (env.CHANGE_URL) {
-            options.githubNotificator.initPR(options, "${BUILD_URL}")
+            options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
 
         options.testsList = options.tests
@@ -678,38 +734,30 @@ def executePreBuild(Map options)
 }
 
 
-def executeDeploy(Map options, List platformList, List testResultList) {
+def executeDeploy(Map options, List platformList, List testResultList, String engine) {
     cleanWS()
     try {
+        String engineName = options.enginesNames[options.engines.indexOf(engine)]
+
         if (options['executeTests'] && testResultList) {
-            withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_usdblender.git')
+            withNotifications(title: "Building test report for ${engineName} engine", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdblender.git")
             }
 
-            Map lostStashes = [:]
-            options.engines.each { engine ->
-                lostStashes[engine] = []
-            }
+            List lostStashes = []
 
             dir("summaryTestResults") {
+                unstashCrashInfo(options['nodeRetry'], engine)
                 testResultList.each() {
-                    String engine
-                    String testName
-                    options.engines.each { currentEngine ->
-                        dir(currentEngine) {
-                            unstashCrashInfo(options['nodeRetry'], currentEngine)
-                        }
-                    }
-                    List testNameParts = it.split("-") as List
-                    engine = testNameParts[-1]
-                    testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                    dir(engine) {
+                    if (it.endsWith(engine)) {
+                        List testNameParts = it.split("-") as List
+                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
                                 unstash "$it"
                             } catch(e) {
                                 println("[ERROR] Failed to unstash ${it}")
-                                lostStashes[engine].add("'${testName}'".replace("testResult-", ""))
+                                lostStashes.add("'${testName}'".replace("testResult-", ""))
                                 println(e.toString())
                                 println(e.getMessage())
                             }
@@ -721,71 +769,61 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             try {
                 dir("jobs_launcher") {
-                    options.engines.each {
-                        bat """
-                            count_lost_tests.bat \"${lostStashes[it]}\" .. ..\\summaryTestResults\\${it} \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"${it}\" \"{}\"
-                        """
-                    }
+                    bat """
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"[]\" \"${it}\" \"{}\"
+                    """
                 }
             } catch (e) {
                 println("[ERROR] Can't generate number of lost tests")
             }
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
-            List reports = []
-            List reportsNames = []
 
             try {
-                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                options.engines.each { engine ->
-                    reports.add("${engine}/summary_report.html")
-                }
-                options.enginesNames.each { engine ->
-                    reportsNames.add("Summary Report (${engine})")
-                }
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
-                        for (int i = 0; i < options.engines.size(); i++) {
-                            String engine = options.engines[i]
-                            String engineName = options.enginesNames[i]
-                            List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
-                            retryInfoList.each{ gpu ->
-                                gpu['Tries'].each{ group ->
-                                    group.each{ groupKey, retries ->
-                                        if (groupKey.endsWith(engine)) {
-                                            List testNameParts = groupKey.split("-") as List
-                                            String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
-                                            group[parsedName] = retries
-                                        }
-                                        group.remove(groupKey)
+                        List retryInfoList = utils.deepcopyCollection(this, options.nodeRetry)
+                        retryInfoList.each{ gpu ->
+                            gpu['Tries'].each{ group ->
+                                group.each{ groupKey, retries ->
+                                    if (groupKey.endsWith(engine)) {
+                                        List testNameParts = groupKey.split("-") as List
+                                        String parsedName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                                        group[parsedName] = retries
                                     }
+                                    group.remove(groupKey)
                                 }
-                                gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
                             }
-                            def retryInfo = JsonOutput.toJson(retryInfoList)
-                            dir("..\\summaryTestResults\\${engine}") {
-                                JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig())
-                                writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                            gpu['Tries'] = gpu['Tries'].findAll{ it.size() != 0 }
+                        }
+                        def retryInfo = JsonOutput.toJson(retryInfoList)
+                        dir("..\\summaryTestResults") {
+                            JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig());
+                            writeJSON file: 'retry_info.json', json: jsonResponse, pretty: 4
+                        }
+                        if (options.sendToUMS) {
+                            options.engine = engine
+                            options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
+                        }
+                        try {
+                            if (options['isPreBuilt']) {
+                                bat """
+                                    build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\"
+                                """
+                            } else {
+                                bat """
+                                    build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
+                                """
                             }
-                            try {
-                                if (options['isPreBuilt']) {
-                                    bat """
-                                        build_reports.bat ..\\summaryTestResults\\${engine} ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} "PreBuilt" "PreBuilt" "PreBuilt" \"${utils.escapeCharsByUnicode(engineName)}\"
-                                    """
-                                } else {
-                                    bat """
-                                        build_reports.bat ..\\summaryTestResults\\${engine} ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
-                                    """
-                                }
-                            } catch (e) {
-                                String errorMessage = utils.getReportFailReason(e.getMessage())
-                                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
-                                if (utils.isReportFailCritical(e.getMessage())) {
-                                    throw e
-                                } else {
-                                    currentBuild.result = "FAILURE"
-                                    options.problemMessageManager.saveGlobalFailReason(errorMessage)
-                                }
+                        } catch (e) {
+                            String errorMessage = utils.getReportFailReason(e.getMessage())
+                            GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
+                            if (utils.isReportFailCritical(e.getMessage())) {
+                                throw e
+                            } else {
+                                currentBuild.result = "FAILURE"
+                                options.problemMessageManager.saveGlobalFailReason(errorMessage)
                             }
                         }
                     }
@@ -793,14 +831,14 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             } catch(e) {
                 String errorMessage = utils.getReportFailReason(e.getMessage())
                 options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
-                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
+                GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
                 println("[ERROR] Failed to build test report.")
                 println(e.toString())
                 println(e.getMessage())
                 if (!options.testDataSaved) {
                     try {
                         // Save test data for access it manually anyway
-                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
+                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
                         options.testDataSaved = true 
                     } catch(e1) {
                         println("[WARNING] Failed to publish test data.")
@@ -813,7 +851,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             try {
                 dir("jobs_launcher") {
-                    bat "get_status.bat ..\\summaryTestResults True"
+                    bat "get_status.bat ..\\summaryTestResults"
                 }
             } catch(e) {
                 println("[ERROR] Failed to generate slack status.")
@@ -858,22 +896,22 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             }
 
             try {
-                options.testsStatus = readFile("summaryTestResults/slack_status.json")
+                options["testsStatus-${engine}"] = readFile("summaryTestResults/slack_status.json")
             } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
-                options.testsStatus = ""
+                options["testsStatus-${engine}"] = ""
             }
 
-            withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", reports.join(", "), "Test Report", reportsNames.join(", "))
+            withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
                 } else {
-                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
+                    GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
             }
 
@@ -901,7 +939,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUSDHydraAddon.git",
     String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows;Ubuntu18',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080,AMD_RX6800;Ubuntu20:AMD_RadeonVII',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
@@ -916,7 +954,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
     String customBuildLinkOSX = "",
     String enginesNames = "RRP,GL",
     String tester_tag = "Blender2.8",
-    String toolVersion = "2.91",
+    String toolVersion = "2.93",
     String mergeablePR = "",
     String parallelExecutionTypeString = "TakeAllNodes",
     Integer testCaseRetries = 3
@@ -1004,9 +1042,6 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                 prBranchName = prInfo[1]
             }
 
-            Integer deployTimeout = 150 * enginesNames.size()
-            println "Calculated deploy timeout: ${deployTimeout}"
-
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
                         testsBranch:testsBranch,
@@ -1026,7 +1061,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         TEST_TIMEOUT:180,
                         ADDITIONAL_XML_TIMEOUT:30,
                         NON_SPLITTED_PACKAGE_TIMEOUT:60,
-                        DEPLOY_TIMEOUT:deployTimeout,
+                        DEPLOY_TIMEOUT:30,
                         TESTER_TAG:tester_tag,
                         resX: resX,
                         resY: resY,

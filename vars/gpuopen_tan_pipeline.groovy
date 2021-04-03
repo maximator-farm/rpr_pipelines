@@ -117,10 +117,7 @@ def executeTests(String osName, String asicName, Map options) {
         timeout(time: "10", unit: 'MINUTES') {
             try {
                 cleanWS(osName)
-                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_tan.git')
-                if (options.sendToRBS) {
-                    options.rbs_prod.setTester(options)
-                }
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_tan.git')
                 getTanTool(osName, options)
             } catch(e) {
                 println("[ERROR] Failed to prepare test group on ${env.NODE_NAME}")
@@ -441,7 +438,8 @@ def executeBuild(String osName, Map options) {
     try {
 
         cleanWS(osName)
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:GPUOpen-LibrariesAndSDKs/TAN.git', true)
+
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
         
         switch(osName) {
             case 'Windows':
@@ -491,7 +489,7 @@ def executePreBuild(Map options) {
     }
 
     if (!env.CHANGE_URL) {
-        checkOutBranchOrScm(env.BRANCH_NAME, 'git@github.com:imatyushin/TAN.git', true)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
@@ -550,7 +548,7 @@ def executePreBuild(Map options) {
 def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_tan.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_tan.git')
 
             downloadFiles("/volume1/CIS/bin_storage/allure/*", "allure")
     
@@ -642,6 +640,7 @@ def call(String projectBranch = "",
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
                                [projectBranch:projectBranch,
+                                projectRepo:'git@github.com:GPUOpen-LibrariesAndSDKs/TAN.git',
                                 testsBranch:testsBranch,
                                 enableNotifications:enableNotifications,
                                 incrementVersion:incrementVersion,

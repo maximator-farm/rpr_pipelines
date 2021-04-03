@@ -331,8 +331,9 @@ class UniverseClient {
             this.context.echo "SPLITTED JOB NAME = ${splittedJobName}"
             this.context.echo "JOB_NAME = ${splittedJobName[0]}"
 
+            // env.JOB_NAME doesn't contains /job/ between package and job name (it's required to build correct url)
             def references = [
-                "jenkins_report": "${env.JENKINS_URL}job/${env.JOB_NAME}/${env.BUILD_NUMBER}"
+                "jenkins_report": "${env.JENKINS_URL}job/${env.JOB_NAME.replace('/', '/job/')}/${env.BUILD_NUMBER}"
             ]
 
             def tags = []
@@ -501,7 +502,7 @@ class UniverseClient {
             def buildBody = [
                 'problem_message': msg
             ]
-
+            
             def res = this.context.httpRequest(
                 consoleLogResponseBody: true,
                 contentType: 'APPLICATION_JSON',

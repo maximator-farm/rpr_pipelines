@@ -138,7 +138,7 @@ def updateTestResults(String osName, String configuration) {
             currentBuild.result = "UNSTABLE"
         }
         dir("jobs_launcher") {
-            checkOutBranchOrScm("master", "git@github.com:luxteam/jobs_launcher.git")
+            checkoutScm(branchName: "master", repositoryUrl: "git@github.com:luxteam/jobs_launcher.git")
             def machineInfoJson
             String machineInfoRaw, renderDevice
             dir('core') {
@@ -657,7 +657,7 @@ def executeBuildLinux(String osName, Map options) {
 def executeBuild(String osName, Map options) {
     try {
 
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         
         switch(osName) {
             case 'Windows':
@@ -704,7 +704,7 @@ def executePreBuild(Map options) {
 
     if (!env.CHANGE_URL) {
 
-        checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
         if (options.projectBranch) {
             currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
@@ -753,7 +753,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
         dir("amf-report") {
             String branchName = env.BRANCH_NAME ?: options.projectBranch
-            checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
 
             dir("amf/public/proj/OpenAMF_Autotests/Reports") {
                 bat """

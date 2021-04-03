@@ -57,7 +57,7 @@ def executeTestCommand(String osName)
 def executeTests(String osName, String asicName, Map options)
 {
     try {
-        checkOutBranchOrScm(options['projectBranch'], options['projectURL'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         unstash "app${osName}"
         executeTestCommand(osName)
     }
@@ -106,7 +106,7 @@ def executeBuildLinux()
 
 def executePreBuild(Map options)
 {
-    checkOutBranchOrScm(options['projectBranch'], options['projectURL'])
+    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
     options.AUTHOR_NAME = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
@@ -132,7 +132,7 @@ def executePreBuild(Map options)
 def executeBuild(String osName, Map options)
 {
     try {
-        checkOutBranchOrScm(options['projectBranch'], options['projectURL'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
 
         switch(osName)
@@ -166,24 +166,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
 {}
 
 def call(String projectBranch = "",
-         String projectURL = 'git@github.com:Radeon-Pro/RadeonRays.git',
+         String projectRepo = 'git@github.com:Radeon-Pro/RadeonRays.git',
          String platforms = 'Windows:AMD_RadeonVII;OSX;Ubuntu18:AMD_RadeonVII',
          Boolean enableNotifications = true)
 {
-    String PRJ_ROOT="rpr-core"
-    String PRJ_NAME="RadeonRays"
-
-    properties([[$class: 'BuildDiscarderProperty', strategy: 
-                 [$class: 'LogRotator', artifactDaysToKeepStr: '', 
-                  artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10']]]);
     
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, 
                            [projectBranch:projectBranch,
                             enableNotifications:enableNotifications,
                             executeBuild:true,
                             executeTests:true,
-                            PRJ_NAME:PRJ_NAME,
-                            PRJ_ROOT:PRJ_ROOT,
+                            PRJ_NAME:"RadeonRays",
+                            PRJ_ROOT:"rpr-core",
                             BUILD_TIMEOUT:'15',
                             TEST_TIMEOUT:'15',
                             BUILDER_TAG:'BuilderRays',

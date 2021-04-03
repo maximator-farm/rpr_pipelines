@@ -87,6 +87,18 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static DOWNLOAD_SVN_REPO = [
+        "begin": ["message": "Downloading the SVN repository."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to download the SVN repository.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
     def static INCREMENT_VERSION = [
         "exceptions": [
             [
@@ -141,6 +153,20 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Failed to create package.", 
+                "rethrow": ExceptionThrowType.RETHROW,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
+    def static BUILD_PACKAGE_USD_VIEWER = [
+        "begin": ["message": "Creating USD Viewer package."],
+
+        "end": ["message": "USD Viewer package was successfully created."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to create USD Viewer package.", 
                 "rethrow": ExceptionThrowType.RETHROW,
                 "githubNotification": ["status": "failure"]
             ]

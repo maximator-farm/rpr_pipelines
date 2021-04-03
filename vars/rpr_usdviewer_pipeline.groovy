@@ -182,7 +182,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_inventor.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_inventor.git")
             }
         }
 
@@ -257,6 +257,9 @@ def executeTests(String osName, String asicName, Map options) {
                 }
             }
         }
+
+        //Do not implemented yet
+        return
 
         String REF_PATH_PROFILE="/volume1/Baselines/usd_inventor_autotests/${asicName}-${osName}"
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
@@ -399,7 +402,7 @@ def executeBuildWindows(Map options) {
             """
         }
         String buildName = "RadeonProUSDViewer_Windows.zip"
-        withNotifications(title: "Windows", options: options, artifactUrl: "${BUILD_URL}/artifact/${buildName}", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        withNotifications(title: "Windows", options: options, artifactUrl: "${BUILD_URL}/artifact/${buildName}", configuration: NotificationConfiguration.BUILD_PACKAGE_USD_VIEWER)  {
             // delete files before zipping
             bat """
                 del RPRViewer\\binary\\windows\\inst\\pxrConfig.cmake
@@ -415,48 +418,40 @@ def executeBuildWindows(Map options) {
             """
 
             withEnv(["PYTHONPATH=%INST%\\lib\\python;%INST%\\lib"]) {
-                try {
+                bat """
+                    set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
+                    set PACKAGE_PATH=%INSTALL_PREFIX_DIR%\\dist
+                    set PYTHONPATH=%INSTALL_PREFIX_DIR%\\lib\\python;%INSTALL_PREFIX_DIR%\\lib;%INSTALL_PREFIX_DIR%\\lib\\python\\pxr\\Usdviewq\\HdRPRPlugin\\python
+
+                    pyinstaller %CD%\\RPRViewer\\tools\\usdview_windows.spec --noconfirm --clean --distpath %PACKAGE_PATH% ^
+                        --workpath %INSTALL_PREFIX_DIR%\\build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                        
+                    XCOPY %PACKAGE_PATH%\\RPRViewer\\hdrpr\\lib\\* %PACKAGE_PATH%\\RPRViewer\\ /Y
+                """
+
+                dir("RPRViewer") {
                     bat """
-                        set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
-                        set PACKAGE_PATH=%INSTALL_PREFIX_DIR%\\dist
-                        set PYTHONPATH=%INSTALL_PREFIX_DIR%\\lib\\python;%INSTALL_PREFIX_DIR%\\lib;%INSTALL_PREFIX_DIR%\\lib\\python\\pxr\\Usdviewq\\HdRPRPlugin\\python
-
-                        pyinstaller %CD%\\RPRViewer\\tools\\usdview_windows.spec --noconfirm --clean --distpath %PACKAGE_PATH% ^
-                            --workpath %INSTALL_PREFIX_DIR%\\build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                            
-                        XCOPY %PACKAGE_PATH%\\RPRViewer\\hdrpr\\lib\\* %PACKAGE_PATH%\\RPRViewer\\ /Y
+                        "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log 2>&1
                     """
+                    stash includes: "RPRViewer_Setup.exe", name: "appWindows"
+                    options.pluginWinSha = sha1 "RPRViewer_Setup.exe"
 
-                    dir("RPRViewer") {
+                    if (options.branch_postfix) {
                         bat """
-                            "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log 2>&1
+                            rename RPRViewer_Setup.exe RPRViewer_Setup.(${options.branch_postfix}).exe
                         """
-                        stash includes: "RPRViewer_Setup.exe", name: "appWindows"
-                        options.pluginWinSha = sha1 "RPRViewer_Setup.exe"
-
-                        if (options.branch_postfix) {
-                            bat """
-                                rename RPRViewer_Setup.exe RPRViewer_Setup.(${options.branch_postfix}).exe
-                            """
-                        }
-
-                        archiveArtifacts artifacts: "RPRViewer_Setup*.exe", allowEmptyArchive: false
-                        String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup.(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
-                        String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
-                        rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
-
-                        /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
-                        if (options.sendToUMS) {
-                            // WARNING! call sendToMinio in build stage only from parent directory
-                            options.universeManager.sendToMINIO(options, "Windows", "..", "RPRViewer_Setup.exe", false)
-                        }*/
                     }
-                } catch (e) {
-                    println(e.toString())
-                    println(e.getMessage())
-                    println(e.getStackTrace())
-                    currentBuild.result = "FAILURE"
-                    println "[ERROR] Failed to build USD Viewer installer"
+
+                    archiveArtifacts artifacts: "RPRViewer_Setup*.exe", allowEmptyArchive: false
+                    String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup.(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
+                    String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+                    rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
+                    /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
+                    if (options.sendToUMS) {
+                        // WARNING! call sendToMinio in build stage only from parent directory
+                        options.universeManager.sendToMINIO(options, "Windows", "..", "RPRViewer_Setup.exe", false)
+                    }*/
                 }
             }
         }
@@ -476,13 +471,10 @@ def executeBuildOSX(Map options)
             export PATH="~/Qt/5.15.2/clang_64/bin:\$PATH"
             
             echo \$PATH
-
             rm -rf RPRViewer/binary/mac/*
-
             export PYENV_ROOT="\$HOME/.pyenv"
             export PATH="\$PYENV_ROOT/shims:\$PYENV_ROOT/bin:\$PATH"
             pyenv rehash
-
             # USD
             python USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
             # HdRprPlugin
@@ -498,61 +490,51 @@ def executeBuildOSX(Map options)
     }
 
     // delete files before zipping
-    withNotifications(title: "OSX", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_OSX.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+    withNotifications(title: "OSX", options: options, artifactUrl: "${BUILD_URL}/artifact/RadeonProUSDViewer_OSX.zip", configuration: NotificationConfiguration.BUILD_PACKAGE_USD_VIEWER) {
         withEnv(["PYTHONPATH=%INST%/lib/python;%INST%/lib"]) {
-            try {
-                sh """
-                    export PYENV_ROOT="\$HOME/.pyenv"
-                    export PATH="\$PYENV_ROOT/shims:\$PYENV_ROOT/bin:\$PATH"
-                    pyenv rehash
-                    
-                    python --version
+            sh """
+                export PYENV_ROOT="\$HOME/.pyenv"
+                export PATH="\$PYENV_ROOT/shims:\$PYENV_ROOT/bin:\$PATH"
+                pyenv rehash
                 
-                    export INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
-                    export MATERIALX_DIR=\$(python -c "import MaterialX as _; import os; print(os.path.dirname(_.__file__))")/
-                    export PYTHONPATH=\$INSTALL_PREFIX_DIR/lib/python:\$INSTALL_PREFIX_DIR/lib:\$INSTALL_PREFIX_DIR/lib/python/pxr/Usdviewq/HdRPRPlugin/python
-                    export PACKAGE_PATH=\$INSTALL_PREFIX_DIR/dist
-
-                    python -m PyInstaller \$(pwd)/RPRViewer/tools/usdview_mac.spec --noconfirm --clean --distpath \
-                        \$PACKAGE_PATH --workpath \$INSTALL_PREFIX_DIR/build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-
-                    install_name_tool -add_rpath @loader_path/../../.. \$PACKAGE_PATH/RPRViewer/hdrpr/plugin/usd/hdRpr.dylib
-                    rm \$PACKAGE_PATH/RPRViewer/librprUsd.dylib
-                    install_name_tool -change @loader_path/../../librprUsd.dylib @loader_path/../../hdrpr/lib/librprUsd.dylib \
-                        \$PACKAGE_PATH/RPRViewer/rpr/RprUsd/_rprUsd.so >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                    install_name_tool -add_rpath @loader_path/../.. \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib
-                    cp \$PACKAGE_PATH/RPRViewer/hdrpr/lib/*.dylib \$PACKAGE_PATH/RPRViewer/
-                    install_name_tool -change \$INSTALL_PREFIX_DIR/lib/libGLEW.2.0.0.dylib @rpath/libGLEW.2.0.0.dylib \
-                        \$PACKAGE_PATH/RPRViewer/hdrpr/plugin/usd/hdRpr.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                    install_name_tool -change \$INSTALL_PREFIX_DIR/lib/libGLEW.2.0.0.dylib @rpath/libGLEW.2.0.0.dylib \
-                        \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                """
-
-                zip archive: false, dir: "RPRViewer/binary/mac/inst/dist/RPRViewer", glob: '', zipFile: "RadeonProUSDViewer_Package_OSX.zip"
+                python --version
             
-                if (options.branch_postfix) {
-                    sh """
-                        mv RadeonProUSDViewer_Package_OSX.zip "RadeonProUSDViewer_Package_OSX.(${options.branch_postfix}).zip"
-                    """
-                }
+                export INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
+                export MATERIALX_DIR=\$(python -c "import MaterialX as _; import os; print(os.path.dirname(_.__file__))")/
+                export PYTHONPATH=\$INSTALL_PREFIX_DIR/lib/python:\$INSTALL_PREFIX_DIR/lib:\$INSTALL_PREFIX_DIR/lib/python/pxr/Usdviewq/HdRPRPlugin/python
+                export PACKAGE_PATH=\$INSTALL_PREFIX_DIR/dist
+                python -m PyInstaller \$(pwd)/RPRViewer/tools/usdview_mac.spec --noconfirm --clean --distpath \
+                    \$PACKAGE_PATH --workpath \$INSTALL_PREFIX_DIR/build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                install_name_tool -add_rpath @loader_path/../../.. \$PACKAGE_PATH/RPRViewer/hdrpr/plugin/usd/hdRpr.dylib
+                rm \$PACKAGE_PATH/RPRViewer/librprUsd.dylib
+                install_name_tool -change @loader_path/../../librprUsd.dylib @loader_path/../../hdrpr/lib/librprUsd.dylib \
+                    \$PACKAGE_PATH/RPRViewer/rpr/RprUsd/_rprUsd.so >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                install_name_tool -add_rpath @loader_path/../.. \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib
+                cp \$PACKAGE_PATH/RPRViewer/hdrpr/lib/*.dylib \$PACKAGE_PATH/RPRViewer/
+                install_name_tool -change \$INSTALL_PREFIX_DIR/lib/libGLEW.2.0.0.dylib @rpath/libGLEW.2.0.0.dylib \
+                    \$PACKAGE_PATH/RPRViewer/hdrpr/plugin/usd/hdRpr.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                install_name_tool -change \$INSTALL_PREFIX_DIR/lib/libGLEW.2.0.0.dylib @rpath/libGLEW.2.0.0.dylib \
+                    \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+            """
 
-                archiveArtifacts artifacts: "RadeonProUSDViewer_Package*.zip", allowEmptyArchive: false
-                String BUILD_NAME = options.branch_postfix ? "RadeonProUSDViewer_Package_OSX.(${options.branch_postfix}).zip" : "RadeonProUSDViewer_Package_OSX.zip"
-                String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
-                rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
-
-                /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
-                if (options.sendToUMS) {
-                    // WARNING! call sendToMinio in build stage only from parent directory
-                    options.universeManager.sendToMINIO(options, "OSX", "..", "RadeonProUSDViewer_Package_OSX.zip", false)
-                }*/
-            } catch (e) {
-                println(e.toString())
-                println(e.getMessage())
-                println(e.getStackTrace())
-                currentBuild.result = "FAILURE"
-                println "[ERROR] Failed to build USD Viewer Package"
+            zip archive: false, dir: "RPRViewer/binary/mac/inst/dist/RPRViewer", glob: '', zipFile: "RadeonProUSDViewer_Package_OSX.zip"
+        
+            if (options.branch_postfix) {
+                sh """
+                    mv RadeonProUSDViewer_Package_OSX.zip "RadeonProUSDViewer_Package_OSX.(${options.branch_postfix}).zip"
+                """
             }
+
+            archiveArtifacts artifacts: "RadeonProUSDViewer_Package*.zip", allowEmptyArchive: false
+            String BUILD_NAME = options.branch_postfix ? "RadeonProUSDViewer_Package_OSX.(${options.branch_postfix}).zip" : "RadeonProUSDViewer_Package_OSX.zip"
+            String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+            rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
+            /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
+            if (options.sendToUMS) {
+                // WARNING! call sendToMinio in build stage only from parent directory
+                options.universeManager.sendToMINIO(options, "OSX", "..", "RadeonProUSDViewer_Package_OSX.zip", false)
+            }*/
         }
     }
     
@@ -565,7 +547,7 @@ def executeBuild(String osName, Map options) {
     }
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            checkOutBranchOrScm(options["projectBranch"], options["projectRepo"])
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         }
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch (osName) {
@@ -603,11 +585,11 @@ def executePreBuild(Map options) {
         options['executeTests'] = true
     // auto job (master)
     } else if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        //options.testsPackage = "master.json"
+        options.testsPackage = "none"
         options.tests = "Smoke"
     // auto job
     } else if (env.BRANCH_NAME) {
-        //options.testsPackage = "smoke.json"
+        options.testsPackage = "none"
         options.tests = "Smoke"
     }
 
@@ -621,7 +603,7 @@ def executePreBuild(Map options) {
     }
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-        checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
 
     if (!options['isPreBuilt']) {
@@ -654,8 +636,8 @@ def executePreBuild(Map options) {
     options.groupsUMS = []
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-        dir('jobs_test_inventor') {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_inventor.git')
+        dir('jobs_test_usdviewer') {
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_inventor.git")
             options['testsBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
             dir('jobs_launcher') {
                 options['jobsLauncherBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
@@ -742,7 +724,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_inventor.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdviewer.git")
             }
 
             List lostStashes = []
@@ -960,7 +942,7 @@ def call(String projectBranch = "",
                 options["universeManager"] = manager
             }
         }
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
         println e.toString()

@@ -41,7 +41,7 @@ def executeTestCommand(String osName, Map options)
 def executeTests(String osName, String asicName, Map options)
 {
     try {
-        checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_ai2rpr_max.git')
+        checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_ai2rpr_max.git')
         dir('jobs/Scripts') {
             bat "del convertAI2RPR.ms"
             unstash "convertionScript"
@@ -149,7 +149,7 @@ def executeBuild(String osName, Map options)
 def executePreBuild(Map options)
 {
     dir('Arnold2RPRConvertTool-3dsMax') {
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/Arnold2RPRConvertTool-3dsMax.git')
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: 'git@github.com:luxteam/Arnold2RPRConvertTool-3dsMax.git')
         stash includes: "convertAI2RPR.ms", name: "convertionScript"
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -164,7 +164,7 @@ def executePreBuild(Map options)
         def tests = []
         if (options.testsPackage != "none") {
             dir('jobs_test_ai2rpr_max') {
-                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_ai2rpr_max.git')
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_ai2rpr_max.git')
                 // json means custom test suite. Split doesn't supported
                 if(options.testsPackage.endsWith('.json')) {
                     options.testsList = ['']
@@ -191,8 +191,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 {
     try {
         if (options['executeTests'] && testResultList) {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_ai2rpr_max.git')
-
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_ai2rpr_max.git')
             dir("summaryTestResults") {
                 testResultList.each() {
                     dir("$it".replace("testResult-", "")) {

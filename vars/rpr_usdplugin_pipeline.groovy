@@ -166,7 +166,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_houdini.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
             }
         }
@@ -340,7 +340,7 @@ def executeBuildWindows(String osName, Map options) {
             }
             archiveArtifacts "hdRpr*.tar.gz"
             String buildName = "${options.win_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}/artifact/${buildName}"
+            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
@@ -402,7 +402,7 @@ def executeBuildOSX(String osName, Map options) {
             }
             archiveArtifacts "hdRpr*.tar.gz"
             String buildName = "${options.osx_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}/artifact/${buildName}"
+            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
@@ -479,7 +479,7 @@ def executeBuildUnix(String osName, Map options) {
             if (osName == "Ubuntu18") options.unix_build_name = options.ubuntu_build_name else options.unix_build_name = options.centos_build_name
             archiveArtifacts "hdRpr*.tar.gz"
             String buildName = "${options.unix_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}/artifact/${buildName}"
+            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
@@ -513,14 +513,14 @@ def executeBuild(String osName, Map options) {
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             dir ("RadeonProRenderUSD") {
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
             }
         }
 
         if (options.rebuildUSD) {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_USD_REPO) {
                 dir('USD') {
-                    checkOutBranchOrScm(options["usdBranch"], "git@github.com:PixarAnimationStudios/USD.git")
+                    checkoutScm(branchName: options.usdBranch, repositoryUrl: "git@github.com:PixarAnimationStudios/USD.git")
                 }
             }
         }
@@ -580,7 +580,7 @@ def executePreBuild(Map options) {
 
     dir('RadeonProRenderUSD') {
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
         }
 
         options.commitAuthor = utils.getBatOutput(this, "git show -s --format=%%an HEAD ")
@@ -640,7 +640,7 @@ def executePreBuild(Map options) {
     options.groupsUMS = []
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_houdini') {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_houdini.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
             dir('jobs_launcher') {
                 options['jobsLauncherBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
             }
@@ -650,14 +650,13 @@ def executePreBuild(Map options) {
             if (options.testsPackage != "none") {
                 def groupNames = readJSON(file: "jobs/${options.testsPackage}")["groups"].collect { it.key }
                 // json means custom test suite. Split doesn't supported
-                options.tests = groupNames
+                options.tests = groupNames.join(" ")
                 options.groupsUMS = groupNames
                 options.testsPackage = "none"
             } else {
                 options.groupsUMS = options.tests.split(" ")
             }
             options.testsList = ['']
-            options.tests = options.tests.join(" ")
         }
         if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
@@ -673,7 +672,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_houdini.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
             }
             List lostStashes = []
             dir("summaryTestResults") {
