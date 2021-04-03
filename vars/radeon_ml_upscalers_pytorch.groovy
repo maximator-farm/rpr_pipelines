@@ -182,7 +182,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 
 
-def call(String projectBranch = "master",
+def call(String projectBranch = "",
          String platforms = 'Windows:NVIDIA_RTX2080',
          Boolean executeAllTests = false,
          String tests = "0000_index,0010_config,0015_utils,0018_pytorch_utils,0020_plot,0030_image,0050_colormaps,0070_SSIM",
