@@ -114,7 +114,7 @@ def buildRenderCache(String osName, String toolVersion, Map options, Boolean cle
 
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
-    dir("script") {
+    dir("scripts") {
         switch (osName) {
             case "Windows":
                 bat """
@@ -371,6 +371,11 @@ def executeTests(String osName, String asicName, Map options) {
                     throw new ExpectedExceptionWrapper(NotificationConfiguration.FAILED_TO_SAVE_RESULTS, e)
                 }
             }
+        }
+        if (!options.executeTestsFinished) {
+            bat """
+                shutdown /r /f /t 0
+            """
         }
     }
 }
@@ -721,7 +726,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdviewer.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_inventor.git")
             }
 
             List lostStashes = []
