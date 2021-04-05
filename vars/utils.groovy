@@ -87,10 +87,41 @@ class utils {
     }
 
     static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "") {
+        // zip report
+        if (self.isUnix()) {
+            self.sh(script: "zip -r report.zip ${reportDir} -x '*@tmp*'")
+        } else {
+            self.bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " report.zip '${reportDir}' -xr!*@tmp*")
+        }
+
+        String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/"
+
+        self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
+            // send report to NAS
+            self.uploadFiles("report.zip", remotePath)
+
+            // unpack report on NAS
+            if (self.isUnix()) {
+                self.sh(script: '$CIS_TOOLS/unstash.sh $REMOTE_HOST' + " ${remotePath}report.zip ${remotePath} true")
+            } else {
+                self.bat(script: '%CIS_TOOLS%\\unstash.bat %REMOTE_HOST%' + " ${remotePath}report.zip ${remotePath} true")
+            }
+        }
+
+        dir("redirect_links") {
+            reportFiles.split(",")).each { reportFile ->
+                if (self.isUnix()) {
+                    self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${remotePath}${reportDir}/${reportFile}\" \".\" \"${reportFile}\"")
+                } else {
+                    self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${remotePath}${reportDir}\\${reportFile}\"  \".\" \"${reportFile}\"")
+                }
+            }
+        }
+
         Map params = [allowMissing: false,
                       alwaysLinkToLastBuild: false,
                       keepAll: true,
-                      reportDir: reportDir,
+                      reportDir: "redirect_links",
                       reportFiles: reportFiles,
                       // TODO: custom reportName (issues with escaping)
                       reportName: reportName]
