@@ -61,7 +61,7 @@ def execute(
                 "UMS_ENV_LABEL=${env_label}", "UMS_TEST_GROUPS=${test_groups.join(',')}"
             ]) {
                 sh """
-                    run_ums_tests.sh >> ../tests.log 2>&1
+                    run_ums_tests.sh
                 """
             }
         }
