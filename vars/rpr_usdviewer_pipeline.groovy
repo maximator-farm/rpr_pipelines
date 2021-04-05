@@ -187,7 +187,7 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
-            timeout(time: "25", unit: "MINUTES") {
+            timeout(time: "40", unit: "MINUTES") {
                 getViewerTool(osName, options)
             }
         }
@@ -426,7 +426,7 @@ def executeBuildWindows(Map options) {
                     set PYTHONPATH=%INSTALL_PREFIX_DIR%\\lib\\python;%INSTALL_PREFIX_DIR%\\lib;%INSTALL_PREFIX_DIR%\\lib\\python\\pxr\\Usdviewq\\HdRPRPlugin\\python
 
                     pyinstaller %CD%\\RPRViewer\\tools\\usdview_windows.spec --noconfirm --clean --distpath %PACKAGE_PATH% ^
-                        --workpath %INSTALL_PREFIX_DIR%\\build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                        --workpath ${env.WORKSPACE}\\installer_build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                         
                     XCOPY %PACKAGE_PATH%\\RPRViewer\\hdrpr\\lib\\* %PACKAGE_PATH%\\RPRViewer\\ /Y
                 """
@@ -918,7 +918,7 @@ def call(String projectBranch = "",
                         testsPackage: testsPackage,
                         BUILD_TIMEOUT: 120,
                         TEST_TIMEOUT: 45,
-                        ADDITIONAL_XML_TIMEOUT: 15,
+                        ADDITIONAL_XML_TIMEOUT: 40,
                         NON_SPLITTED_PACKAGE_TIMEOUT: 45,
                         DEPLOY_TIMEOUT: 45,
                         tests: tests,
