@@ -55,9 +55,15 @@ def execute(
     envs.each { env_label ->
         println("[INFO] START Environment tests execution")
         withCredentials([usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')]) {
-            sh """
-                sudo sh run_ums_tests.sh ${umsURL} ${UMS_USER} ${UMS_PASSWORD} ${JOB_ID} ${BUILD_ID} ${env_label} ${test_groups.join(',')}>> ../tests.log 2>&1
-            """
+            context.withEnv(["UMS_URL=${umsURL}",
+                "UMS_USER=${UMS_USER}", "UMS_PASSWORD=${UMS_PASSWORD}",
+                "UMS_BUILD_ID=${BUILD_ID}", "UMS_JOB_ID=${JOB_ID}",
+                "UMS_ENV_LABEL=${env_label}",
+            ]) {
+                sh """
+                    sudo sh run_ums_tests.sh ${test_groups.join(',')}>> ../tests.log 2>&1
+                """
+            }
         }
     }
     println("[INFO] END Tests execution")
