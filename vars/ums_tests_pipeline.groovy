@@ -58,10 +58,10 @@ def execute(
             context.withEnv(["UMS_URL=${umsURL}",
                 "UMS_USER=${UMS_USER}", "UMS_PASSWORD=${UMS_PASSWORD}",
                 "UMS_BUILD_ID=${BUILD_ID}", "UMS_JOB_ID=${JOB_ID}",
-                "UMS_ENV_LABEL=${env_label}",
+                "UMS_ENV_LABEL=${env_label}", "UMS_TEST_GROUPS=${test_groups.join(',')}"
             ]) {
                 sh """
-                    sudo sh run_ums_tests.sh ${test_groups.join(',')}>> ../tests.log 2>&1
+                    sudo sh run_ums_tests.sh >> ../tests.log 2>&1
                 """
             }
         }
