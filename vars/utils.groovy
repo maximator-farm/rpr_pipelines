@@ -118,9 +118,9 @@ class utils {
         self.dir("redirect_links") {
             reportFiles.split(",").each { reportFile ->
                 if (self.isUnix()) {
-                    self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${reportLinkBase}${reportDir}/${reportFile}\" \".\" \"${reportFile}\"")
+                    self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\" \".\" \"${reportFile.trim()}\"")
                 } else {
-                    self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${reportLinkBase}${reportDir}/${reportFile}\"  \".\" \"${reportFile}\"")
+                    self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\"  \".\" \"${reportFile.trim()}\"")
                 }
             }
         }
