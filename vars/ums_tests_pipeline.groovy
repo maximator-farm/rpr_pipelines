@@ -3,6 +3,7 @@ import universe.*
 
 
 @Field final String PRODUCT_NAME = "UMS+Tests"
+@Field UniverseClient client = null
 
 
 /**
@@ -17,7 +18,6 @@ def execute(
     List envs,
     List test_groups
 ) {
-    def client = null
     def umsURL = null
 
     withCredentials([string(credentialsId: "devTestUmsURL", variable: "TEST_UMS_URL"),
@@ -79,14 +79,22 @@ def execute(
 def call(
     String testsBranch
 ) {
+    try {
+        node("!UMS && ( OSX || Ubuntu)") {
+            stage("Execute Tests") {
+                execute(
+                    testsBranch,
+                    ["Windows", "Ubuntu"],
+                    ["Smoke", "Example"]
+                )
 
-    node("!UMS && ( OSX || Ubuntu)") {
-        stage("Execute Tests") {
-            execute(
-                testsBranch,
-                ["Windows", "Ubuntu"],
-                ["Smoke", "Example"]
-            )
+            }
         }
+    } catch(e) {
+        println(e.toString())
+        println(e.getMessage())
+        throw e
+    } finally {
+        client.changeStatus(currentBuild.result)
     }
 }
