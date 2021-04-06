@@ -59,8 +59,8 @@ def execute(
                 "UMS_ENV_LABEL=${env_label}", "UMS_TEST_GROUPS=${test_groups.join(',')}"
             ]) {
                 sh """
-                    sudo python3 -m pip install pytest
-                    sudo sh ./run_ums_tests.sh
+                    python3 -m pip install pytest
+                    ./run_ums_tests.sh
                 """
             }
         }
