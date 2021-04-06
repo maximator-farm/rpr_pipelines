@@ -53,7 +53,7 @@ def execute(
     envs.each { env_label ->
         println("[INFO] START Environment tests execution")
         withCredentials([usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')]) {
-            context.withEnv(["UMS_URL=${umsURL}",
+            withEnv(["UMS_URL=${umsURL}",
                 "UMS_USER=${UMS_USER}", "UMS_PASSWORD=${UMS_PASSWORD}",
                 "UMS_BUILD_ID=${BUILD_ID}", "UMS_JOB_ID=${JOB_ID}",
                 "UMS_ENV_LABEL=${env_label}", "UMS_TEST_GROUPS=${test_groups.join(',')}"
