@@ -45,7 +45,7 @@ def execute(
     println("[INFO] JOB_ID = ${JOB_ID}")
 
     cleanWS("Ubuntu")
-    checkoutScm(branchName: testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_launcher.git")
+    checkoutScm(branchName: testsBranch, repositoryUrl: "https://github.com/luxteam/jobs_launcher.git")
 
     client.stage("Tests", "begin");
 
