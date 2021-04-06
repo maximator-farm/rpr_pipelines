@@ -91,29 +91,36 @@ class utils {
         if (self.isUnix()) {
             self.sh(script: "zip -r report.zip ${reportDir} -x '*@tmp*'")
         } else {
-            self.bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " report.zip '${reportDir}' -xr!*@tmp*")
+            self.bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " report.zip ${reportDir} -xr!*@tmp*")
         }
 
-        String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/"
+        String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
 
-        self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
+        String reportLinkBase
+
+        self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
+            self.string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
             // send report to NAS
             self.uploadFiles("report.zip", remotePath)
 
-            // unpack report on NAS
+            // unzip report on NAS
             if (self.isUnix()) {
-                self.sh(script: '$CIS_TOOLS/unstash.sh $REMOTE_HOST' + " ${remotePath}report.zip ${remotePath} true")
+                self.sh(script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " ${remotePath}report.zip ${remotePath} true")
             } else {
-                self.bat(script: '%CIS_TOOLS%\\unstash.bat %REMOTE_HOST%' + " ${remotePath}report.zip ${remotePath} true")
+                self.bat(script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " ${remotePath}report.zip ${remotePath} true")
             }
+
+            reportLinkBase = self.REMOTE_URL
         }
 
-        dir("redirect_links") {
-            reportFiles.split(",")).each { reportFile ->
+        reportLinkBase = "${reportLinkBase}/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
+
+        self.dir("redirect_links") {
+            reportFiles.split(",").each { reportFile ->
                 if (self.isUnix()) {
-                    self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${remotePath}${reportDir}/${reportFile}\" \".\" \"${reportFile}\"")
+                    self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${reportLinkBase}${reportDir}/${reportFile}\" \".\" \"${reportFile}\"")
                 } else {
-                    self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${remotePath}${reportDir}\\${reportFile}\"  \".\" \"${reportFile}\"")
+                    self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${reportLinkBase}${reportDir}/${reportFile}\"  \".\" \"${reportFile}\"")
                 }
             }
         }
