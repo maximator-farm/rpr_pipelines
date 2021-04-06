@@ -60,7 +60,7 @@ def execute(
             ]) {
                 sh """
                     python3 -m pip install pytest
-                    ./run_ums_tests.sh
+                    sh ./run_ums_tests.sh
                 """
             }
         }
