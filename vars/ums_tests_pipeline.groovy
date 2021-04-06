@@ -81,11 +81,12 @@ def call(
 ) {
 
     node("UMS") {
-        execute(
-            testsBranch,
-            ["Windows", "Ubuntu"],
-            ["Smoke", "Example"]
-        )
-
+        stage("Execute Tests") {
+            execute(
+                testsBranch,
+                ["Windows", "Ubuntu"],
+                ["Smoke", "Example"]
+            )
+        }
     }
 }
