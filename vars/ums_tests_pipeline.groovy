@@ -59,7 +59,7 @@ def execute(
                 "UMS_ENV_LABEL=${env_label}", "UMS_TEST_GROUPS=${test_groups.join(',')}"
             ]) {
                 sh """
-                    sudo ./run_ums_tests.sh
+                    sudo sh ./run_ums_tests.sh
                 """
             }
         }
