@@ -35,7 +35,7 @@ def execute(
 
     println("[INFO] START Create build")
     withCredentials([string(credentialsId: "devTestFrontUmsURL", variable: "TEST_UMS_FRONT_URL")]) {
-        universeClientProd.createBuild(envs, test_groups, false, null, TEST_UMS_FRONT_URL, "test")
+        client.createBuild(envs, test_groups, false, null, TEST_UMS_FRONT_URL, "test")
     }
     println("[INFO] END Create build")
 
