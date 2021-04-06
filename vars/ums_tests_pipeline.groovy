@@ -18,6 +18,7 @@ def execute(
     List test_groups
 ) {
     def client = null
+    def umsURL = null
 
     withCredentials([string(credentialsId: "devTestUmsURL", variable: "TEST_UMS_URL"),
             string(credentialsId: "imageServiceURL", variable: "IS_URL")]) {
@@ -54,7 +55,7 @@ def execute(
         println("[INFO] START Environment tests execution")
         withCredentials([usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD')]) {
             withEnv(["UMS_URL=${umsURL}",
-                "UMS_USER=${UMS_USER}", "UMS_PASSWORD=${UMS_PASSWORD}",
+                "UMS_LOGIN=${UMS_USER}", "UMS_PASSWORD=${UMS_PASSWORD}",
                 "UMS_BUILD_ID=${BUILD_ID}", "UMS_JOB_ID=${JOB_ID}",
                 "UMS_ENV_LABEL=${env_label}", "UMS_TEST_GROUPS=${test_groups.join(',')}"
             ]) {
