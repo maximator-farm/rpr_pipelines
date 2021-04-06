@@ -77,7 +77,7 @@ def execute(
 * @param testsBranch jobs_launcher branch
 */
 def call(
-    String testsBranch,
+    String testsBranch
 ) {
 
     node("UMS") {
