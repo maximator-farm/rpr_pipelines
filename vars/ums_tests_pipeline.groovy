@@ -19,8 +19,6 @@ def execute(
 ) {
     def client = null
 
-    universeClientProd = new UniverseClient(this, universeURLProd, env, imageServiceURL, PRODUCT_NAME);
-
     withCredentials([string(credentialsId: "devTestUmsURL", variable: "TEST_UMS_URL"),
             string(credentialsId: "imageServiceURL", variable: "IS_URL")]) {
 
