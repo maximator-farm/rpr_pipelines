@@ -187,7 +187,7 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PACKAGE) {
-            timeout(time: "25", unit: "MINUTES") {
+            timeout(time: "40", unit: "MINUTES") {
                 getViewerTool(osName, options)
             }
         }
@@ -426,7 +426,7 @@ def executeBuildWindows(Map options) {
                     set PYTHONPATH=%INSTALL_PREFIX_DIR%\\lib\\python;%INSTALL_PREFIX_DIR%\\lib;%INSTALL_PREFIX_DIR%\\lib\\python\\pxr\\Usdviewq\\HdRPRPlugin\\python
 
                     pyinstaller %CD%\\RPRViewer\\tools\\usdview_windows.spec --noconfirm --clean --distpath %PACKAGE_PATH% ^
-                        --workpath %INSTALL_PREFIX_DIR%\\build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                        --workpath ${env.WORKSPACE}\\installer_build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                         
                     XCOPY %PACKAGE_PATH%\\RPRViewer\\hdrpr\\lib\\* %PACKAGE_PATH%\\RPRViewer\\ /Y
                 """
@@ -883,7 +883,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_WX9100,AMD_RX5700XT;OSX',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;OSX',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
