@@ -79,7 +79,7 @@ def call(
     String testsBranch
 ) {
 
-    node("!UMS") {
+    node("!UMS && ( OSX || Ubuntu)") {
         stage("Execute Tests") {
             execute(
                 testsBranch,
