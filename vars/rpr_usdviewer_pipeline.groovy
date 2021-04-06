@@ -114,7 +114,7 @@ def buildRenderCache(String osName, String toolVersion, Map options, Boolean cle
 
 
 def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
-    dir("script") {
+    dir("scripts") {
         switch (osName) {
             case "Windows":
                 bat """
@@ -154,7 +154,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                 case "Windows":
                     dir('scripts') {
                         bat """
-                            run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                            run.bat \"${testsPackageName}\" \"${testsNames}\" 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                         """
                     }
                     break
@@ -250,8 +250,6 @@ def executeTests(String osName, String asicName, Map options) {
                     }
                 }
                 dir("scripts") {
-                    utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_clean_${options.currentTry}")
-                    archiveArtifacts artifacts: "${options.stageName}_clean_${options.currentTry}/*.jpg", allowEmptyArchive: true
                     String cacheImgPath = "./${options.stageName}_clean_${options.currentTry}/RESULT.jpg"
                     if(!fileExists(cacheImgPath)){
                         throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
@@ -259,9 +257,6 @@ def executeTests(String osName, String asicName, Map options) {
                 }
             }
         }
-
-        //Do not implemented yet
-        return
 
         String REF_PATH_PROFILE="/volume1/Baselines/usd_inventor_autotests/${asicName}-${osName}"
         options.REF_PATH_PROFILE = REF_PATH_PROFILE
@@ -327,9 +322,9 @@ def executeTests(String osName, String asicName, Map options) {
             }
             if (stashResults) {
                 dir('Work') {
-                    if (fileExists("Results/USDViewer/session_report.json")) {
+                    if (fileExists("Results/Inventor/session_report.json")) {
 
-                        def sessionReport = readJSON file: 'Results/USDViewer/session_report.json'
+                        def sessionReport = readJSON file: 'Results/Inventor/session_report.json'
                         if (options.sendToUMS) {
                             options.universeManager.finishTestsStage(osName, asicName, options)
                         }
@@ -376,6 +371,11 @@ def executeTests(String osName, String asicName, Map options) {
                     throw new ExpectedExceptionWrapper(NotificationConfiguration.FAILED_TO_SAVE_RESULTS, e)
                 }
             }
+        }
+        if (!options.executeTestsFinished) {
+            bat """
+                shutdown /r /f /t 0
+            """
         }
     }
 }
@@ -726,7 +726,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_usdviewer.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_inventor.git")
             }
 
             List lostStashes = []
@@ -769,9 +769,15 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         if (options.sendToUMS) {
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
-                        bat """
-                            build_reports.bat ..\\summaryTestResults "USDViewer" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
-                        """
+                        if (options['isPreBuilt']) {
+                            bat """
+                                build_reports.bat ..\\summaryTestResults "USDViewer" "PreBuilt" "PreBuilt" "PreBuilt"
+                            """
+                        } else {
+                            bat """
+                                build_reports.bat ..\\summaryTestResults "USDViewer" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
+                            """
+                        }                        
                     }
                 }
             } catch (e) {
@@ -877,7 +883,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_WX9100,AMD_RX5700XT;OSX',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;OSX',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
@@ -917,8 +923,8 @@ def call(String projectBranch = "",
                         DEPLOY_FOLDER: "USDViewer",
                         testsPackage: testsPackage,
                         BUILD_TIMEOUT: 120,
-                        TEST_TIMEOUT: 45,
-                        ADDITIONAL_XML_TIMEOUT: 40,
+                        TEST_TIMEOUT: 90,
+                        ADDITIONAL_XML_TIMEOUT: 15,
                         NON_SPLITTED_PACKAGE_TIMEOUT: 45,
                         DEPLOY_TIMEOUT: 45,
                         tests: tests,
@@ -938,7 +944,7 @@ def call(String projectBranch = "",
                 options["universeManager"] = manager
             }
         }
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
         println e.toString()
