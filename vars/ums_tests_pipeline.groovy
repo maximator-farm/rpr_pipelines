@@ -25,7 +25,7 @@ def execute(
         umsURL = TEST_UMS_URL
         imageServiceURL = IS_URL
         println("[INFO] START Create UMS client")
-        client = new UniverseClient(this, umsURL, env, imageServiceURL, productName)
+        client = new UniverseClient(this, umsURL, env, imageServiceURL, PRODUCT_NAME)
         println("[INFO] END Create UMS client")
     }
 
