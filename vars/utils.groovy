@@ -86,59 +86,72 @@ class utils {
         }
     }
 
-    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "") {
-        // zip report
-        if (self.isUnix()) {
-            self.sh(script: "zip -r report.zip ${reportDir} -x '*@tmp*'")
-        } else {
-            self.bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " report.zip ${reportDir} -xr!*@tmp*")
-        }
+    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false) {
+        Map params
 
-        String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
-
-        String reportLinkBase
-
-        self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
-            self.string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
-            // send report to NAS
-            self.uploadFiles("report.zip", remotePath)
-
-            // unzip report on NAS
+        if (publishOnNAS) {
+            // zip report
             if (self.isUnix()) {
-                self.sh(script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " ${remotePath}report.zip ${remotePath} true")
+                self.sh(script: "zip -r report.zip ${reportDir} -x '*@tmp*'")
             } else {
-                self.bat(script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " ${remotePath}report.zip ${remotePath} true")
+                self.bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " report.zip ${reportDir} -xr!*@tmp*")
             }
 
-            reportLinkBase = self.REMOTE_URL
-        }
+            String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
 
-        reportLinkBase = "${reportLinkBase}/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
-        
-        self.dir("redirect_links") {
-            reportFiles.split(",").each { reportFile ->
+            String reportLinkBase
+
+            self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
+                self.string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
+                // send report to NAS
+                self.uploadFiles("report.zip", remotePath)
+
+                // unzip report on NAS
                 if (self.isUnix()) {
-                    self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                    self.sh(script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " ${remotePath}report.zip ${remotePath} true")
                 } else {
-                    self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                    self.bat(script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " ${remotePath}report.zip ${remotePath} true")
+                }
+
+                reportLinkBase = self.REMOTE_URL
+            }
+
+            reportLinkBase = "${reportLinkBase}/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
+            
+            self.dir("redirect_links") {
+                reportFiles.split(",").each { reportFile ->
+                    if (self.isUnix()) {
+                        self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                    } else {
+                        self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                    }
                 }
             }
-        }
-        
-        def updateReportFiles = []
-        reportFiles.split(",").each() { reportFile ->
-            updateReportFiles << reportFile.trim().replace("/", "_")
-        }
-        
-        updateReportFiles = updateReportFiles.join(", ")
+            
+            def updateReportFiles = []
+            reportFiles.split(",").each() { reportFile ->
+                updateReportFiles << reportFile.trim().replace("/", "_")
+            }
+            
+            updateReportFiles = updateReportFiles.join(", ")
 
-        Map params = [allowMissing: false,
-                      alwaysLinkToLastBuild: false,
-                      keepAll: true,
-                      reportDir: "redirect_links",
-                      reportFiles: updateReportFiles,
-                      // TODO: custom reportName (issues with escaping)
-                      reportName: reportName]
+            params = [allowMissing: false,
+                          alwaysLinkToLastBuild: false,
+                          keepAll: true,
+                          reportDir: "redirect_links",
+                          reportFiles: updateReportFiles,
+                          // TODO: custom reportName (issues with escaping)
+                          reportName: reportName]
+        } else {
+            params = [allowMissing: false,
+                          alwaysLinkToLastBuild: false,
+                          keepAll: true,
+                          reportDir: reportDir,
+                          reportFiles: reportFiles,
+                          // TODO: custom reportName (issues with escaping)
+                          reportName: reportName]
+        }
+
         if (reportTitles) {
             params['reportTitles'] = reportTitles
         }
