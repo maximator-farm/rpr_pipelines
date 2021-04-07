@@ -206,10 +206,8 @@ def main(String PCs, Map options) {
 }
 
 def startRender(osName, deviceName, renderDevice, options) {
-	node("RenderService || Windows && Builder") {
-		stage("Send Build Number") {
-			render_service_send_build_number(currentBuild.number, options.id, options.django_url)
-		}
+	stage("Send Build Number") {
+		render_service_send_build_number(currentBuild.number, options.id, options.django_url)
 	}
 
 	def labels = "${osName} && RenderService && ${renderDevice}"
@@ -260,10 +258,8 @@ def startRender(osName, deviceName, renderDevice, options) {
 	if (!successfullyDone) {
 		if (nodesCount == 0) {
 			// master machine can't access necessary nodes. Run notification script on any machine
-			node("RenderService || Windows && Builder") {
-				stage("Notify about failure") {
-					render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, 'No machine with specified configuration')
-				}
+			stage("Notify about failure") {
+				render_service_send_render_status('Failure', options.id, options.django_url, currentBuild.number, 'No machine with specified configuration')
 			}
 		}
 		throw new Exception("Job was failed by all used nodes!")

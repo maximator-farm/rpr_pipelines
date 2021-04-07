@@ -3,7 +3,8 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 def executeConfiguration(osName, attemptNum, Map options) {
     currentBuild.result = 'SUCCESS'
 
-    String tool = options['tool']
+    String tool = options['tool'].split(':')[0].trim()
+    String version = options['tool'].split(':')[1].trim()
     String scene_name = options['sceneName']
     String scene_user = options['sceneUser']
     String fail_reason = "Unknown"
@@ -30,7 +31,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
 
                 // download and install plugin
                 if (options["pluginLink"]) {
-                    render_service_install_plugin(options["pluginLink"], options["pluginHash"], tool, "2.83", options.id, options.django_url)
+                    render_service_install_plugin(options["pluginLink"], options["pluginHash"], tool, version, options.id, options.django_url)
                 }
 
                 // download scene, check if it is already downloaded
@@ -70,24 +71,48 @@ def executeConfiguration(osName, attemptNum, Map options) {
                 try {
                     switch(tool) {
                         case 'Blender':
-                            // copy necessary scripts for render and start read process
-                            bat """
-                                copy "render_service_scripts\\scene_scanning\\read_blender_configuration.py" "."
-                                copy "render_service_scripts\\scene_scanning\\write_blender_configuration.py" "."
-                                copy "render_service_scripts\\scene_scanning\\launch_blender.py" "."
-                            """
-                            // Launch render
-                            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-                                python3("launch_blender.py --tool \"2.91\" --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --action \"${options.action}\" --configuration_options \"${options.configurationOptions}\" --options_structure \"${options.optionsStructure}\" ")
+                            if (options["id_render"] && options["django_render_url"]) {
+                                try {
+                                    bat """
+                                        copy "render_service_scripts\\blender_render.py" "."
+                                        copy "render_service_scripts\\launch_blender.py" "."
+                                    """
+                                    // Launch render
+                                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+                                        python3("launch_blender.py --tool ${version} --django_ip \"${options.django_render_url}/\" --scene_name \"${scene_name}\" --id ${options.id_render} --min_samples 16 --max_samples 32 --noise_threshold 0.1 --height 150 --width 150 --startFrame 1 --endFrame 1 --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout 120 ")
+                                    }
+                                } catch(FlowInterruptedException e) {
+                                    throw e
+                                } catch(e) {
+                                    fail_reason = "Failed sample render. Maybe incorrect scene or node problems. Check logs."
+                                    throw e
+                                }
                             }
-                            if (options['action'] == 'Write') {
-                                String updatedSceneHash = sha1 scene_name
+                            try {
+                                // copy necessary scripts for render and start read process
                                 bat """
-                                    if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
-                                    copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${updatedSceneHash}"
+                                    copy "render_service_scripts\\scene_scanning\\read_blender_configuration.py" "."
+                                    copy "render_service_scripts\\scene_scanning\\write_blender_configuration.py" "."
+                                    copy "render_service_scripts\\scene_scanning\\launch_blender_scan.py" "."
                                 """
+                                // Launch render
+                                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+                                    python3("launch_blender_scan.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --action \"${options.action}\" --configuration_options \"${options.configurationOptions}\" --options_structure \"${options.optionsStructure}\" ")
+                                }
+                                if (options['action'] == 'Write') {
+                                    String updatedSceneHash = sha1 scene_name
+                                    bat """
+                                        if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
+                                        copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${updatedSceneHash}"
+                                    """
+                                }
+                                break;
+                            } catch(FlowInterruptedException e) {
+                                throw e
+                            } catch(e) {
+                                fail_reason = "Failed configuration" 
+                                throw e
                             }
-                            break;
                     }
 
                 } catch(FlowInterruptedException e) {
@@ -97,7 +122,6 @@ def executeConfiguration(osName, attemptNum, Map options) {
                         mkdir "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
                         copy "*" "..\\..\\RenderServiceStorage\\failed_${scene_name}_${id}_${currentBuild.number}"
                     """
-                    fail_reason = "Unknown" 
                     throw e
                 }
             } catch(FlowInterruptedException e) {
@@ -129,9 +153,10 @@ def main(Map options) {
 }
 
 def startConfiguration(osName, options) {
-    node("RenderService || Windows && Builder") {
-        stage("Send Build Number") {
-            render_service_send_build_number(currentBuild.number, options.id, options.django_url)
+    stage("Send Build Number") {
+        render_service_send_build_number(currentBuild.number, options.id, options.django_url)
+        if (options["id_render"] && options["django_render_url"]) {
+            render_service_send_build_number(currentBuild.number, options.id_render.toString(), options.django_render_url)
         }
     }
     
@@ -173,9 +198,7 @@ def startConfiguration(osName, options) {
     }
 
     if (!successfullyDone) {
-        node("RenderService") {
-            render_service_send_render_status('Failure', options.id, options.django_url)
-        }
+        render_service_send_render_status('Failure', options.id, options.django_url)
         throw new Exception("Job was failed by all used nodes!")
     } else {
         currentBuild.result = 'SUCCESS'
@@ -188,7 +211,14 @@ def getNodesCount(labels) {
 
     return nodesCount
 }
-    
+
+@NonCPS
+def parseOptions(String options) {
+	def jsonSlurper = new groovy.json.JsonSlurperClassic()
+
+	return jsonSlurper.parseText(options)
+}
+
 def call(String id = '',
     String tool = '',
     String scene = '',
@@ -202,16 +232,18 @@ def call(String id = '',
     String sceneHash = '',
     String pluginHash = '',
     String configurationOptions = '',
-    String optionsStructure = ''
+    String optionsStructure = '',
+    String sampleJobParams = ''
     ) {
     String PRJ_ROOT = 'RenderServiceSceneConfiguration'
     String PRJ_NAME = 'RenderServiceSceneConfiguration' 
 
     configurationOptions = configurationOptions.replace('\"', '\"\"')
     optionsStructure = optionsStructure.replace('\"', '\"\"')
+    def sampleJobParamsMap = parseOptions(sampleJobParams)
 
     main([
-        id:id,
+        id: id,
         PRJ_NAME: PRJ_NAME,
         PRJ_ROOT: PRJ_ROOT,
         tool: tool,
@@ -226,6 +258,8 @@ def call(String id = '',
         sceneHash: sceneHash,
         pluginHash: pluginHash,
         configurationOptions: configurationOptions,
-        optionsStructure: optionsStructure
+        optionsStructure: optionsStructure,
+        id_render: sampleJobParamsMap.id,
+        django_render_url: sampleJobParamsMap.django_url
         ])
     }

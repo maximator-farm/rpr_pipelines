@@ -8,11 +8,9 @@ def call(String command)
     }
     else
     {
-        withEnv(["PATH=c:\\python35\\;c:\\python35\\scripts\\;${PATH}"]) {
+        withEnv(["PATH+PYTHON_PATH=c:\\python35\\;c:\\python35\\scripts\\;"]) {
             ret = bat(
-                script: """
-                python ${command}
-                """,
+                script: "python " + command,
                 returnStdout: true
             )
         }
