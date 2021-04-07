@@ -5,11 +5,14 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows(String osName, Map options)
 {
+    String bzipKey = "-DBZIP2_INCLUDE_DIR='C:\\Program Files (x86)\\GnuWin32\\include' -DBZIP2_LIBRARIES='C:\\Program Files (x86)\\GnuWin32\\lib\\bzip2.lib'"
+    String boostKey = "-DBoost_INCLUDE_DIR=C:\\local\\boost_1_69_0 -DBoost_LIB_DIR=C:\\local\\boost_1_69_0\\lib64-msvc-14.1"
+    String sqliteKey = "-DMIOPEN_ENABLE_SQLITE=OFF -DMIOPEN_ENABLE_SQLITE_KERN_CACHE=OFF"
     bat """
-        set msbuild="C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe" >> ..\\${STAGE_NAME}.log 2>&1
+        set msbuild="C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe" >> ..\\${STAGE_NAME}.log 2>&1
         mkdir build
         cd build
-        cmake -G "Visual Studio 15 2017 Win64" -DRIF_BUILD=1 -DMIOPEN_BACKEND=OpenCL -DBoost_INCLUDE_DIR=C:/local/boost_1_69_0 -DBoost_LIB_DIR=C:/local/boost_1_69_0/lib64-msvc-14.1 .. >> ..\\${STAGE_NAME}.log 2>&1
+        cmake -G "Visual Studio 16 2019" -DRIF_BUILD=1 -DMIOPEN_BACKEND=OpenCL ${bzipKey} ${boostKey} ${sqliteKey} .. >> ..\\${STAGE_NAME}.log 2>&1
         %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.log 2>&1
     """
 
@@ -37,7 +40,7 @@ def executeBuildUbuntu(String osName, Map options)
         export BOOST_ROOT=/usr/local
         mkdir build
         cd build
-        cmake -DRIF_BUILD=1 -DMIOPEN_BACKEND=OpenCL .. >> ../${STAGE_NAME}.log 2>&1
+        cmake -DRIF_BUILD=1 -DMIOPEN_BACKEND=OpenCL -DMIOPEN_ENABLE_SQLITE=OFF -DMIOPEN_ENABLE_SQLITE_KERN_CACHE=OFF .. >> ../${STAGE_NAME}.log 2>&1
         cmake --build . --config Release >> ../${STAGE_NAME}.log 2>&1
     """
  
