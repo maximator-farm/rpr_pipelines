@@ -114,22 +114,29 @@ class utils {
         }
 
         reportLinkBase = "${reportLinkBase}/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
-
+        
         self.dir("redirect_links") {
             reportFiles.split(",").each { reportFile ->
                 if (self.isUnix()) {
-                    self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\" \".\" \"${reportFile.trim()}\"")
+                    self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
                 } else {
-                    self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\"  \".\" \"${reportFile.trim()}\"")
+                    self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
                 }
             }
         }
+        
+        def updateReportFiles = []
+        reportFiles.split(",").each() { reportFile ->
+            updateReportFiles << reportFile.trim().replace("/", "_")
+        }
+        
+        updateReportFiles = updateReportFiles.join(", ")
 
         Map params = [allowMissing: false,
                       alwaysLinkToLastBuild: false,
                       keepAll: true,
                       reportDir: "redirect_links",
-                      reportFiles: reportFiles,
+                      reportFiles: updateReportFiles,
                       // TODO: custom reportName (issues with escaping)
                       reportName: reportName]
         if (reportTitles) {

@@ -541,7 +541,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         }
                     }
                 }
-                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles}", "Failures Report", "${STAGE_NAME}_failures")
+                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^, ', '')}", "Failures Report", "${STAGE_NAME}_failures")
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
