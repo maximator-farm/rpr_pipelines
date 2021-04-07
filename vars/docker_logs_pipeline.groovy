@@ -2,15 +2,17 @@
 * Pipeline to get log file from container logs output
 *
 * @param nodeName Jenkins node label
-* @param containerName Docker container name
+* @param containerNames List of docker container names
 */
 def call(
     String nodeName,
-    String containerName
+    List containerNames
 ) {
     node(nodeName) {
         stage("Logs getting") {
-            sh "docker container logs ${containerName} 2>&1 >> ${containerName}.log";
+            containerNames.each{
+                sh "docker container logs ${it} 2>&1 >> ${it}.log";
+            }
         }
     }
 }
