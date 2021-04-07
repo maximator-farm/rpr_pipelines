@@ -3,8 +3,8 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 def executeConvert(osName, gpuName, attemptNum, Map options) {
 	currentBuild.result = 'SUCCESS'
 	
-	String tool = options['Tool'].split(':')[0].trim()
-	String version = options['Tool'].split(':')[1].trim()
+	String tool = options['tool'].split(':')[0].trim()
+	String version = options['tool'].split(':')[1].trim()
 	String scene_name = options['sceneName']
 	String scene_user = options['sceneUser']
 	String fail_reason = "Unknown"
@@ -33,8 +33,8 @@ def executeConvert(osName, gpuName, attemptNum, Map options) {
 				}
 
 				// download and install plugin
-				if (options["PluginLink"]) {
-					render_service_install_plugin(options["PluginLink"], options["pluginHash"], tool, version, options.id, options.django_url)
+				if (options["pluginLink"]) {
+					render_service_install_plugin(options["pluginLink"], options["pluginHash"], tool, version, options.id, options.django_url)
 				}
 
 				// download scene, check if it is already downloaded
@@ -55,7 +55,7 @@ def executeConvert(osName, gpuName, attemptNum, Map options) {
 						print("[INFO] Scene wasn't found in Render Service Storage on this PC. Downloading it.")
 						withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 							bat """
-								curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.Scene}"
+								curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.scene}"
 							"""
 						}
 
@@ -158,7 +158,7 @@ def main(String PCs, Map options) {
 		String renderDevice = ""
 		if (deviceName == "ANY") {
 			// Maya (Plugin):Version -> PluginMaya
-			String[] toolParts = options['Tool'].split(':')[0].trim().split(' \\(')
+			String[] toolParts = options['tool'].split(':')[0].trim().split(' \\(')
 			String tool = toolParts[1].replace(')', '') + toolParts[0]
 			renderDevice = tool
 		} else {
@@ -183,7 +183,55 @@ def startConvert(osName, deviceName, renderDevice, options) {
 	def maxAttempts = "${options.maxAttempts}".toInteger()
 	def testTasks = [:]
 	def currentLabels = labels
-	for (int attemptNum = 1; attemptNum <= maxAttempts && attemptNum <= nodesCount; attemptNum++) {
+
+	int attemptNum = 0
+    
+    def nodes = nodesByLabel label: labels, offline: false
+
+	for (nodeName in nodes) {
+		if (utils.isNodeIdle(nodeName)) {
+			println("Checking the ${nodeName} storage for a scene")
+			node(nodeName) {
+				stage("Storage pre-check") {
+					ws("WS/${options.PRJ_NAME}_Conversion") {
+						try {
+							Boolean sceneExists = fileExists "..\\..\\RenderServiceStorage\\${options.sceneUser}\\${options.sceneHash}"
+							if (sceneExists) {
+								print("[INFO] Scene exists on this PC. Trying to execute the job")
+								stage("Conversion") {
+									timeout(time: 65, unit: 'MINUTES') {
+										attemptNum += 1
+										executeConvert(osName, deviceName, attemptNum, options)
+										successfullyDone = true
+									}
+								}
+							} else {
+								print("[INFO] Scene wasn't found during pre-check")
+							}
+						} catch(FlowInterruptedException e) {
+							throw e
+						} catch (e) {
+							rs_utils.handleException(this, e, nodeName)
+							//Exclude failed node name
+							currentLabels = currentLabels + " && !" + nodeName
+							println(currentLabels)
+						}
+						if (successfullyDone || attemptNum == maxAttempts || attemptNum == nodesCount) {
+							// Process finished - set attempt number as 0
+							render_service_send_render_attempt(0, options.id, options.django_url)
+						}
+					}
+				}
+			}
+
+			if (successfullyDone) {
+				break
+			}
+		}
+	}
+
+
+	for (attemptNum += 1; attemptNum <= maxAttempts && attemptNum <= nodesCount && !successfullyDone; attemptNum++) {
 		def currentNodeName = ""
 
 		echo "Scheduling Convert ${osName}:${deviceName}. Attempt #${attemptNum}"
@@ -199,6 +247,7 @@ def startConvert(osName, deviceName, renderDevice, options) {
 							} catch(FlowInterruptedException | InterruptedException e) {
 								throw e
 							} catch (e) {
+								rs_utils.handleException(this, e, currentNodeName)
 								//Exclude failed node name
 								currentLabels = currentLabels + " && !" + currentNodeName
 								println(currentLabels)
@@ -213,11 +262,7 @@ def startConvert(osName, deviceName, renderDevice, options) {
 			}
 		}
 
-		parallel testTasks	
-		
-		if (successfullyDone) {
-			break
-		}
+		parallel testTasks
 	}
 
 	if (!successfullyDone) {
@@ -240,9 +285,9 @@ def getNodesCount(labels) {
 	return nodesCount
 }
 	
-def call(String Tool = '',
-	String Scene = '',
-	String PluginLink = '',  
+def call(String tool = '',
+	String scene = '',
+	String pluginLink = '',  
 	String PCs = '',
 	String id = '',
 	String sceneName = '',
@@ -261,9 +306,9 @@ def call(String Tool = '',
 		enableNotifications:false,
 		PRJ_NAME:PRJ_NAME,
 		PRJ_ROOT:PRJ_ROOT,
-		Tool:Tool,
-		Scene:Scene,
-		PluginLink:PluginLink,
+		tool:tool,
+		scene:scene,
+		pluginLink:pluginLink,
 		id:id,
 		sceneName:sceneName,
 		sceneUser:sceneUser,

@@ -167,7 +167,50 @@ def startConfiguration(osName, options) {
     print("Max attempts: ${options.maxAttempts}")
     def maxAttempts = "${options.maxAttempts}".toInteger()
     def currentLabels = labels
-    for (int attemptNum = 1; attemptNum <= maxAttempts && attemptNum <= nodesCount; attemptNum++) {
+    
+    int attemptNum = 0
+    
+    def nodes = nodesByLabel label: labels, offline: false
+    
+    for (nodeName in nodes) {
+        if (utils.isNodeIdle(nodeName)) {
+            println("Checking the ${nodeName} storage for a scene")
+            node(nodeName) {
+                stage("Storage pre-check") {
+                    ws("WS/${options.PRJ_NAME}_Configuration") {
+                        try {
+                            Boolean sceneExists = fileExists "..\\..\\RenderServiceStorage\\${options.sceneUser}\\${options.sceneHash}"
+                            if (sceneExists) {
+                                print("[INFO] Scene exists on this PC. Trying to execute the job")
+                                stage("Configuration") {
+                                    timeout(time: 15, unit: 'MINUTES') {
+                                        attemptNum += 1
+                                        executeConfiguration(osName, attemptNum, options)
+                                        successfullyDone = true
+                                    }
+                                }
+                            } else {
+                                print("[INFO] scene wasn't found during pre-check")
+                            }
+                        } catch(FlowInterruptedException e) {
+                            throw e
+                        } catch (e) {
+                            print e
+                            rs_utils.handleException(this, e, nodeName)
+                            //Exclude failed node name
+                            currentLabels = currentLabels + " && !" + nodeName
+                            println("[INFO] Updated labels: ${currentLabels}")
+                        }
+                    } 
+                }
+            }
+            if (successfullyDone) {
+                break
+            }
+        }
+    }
+
+    for (attemptNum += 1; attemptNum <= maxAttempts && attemptNum <= nodesCount && !successfullyDone; attemptNum++) {
         def currentNodeName = ""
 
         echo "Scheduling Configuration ${osName}. Attempt #${attemptNum}"
@@ -183,6 +226,7 @@ def startConfiguration(osName, options) {
                             throw e
                         } catch (e) {
                             print e
+                            rs_utils.handleException(this, e, currentNodeName)
                             //Exclude failed node name
                             currentLabels = currentLabels + " && !" + currentNodeName
                             println("[INFO] Updated labels: ${currentLabels}")
@@ -190,10 +234,6 @@ def startConfiguration(osName, options) {
                     }
                 }
             }
-        }
-        
-        if (successfullyDone) {
-            break
         }
     }
 

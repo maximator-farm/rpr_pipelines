@@ -3,8 +3,8 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 def executeRender(osName, gpuName, attemptNum, Map options) {
 	currentBuild.result = 'SUCCESS'
 
-	String tool = options['Tool'].split(':')[0].trim()
-	String version = options['Tool'].split(':')[1].trim()
+	String tool = options['tool'].split(':')[0].trim()
+	String version = options['tool'].split(':')[1].trim()
 	String scene_name = options['sceneName']
 	String scene_user = options['sceneUser']
 	String fail_reason = "Unknown"
@@ -33,8 +33,8 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 				}
 
 				// download and install plugin
-				if (options["PluginLink"]) {
-					render_service_install_plugin(options["PluginLink"], options["pluginHash"], tool, version, options.id, options.django_url)
+				if (options["pluginLink"]) {
+					render_service_install_plugin(options["pluginLink"], options["pluginHash"], tool, version, options.id, options.django_url)
 				}
 
 				// download scene, check if it is already downloaded
@@ -55,7 +55,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 						print("[INFO] Scene wasn't found in Render Service Storage on this PC. Downloading it.")
 						withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
 							bat """
-								curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.Scene}"
+								curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.scene}"
 							"""
 						}
 						
@@ -81,7 +81,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_blender.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --height ${options.Height} --width ${options.Width} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_blender.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.minSamples} --max_samples ${options.maxSamples} --noise_threshold ${options.noiseThreshold} --height ${options.height} --width ${options.width} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
@@ -93,7 +93,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_max.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_max.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.minSamples} --max_samples ${options.maxSamples} --noise_threshold ${options.noiseThreshold} --width ${options.width} --height ${options.height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
@@ -106,7 +106,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_maya.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --batchRender ${options.batchRender} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_maya.py --tool ${version} --django_ip \"${options.django_url}/\" --scene_name \"${scene_name}\" --id ${id} --min_samples ${options.minSamples} --max_samples ${options.maxSamples} --noise_threshold ${options.noiseThreshold} --width ${options.width} --height ${options.height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --batchRender ${options.batchRender} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
@@ -118,7 +118,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_maya_redshift.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --scene_name \"${scene_name}\" --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_maya_redshift.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --scene_name \"${scene_name}\" --min_samples ${options.minSamples} --max_samples ${options.maxSamples} --noise_threshold ${options.noiseThreshold} --width ${options.width} --height ${options.height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 					
@@ -130,7 +130,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_maya_arnold.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --scene_name \"${scene_name}\" --min_samples ${options.Min_Samples} --max_samples ${options.Max_Samples} --noise_threshold ${options.Noise_threshold} --width ${options.Width} --height ${options.Height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_maya_arnold.py --tool ${version} --django_ip \"${options.django_url}/\" --id ${id} --scene_name \"${scene_name}\" --min_samples ${options.minSamples} --max_samples ${options.maxSamples} --noise_threshold ${options.noiseThreshold} --width ${options.width} --height ${options.height} --startFrame ${options.startFrame} --endFrame ${options.endFrame} --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
@@ -142,7 +142,7 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 							"""
 							// Launch render
 							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
-								python3("launch_core_render.py --django_ip \"${options.django_url}/\" --id ${id} --pass_limit ${options.Iterations} --width ${options.Width} --height ${options.Height} --sceneName \"${scene_name}\" --startFrame ${options.startFrame} --endFrame ${options.endFrame} --gpu \"${options.GPU}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
+								python3("launch_core_render.py --django_ip \"${options.django_url}/\" --id ${id} --pass_limit ${options.iterations} --width ${options.width} --height ${options.height} --sceneName \"${scene_name}\" --startFrame ${options.startFrame} --endFrame ${options.endFrame} --gpu \"${options.GPU}\" --login %DJANGO_USER% --password %DJANGO_PASSWORD% --timeout ${options.timeout} ")
 							}
 							break;
 
@@ -194,7 +194,7 @@ def main(String PCs, Map options) {
 		
 		String renderDevice = ""
 		if (deviceName == "ANY") {
-			String tool = options['Tool'].split(':')[0].replaceAll("\\(Redshift\\)", "").trim()
+			String tool = options['tool'].split(':')[0].replaceAll("\\(Redshift\\)", "").trim()
 			renderDevice = tool
 		} else {
 			renderDevice = "gpu${deviceName}"
@@ -218,7 +218,54 @@ def startRender(osName, deviceName, renderDevice, options) {
 	def maxAttempts = "${options.maxAttempts}".toInteger()
 	def testTasks = [:]
 	def currentLabels = labels
-	for (int attemptNum = 1; attemptNum <= maxAttempts && attemptNum <= nodesCount; attemptNum++) {
+
+	int attemptNum = 0
+    
+    def nodes = nodesByLabel label: labels, offline: false
+
+	for (nodeName in nodes) {
+		if (utils.isNodeIdle(nodeName)) {
+			println("Checking the ${nodeName} storage for a scene")
+			node(nodeName) {
+				stage("Storage pre-check") {
+					ws("WS/${options.PRJ_NAME}_Render") {
+						try {
+							Boolean sceneExists = fileExists "..\\..\\RenderServiceStorage\\${options.sceneUser}\\${options.sceneHash}"
+							if (sceneExists) {
+								print("[INFO] Scene exists on this PC. Trying to execute the job")
+								stage("Render") {
+									timeout(time: 65, unit: 'MINUTES') {
+										attemptNum += 1
+										executeRender(osName, deviceName, attemptNum, options)
+										successfullyDone = true
+									}
+								}
+							} else {
+								print("[INFO] Scene wasn't found during pre-check")
+							}
+						} catch(FlowInterruptedException e) {
+							throw e
+						} catch (e) {
+							rs_utils.handleException(this, e, nodeName)
+							//Exclude failed node name
+							currentLabels = currentLabels + " && !" + nodeName
+							println(currentLabels)
+						}
+						if (successfullyDone || attemptNum == maxAttempts || attemptNum == nodesCount) {
+							// Process finished - set attempt number as 0
+							render_service_send_render_attempt(0, options.id, options.django_url)
+						}
+					}
+				}
+			}
+
+			if (successfullyDone) {
+				break
+			}
+		}
+	}
+
+	for (attemptNum += 1; attemptNum <= maxAttempts && attemptNum <= nodesCount && !successfullyDone; attemptNum++) {
 		def currentNodeName = ""
 
 		echo "Scheduling Render ${osName}:${deviceName}. Attempt #${attemptNum}"
@@ -234,6 +281,7 @@ def startRender(osName, deviceName, renderDevice, options) {
 							} catch(FlowInterruptedException e) {
 								throw e
 							} catch (e) {
+								rs_utils.handleException(this, e, currentNodeName)
 								//Exclude failed node name
 								currentLabels = currentLabels + " && !" + currentNodeName
 								println(currentLabels)
@@ -248,11 +296,7 @@ def startRender(osName, deviceName, renderDevice, options) {
 			}
 		}
 
-		parallel testTasks	
-		
-		if (successfullyDone) {
-			break
-		}
+		parallel testTasks
 	}
 
 	if (!successfullyDone) {
@@ -276,21 +320,21 @@ def getNodesCount(labels) {
 }
 
 @NonCPS
-def parseOptions(String Options) {
+def parseOptions(String options) {
 	def jsonSlurper = new groovy.json.JsonSlurperClassic()
 
-	return jsonSlurper.parseText(Options)
+	return jsonSlurper.parseText(options)
 }
 	
 def call(String PCs = '',
 	String id = '',
-	String Tool = '',
-	String Scene = '',  
-	String PluginLink = '',
+	String tool = '',
+	String scene = '',  
+	String pluginLink = '',
 	String sceneName = '',
 	String sceneUser = '',
 	String maxAttempts = '',
-	String Options = '',
+	String options = '',
 	String timeout = '',
 	String djangoUrl = '',
 	String scriptsBranch = '',
@@ -300,29 +344,29 @@ def call(String PCs = '',
 	String PRJ_ROOT='RenderServiceRenderJob'
 	String PRJ_NAME='RenderServiceRenderJob' 
 
-	def OptionsMap = parseOptions(Options)
+	def optionsMap = parseOptions(options)
 
 	main(PCs,[
 		enableNotifications:false,
 		PRJ_NAME:PRJ_NAME,
 		PRJ_ROOT:PRJ_ROOT,
 		id:id,
-		Tool:Tool,
-		Scene:Scene,
-		PluginLink:PluginLink,
+		tool:tool,
+		scene:scene,
+		pluginLink:pluginLink,
 		sceneName:sceneName,
 		sceneUser:sceneUser,
 		maxAttempts:maxAttempts,
-		Min_Samples:OptionsMap.min_samples,
-		Max_Samples:OptionsMap.max_samples,
-		Noise_threshold:OptionsMap.noise_threshold,
-		startFrame:OptionsMap.start_frame,
-		endFrame:OptionsMap.end_frame,
-		Width:OptionsMap.width,
-		Height:OptionsMap.height,
-		Iterations:OptionsMap.iterations,
-		GPU:OptionsMap.gpu,
-		batchRender:OptionsMap.batch_render,
+		minSamples:optionsMap.min_samples,
+		maxSamples:optionsMap.max_samples,
+		noiseThreshold:optionsMap.noise_threshold,
+		startFrame:optionsMap.start_frame,
+		endFrame:optionsMap.end_frame,
+		width:optionsMap.width,
+		height:optionsMap.height,
+		iterations:optionsMap.iterations,
+		GPU:optionsMap.gpu,
+		batchRender:optionsMap.batch_render,
 		timeout:timeout,
 		django_url:djangoUrl,
 		scripts_branch:scriptsBranch,
