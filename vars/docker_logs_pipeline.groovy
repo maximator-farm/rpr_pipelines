@@ -13,6 +13,7 @@ def call(
             containerNames.each{
                 sh "(docker container logs ${it} 2>&1) >> ${it}.log";
             }
+            archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
         }
     }
 }
