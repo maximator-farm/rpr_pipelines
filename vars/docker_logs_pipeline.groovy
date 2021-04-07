@@ -11,7 +11,7 @@ def call(
     node(nodeName) {
         stage("Logs getting") {
             containerNames.each{
-                sh "docker container logs ${it} 2>&1 >> ${it}.log";
+                sh "(docker container logs ${it} 2>&1) >> ${it}.log";
             }
         }
     }
