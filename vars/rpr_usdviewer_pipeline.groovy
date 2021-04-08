@@ -618,11 +618,13 @@ def executePreBuild(Map options) {
         options["branch_postfix"] = options.projectBranch.replace('/', '-')
     }
 
-    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
-    }
-
+    
     if (!options['isPreBuilt']) {
+
+        withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+        }
+
         options.commitAuthor = utils.getBatOutput(this, "git show -s --format=%%an HEAD ")
         options.commitMessage = utils.getBatOutput(this, "git log --format=%%s -n 1").replace('\n', '')
         options.commitSHA = utils.getBatOutput(this, "git log --format=%%H -1 ")
@@ -632,19 +634,76 @@ def executePreBuild(Map options) {
             Commit SHA: ${options.commitSHA}
         """
 
-        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch ?: env.BRANCH_NAME}<br/>"
-        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
-    }
+        withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
+            options.pluginVersion = version_read("${env.WORKSPACE}\\RPRViewer\\src\\application\\version.py", 'USD_VIEWER_BUILD_VERSION = "')
 
-    if (env.BRANCH_NAME) {
-        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
-            GithubNotificator githubNotificator = new GithubNotificator(this, options)
-            githubNotificator.init(options)
-            options["githubNotificator"] = githubNotificator
-            githubNotificator.initPreBuild("${BUILD_URL}")
+            if (options['incrementVersion']) {
+                withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+                    GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                    githubNotificator.init(options)
+                    options["githubNotificator"] = githubNotificator
+                    githubNotificator.initPreBuild("${BUILD_URL}")
+                }
+                
+                if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
+
+                    println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
+                    println "[INFO] Current build version: ${options.pluginVersion}"
+
+                    def new_plugin_version = version_inc(options.pluginVersion, 3)
+                    println "[INFO] New build version: ${new_plugin_version}"
+                    version_write("${env.WORKSPACE}\\RPRViewer\\src\\application\\version.py", 'USD_VIEWER_BUILD_VERSION = "', new_plugin_version)
+
+                    options.pluginVersion = version_read("${env.WORKSPACE}\\RPRViewer\\src\\application\\version.py", 'USD_VIEWER_BUILD_VERSION = "')
+                    println "[INFO] Updated build version: ${options.pluginVersion}"
+
+                    options.installerVersion = version_read("${env.WORKSPACE}\\RPRViewer\\installer.iss", 'AppVersion=')
+                    println "[INFO] Current installer version: ${options.installerVersion}"
+
+                    // TODO: delete this code
+                    if (options.installerVersion == "1.0") {
+                        options.installerVersion = "1.0.0"
+                        println "[INFO] Updated installer version: ${options.installerVersion}"
+                    }
+
+                    def new_installer_version = version_inc(options.installerVersion, 3)
+                    println "[INFO] New installer version: ${new_installer_version}"
+                    version_write("${env.WORKSPACE}\\RPRViewer\\installer.iss", 'AppVersion=', new_installer_version)
+
+                    bat """
+                        git add ${env.WORKSPACE}\\RPRViewer\\src\\application\\version.py
+                        git add ${env.WORKSPACE}\\RPRViewer\\installer.iss
+                        git commit -m "buildmaster: version update to ${options.pluginVersion}"
+                        git push origin HEAD:jenkins/test_installer_iss_version
+                    """
+
+                    // Get commit's sha which have to be build
+                    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+                    options.projectBranch = options.commitSHA
+                    println "[INFO] Project branch hash: ${options.projectBranch}"
+                } else {
+
+                    if (options.commitMessage.contains("CIS:BUILD")) {
+                        options['executeBuild'] = true
+                    }
+
+                    if (options.commitMessage.contains("CIS:TESTS")) {
+                        options['executeBuild'] = true
+                        options['executeTests'] = true
+                    }
+                    // get a list of tests from commit message for auto builds
+                    options.tests = utils.getTestsFromCommitMessage(options.commitMessage)
+                    println "[INFO] Test groups mentioned in commit message: ${options.tests}"
+                }
+            }
+
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch ?: env.BRANCH_NAME}<br/>"
+            currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
+            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+            currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
         }
+
     }
 
     def tests = []
@@ -903,6 +962,7 @@ def call(String projectBranch = "",
          String testsPackage = "",
          String tests = "",
          Boolean splitTestsExecution = true,
+         Boolean incrementVersion = true,
          String tester_tag = 'USDViewer',
          String customBuildLinkWindows = "",
          String parallelExecutionTypeString = "TakeAllNodes",
@@ -932,6 +992,7 @@ def call(String projectBranch = "",
                         BUILDER_TAG: 'BuilderUSDViewer',
                         isPreBuilt:isPreBuilt,
                         TESTER_TAG: tester_tag,
+                        incrementVersion:incrementVersion,
                         executeBuild: true,
                         executeTests: true,
                         splitTestsExecution: splitTestsExecution,
