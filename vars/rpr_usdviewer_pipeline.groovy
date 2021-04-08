@@ -691,9 +691,7 @@ def executePreBuild(Map options) {
                         options['executeBuild'] = true
                         options['executeTests'] = true
                     }
-                    // get a list of tests from commit message for auto builds
-                    options.tests = utils.getTestsFromCommitMessage(options.commitMessage)
-                    println "[INFO] Test groups mentioned in commit message: ${options.tests}"
+
                 }
             }
 
