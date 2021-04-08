@@ -10,6 +10,7 @@ def call(
 ) {
     node(nodeName) {
         stage("Logs getting") {
+            cleanWS()
             containerNames.each{
                 sh "(docker container logs ${it} 2>&1) >> ${it}.log";
             }
