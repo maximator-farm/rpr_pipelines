@@ -596,6 +596,7 @@ def executeBuild(String osName, Map options) {
                 break
             default:
                 println "Linux isn't supported"
+        }
     }
 }
 
