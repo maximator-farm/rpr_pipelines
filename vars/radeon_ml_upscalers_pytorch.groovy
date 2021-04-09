@@ -156,7 +156,7 @@ def executePreBuild(Map options)
         println "[INFO] Tests to be executed: ${options.tests}"
     }
 
-    if (env.CHANGE_ID && options.githubNotificator) {
+    if (env.BRANCH_NAME && options.githubNotificator) {
         options.githubNotificator.initChecks(options, BUILD_URL, true, false, false)
     }
     
