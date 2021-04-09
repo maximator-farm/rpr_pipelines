@@ -295,15 +295,10 @@ def executePreBuild(Map options)
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
     options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    options.commit = bat (script:"git rev-parse --short=6 HEAD", returnStdout: true).trim()
     println "The last commit was written by ${options.commitAuthor}."
     println "Commit message: ${options.commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
-
-    options.commit = bat (
-        script: '''@echo off
-                   git rev-parse --short=6 HEAD''',
-        returnStdout: true
-    ).trim()
 
     String branch = env.BRANCH_NAME ? env.BRANCH_NAME : env.Branch
     options.branch = branch.replace('origin/', '')
@@ -311,10 +306,6 @@ def executePreBuild(Map options)
     options.packageName = getArtifactName('radeonimagefilters', options.branch, options.commit)
     options.modelsName = getArtifactName('models', options.branch, options.commit)
     options.samplesName = getArtifactName('samples', options.branch, options.commit)
-
-    if (env.CHANGE_URL) {
-        println("Build was detected as Pull Request")
-    }
 }
 
 
@@ -370,7 +361,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             checkoutScm(branchName: "master", repositoryUrl: "git@github.com:luxteam/rif_report.git")
 
             bat """
-                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
+                set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%
                 pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
                 python build_report.py --test_results ..\\testResults --output_dir ..\\results
             """
@@ -386,7 +377,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
         """
 
         platformList.each() {
-            dir("${it}") {
+            dir(it) {
                 dir("Dynamic"){
                     unstash "deploy-dynamic-${it}"
                 }
@@ -414,7 +405,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT;Ubuntu18:NVIDIA_RTX2070;OSX:AMD_RXVEGA;CentOS7;Ubuntu18-Clang',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT;Ubuntu18:NVIDIA_RTX2070,AMD_RadeonVII;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA;CentOS7;Ubuntu18-Clang',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = '',
@@ -424,7 +415,7 @@ def call(String projectBranch = "",
     println "TAG_NAME: ${env.TAG_NAME}"
 
     def deployStage = env.TAG_NAME || testPerformance ? this.&executeDeploy : null
-    platforms = env.TAG_NAME ? "Windows;Ubuntu18;OSX;CentOS7;" : platforms
+    platforms = env.TAG_NAME ? "Windows;Ubuntu18;Ubuntu18-Clang;Ubuntu20;OSX;CentOS7;" : platforms
 
     def nodeRetry = []
 
