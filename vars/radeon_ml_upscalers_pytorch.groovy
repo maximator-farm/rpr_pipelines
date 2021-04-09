@@ -111,11 +111,13 @@ def executeBuild(String osName, Map options) {}
 def executePreBuild(Map options)
 {
 
-    withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
-        GithubNotificator githubNotificator = new GithubNotificator(this, options)
-        githubNotificator.init(options)
-        options.githubNotificator = githubNotificator
-        githubNotificator.initPreBuild(BUILD_URL)
+    if (env.BRANCH_NAME) {
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+            GithubNotificator githubNotificator = new GithubNotificator(this, options)
+            githubNotificator.init(options)
+            options.githubNotificator = githubNotificator
+            githubNotificator.initPreBuild(BUILD_URL)
+        }
     }
 
     checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
@@ -154,7 +156,7 @@ def executePreBuild(Map options)
         println "[INFO] Tests to be executed: ${options.tests}"
     }
 
-    if (env.BRANCH_NAME && options.githubNotificator) {
+    if (env.CHANGE_ID && options.githubNotificator) {
         options.githubNotificator.initChecks(options, BUILD_URL, true, false, false)
     }
     
