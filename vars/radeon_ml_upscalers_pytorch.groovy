@@ -6,6 +6,7 @@ import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import static groovy.io.FileType.FILES
 import TestsExecutionType
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 
 
 def executeTestCommand(String osName, String asicName, Map options)
@@ -35,11 +36,11 @@ def executeTestCommand(String osName, String asicName, Map options)
                 }
             }
 
-            println "Tests: ${options.parsedTests}"
-            for (test in options.parsedTests) {
+            for (test in options.tests) {
                 dir ("nbs") {
                     try {
                         if (fileExists("${test}.ipynb")) {
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
                             println "[INFO] Current notebook: ${test}.ipynb"
                             bat """
                                 set TAAU_DATA=C:\\TestResources\\upscalers_pytorch_assets\\data_small
@@ -47,13 +48,21 @@ def executeTestCommand(String osName, String asicName, Map options)
                                 call conda activate upscalers_pytorch >> ${STAGE_NAME}_${test}.log 2>&1
                                 jupyter nbconvert --to html --execute --ExecutePreprocessor.timeout=300 --output tested/tested_${test} ${test}.ipynb >> ..\\${STAGE_NAME}_${test}.log 2>&1
                             """
+                            utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report", "Test Report")
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
                         } else {
                             currentBuild.result = "UNSTABLE"
+                            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_NOT_FOUND, BUILD_URL)
                             options.problemMessageManager.saveUnstableReason("tested_${test}.html wasn't found\n")
-                            println "[WARNING] tested_${test}.html wasn't found"
+                            println "[WARNING] ${test}.ipynb wasn't found"
                         }
+                    } catch (FlowInterruptedException error) {
+                        println("[INFO] Job was aborted during executing tests.")
+                        throw error
                     } catch (e) {
                         currentBuild.result = "UNSTABLE"
+                        archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
+                        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}_${test}.log")
                         options.problemMessageManager.saveUnstableReason("Failed to execute ${test}\n")
                         println "[ERROR] Failed to execute ${test}"
                         println(e.toString())
@@ -67,11 +76,10 @@ def executeTestCommand(String osName, String asicName, Map options)
 def executeTests(String osName, String asicName, Map options)
 {
     try {
-        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-            timeout(time: "10", unit: "MINUTES") {
-                cleanWS(osName)
-                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
-            }
+        
+        timeout(time: "10", unit: "MINUTES") {
+            cleanWS(osName)
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         }
 
         // Manual download only (~160GB)
@@ -81,56 +89,19 @@ def executeTests(String osName, String asicName, Map options)
         //}
 
         outputEnvironmentInfo(osName, "${STAGE_NAME}_init_env")
-
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
-            executeTestCommand(osName, asicName, options)
-        }
-
-        options.executeTestsFinished = true
+        executeTestCommand(osName, asicName, options)
 
     } catch (e) {
         println(e.toString())
         println(e.getMessage())
         
         if (e instanceof ExpectedExceptionWrapper) {
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper(e.getMessage(), e.getCause())
         } else {
-            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${NotificationConfiguration.REASON_IS_NOT_IDENTIFIED} ${additionalDescription}", "${BUILD_URL}")
             throw new ExpectedExceptionWrapper(NotificationConfiguration.REASON_IS_NOT_IDENTIFIED, e)
         }
     } finally {
-        try {
-            archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
-            dir("nbs") {
-                for (test in options.parsedTests) {
-                    try {
-                        // Save test data for access it manually anyway
-                        if (fileExists("tested/tested_${test}.html")) {
-                            utils.publishReport(this, "${BUILD_URL}", "tested", "tested_${test}.html", "${test} report", "Test Report")
-                        } else {
-                            println "[WARNING] tested_${test}.html wasn't found"
-                        }
-                    } catch(e) {
-                        println("[WARNING] Failed to publish ${test} report.")
-                        println(e.toString())
-                        println(e.getMessage())
-                    }
-                }
-            }
-            
-        } catch (e) {
-            // throw exception in finally block only if test stage was finished
-            if (options.executeTestsFinished) {
-                if (e instanceof ExpectedExceptionWrapper) {
-                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, e.getMessage(), "${BUILD_URL}")
-                    throw e
-                } else {
-                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.FAILED_TO_SAVE_RESULTS, "${BUILD_URL}")
-                    throw new ExpectedExceptionWrapper(NotificationConfiguration.FAILED_TO_SAVE_RESULTS, e)
-                }
-            }
-        }
+        archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
     }
 }
 
@@ -139,6 +110,14 @@ def executeBuild(String osName, Map options) {}
 
 def executePreBuild(Map options)
 {
+
+    withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+        GithubNotificator githubNotificator = new GithubNotificator(this, options)
+        githubNotificator.init(options)
+        options.githubNotificator = githubNotificator
+        githubNotificator.initPreBuild(BUILD_URL)
+    }
+
     checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
@@ -160,31 +139,34 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-    if (options.executeAllTests) {
-        dir ("nbs") {
-            options.parsedTests = []
-            def ipynb_files = findFiles(glob: "*.ipynb")
-            for (file in ipynb_files) {
-                options.parsedTests << file.name.replaceFirst(~/\.[^\.]+$/, '')
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+        if (options.executeAllTests) {
+            dir ("nbs") {
+                options.tests = []
+                def ipynb_files = findFiles(glob: "*.ipynb")
+                for (file in ipynb_files) {
+                    options.tests << file.name.replaceFirst(~/\.[^\.]+$/, '')
+                }
             }
+        } else {
+            options.tests = options.tests.split(" ")
         }
-    } else {
-        options.parsedTests = options.tests.split(" ")
+        println "[INFO] Tests to be executed: ${options.tests}"
     }
-    println "Parsed tests: ${options.parsedTests}"
+
+    if (env.BRANCH_NAME && options.githubNotificator) {
+        options.githubNotificator.initChecks(options, BUILD_URL, true, false, false)
+    }
     
 }
 
 
-def executeDeploy(Map options, List platformList, List testResultList)
-{
-}
-
+def executeDeploy(Map options, List platformList, List testResultList) {}
 
 
 def call(String projectBranch = "",
          String platforms = 'Windows:NVIDIA_RTX2080',
-         Boolean executeAllTests = false,
+         Boolean executeAllTests = true,
          String tests = "0000_index,0010_config,0015_utils,0018_pytorch_utils,0020_plot,0030_image,0050_colormaps,0070_SSIM",
          String customTests = "",
          Boolean recreateCondaEnv = false) {

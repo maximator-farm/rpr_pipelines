@@ -432,6 +432,14 @@ public class NotificationConfiguration {
 
     def static ALL_TESTS_PASSED = "Tests completed successfully."
 
+    def static EXECUTE_TEST = "Executing test..."
+
+    def static TEST_PASSED = "Test completed successfully."
+
+    def static TEST_FAILED = "Test execution failed."
+
+    def static TEST_NOT_FOUND = "Test not found."
+
     def static FAILED_TO_SAVE_RESULTS = "An error occurred while saving test results. Please contact support."
 
     def static BUILDING_REPORT = "Building test report."

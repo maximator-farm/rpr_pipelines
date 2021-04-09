@@ -13,6 +13,8 @@ public class GithubNotificator {
     List buildCases = []
     List testCases = []
     List deployCases = []
+    Boolean showTests
+    Boolean hasBuildStage
     Boolean hasDeployStage
     // this variable is used for prevent multiple closing of status checks in multi thread logic of pipeline
     AtomicBoolean statusesClosed = new AtomicBoolean(false)
@@ -78,9 +80,11 @@ public class GithubNotificator {
      *
      * @param options Options map
      * @param url Build url
+     * @param showTests Specify that status for test stage should have test names or not
+     * @param hasBuildStage Specify that status for build stage should be created or not
      * @param hasDeployStage Specify that status for deploy stage should be created or not
      */
-    def initChecks(Map options, String url, Boolean hasDeployStage = true) {
+    def initChecks(Map options, String url, Boolean showTests = false, Boolean hasBuildStage = true, Boolean hasDeployStage = true) {
         try {
             context.println("[INFO] Started initialization of PR notifications")
             this.hasDeployStage = hasDeployStage
@@ -96,7 +100,7 @@ public class GithubNotificator {
                         gpuNames = tokens.get(1)
                     }
 
-                    if(gpuNames) {
+                    if (gpuNames) {
                         gpuNames.split(',').each() { asicName ->
                             if (options.splitTestsExecution) {
                                 options.tests.each() { testName ->
@@ -117,7 +121,13 @@ public class GithubNotificator {
                                     testCases << "${asicName}-${osName}-${parsedTestsName}"
                                 }
                             } else {
-                                testCases << "${asicName}-${osName}"
+                                if (showTests) {
+                                    options.tests.each() { testName ->
+                                        testCases << "${asicName}-${osName}-${testName}"
+                                    }
+                                } else {
+                                    testCases << "${asicName}-${osName}"
+                                }
                             }
                         }
                     }
@@ -137,9 +147,11 @@ public class GithubNotificator {
                 ]
             ]
 
-            for (buildCase in buildCases) {
-                paramsBase["name"] = "[BUILD] ${buildCase}"
-                githubApiProvider.createOrUpdateStatusCheck(paramsBase)
+            if (hasBuildStage) {
+                for (buildCase in buildCases) {
+                    paramsBase["name"] = "[BUILD] ${buildCase}"
+                    githubApiProvider.createOrUpdateStatusCheck(paramsBase)
+                }
             }
 
             for (testCase in testCases) {
