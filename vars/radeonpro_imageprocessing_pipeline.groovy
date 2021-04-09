@@ -333,17 +333,11 @@ def executeBuild(String osName, Map options)
             case 'OSX':
                 executeBuildUnix(options.cmakeKeys, osName, options, 'clang')
                 break
-            case 'CentOS7':
-                executeBuildUnix(options.cmakeKeys, osName, options)
-                break
-            case 'Ubuntu18':
-                executeBuildUnix(options.cmakeKeys, osName, options)
-                break
             case 'Ubuntu18-Clang':
                 executeBuildUnix("${options.cmakeKeys} -DRIF_UNITTEST=OFF -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, options, 'clang-5.0')
                 break
             default:
-                println('Unsupported OS')
+                executeBuildUnix(options.cmakeKeys, osName, options)
         }
     } catch (e) {
         currentBuild.result = "FAILED"
