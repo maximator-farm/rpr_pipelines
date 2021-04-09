@@ -111,14 +111,7 @@ def executeBuild(String osName, Map options) {}
 def executePreBuild(Map options)
 {
 
-    if (env.BRANCH_NAME) {
-        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
-            GithubNotificator githubNotificator = new GithubNotificator(this, options)
-            githubNotificator.init(options)
-            options.githubNotificator = githubNotificator
-            githubNotificator.initPreBuild(BUILD_URL)
-        }
-    }
+
 
     checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
@@ -140,6 +133,15 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+    if (env.BRANCH_NAME) {
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+            GithubNotificator githubNotificator = new GithubNotificator(this, options)
+            githubNotificator.init(options)
+            options.githubNotificator = githubNotificator
+            githubNotificator.initPreBuild(BUILD_URL)
+        }
+    }
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         if (options.executeAllTests) {
