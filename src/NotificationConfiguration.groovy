@@ -40,6 +40,12 @@ public class NotificationConfiguration {
 
         "exceptions": [
             [
+                "class": Exception, "problemMessage": "PR is not mergeable.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": ["Not mergeable"],
+                "githubNotification": ["status": "failure"]
+            ],
+            [
                 "class": "TimeoutExceeded", "problemMessage": "Failed to download source code repository due to timeout.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
                 "githubNotification": ["status": "timed_out"]

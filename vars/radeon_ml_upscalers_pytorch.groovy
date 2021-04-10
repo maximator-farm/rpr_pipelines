@@ -110,7 +110,7 @@ def executeBuild(String osName, Map options) {}
 
 def executePreBuild(Map options)
 {
-    withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
 
