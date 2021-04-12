@@ -200,6 +200,7 @@ def call(String projectBranch = "",
                         recreateCondaEnv:recreateCondaEnv,
                         executeBuild:false,
                         executeTests:true,
+                        TEST_TIMEOUT:60,
                         retriesForTestStage:1]
         }
 
