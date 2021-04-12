@@ -43,7 +43,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
                             println "[INFO] Current notebook: ${test}.ipynb"
                             bat """
-                                set TAAU_DATA=C:\\TestResources\\upscalers_pytorch_assets\\data_small
+                                set TAAU_DATA=C:\\TestResources\\upscalers_pytorch_assets\\data
                                 call C:\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_${test}.log 2>&1
                                 call conda activate upscalers_pytorch >> ${STAGE_NAME}_${test}.log 2>&1
                                 jupyter nbconvert --to html --execute --ExecutePreprocessor.timeout=${options.notebooksTimeout} --ExecutePreprocessor.kernel_name=upscalers_pytorch --output tested/tested_${test} ${test}.ipynb >> ..\\${STAGE_NAME}_${test}.log 2>&1
