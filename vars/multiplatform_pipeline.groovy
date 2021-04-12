@@ -82,6 +82,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 }
                                 if (options.skippedTests && options.skippedTests.containsKey(testName) && options.skippedTests[testName].contains("${asicName}-${osName}")) {
                                     println("Test group ${testName} on ${asicName}-${osName} fully skipped")
+                                    testName = getNextTest(testsIterator)
                                     changeTestsCount(testsLeft, -1, engine)
                                     continue
                                 } 

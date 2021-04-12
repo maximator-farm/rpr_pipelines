@@ -724,7 +724,7 @@ def executePreBuild(Map options)
         }
 
         if (env.CHANGE_URL) {
-            options.githubNotificator.initPR(options, "${BUILD_URL}")
+            options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
 
         options.testsList = options.tests
@@ -952,7 +952,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
     String customBuildLinkOSX = "",
-    String enginesNames = "RRP,GL",
+    String enginesNames = "RPR,GL",
     String tester_tag = "Blender2.8",
     String toolVersion = "2.93",
     String mergeablePR = "",

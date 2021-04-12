@@ -40,6 +40,12 @@ public class NotificationConfiguration {
 
         "exceptions": [
             [
+                "class": Exception, "problemMessage": "PR is not mergeable.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": ["Not mergeable"],
+                "githubNotification": ["status": "failure"]
+            ],
+            [
                 "class": "TimeoutExceeded", "problemMessage": "Failed to download source code repository due to timeout.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
                 "githubNotification": ["status": "timed_out"]
@@ -153,6 +159,20 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Failed to create package.", 
+                "rethrow": ExceptionThrowType.RETHROW,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
+    def static BUILD_PACKAGE_USD_VIEWER = [
+        "begin": ["message": "Creating USD Viewer package."],
+
+        "end": ["message": "USD Viewer package was successfully created."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to create USD Viewer package.", 
                 "rethrow": ExceptionThrowType.RETHROW,
                 "githubNotification": ["status": "failure"]
             ]
@@ -417,6 +437,14 @@ public class NotificationConfiguration {
     def static SOME_TESTS_FAILED = "Some tests were marked as failed. Check the report for details."
 
     def static ALL_TESTS_PASSED = "Tests completed successfully."
+
+    def static EXECUTE_TEST = "Executing test..."
+
+    def static TEST_PASSED = "Test completed successfully."
+
+    def static TEST_FAILED = "Test execution failed."
+
+    def static TEST_NOT_FOUND = "Test not found."
 
     def static FAILED_TO_SAVE_RESULTS = "An error occurred while saving test results. Please contact support."
 
