@@ -138,16 +138,16 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete) {
 
 
 def executeTestCommand(String osName, String asicName, Map options) {
-    def testTimeout = options.timeouts[options.tests]
+    def testTimeout = options.timeouts["${options.tests}"]
     String testsNames = options.tests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
-        if (options.parsedTests.contains(".json")) {
+        if (testsNames.contains(".json")) {
             // if tests package isn't splitted and it's execution of this package - replace test group for non-splitted package by empty string
             testsNames = ""
         } else {
             // if tests package isn't splitted and it isn't execution of this package - replace tests package by empty string
-            testsPackageName = "none"
+            testsPackageName = ""
         }
     }
 
@@ -614,12 +614,10 @@ def executePreBuild(Map options) {
         options['executeTests'] = true
     // auto job (master)
     } else if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        options.testsPackage = "none"
-        options.tests = "Smoke"
+        options.testsPackage = "master.json"
     // auto job
     } else if (env.BRANCH_NAME) {
-        options.testsPackage = "none"
-        options.tests = "Smoke"
+        options.testsPackage = "pr.json"
     }
 
     options["branch_postfix"] = ""
@@ -776,11 +774,7 @@ def executePreBuild(Map options) {
                     options.testsPackage = "none"
                 } else {
                     options.testsPackage = modifiedPackageName
-                    if (options.engines.count(",") > 0) {
-                        options.engines.split(",").each { tests << "${modifiedPackageName}-${it}" }
-                    } else {
-                        tests << modifiedPackageName
-                    }
+                    tests << modifiedPackageName
                     options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
 
@@ -1012,7 +1006,7 @@ def call(String projectBranch = "",
                         BUILD_TIMEOUT: 120,
                         TEST_TIMEOUT: 90,
                         ADDITIONAL_XML_TIMEOUT: 15,
-                        NON_SPLITTED_PACKAGE_TIMEOUT: 45,
+                        NON_SPLITTED_PACKAGE_TIMEOUT: 60,
                         DEPLOY_TIMEOUT: 45,
                         tests: tests,
                         customBuildLinkWindows: customBuildLinkWindows,
