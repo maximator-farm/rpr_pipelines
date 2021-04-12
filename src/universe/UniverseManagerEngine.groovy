@@ -29,7 +29,7 @@ class UniverseManagerEngine extends UniverseManager  {
             imageServiceURL = "${context.IS_URL}"
             universeClientParentProd = new UniverseClient(context, universeURLProd, env, productName)
 
-            universeURLDev = "https://umsapi3.cistest.luxoft.com/"
+            universeURLDev = "https://umsapi2.cistest.luxoft.com/"
             universeClientParentDev = new UniverseClient(context, universeURLDev, env, productName)
 
             try {
