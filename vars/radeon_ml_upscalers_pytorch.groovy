@@ -35,6 +35,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         pip install C:\\TestResources\\OpenEXR-1.3.2-cp38-cp38-win_amd64.whl >> ${STAGE_NAME}_init_env.log 2>&1
                         pip install -e . >> ${STAGE_NAME}_init_env.log 2>&1
                         mkdir nbs\\tested
+                        set TAAU_DATA=C:\\TestResources\\upscalers_pytorch_assets\\data
                         call run_nbs
                     """
                 }
