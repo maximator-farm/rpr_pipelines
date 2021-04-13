@@ -91,7 +91,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
         }
 
         bat """
-            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.install${logPostfix}.log
+            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART /LOG=${options.stageName}${logPostfix}_${options.currentTry}.install${logPostfix}.log
         """
     } catch (e) {
         throw new Exception("Failed to install new plugin")
@@ -213,7 +213,7 @@ def executeTests(String osName, String asicName, Map options) {
 
             println "Install \"baseline\" plugin"
 
-            timeout(time: "5", unit: "MINUTES") {
+            timeout(time: "10", unit: "MINUTES") {
                 installInventorPlugin(osName, options, true, baselinePluginPath.split("/")[-1])
             }
 
@@ -246,7 +246,7 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
-            timeout(time: "5", unit: "MINUTES") {
+            timeout(time: "10", unit: "MINUTES") {
                 installInventorPlugin(osName, options, true)
             }
         }
