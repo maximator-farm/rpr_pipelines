@@ -49,7 +49,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                                 set TAAU_DATA=C:\\TestResources\\upscalers_pytorch_assets\\data
                                 call C:\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_${test}.log 2>&1
                                 call conda activate upscalers_pytorch >> ${STAGE_NAME}_${test}.log 2>&1
-                                jupyter nbconvert --to html --execute --ExecutePreprocessor.timeout=${options.notebooksTimeout} --ExecutePreprocessor.kernel_name=upscalers_pytorch --output tested/tested_${test} ${test}.ipynb >> ..\\${STAGE_NAME}_${test}.log 2>&1
+                                jupyter nbconvert --to notebook --execute --ExecutePreprocessor.timeout=${options.notebooksTimeout} --ExecutePreprocessor.kernel_name=upscalers_pytorch --output tested/tested_${test}.ipynb ${test}.ipynb >> ..\\${STAGE_NAME}_${test}.log 2>&1
                             """
                             utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report", "Test Report")
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
