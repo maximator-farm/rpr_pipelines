@@ -7,23 +7,21 @@ import utils
  */
  
 def call(String osName, Map options) {
+    String installerRemotePath = "/volume1/CIS/bin-storage"
+
     switch(osName) {
         case 'Windows':
-            String installer = "C:\\TestResources\\RadeonProRenderMaterialLibrary.msi"
-            if (!fileExists(installer)) {
-                withCredentials([string(credentialsId: "jenkinsURL", variable: "JENKINS_URL")]) {
-                    utils.downloadFile(
-                            this,
-                            "${JENKINS_URL}/job/RadeonProRenderMaterialLibrary/lastSuccessfulBuild/artifact/RadeonProRenderMaterialLibrary.msi",
-                            "C:\\TestResources\\",
-                            "jenkinsUser"
-                    )
-                }
-            }
+            // download files from NAS
+            String installerLocalPathRsync = "/mnt/c/TestResources"
+            String installerLocalPath = "C:\\TestResources"
+            String installerName = "RadeonProRenderMaterialLibrary.msi"
+
+            downloadFiles("${installerRemotePath}/${installerName}", "${installerLocalPathRsync}/${installerName}")
+
             uninstallMSI("Radeon%Material%", options.stageName, options.currentTry)
             // msiexec doesn't work with relative paths
             bat """
-                start /wait msiexec /i ${installer} /passive
+                start /wait msiexec /i ${installerLocalPath}\\${installerName} /passive
             """
             break
 
@@ -32,21 +30,16 @@ def call(String osName, Map options) {
             break
 
         default:
-            String installer = "${CIS_TOOLS}/../TestResources/RadeonProRenderMaterialLibrary.run"
-            if (!fileExists(installer)) {
-                withCredentials([string(credentialsId: "jenkinsURL", variable: "JENKINS_URL")]) {
-                    utils.downloadFile(
-                            this,
-                            "${JENKINS_URL}/job/RadeonProRenderMaterialLibrary/lastSuccessfulBuild/artifact/RadeonProRenderMaterialLibrary.run",
-                            "${CIS_TOOLS}/../TestResources/",
-                            "jenkinsUser"
-                    )
-                }
-            }
+            // download files from NAS
+            String installerLocalPath = "${CIS_TOOLS}/../TestResources"
+            String installerName = "RadeonProRenderMaterialLibrary.run"
+
+            downloadFiles("${installerRemotePath}/${installerName}", "${installerLocalPath}/${installerName}")
+
             sh """
                 /home/\$USER/local/share/rprmaterials/uninstall.py --just-do-it 
-                chmod +x ${installer}
-                ${installer}
+                chmod +x ${installerLocalPath}/${installerName}
+                ${installerLocalPath}/${installerName}
             """
     }
 }
