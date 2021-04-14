@@ -309,7 +309,6 @@ def executeTests(String osName, String asicName, Map options) {
         options.executeTestsFinished = true
 
     } catch (e) {
-        options.problemMessageManager.saveSpecificFailReason("${e.getMessage()} (try #${options.currentTry})", options["stageName"], osName)
         if (options.currentTry < options.nodeReallocateTries - 1) {
             stashResults = false
         } else {
