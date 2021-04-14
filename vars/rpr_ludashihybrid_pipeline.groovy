@@ -298,7 +298,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RadeonVII_Beta',
+         String platforms = 'Windows:AMD_RX6800',
          String testsQuality = "low,medium",
          Boolean updateRefs = false,
          Boolean enableNotifications = true,

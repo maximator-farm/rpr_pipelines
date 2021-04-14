@@ -775,7 +775,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RadeonVII,AMD_RadeonVII_Beta,NVIDIA_RTX2080',
+         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          Boolean incrementVersion = true,
