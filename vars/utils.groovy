@@ -120,7 +120,7 @@ class utils {
             
             self.dir("redirect_links") {
                 self.withCredentials([self.usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
-                    String authReportLinkBase = reportLinkBase.replace("https://", "https://${NAS_USER}:${NAS_PASSWORD}@")
+                    String authReportLinkBase = reportLinkBase.replace("https://", "https://${self.NAS_USER}:${self.NAS_PASSWORD}@")
 
                     reportFiles.split(",").each { reportFile ->
                         if (self.isUnix()) {
