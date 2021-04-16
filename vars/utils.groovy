@@ -90,29 +90,17 @@ class utils {
         Map params
 
         if (publishOnNAS) {
-            // zip report
-            if (self.isUnix()) {
-                self.sh(script: "zip -r report.zip ${reportDir} -x '*@tmp*'")
-            } else {
-                self.bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " report.zip ${reportDir} -xr!*@tmp*")
-            }
-
             String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
+
+            self.dir(reportDir) {
+                // upload report to NAS in archive and unzip it
+                self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, zip: true, unzip: true)
+            }
 
             String reportLinkBase
 
             self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
                 self.string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
-                // send report to NAS
-                self.uploadFiles("report.zip", remotePath)
-
-                // unzip report on NAS
-                if (self.isUnix()) {
-                    self.sh(script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " ${remotePath}report.zip ${remotePath} true")
-                } else {
-                    self.bat(script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " ${remotePath}report.zip ${remotePath} true")
-                }
-
                 reportLinkBase = self.REMOTE_URL
             }
 
@@ -124,9 +112,9 @@ class utils {
 
                     reportFiles.split(",").each { reportFile ->
                         if (self.isUnix()) {
-                            self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${authReportLinkBase}${reportDir}/${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                            self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${authReportLinkBase}/${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
                         } else {
-                            self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${authReportLinkBase}${reportDir}/${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                            self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${authReportLinkBase}/${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
                         }
                     }
                 }

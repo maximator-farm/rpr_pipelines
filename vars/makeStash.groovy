@@ -11,6 +11,8 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
  *     excludes (optional) - String of comma separated patters of files which must be excluded
  *     debug (optional) - Print more info about making of stash (default - false)
  *     zip (optional) - Make zip archive for stash (default - true)
+ *     customLocation (optional) - custom path for stash
+ *     unzip (optional) - unzip archive after unstash (to set 'unzip' parameter as true 'zip' parameter must be true)
  */
 def call(Map params) {
 
@@ -24,6 +26,7 @@ def call(Map params) {
         String excludes = params["excludes"]
         Boolean debug = params["debug"]
         Boolean zip = params.containsKey("zip") ? params["zip"] : true
+        Boolean unzip = params.containsKey("unzip") ? (zip && params["unzip"]) : false
 
         def includeParams = []
         def excludeParams = []
@@ -54,7 +57,13 @@ def call(Map params) {
         includeParams = includeParams.join(" ")
         excludeParams = excludeParams.join(" ")
 
-        String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
+        String remotePath
+
+        if (params["customLocation"]) {
+            remotePath = params["customLocation"]
+        } else {
+            remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
+        }
 
         String stdout
 
@@ -123,6 +132,20 @@ def call(Map params) {
         }
         
         if (zip) {
+            if (unzip) {
+                withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
+                    if (isUnix()) {
+                        stdout = sh(returnStdout: true, script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " ${remotePath}${zipName} ${remotePath} true")
+                    } else {
+                        stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " ${remotePath}${zipName} ${remotePath} true")
+                    }
+                }
+
+                if (debug) {
+                    println(stdout)
+                }
+            }
+
             if (isUnix()) {
                 sh "rm -rf ${zipName}"
             } else {
