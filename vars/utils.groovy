@@ -119,11 +119,15 @@ class utils {
             reportLinkBase = "${reportLinkBase}/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
             
             self.dir("redirect_links") {
-                reportFiles.split(",").each { reportFile ->
-                    if (self.isUnix()) {
-                        self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
-                    } else {
-                        self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${reportLinkBase}${reportDir}/${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                self.withCredentials([self.usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
+                    String authReportLinkBase = reportLinkBase.replace("https://", "https://${NAS_USER}:${NAS_PASSWORD}@")
+
+                    reportFiles.split(",").each { reportFile ->
+                        if (self.isUnix()) {
+                            self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${authReportLinkBase}${reportDir}/${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                        } else {
+                            self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${authReportLinkBase}${reportDir}/${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                        }
                     }
                 }
             }
