@@ -27,8 +27,8 @@ def executeTests(String osName, String asicName, Map options)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
 
         outputEnvironmentInfo(osName)
-        unstash "app${osName}"
-        unstash "app${osName}_shaders"
+        makeUnstash("app${osName}")
+        makeUnstash("app${osName}_shaders")
 
         dir('unittests') {
             executeTestCommand(osName)
@@ -102,8 +102,8 @@ def executeBuild(String osName, Map options)
                 executeBuildLinux()
         }
        
-        stash includes: 'build/**/*', name: "app${osName}"
-        stash includes: 'shaders/**/*', name: "app${osName}_shaders"
+        makeStash(includes: 'build/**/*', name: "app${osName}")
+        makeStash(includes: 'shaders/**/*', name: "app${osName}_shaders")
     } catch (e) {
         currentBuild.result = "FAILED"
         throw e

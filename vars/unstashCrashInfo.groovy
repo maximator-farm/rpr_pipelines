@@ -5,7 +5,7 @@ def call(List nodeRetryList, String engine = "") {
                 group.each{ groupKey, retries ->
                     if (!engine || groupKey.split("-")[-1] == engine) {
                         retries.each { retry ->
-                            unstash "${retry['link']}"
+                            makeUnstash("${retry['link']}")
                         }
                     }
                 }

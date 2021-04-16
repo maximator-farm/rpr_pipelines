@@ -14,7 +14,7 @@ import universe.*
 def installHoudiniPlugin(String osName, Map options) {
     switch(osName) {
         case 'Windows':
-            unstash "appWindows"
+            makeUnstash("appWindows", false)
             bat """
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa e hdRpr_${osName}.tar.gz
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa x tmpPackage.tar 
@@ -24,7 +24,7 @@ def installHoudiniPlugin(String osName, Map options) {
             break
 
         case "OSX":
-            unstash "appOSX"
+            makeUnstash("appOSX", false)
             sh """
                 tar -xzf hdRpr_${osName}.tar.gz 
                 cd hdRpr*
@@ -34,7 +34,7 @@ def installHoudiniPlugin(String osName, Map options) {
             break
 
         default:
-            unstash "app${osName}"
+            makeUnstash("app${osName}", false)
             sh """
                 tar -xzf hdRpr_${osName}.tar.gz
                 cd hdRpr*
@@ -260,7 +260,7 @@ def executeTests(String osName, String asicName, Map options) {
                         }
 
                         println "Stashing test results to : ${options.testResultsName}"
-                        stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+                        makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
 
                         println "Total: ${sessionReport.summary.total}"
                         println "Error: ${sessionReport.summary.error}"
@@ -349,7 +349,7 @@ def executeBuildWindows(String osName, Map options) {
                 }
             }
             bat "rename hdRpr* hdRpr_${osName}.tar.gz"
-            stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
+            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", zip: false)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
@@ -411,7 +411,7 @@ def executeBuildOSX(String osName, Map options) {
                 }
             }
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
-            stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
+            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", zip: false)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
@@ -488,7 +488,7 @@ def executeBuildUnix(String osName, Map options) {
                 }
             }
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
-            stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
+            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", zip: false)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
@@ -680,7 +680,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 testResultList.each {
                     dir(it.replace("testResult-", "")) {
                         try {
-                            unstash it
+                            makeUnstash(it)
                         } catch (e) {
                             println "Can't unstash ${it}"
                             lostStashes << "'$it'".replace("testResult-", "")

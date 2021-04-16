@@ -124,7 +124,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
     }
     
     try {
-        unstash "app${osName}"
+        makeUnstash("app${osName}")
         switch(osName) {
             case 'Windows':
                 unzip dir: '.', glob: '', zipFile: 'BaikalNext_Build-Windows.zip'
@@ -156,7 +156,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
                     python3("hybrid_report.py --xml_path ../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-${options.RENDER_QUALITY}_failures")
                 }
 
-                stash includes: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures/**/*", name: "testResult-${asicName}-${osName}-${options.RENDER_QUALITY}", allowEmpty: true
+                makeStash(includes: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures/**/*", name: "testResult-${asicName}-${osName}-${options.RENDER_QUALITY}", allowEmpty: true)
 
                 utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-${options.RENDER_QUALITY}_failures", "report.html", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures")
 
@@ -173,7 +173,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
                     python3("hybrid_report.py --xml_path ../${STAGE_NAME}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-Failures")
                 }
 
-                stash includes: "${asicName}-${osName}-Failures/**/*", name: "testResult-${asicName}-${osName}", allowEmpty: true
+                makeStash(includes: "${asicName}-${osName}-Failures/**/*", name: "testResult-${asicName}-${osName}", allowEmpty: true)
 
                 utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-Failures", "report.html", "${STAGE_NAME}_Failures", "${STAGE_NAME}_Failures")
 
@@ -288,9 +288,9 @@ def executePerfTests(String osName, String asicName, Map options) {
 
         dir("BaikalNext") {
             dir("bin") {
-                unstash "perf${osName}"
+                makeUnstash("perf${osName}", false)
             }
-            unstash "perfTestsConf"
+            makeUnstash("perfTestsConf")
             dir("RprPerfTest/Scenarios") {
                 if (options.scenarios == "all") {
                     List scenariosList = []
@@ -331,7 +331,7 @@ def executePerfTests(String osName, String asicName, Map options) {
         archiveArtifacts "*.log"
 
         dir("BaikalNext/RprPerfTest/Reports") {
-            stash includes: "*.json", name: "testPerfResult-${asicName}-${osName}", allowEmpty: true
+            makeStash(includes: "*.json", name: "testPerfResult-${asicName}-${osName}", allowEmpty: true)
 
             // check results
             if (!options.updateRefsPerf) {
@@ -435,7 +435,7 @@ def executeBuildWindows(Map options) {
         rename BaikalNext.zip BaikalNext_${STAGE_NAME}.zip
     """
     dir("Build/bin/${build_type}") {
-        stash includes: "RprPerfTest.exe", name: "perfWindows", allowEmpty: true
+        makeStash(includes: "RprPerfTest.exe", name: "perfWindows", allowEmpty: true, zip: false)
     }
 }
 
@@ -450,7 +450,7 @@ def executeBuildOSX(Map options) {
         mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
     """
     dir("Build/bin") {
-        stash includes: "RprPerfTest", name: "perfOSX", allowEmpty: true
+        makeStash(includes: "RprPerfTest", name: "perfOSX", allowEmpty: true, zip: false)
     }
 }
 
@@ -465,7 +465,7 @@ def executeBuildLinux(Map options) {
         mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
     """
     dir("Build/bin") {
-        stash includes: "RprPerfTest", name: "perfUbuntu18", allowEmpty: true
+        makeStash(includes: "RprPerfTest", name: "perfUbuntu18", allowEmpty: true, zip: false)
     }
 }
 
@@ -493,7 +493,7 @@ def executeBuild(String osName, Map options) {
         }
 
         dir('Build') {
-            stash includes: "BaikalNext_${STAGE_NAME}*", name: "app${osName}"
+            makeStash(includes: "BaikalNext_${STAGE_NAME}*", name: "app${osName}")
         }
     } catch (e) {
         println(e.getMessage())
@@ -536,7 +536,7 @@ def executePreBuild(Map options) {
         println("Build was detected as Pull Request")
     }
 
-    stash includes: "RprPerfTest/", name: "perfTestsConf", allowEmpty: true
+    makeStash(includes: "RprPerfTest/", name: "perfTestsConf", allowEmpty: true)
 
     options.commitMessage = []
     commitMessage = commitMessage.split('\r\n')
@@ -594,7 +594,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     options['testsQuality'].split(",").each() { quality ->
                         testResultList.each() {
                             try {
-                                unstash "${it}-${quality}"
+                                makeUnstash("${it}-${quality}")
                                 reportFiles += ", ${it}-${quality}_failures/report.html".replace("testResult-", "")
                             }
                             catch(e) {
@@ -620,7 +620,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 dir("SummaryReport") {
                     testResultList.each() {
                         try {
-                            unstash "${it}"
+                            makeUnstash("${it}")
                             reportFiles += ", ${it}-Failures/report.html".replace("testResult-", "")
                         }
                         catch(e) {
@@ -647,7 +647,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     testResultList.each() {
                         try {
                             dir("${it}".replace("testResult-", "")) {
-                                unstash "${it.replace('testResult-', 'testPerfResult-')}"
+                                makeUnstash("${it.replace('testResult-', 'testPerfResult-')}")
                             }
                         }
                         catch(e) {

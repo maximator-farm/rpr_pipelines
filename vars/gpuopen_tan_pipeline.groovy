@@ -9,7 +9,7 @@ def getTanTool(String osName, Map options) {
                 clearBinariesWin()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "TAN_Windows"
+                makeUnstash("TAN_Windows", false)
                 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -33,7 +33,7 @@ def getTanTool(String osName, Map options) {
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "TAN_OSX"
+                makeUnstash("TAN_OSX", false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -59,7 +59,7 @@ def getTanTool(String osName, Map options) {
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "TAN_Ubuntu18"
+                makeUnstash("TAN_Ubuntu18", false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -150,7 +150,7 @@ def executeTests(String osName, String asicName, Map options) {
         if (stashResults) {
             dir('allure-results') {       
                 println "Stashing test results to : ${options.testResultsName}"
-                stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+                makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
             }
         }
     }
@@ -255,7 +255,7 @@ def executeBuildWindows(Map options) {
                                 bat """
                                     rename Windows_${win_build_name}.zip binWindows.zip
                                 """
-                                stash includes: "binWindows.zip", name: 'TAN_Windows'
+                                makeStash(includes: "binWindows.zip", name: 'TAN_Windows', zip: false)
                                 options.pluginWinSha = sha1 "binWindows.zip"
 
                             } catch (FlowInterruptedException error) {
@@ -340,7 +340,7 @@ def executeBuildOSX(Map options) {
                             sh """
                                 mv MacOS_${osx_build_name}.tar.gz binMacOS.tar.gz
                             """
-                            stash includes: "binMacOS.tar.gz", name: 'TAN_OSX'
+                            makeStash(includes: "binMacOS.tar.gz", name: 'TAN_OSX', zip: false)
                             options.pluginOSXSha = sha1 "binMacOS.tar.gz"
 
                         } catch (FlowInterruptedException error) {
@@ -417,7 +417,7 @@ def executeBuildLinux(String osName, Map options) {
                         sh """
                             mv Ubuntu18_${ub18_build_name}.tar.gz binUbuntu18.tar.gz
                         """
-                        stash includes: "binUbuntu18.tar.gz", name: 'TAN_Ubuntu18'
+                        makeStash(includes: "binUbuntu18.tar.gz", name: 'TAN_Ubuntu18', zip: false)
                         options.pluginUbuntuSha = sha1 "binUbuntu18.tar.gz"
 
                     } catch (FlowInterruptedException error) {
@@ -555,7 +555,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             dir("allure-results") {
                 testResultList.each() {
                     try {
-                        unstash "$it"
+                        makeUnstash("$it")
                     } catch(e) {
                         println "[ERROR] Failed to unstash ${it}"
                         println(e.toString())
