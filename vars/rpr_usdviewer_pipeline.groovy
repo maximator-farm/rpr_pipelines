@@ -406,7 +406,7 @@ def executeBuildWindows(Map options) {
                 git apply ../usd_dev.patch  >> ${STAGE_NAME}.USDPixar.log 2>&1
                 cd ..
 
-                python USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/windows/build --src RPRViewer/binary/windows/deps RPRViewer/binary/windows/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
+                python USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/windows/build --src RPRViewer/binary/windows/deps --openimageio RPRViewer/binary/windows/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
                 
                 set PXR_DIR=%CD%\\USDPixar
                 set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
