@@ -457,7 +457,7 @@ def executeBuildWindows(Map options) {
 
                     archiveArtifacts artifacts: "RPRViewer_Setup*.exe", allowEmptyArchive: false
                     String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
-                    String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+                    String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
                     rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
                     /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
@@ -540,7 +540,7 @@ def executeBuildOSX(Map options)
 
             archiveArtifacts artifacts: "RadeonProUSDViewer_Package*.zip", allowEmptyArchive: false
             String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).zip" : "RadeonProUSDViewer_Package_OSX.zip"
-            String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
             rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
