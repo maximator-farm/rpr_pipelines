@@ -22,7 +22,7 @@ class UniverseManagerEngine extends UniverseManager  {
 
     def init() {
         context.withCredentials([context.string(credentialsId: "prodUniverseURL", variable: "PROD_UMS_URL"),
-            context.string(credentialsId: "dev3UniverseURL", variable: "DEV_UMS_URL"),
+            context.string(credentialsId: "dev3UmsURL", variable: "DEV_UMS_URL"),
             context.string(credentialsId: "imageServiceURL", variable: "IS_URL")]) {
 
             universeURLProd = "${context.PROD_UMS_URL}"
