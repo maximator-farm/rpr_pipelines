@@ -402,15 +402,12 @@ def executeBuildWindows(Map options) {
         withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             bat """
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
-                cd USDPixar
-                git apply ../usd_dev.patch  >> ${STAGE_NAME}.USDPixar.log 2>&1
-                cd ..
 
-                cd RPRViewer\\tools
+                RPRViewer\\tools\\build_usd_windows.bat >> ${STAGE_NAME}.USDPixar.log 2>&1
+            """
 
-                build_usd_windows.bat >> ${STAGE_NAME}.USDPixar.log 2>&1
-                
-                build_hdrpr_windows.bat ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
+            bat """
+                RPRViewer\\tools\\build_hdrpr_windows.bat >> ${STAGE_NAME}.HdRPRPlugin.log 2>&1
             """
         }
         String buildName = "RadeonProUSDViewer_Windows.zip"
@@ -431,12 +428,12 @@ def executeBuildWindows(Map options) {
 
             withEnv(["PYTHONPATH=%INST%\\lib\\python;%INST%\\lib"]) {
                 bat """
-                    build_package_windows.bat >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                    RPRViewer\\tools\\build_package_windows.bat >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                 """
 
                 dir("RPRViewer") {
                     bat """
-                        "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log 2>&1
+                        "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ..\\${STAGE_NAME}.USDViewerInstaller.log 2>&1
                     """
                     stash includes: "RPRViewer_Setup.exe", name: "appWindows"
                     options.pluginWinSha = sha1 "RPRViewer_Setup.exe"
@@ -481,9 +478,11 @@ def executeBuildOSX(Map options)
             export PATH="\$PYENV_ROOT/shims:\$PYENV_ROOT/bin:\$PATH"
             pyenv rehash
 
-            ./build_usd_mac.sh >> ${STAGE_NAME}.USDPixar.log 2>&1
+            chmod u+x RPRViewer/tools/build_usd_mac.sh
+            RPRViewer/tools/build_usd_mac.sh >> ${STAGE_NAME}.USDPixar.log 2>&1
             
-            ./build_hdrpr_mac.sh >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
+            chmod u+x RPRViewer/tools/build_hdrpr_mac.sh
+            RPRViewer/tools/build_hdrpr_mac.sh >> ${STAGE_NAME}.HdRPRPlugin.log 2>&1
         """
     }
 
@@ -497,7 +496,8 @@ def executeBuildOSX(Map options)
                 
                 python --version
             
-                ./build_package_mac.sh >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                chmod u+x build_package_mac.sh
+                RPRViewer/tools/build_package_mac.sh >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
             """
 
             zip archive: false, dir: "RPRViewer/binary/mac/inst/dist/RPRViewer", glob: '', zipFile: "RadeonProUSDViewer_Package_OSX.zip"
