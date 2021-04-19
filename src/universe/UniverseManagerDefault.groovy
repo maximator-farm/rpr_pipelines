@@ -23,7 +23,7 @@ class UniverseManagerDefault extends UniverseManager {
 
     def init() {
         context.withCredentials([context.string(credentialsId: "prodUniverseURL", variable: "PROD_UMS_URL"),
-            context.string(credentialsId: "devUniverseURL", variable: "DEV_UMS_URL"),
+            context.string(credentialsId: "dev3UmsURL", variable: "DEV_UMS_URL"),
             context.string(credentialsId: "imageServiceURL", variable: "IS_URL")]) {
 
             universeURLProd = "${context.PROD_UMS_URL}"
@@ -56,7 +56,7 @@ class UniverseManagerDefault extends UniverseManager {
     def createBuilds(Map options) {
         // create build ([OS-1:GPU-1, ... OS-N:GPU-N], ['Suite1', 'Suite2', ..., 'SuiteN'])
         context.withCredentials([context.string(credentialsId: "prodUniverseFrontURL", variable: "PROD_UMS_FRONT_URL"),
-            context.string(credentialsId: "devUniverseProdURL", variable: "DEV_UMS_FRONT_URL")]) {
+            context.string(credentialsId: "dev3UmsFrontURL", variable: "DEV_UMS_FRONT_URL")]) {
             if (universeClientProd) {
                 universeClientProd.createBuild(options.universePlatforms, options.groupsUMS, options.updateRefs, options,
                         context.PROD_UMS_FRONT_URL, "prod")

@@ -153,7 +153,7 @@ abstract class UniverseManager {
                 context.withCredentials([context.usernamePassword(credentialsId: 'image_service', usernameVariable: 'IS_USER', passwordVariable: 'IS_PASSWORD'),
                     context.usernamePassword(credentialsId: 'universeMonitoringSystem', usernameVariable: 'UMS_USER', passwordVariable: 'UMS_PASSWORD'),
                     context.string(credentialsId: 'prodUniverseURL', variable: 'PROD_UMS_URL'),
-                    context.string(credentialsId: 'devUniverseURL', variable: 'DEV_UMS_URL'),
+                    context.string(credentialsId: 'dev3UmsURL', variable: 'DEV_UMS_URL'),
                     context.string(credentialsId: 'imageServiceURL', variable: 'IS_URL')]) {
 
                     updateIds(options)
