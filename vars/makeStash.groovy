@@ -37,7 +37,7 @@ def call(Map params) {
                     if (isUnix()) {
                         includeParams << "-i '${include.trim()}'"
                     } else {
-                        includeParams << "${include.replace('/**/', '/').replace('**/', '').replace('/**', '').trim()}"
+                        includeParams << "-ir!${include.replace('/**/', '/').replace('**/', '').replace('/**', '').trim()}"
                     }
                 }
             }
@@ -77,7 +77,7 @@ def call(Map params) {
             }
         }
 
-        if (debug) {
+        if (true) {
             println(stdout)
         }
 
@@ -141,7 +141,7 @@ def call(Map params) {
                     }
                 }
 
-                if (debug) {
+                if (true) {
                     println(stdout)
                 }
             }

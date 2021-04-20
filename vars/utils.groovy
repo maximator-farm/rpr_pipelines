@@ -86,6 +86,40 @@ class utils {
         }
     }
 
+    static def stashTestData(Object self, Map options, Boolean publishOnNAS = false) {
+        if (publishOnNAS) {
+            String engine = ""
+            String stashName = ""
+            String stashNameZip = ""
+            String reportName = ""
+            String[] testsResultsParts = parsedTestsName.split("-")
+            if (options.containsKey("engines") && options.containsKey("enginesNames")) {
+                engine = testsResultsParts[-1]
+                // Remove "testResult" prefix and engine from stash name
+                stashName = testsResultsParts.subList(1, testsResultsParts.size() - 1).join("-")
+            } else {
+                // Remove "testResult" prefix from stash name
+                stashName = testsResultsParts.subList(1, testsResultsParts.size()).join("-")
+            }
+
+            // Use stash name without spaces for zip archive to simply process it
+            stashNameZip = stashName.replace(" ", "_")
+
+            if (engine) {
+                String engineName = options.enginesNames[options.engines.indexOf(engine)]
+                reportName = "Test_Report_${engineName}"
+            } else {
+                reportName = "Test_Report"
+            }
+
+            String path = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/${reportName}/${stashName}/"
+            makeStash(includes: '*.jpg, *.jpeg, *.png, *.bmp, *.gif, *.log', name: stashNameZip, allowEmpty: true, customLocation: path, zip: true, unzip: true)
+            self.makeStash(includes: '**/*', excludes: '*.jpg, *.jpeg, *.png, *.bmp, *.gif, *.log', name: stashNameZip, allowEmpty: true)
+        } else {
+            self.makeStash(includes: '**/*', name: options.testResultsName, allowEmpty: true)
+        }
+    }
+
     static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false) {
         Map params
 

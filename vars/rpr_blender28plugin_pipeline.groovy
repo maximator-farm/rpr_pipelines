@@ -421,7 +421,8 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         println("Stashing test results to : ${options.testResultsName}")
-                        makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
+                        
+                        utils.stashTestData(this, options, options.storeOnNAS)
 
                         // deinstalling broken addon
                         // if test group is fully errored or number of test cases is equal to zero
@@ -1235,7 +1236,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
-                        testCaseRetries:testCaseRetries
+                        testCaseRetries:testCaseRetries,
+                        storeOnNAS: true
                         ]
 
             if (sendToUMS) {
