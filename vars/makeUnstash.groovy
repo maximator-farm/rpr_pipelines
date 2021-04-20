@@ -25,9 +25,9 @@ def call(String stashName, Boolean unzip = true, Boolean debug = false) {
                 print("Try to make unstash №${retries}")
                 withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                     if (isUnix()) {
-                        status = sh(returnStatus: true, script: '$CIS_TOOLS/unstash.sh' + " ${remotePath} " + '$REMOTE_HOST')
+                        status = sh(returnStatus: true, script: '$CIS_TOOLS/downloadFiles.sh' + " \"${remotePath.replace(" ", "\\\\\\ ")}\" . " + '$REMOTE_HOST')
                     } else {
-                        status = bat(returnStatus: true, script: '%CIS_TOOLS%\\unstash.bat' + " ${remotePath} " + '%REMOTE_HOST%')
+                        status = bat(returnStatus: true, script: '%CIS_TOOLS%\\downloadFiles.bat' + " \"${remotePath.replace(" ", "\\\\\\ ")}\" . " + '%REMOTE_HOST%')
                     }
                 }
 
@@ -51,9 +51,9 @@ def call(String stashName, Boolean unzip = true, Boolean debug = false) {
 
         if (unzip) {
             if (isUnix()) {
-                stdout = sh(returnStdout: true, script: "unzip -u ${zipName}")
+                stdout = sh(returnStdout: true, script: "unzip -u \"${zipName}\"")
             } else {
-                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " ${zipName}\"")
+                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " \"${zipName}\"")
             }
         }
 
@@ -63,9 +63,9 @@ def call(String stashName, Boolean unzip = true, Boolean debug = false) {
         
         if (unzip) {
             if (isUnix()) {
-                sh "rm -rf ${zipName}"
+                sh "rm -rf \"${zipName}\""
             } else {
-                bat "del ${zipName}"
+                bat "del \"${zipName}\""
             }
         }
 

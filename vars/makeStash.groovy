@@ -71,9 +71,9 @@ def call(Map params) {
 
         if (zip) {
             if (isUnix()) {
-                stdout = sh(returnStdout: true, script: "zip -r ${zipName} . ${includeParams} ${excludeParams} -x '*@tmp*'")
+                stdout = sh(returnStdout: true, script: "zip -r \"${zipName}\" . ${includeParams} ${excludeParams} -x '*@tmp*'")
             } else {
-                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " stash_${stashName}.zip ${includeParams ?: '.'} ${excludeParams} -xr!*@tmp*")
+                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"stash_${stashName}.zip\" ${includeParams ?: '.'} ${excludeParams} -xr!*@tmp*")
             }
         }
 
@@ -96,15 +96,15 @@ def call(Map params) {
                 withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                     if (isUnix()) {
                         if (zip) {
-                            status = sh(returnStatus: true, script: '$CIS_TOOLS/stash.sh' + " ${zipName} ${remotePath} " + '$REMOTE_HOST')
+                            status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " \"${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '$REMOTE_HOST')
                         } else {
-                            status = sh(returnStatus: true, script: '$CIS_TOOLS/stash.sh' + " ${includes} ${remotePath} " + '$REMOTE_HOST')
+                            status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " ${includes} \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '$REMOTE_HOST')
                         }
                     } else {
                         if (zip) {
-                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\stash.bat' + " ${zipName} ${remotePath} " + '%REMOTE_HOST%')
+                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " \"${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
                         } else {
-                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\stash.bat' + " ${includes} ${remotePath} " + '%REMOTE_HOST%')
+                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " ${includes} \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
                         }
                     }
                 }
@@ -147,9 +147,9 @@ def call(Map params) {
             }
 
             if (isUnix()) {
-                sh "rm -rf ${zipName}"
+                sh "rm -rf \"${zipName}\""
             } else {
-                bat "del ${zipName}"
+                bat "del \"${zipName}\""
             }
         }
 
