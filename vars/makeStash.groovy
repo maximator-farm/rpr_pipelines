@@ -94,6 +94,8 @@ def call(Map params) {
             try {
                 print("Try to make stash №${retries}")
                 withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
+                    // Escaping of space characters should be done by different ways for local path and remote paths
+                    // Read more about it here: https://rsync.samba.org/FAQ.html#9
                     if (isUnix()) {
                         if (zip) {
                             status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " \"${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '$REMOTE_HOST')
