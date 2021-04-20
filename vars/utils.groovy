@@ -90,9 +90,8 @@ class utils {
         if (publishOnNAS) {
             String engine = ""
             String stashName = ""
-            String stashNameZip = ""
             String reportName = ""
-            String[] testsResultsParts = parsedTestsName.split("-")
+            List testsResultsParts = options.testResultsName.split("-") as List
             if (options.containsKey("engines") && options.containsKey("enginesNames")) {
                 engine = testsResultsParts[-1]
                 // Remove "testResult" prefix and engine from stash name
@@ -102,9 +101,6 @@ class utils {
                 stashName = testsResultsParts.subList(1, testsResultsParts.size()).join("-")
             }
 
-            // Use stash name without spaces for zip archive to simply process it
-            stashNameZip = stashName.replace(" ", "_")
-
             if (engine) {
                 String engineName = options.enginesNames[options.engines.indexOf(engine)]
                 reportName = "Test_Report_${engineName}"
@@ -112,9 +108,9 @@ class utils {
                 reportName = "Test_Report"
             }
 
-            String path = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/${reportName}/${stashName}/"
-            makeStash(includes: '*.jpg, *.jpeg, *.png, *.bmp, *.gif, *.log', name: stashNameZip, allowEmpty: true, customLocation: path, zip: true, unzip: true)
-            self.makeStash(includes: '**/*', excludes: '*.jpg, *.jpeg, *.png, *.bmp, *.gif, *.log', name: stashNameZip, allowEmpty: true)
+            String path = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/${stashName}/"
+            self.makeStash(includes: '*.jpg, *.jpeg, *.png, *.bmp, *.gif, *.log', name: stashName, allowEmpty: true, customLocation: path, zip: true, unzip: true)
+            self.makeStash(includes: '**/*', excludes: '*.jpg, *.jpeg, *.png, *.bmp, *.gif, *.log', name: options.testResultsName, allowEmpty: true)
         } else {
             self.makeStash(includes: '**/*', name: options.testResultsName, allowEmpty: true)
         }
