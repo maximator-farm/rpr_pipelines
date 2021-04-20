@@ -478,6 +478,8 @@ def executeBuildOSX(Map options)
             export PATH="\$PYENV_ROOT/shims:\$PYENV_ROOT/bin:\$PATH"
             pyenv rehash
 
+            python --version
+
             chmod u+x RPRViewer/tools/build_usd_mac.sh
             RPRViewer/tools/build_usd_mac.sh >> ${STAGE_NAME}.USDPixar.log 2>&1
             
@@ -496,7 +498,7 @@ def executeBuildOSX(Map options)
                 
                 python --version
             
-                chmod u+x build_package_mac.sh
+                chmod u+x RPRViewer/tools/build_package_mac.sh
                 RPRViewer/tools/build_package_mac.sh >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
             """
 
