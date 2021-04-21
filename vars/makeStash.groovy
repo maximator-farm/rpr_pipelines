@@ -98,9 +98,9 @@ def call(Map params) {
                     // Read more about it here: https://rsync.samba.org/FAQ.html#9
                     if (isUnix()) {
                         if (zip) {
-                            status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " \"${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '$REMOTE_HOST')
+                            status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " \"${zipName}\" \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
                         } else {
-                            status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " ${includes} \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '$REMOTE_HOST')
+                            status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " ${includes} \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
                         }
                     } else {
                         if (zip) {
@@ -137,9 +137,9 @@ def call(Map params) {
             if (unzip) {
                 withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                     if (isUnix()) {
-                        stdout = sh(returnStdout: true, script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " \"${remotePath.replace(" ", "\\ ")}${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\ ")}\" true")
+                        stdout = sh(returnStdout: true, script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " \"${remotePath}${zipName}\" \"${remotePath}\" true")
                     } else {
-                        stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " \"${remotePath.replace(" ", "\\ ")}${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\ ")}\" true")
+                        stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " \"${remotePath}${zipName}\" \"${remotePath}\" true")
                     }
                 }
 
