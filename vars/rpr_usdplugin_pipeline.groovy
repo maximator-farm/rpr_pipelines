@@ -319,14 +319,14 @@ def executeBuildWindows(String osName, Map options) {
             options.win_tool_path = "C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}${options.win_houdini_python3}"
             bat """
                 mkdir build
-                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+                set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
                 set HFS=${options.win_tool_path}
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
             """
         } else {
             bat """
                 mkdir build
-                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+                set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ..\\${STAGE_NAME}.log 2>&1
             """
         } 

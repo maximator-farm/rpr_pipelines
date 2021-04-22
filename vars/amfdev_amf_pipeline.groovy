@@ -145,21 +145,21 @@ def updateTestResults(String osName, String configuration) {
                 switch(osName) {
                     case 'Windows':
                         machineInfoRaw = bat(
-                            script: "set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH% & python -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
+                            script: "set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH% & python -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
                             returnStdout: true
                         ).split('\r\n')[2].trim()
                         renderDevice = bat(
-                            script: "set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH% & python -c \"from system_info import get_gpu; print(get_gpu())\"", 
+                            script: "set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH% & python -c \"from system_info import get_gpu; print(get_gpu())\"", 
                             returnStdout: true
                         ).split('\r\n')[2].trim()
                         break
                     default:
                         machineInfoRaw = sh(
-                            script: "python3 -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
+                            script: "python3.9 -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
                             returnStdout: true
                         )
                         renderDevice = sh(
-                            script: "python3 -c \"from system_info import get_gpu; print(get_gpu())\"", 
+                            script: "python3.9 -c \"from system_info import get_gpu; print(get_gpu())\"", 
                             returnStdout: true
                         )
                         break
@@ -757,7 +757,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             dir("amf/public/proj/OpenAMF_Autotests/Reports") {
                 bat """
-                    set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
+                    set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%
                     pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
                     python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --commit_datetime "${options.commitDatetime}" --commit_message "${utils.escapeCharsByUnicode(options.commitMessage)}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
                 """
