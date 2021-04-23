@@ -77,7 +77,7 @@ def call(Map params) {
             }
         }
 
-        if (true) {
+        if (debug) {
             println(stdout)
         }
 
@@ -143,7 +143,7 @@ def call(Map params) {
                     }
                 }
 
-                if (true) {
+                if (debug) {
                     println(stdout)
                 }
             }
