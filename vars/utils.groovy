@@ -109,8 +109,8 @@ class utils {
             }
 
             String path = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/${stashName}/"
-            self.makeStash(includes: '*.jpg, *.jpeg, *.png, *.bmp, *.gif, *.log', name: stashName, allowEmpty: true, customLocation: path, zip: true, unzip: true)
-            self.makeStash(includes: '**/*', excludes: '*.jpg, *.jpeg, *.png, *.bmp, *.gif, *.log', name: options.testResultsName, allowEmpty: true)
+            self.makeStash(includes: '**/*', name: stashName, allowEmpty: true, customLocation: path, zip: true, unzip: true)
+            self.makeStash(includes: '*.json', excludes: '*/events/*.json', name: options.testResultsName, allowEmpty: true)
         } else {
             self.makeStash(includes: '**/*', name: options.testResultsName, allowEmpty: true)
         }
