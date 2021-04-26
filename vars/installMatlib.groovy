@@ -16,7 +16,7 @@ def call(String osName, Map options) {
             String installerLocalPath = "C:\\TestResources"
             String installerName = "RadeonProRenderMaterialLibrary.msi"
 
-            downloadFiles("${installerRemotePath}/${installerName}", "${installerLocalPathRsync}/${installerName}")
+            downloadFiles("${installerRemotePath}/${installerName}", "${installerLocalPathRsync}/")
 
             uninstallMSI("Radeon%Material%", options.stageName, options.currentTry)
             // msiexec doesn't work with relative paths
@@ -34,12 +34,20 @@ def call(String osName, Map options) {
             String installerLocalPath = "${CIS_TOOLS}/../TestResources"
             String installerName = "RadeonProRenderMaterialLibrary.run"
 
-            downloadFiles("${installerRemotePath}/${installerName}", "${installerLocalPath}/${installerName}")
+            downloadFiles("${installerRemotePath}/${installerName}", "${installerLocalPath}/")
+
+            try {
+                sh """
+                    /home/\$USER/local/share/rprmaterials/uninstall.py --just-do-it 
+                """
+            } catch (e) {
+                println(e.toString())
+                println("[WARNING] Could not uninstall MatLib")
+            }
 
             sh """
-                /home/\$USER/local/share/rprmaterials/uninstall.py --just-do-it 
                 chmod +x ${installerLocalPath}/${installerName}
-                ${installerLocalPath}/${installerName}
+                ${installerLocalPath}/${installerName} --nox11 -- --just-do-it
             """
     }
 }
