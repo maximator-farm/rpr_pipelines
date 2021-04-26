@@ -21,138 +21,155 @@ def call(Map params) {
     try {
         stashName = params["name"]
 
-        Boolean allowEmpty = params["allowEmpty"]
+        Boolean allowEmpty = params.containsKey("allowEmpty") ? params["allowEmpty"] : false
         String includes = params["includes"]
         String excludes = params["excludes"]
         Boolean debug = params["debug"]
         Boolean zip = params.containsKey("zip") ? params["zip"] : true
         Boolean unzip = params.containsKey("unzip") ? (zip && params["unzip"]) : false
+        Boolean storeOnNAS = params.containsKey("storeOnNAS") ? params["storeOnNAS"] : false
 
-        def includeParams = []
-        def excludeParams = []
+        if (storeOnNAS) {
+            def includeParams = []
+            def excludeParams = []
 
-        if (zip) {
-            if (includes) {
-                for (include in includes.split(",")) {
-                    if (isUnix()) {
-                        includeParams << "-i '${include.trim()}'"
-                    } else {
-                        includeParams << "-ir!${include.replace('/**/', '/').replace('**/', '').replace('/**', '').trim()}"
+            if (zip) {
+                if (includes) {
+                    for (include in includes.split(",")) {
+                        if (isUnix()) {
+                            includeParams << "-i '${include.trim()}'"
+                        } else {
+                            includeParams << "-ir!${include.replace('/**/', '/').replace('**/', '').replace('/**', '').trim()}"
+                        }
+                    }
+                }
+
+                if (excludes) {
+                    for (exclude in excludes.split(",")) {
+                        if (isUnix()) {
+                            excludeParams << "-x '${exclude.trim()}'"
+                        } else {
+                            excludeParams << "-xr!${exclude.replace('/**/', '/').replace('**/', '').replace('/**', '').trim()}"
+                        }
+                        
                     }
                 }
             }
 
-            if (excludes) {
-                for (exclude in excludes.split(",")) {
-                    if (isUnix()) {
-                        excludeParams << "-x '${exclude.trim()}'"
-                    } else {
-                        excludeParams << "-xr!${exclude.replace('/**/', '/').replace('**/', '').replace('/**', '').trim()}"
-                    }
-                    
-                }
-            }
-        }
+            includeParams = includeParams.join(" ")
+            excludeParams = excludeParams.join(" ")
 
-        includeParams = includeParams.join(" ")
-        excludeParams = excludeParams.join(" ")
+            String remotePath
 
-        String remotePath
-
-        if (params["customLocation"]) {
-            remotePath = params["customLocation"]
-        } else {
-            remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
-        }
-
-        String stdout
-
-        String zipName = "stash_${stashName}.zip"
-
-        if (zip) {
-            if (isUnix()) {
-                stdout = sh(returnStdout: true, script: "zip -r \"${zipName}\" . ${includeParams} ${excludeParams} -x '*@tmp*'")
+            if (params["customLocation"]) {
+                remotePath = params["customLocation"]
             } else {
-                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"stash_${stashName}.zip\" ${includeParams ?: '.'} ${excludeParams} -xr!*@tmp*")
+                remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
             }
-        }
 
-        if (debug) {
-            println(stdout)
-        }
+            String stdout
 
-        if (stdout?.contains("Nothing to do!") && !allowEmpty) {
-            println("[ERROR] Stash is empty")
-            throw new Exception("Empty stash")
-        }
+            String zipName = "stash_${stashName}.zip"
 
-        int times = 3
-        int retries = 0
-        int status = 0
+            if (zip) {
+                if (isUnix()) {
+                    stdout = sh(returnStdout: true, script: "zip -r \"${zipName}\" . ${includeParams} ${excludeParams} -x '*@tmp*'")
+                } else {
+                    stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"stash_${stashName}.zip\" ${includeParams ?: '.'} ${excludeParams} -xr!*@tmp*")
+                }
+            }
 
-        while (retries++ < times) {
-            try {
-                print("Try to make stash №${retries}")
-                withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
-                    // Escaping of space characters should be done by different ways for local path and remote paths
-                    // Read more about it here: https://rsync.samba.org/FAQ.html#9
-                    if (isUnix()) {
-                        if (zip) {
-                            status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " \"${zipName}\" \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
+            if (debug) {
+                println(stdout)
+            }
+
+            if (stdout?.contains("Nothing to do!") && !allowEmpty) {
+                println("[ERROR] Stash is empty")
+                throw new Exception("Empty stash")
+            }
+
+            int times = 3
+            int retries = 0
+            int status = 0
+
+            while (retries++ < times) {
+                try {
+                    print("Try to make stash №${retries}")
+                    withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
+                        // Escaping of space characters should be done by different ways for local path and remote paths
+                        // Read more about it here: https://rsync.samba.org/FAQ.html#9
+                        if (isUnix()) {
+                            if (zip) {
+                                status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " \"${zipName}\" \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
+                            } else {
+                                status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " ${includes} \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
+                            }
                         } else {
-                            status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " ${includes} \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
-                        }
-                    } else {
-                        if (zip) {
-                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " \"${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
-                        } else {
-                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " ${includes} \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
+                            if (zip) {
+                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " \"${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
+                            } else {
+                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " ${includes} \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
+                            }
                         }
                     }
-                }
 
-                if (status == 23) {
-                    if (allowEmpty) {
+                    if (status == 23) {
+                        if (allowEmpty) {
+                            break
+                        } else {
+                            println("[ERROR] Stash is empty")
+                            throw new Exception("Empty stash")
+                        }
+                    } else if (status != 24) {
                         break
                     } else {
-                        println("[ERROR] Stash is empty")
-                        throw new Exception("Empty stash")
+                        print("[ERROR] Partial transfer due to vanished source files")
                     }
-                } else if (status != 24) {
-                    break
+                } catch (FlowInterruptedException e1) {
+                    println("[INFO] Making of stash with name '${stashName}' was aborting.")
+                    throw e1
+                } catch(e1) {
+                    println(e1.toString())
+                    println(e1.getMessage())
+                    println(e1.getStackTrace())
+                }
+            }
+            
+            if (zip) {
+                if (unzip) {
+                    withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
+                        if (isUnix()) {
+                            stdout = sh(returnStdout: true, script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " \"${remotePath}${zipName}\" \"${remotePath}\" true")
+                        } else {
+                            stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " \"${remotePath.replace(" ", "\\ ")}${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\ ")}\" true")
+                        }
+                    }
+
+                    if (debug) {
+                        println(stdout)
+                    }
+                }
+
+                if (isUnix()) {
+                    sh "rm -rf \"${zipName}\""
                 } else {
-                    print("[ERROR] Partial transfer due to vanished source files")
+                    bat "del \"${zipName}\""
                 }
-            } catch (FlowInterruptedException e1) {
-                println("[INFO] Making of stash with name '${stashName}' was aborting.")
-                throw e1
-            } catch(e1) {
-                println(e1.toString())
-                println(e1.getMessage())
-                println(e1.getStackTrace())
             }
-        }
-        
-        if (zip) {
-            if (unzip) {
-                withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
-                    if (isUnix()) {
-                        stdout = sh(returnStdout: true, script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " \"${remotePath}${zipName}\" \"${remotePath}\" true")
-                    } else {
-                        stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " \"${remotePath.replace(" ", "\\ ")}${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\ ")}\" true")
-                    }
-                }
+        } else {
+            Map stashParams = [name: stashName]
 
-                if (debug) {
-                    println(stdout)
-                }
+            if (includes) {
+                params["includes"] = includes
+            }
+            if (excludes) {
+                params["excludes"] = excludes
+            }
+            if (allowEmpty) {
+                params["allowEmpty"] = allowEmpty
             }
 
-            if (isUnix()) {
-                sh "rm -rf \"${zipName}\""
-            } else {
-                bat "del \"${zipName}\""
-            }
+            stash(stashParams)
         }
 
     } catch (e) {

@@ -52,7 +52,7 @@ def getMayaPluginInstaller(String osName, Map options) {
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash("appWindows", false)
+                    makeUnstash("appWindows", false, options.storeOnNAS)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -102,7 +102,7 @@ def getMayaPluginInstaller(String osName, Map options) {
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash("appOSX", false)
+                    makeUnstash("appOSX", false, options.storeOnNAS)
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -469,7 +469,7 @@ def executeBuildWindows(Map options)
 
         //options.productCode = "unknown"
         options.pluginWinSha = sha1 'RadeonProRenderMaya.msi'
-        makeStash(includes: 'RadeonProRenderMaya.msi', name: 'appWindows', zip: false)
+        makeStash(includes: 'RadeonProRenderMaya.msi', name: 'appWindows', zip: false, storeOnNAS: options.storeOnNAS)
 
         GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
     }
@@ -502,7 +502,7 @@ def executeBuildOSX(Map options)
             }
 
             sh "cp RadeonProRender*.dmg RadeonProRenderMaya.dmg"
-            makeStash(includes: 'RadeonProRenderMaya.dmg', name: "appOSX", zip: false)
+            makeStash(includes: 'RadeonProRenderMaya.dmg', name: "appOSX", zip: false, storeOnNAS: options.storeOnNAS)
 
             // TODO: detect ID of installed plugin
             options.pluginOSXSha = sha1 'RadeonProRenderMaya.dmg'
@@ -797,7 +797,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
-                                makeUnstash("$it")
+                                makeUnstash("$it", true, options.storeOnNAS)
                             } catch(e) {
                                 println "[ERROR] Failed to unstash ${it}"
                                 lostStashes.add("'${testName}'".replace("testResult-", ""))
@@ -1131,7 +1131,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
-                        testCaseRetries:testCaseRetries
+                        testCaseRetries:testCaseRetries,
+                        storeOnNAS: true
                         ]
 
             if (sendToUMS) {

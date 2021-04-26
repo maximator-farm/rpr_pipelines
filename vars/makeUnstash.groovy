@@ -7,68 +7,71 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
  * @param unzip Unzip content of stash
  * @param debug Print more info about making of stash (default - false)
  */
-def call(String stashName, Boolean unzip = true, Boolean debug = false) {
+def call(String stashName, Boolean unzip = true, Boolean storeOnNAS = false, Boolean debug = false) {
 
     String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
     
     String stdout
 
     try {
-        int times = 3
-        int retries = 0
-        int status = 0
+        if (storeOnNAS) {
+            int times = 3
+            int retries = 0
+            int status = 0
 
-        String zipName = "stash_${stashName}.zip"
+            String zipName = "stash_${stashName}.zip"
 
-        while (retries++ < times) {
-            try {
-                print("Try to make unstash №${retries}")
-                withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
-                    if (isUnix()) {
-                        status = sh(returnStatus: true, script: '$CIS_TOOLS/downloadFiles.sh' + " \"${remotePath.replace(" ", "\\\\\\ ")}\" . " + '$REMOTE_HOST')
-                    } else {
-                        status = bat(returnStatus: true, script: '%CIS_TOOLS%\\downloadFiles.bat' + " \"${remotePath.replace(" ", "\\\\\\ ")}\" . " + '%REMOTE_HOST%')
+            while (retries++ < times) {
+                try {
+                    print("Try to make unstash №${retries}")
+                    withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
+                        if (isUnix()) {
+                            status = sh(returnStatus: true, script: '$CIS_TOOLS/downloadFiles.sh' + " \"${remotePath.replace(" ", "\\\\\\ ")}\" . " + '$REMOTE_HOST')
+                        } else {
+                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\downloadFiles.bat' + " \"${remotePath.replace(" ", "\\\\\\ ")}\" . " + '%REMOTE_HOST%')
+                        }
                     }
-                }
 
-                if (status == 23) {
-                    println("[ERROR] Nothing to unstash. Stash is empty")
-                    throw new Exception("Nothing to unstash. Stash is empty")
-                } else if (status != 24) {
-                    break
+                    if (status == 23) {
+                        println("[ERROR] Nothing to unstash. Stash is empty")
+                        throw new Exception("Nothing to unstash. Stash is empty")
+                    } else if (status != 24) {
+                        break
+                    } else {
+                        print("[ERROR] Partial transfer due to vanished source files")
+                    }
+                } catch (FlowInterruptedException e1) {
+                    println("[INFO] Making of unstash of stash with name '${stashName}' was aborting.")
+                    throw e1
+                } catch(e1) {
+                    println(e1.toString())
+                    println(e1.getMessage())
+                    println(e1.getStackTrace())
+                }
+            }
+
+            if (unzip) {
+                if (isUnix()) {
+                    stdout = sh(returnStdout: true, script: "unzip -u \"${zipName}\"")
                 } else {
-                    print("[ERROR] Partial transfer due to vanished source files")
+                    stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " \"${zipName}\"")
                 }
-            } catch (FlowInterruptedException e1) {
-                println("[INFO] Making of unstash of stash with name '${stashName}' was aborting.")
-                throw e1
-            } catch(e1) {
-                println(e1.toString())
-                println(e1.getMessage())
-                println(e1.getStackTrace())
             }
-        }
 
-        if (unzip) {
-            if (isUnix()) {
-                stdout = sh(returnStdout: true, script: "unzip -u \"${zipName}\"")
-            } else {
-                stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe x' + " \"${zipName}\"")
+            if (debug) {
+                println(stdout)
             }
-        }
-
-        if (debug) {
-            println(stdout)
-        }
-        
-        if (unzip) {
-            if (isUnix()) {
-                sh "rm -rf \"${zipName}\""
-            } else {
-                bat "del \"${zipName}\""
+            
+            if (unzip) {
+                if (isUnix()) {
+                    sh "rm -rf \"${zipName}\""
+                } else {
+                    bat "del \"${zipName}\""
+                }
             }
+        } else {
+            unstash(stashName)
         }
-
     } catch (e) {
         println("Failed to unstash stash with name '${stashName}'")
         println(e.toString())
