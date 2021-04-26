@@ -109,8 +109,8 @@ class utils {
             }
 
             String path = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/${stashName}/"
-            self.makeStash(includes: '**/*', name: stashName, allowEmpty: true, customLocation: path, zip: true, unzip: true)
-            self.makeStash(includes: '*.json', excludes: '*/events/*.json', name: options.testResultsName, allowEmpty: true)
+            self.makeStash(includes: '**/*', name: stashName, allowEmpty: true, customLocation: path, zip: true, unzip: true, storeOnNAS: true)
+            self.makeStash(includes: '*.json', excludes: '*/events/*.json', name: options.testResultsName, allowEmpty: true, storeOnNAS: true)
         } else {
             self.makeStash(includes: '**/*', name: options.testResultsName, allowEmpty: true)
         }
@@ -124,7 +124,7 @@ class utils {
 
             self.dir(reportDir) {
                 // upload report to NAS in archive and unzip it
-                self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, zip: true, unzip: true)
+                self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, zip: true, unzip: true, storeOnNAS: true)
             }
 
             String reportLinkBase
