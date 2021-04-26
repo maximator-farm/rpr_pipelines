@@ -34,5 +34,5 @@ def call(String osName, Map options, Integer retryNumber){
             """
     }
     archiveArtifacts artifacts: "*.crash.log"
-    makeStash(includes: "${logName}", name: "${logName}")
+    stash(includes: "${logName}", name: "${logName}")
 }
