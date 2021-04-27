@@ -466,8 +466,10 @@ def executeBuildWindows(Map options)
     dir('RadeonProRenderBlenderAddon\\BlenderPkg') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
-            build_win.cmd >> ../../${STAGE_NAME}.log  2>&1
+            cd ..
+            build.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
+        python3("create_zip_addon.py >> ../../${STAGE_NAME}.log 2>&1")
 
         dir('.build') {
             bat """
@@ -508,8 +510,10 @@ def executeBuildOSX(Map options)
     dir('RadeonProRenderBlenderAddon/BlenderPkg') {
         GithubNotificator.updateStatus("Build", "OSX", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
         sh """
+            cd ..
             ./build_osx.sh >> ../../${STAGE_NAME}.log  2>&1
         """
+        python3("create_zip_addon.py >> ../../${STAGE_NAME}.log 2>&1")
 
         dir('.build') {
             sh """
@@ -549,8 +553,10 @@ def executeBuildLinux(String osName, Map options)
     dir('RadeonProRenderBlenderAddon/BlenderPkg') {
         GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         sh """
-            ./build_linux.sh >> ../../${STAGE_NAME}.log  2>&1
+            cd ..
+            ./build.sh >> ../../${STAGE_NAME}.log  2>&1
         """
+        python3("create_zip_addon.py >> ../../${STAGE_NAME}.log 2>&1")
 
         dir('.build') {
 
