@@ -35,7 +35,6 @@ def executeTestCommand(String osName, String asicName, Map options)
                         pip install C:\\AMD\\OpenEXR-1.3.2-cp38-cp38-win_amd64.whl >> ${STAGE_NAME}_init_env.log 2>&1
                         pip install -e . >> ${STAGE_NAME}_init_env.log 2>&1
                         mkdir nbs\\tested
-                        call run_nbs
                     """
                 }
             }
@@ -47,9 +46,9 @@ def executeTestCommand(String osName, String asicName, Map options)
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
                             println "[INFO] Current notebook: ${test}.ipynb"
                             bat """
-                                call C:\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_${test}.log 2>&1
+                                call C:\\Users\\Gdansk\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
                                 call conda activate upscalers_pytorch >> ${STAGE_NAME}_${test}.log 2>&1
-                                jupyter nbconvert --inplace --allow-errors --execute --ExecutePreprocessor.timeout=${options.notebooksTimeout} --ExecutePreprocessor.kernel_name=upscalers_pytorch ${test}.ipynb >> ..\\${STAGE_NAME}_${test}.log 2>&1
+                                jupyter nbconvert --inplace --execute --ExecutePreprocessor.timeout=${options.notebooksTimeout} --ExecutePreprocessor.kernel_name=upscalers_pytorch ${test}.ipynb >> ..\\${STAGE_NAME}_${test}.log 2>&1
                             """
                             utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report", "Test Report")
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
