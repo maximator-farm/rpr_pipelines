@@ -16,23 +16,23 @@ def executeTestCommand(String osName, String asicName, Map options)
 
             if (options.recreateCondaEnv) {
                     bat """
-                        call C:\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
+                        call C:\\Users\\${env.USERNAME}\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env remove --name upscalers_pytorch >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env create --force --quiet --name upscalers_pytorch -f upscalers_pytorch.yml -v >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda activate upscalers_pytorch >> ${STAGE_NAME}_init_env.log 2>&1
                         call ipython kernel install --user --name upscalers_pytorch
-                        pip install C:\\TestResources\\OpenEXR-1.3.2-cp38-cp38-win_amd64.whl >> ${STAGE_NAME}_init_env.log 2>&1
+                        pip install C:\\AMD\\OpenEXR-1.3.2-cp38-cp38-win_amd64.whl >> ${STAGE_NAME}_init_env.log 2>&1
                         pip install -e . >> ${STAGE_NAME}_init_env.log 2>&1
                         mkdir nbs\\tested
                     """
                 } else {
                     bat """
-                        call C:\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
+                        call C:\\Users\\${env.USERNAME}\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env update --prune --quiet --name upscalers_pytorch -f upscalers_pytorch.yml -v >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda activate upscalers_pytorch >> ${STAGE_NAME}_init_env.log 2>&1
                         call ipython kernel install --user --name upscalers_pytorch
                         call jupyter kernelspec list >> ${STAGE_NAME}_init_env.log 2>&1
-                        pip install C:\\TestResources\\OpenEXR-1.3.2-cp38-cp38-win_amd64.whl >> ${STAGE_NAME}_init_env.log 2>&1
+                        pip install C:\\AMD\\OpenEXR-1.3.2-cp38-cp38-win_amd64.whl >> ${STAGE_NAME}_init_env.log 2>&1
                         pip install -e . >> ${STAGE_NAME}_init_env.log 2>&1
                         mkdir nbs\\tested
                     """
@@ -46,10 +46,10 @@ def executeTestCommand(String osName, String asicName, Map options)
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
                             println "[INFO] Current notebook: ${test}.ipynb"
                             bat """
-                                set TAAU_DATA=C:\\TestResources\\upscalers_pytorch_assets\\data
-                                call C:\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_${test}.log 2>&1
+                                call C:\\Users\\${env.USERNAME}\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
                                 call conda activate upscalers_pytorch >> ${STAGE_NAME}_${test}.log 2>&1
                                 jupyter nbconvert --to html --execute --ExecutePreprocessor.timeout=${options.notebooksTimeout} --ExecutePreprocessor.kernel_name=upscalers_pytorch --output tested/tested_${test} ${test}.ipynb >> ..\\${STAGE_NAME}_${test}.log 2>&1
+
                             """
                             utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report", "Test Report")
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
