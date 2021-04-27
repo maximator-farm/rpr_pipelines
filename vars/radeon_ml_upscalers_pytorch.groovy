@@ -16,7 +16,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 
             if (options.recreateCondaEnv) {
                     bat """
-                        call C:\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
+                        call C:\\Users\\Gdansk\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env remove --name upscalers_pytorch >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env create --force --quiet --name upscalers_pytorch -f upscalers_pytorch.yml -v >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda activate upscalers_pytorch >> ${STAGE_NAME}_init_env.log 2>&1
@@ -27,7 +27,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     """
                 } else {
                     bat """
-                        call C:\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
+                        call C:\\Users\\Gdansk\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env update --prune --quiet --name upscalers_pytorch -f upscalers_pytorch.yml -v >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda activate upscalers_pytorch >> ${STAGE_NAME}_init_env.log 2>&1
                         call ipython kernel install --user --name upscalers_pytorch
