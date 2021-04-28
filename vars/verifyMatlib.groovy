@@ -52,7 +52,7 @@ def call(String tool, String cacheImgPath, Integer allowableDiff, String osName,
 
                 default:
                     sh """
-                        if [ -d "home/\$USER/Documents/Radeon ProRender" ]; echo ${success}; else echo ${failure}; fi
+                        if [ -d "home/\$USER/Documents/Radeon ProRender" ]; then echo "${success}"; else echo "${failure}"; fi
                     """
             }
         } else {

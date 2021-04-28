@@ -353,7 +353,7 @@ public class GithubNotificator {
                             }
                             githubApiProvider.createOrUpdateStatusCheck(
                                 repositoryUrl: repositoryUrl,
-                                status: "error",
+                                status: "action_required",
                                 name: prStatus["name"],
                                 head_sha: commitSHA,
                                 details_url: prStatus["details_url"] ?: "",
@@ -428,7 +428,7 @@ public class GithubNotificator {
                 if (prStatus["name"].contains("[TEST]") && prStatus["name"].contains(osName)) {
                     githubApiProvider.createOrUpdateStatusCheck(
                         repositoryUrl: repositoryUrl,
-                        status: "error",
+                        status: "action_required",
                         name: prStatus["name"],
                         head_sha: commitSHA,
                         details_url: prStatus["details_url"] ?: "",

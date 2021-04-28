@@ -260,7 +260,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
             } catch (e1) {
                 if (options.engines) {
                     options.engines.each { engine ->
-                        changeTestsCount(testsLeft, -options.testsInfo["testsPer-${engine}"], engine)
+                        changeTestsCount(testsLeft, -options.testsInfo["testsPer-${engine}-${osName}"], engine)
                     }
                 }
                 throw e1
@@ -451,8 +451,6 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                     }
                 }
 
-                println "Tests Info: ${options.testsInfo}"
-
                 Map tasks = [:]
 
                 platforms.split(';').each() {
@@ -486,6 +484,11 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                             testsLeft[engine] = 0
                                         }
                                         testsLeft[engine] += (options.testsInfo["testsPer-${engine}"] ?: 0)
+
+                                        if (!options.testsInfo.containsKey("testsPer-" + engine + "-" + osName)) {
+                                            options.testsInfo["testsPer-${engine}-${osName}"] = 0
+                                        }
+                                        options.testsInfo["testsPer-${engine}-${osName}"] += (options.testsInfo["testsPer-${engine}"] ?: 0)
                                     }
                                 }
                             }
@@ -494,6 +497,8 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                         tasks[osName]=executePlatform(osName, gpuNames, executeBuild, executeTests, newOptions, testsLeft)
                     }
                 }
+
+                println "Tests Info: ${options.testsInfo}"
 
                 println "Tests Left: ${testsLeft}"
 
@@ -537,7 +542,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                     options.engines.each {
                         if (testsLeft && testsLeft[it] != 0) {
                             // Build was aborted. Make reports from existing data
-                            tasks["Deploy-${options.enginesNames[options.engines.indexOf(engine)]}"] = {
+                            tasks["Deploy-${options.enginesNames[options.engines.indexOf(it)]}"] = {
                                 makeDeploy(options, it)
                             }
                         }

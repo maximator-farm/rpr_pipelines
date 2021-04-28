@@ -3,7 +3,7 @@ def executeTestCommand(String osName) {}
 def executeTests(String osName, String asicName, Map options) {}
 
 def executeBuildWindows() {
-    withEnv(["PATH=c:\\python35\\;c:\\python35\\scripts\\;${PATH}"]) {
+    withEnv(["PATH=c:\\python39\\;c:\\python39\\scripts\\;${PATH}"]) {
         bat """
             pushd MatLibPkg
             build_windows_installer.cmd >> ..\\${STAGE_NAME}.log 2>&1        

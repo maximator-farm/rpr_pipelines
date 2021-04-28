@@ -60,9 +60,19 @@ def checkExistenceOfPlugin(String osName, Map options) {
 def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true, String customPluginName = "") {
     String uninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
 
-    try {
-        String logPostfix = cleanInstall ? "clean" : "dirt"
+    String installerName = ""
+    String logPostfix = cleanInstall ? "clean" : "dirt"
 
+    if (customPluginName) {
+        installerName = customPluginName
+        logPostfix = "_custom"
+    } else if (options['isPreBuilt']) {
+        installerName = "${options.pluginWinSha}.exe"
+    } else {
+        installerName = "${options.commitSHA}.exe"
+    }
+
+    try {
         if (cleanInstall && checkExistenceOfPlugin(osName, options)) {
             println "[INFO] Uninstalling Inventor Plugin"
             bat """
@@ -75,18 +85,6 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
 
     try {
         println "[INFO] Install Inventor Plugin"
-
-        String installerName = ""
-        String logPostfix = ""
-
-        if (customPluginName) {
-            installerName = customPluginName
-            logPostfix = "_custom"
-        } else if (options['isPreBuilt']) {
-            installerName = "${options.pluginWinSha}.exe"
-        } else {
-            installerName = "${options.commitSHA}.exe"
-        }
 
         bat """
             start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART /LOG=${options.stageName}${logPostfix}_${options.currentTry}.install${logPostfix}.log
@@ -211,13 +209,13 @@ def executeTests(String osName, String asicName, Map options) {
 
             println "Install \"baseline\" plugin"
 
-            timeout(time: "10", unit: "MINUTES") {
-                installInventorPlugin(osName, options, true, baselinePluginPath.split("/")[-1])
+            timeout(time: "15", unit: "MINUTES") {
+                installInventorPlugin(osName, options, false, baselinePluginPath.split("/")[-1])
             }
 
             println "Start \"dirt\" installation"
 
-            timeout(time: "5", unit: "MINUTES") {
+            timeout(time: "8", unit: "MINUTES") {
                 installInventorPlugin(osName, options, false)
             }
         }
@@ -244,7 +242,7 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
-            timeout(time: "10", unit: "MINUTES") {
+            timeout(time: "15", unit: "MINUTES") {
                 installInventorPlugin(osName, options, true)
             }
         }
@@ -404,7 +402,7 @@ def executeBuildWindows(Map options) {
                 git apply ../usd_dev.patch  >> ${STAGE_NAME}.USDPixar.log 2>&1
                 cd ..
 
-                python USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/windows/build --src RPRViewer/binary/windows/deps RPRViewer/binary/windows/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
+                python USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/windows/build --src RPRViewer/binary/windows/deps --openimageio RPRViewer/binary/windows/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
                 
                 set PXR_DIR=%CD%\\USDPixar
                 set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
@@ -457,7 +455,7 @@ def executeBuildWindows(Map options) {
 
                     archiveArtifacts artifacts: "RPRViewer_Setup*.exe", allowEmptyArchive: false
                     String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
-                    String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+                    String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
                     rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
                     /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
@@ -540,7 +538,7 @@ def executeBuildOSX(Map options)
 
             archiveArtifacts artifacts: "RadeonProUSDViewer_Package*.zip", allowEmptyArchive: false
             String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).zip" : "RadeonProUSDViewer_Package_OSX.zip"
-            String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
             rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
