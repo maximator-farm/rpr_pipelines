@@ -704,7 +704,6 @@ def call(String projectBranch = "",
     }
 
     if ((env.BRANCH_NAME && env.BRANCH_NAME == "1.xx") || (env.CHANGE_TARGET && env.CHANGE_TARGET == "1.xx") || (projectBranch == "1.xx")) {
-        platforms = "Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI;Ubuntu18:AMD_RadeonVII;CentOS7"
         testsQuality = "low,medium,high"
         scenarios = ""
     }
