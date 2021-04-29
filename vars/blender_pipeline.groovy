@@ -23,6 +23,9 @@ def executeBuildWindows(String osName, Map options)
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SVN_REPO) {
             checkoutScm(checkoutClass: 'SubversionSCM', repositoryUrl: 'https://svn.blender.org/svnroot/bf-blender/trunk/lib/win64_vc15')
         }
+        bat """
+            svn up -r62505
+        """
     }
 
     dir("lib\\tests"){
@@ -38,11 +41,12 @@ def executeBuildWindows(String osName, Map options)
             mkdir build_windows
             cd build_windows
 
-            cmake -G "Visual Studio 15 2017 Win64" -DCYCLES_TEST_DEVICES=OPENCL .. >> ..\\${STAGE_NAME}.log 2>&1
+            cmake -G "Visual Studio 15 2017 Win64" .. >> ..\\${STAGE_NAME}.log 2>&1
             %msbuild% INSTALL.vcxproj /property:Configuration=Release /p:platform=x64 >> ..\\${STAGE_NAME}.log 2>&1
         """
     }
 
+    """
     dir("blender\\build_windows"){
         try {
             bat """
@@ -56,6 +60,7 @@ def executeBuildWindows(String osName, Map options)
                 "Blender Report", "Test Report")
         }
     }
+    """
 }
 
 
