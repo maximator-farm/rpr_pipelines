@@ -19,20 +19,22 @@ def executeTests(String osName, String asicName, Map options)
 
 def executeBuildWindows(String osName, Map options)
 {
-    dir("lib\\win64_vc15"){
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SVN_REPO) {
-            checkoutScm(checkoutClass: 'SubversionSCM', repositoryUrl: 'https://svn.blender.org/svnroot/bf-blender/trunk/lib/win64_vc15')
-        }
-        bat """
-            svn up -r62505
-        """
-    }
+    
+   //dir("lib\\win64_vc15"){
+   //    withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SVN_REPO) {
+   //        checkoutScm(checkoutClass: 'SubversionSCM', repositoryUrl: 'https://svn.blender.org/svnroot/bf-blender/trunk/lib/win64_vc15')
+   //    }
+   //    bat """
+   //        svn up -r62505
+   //    """
+   //}
 
-    dir("lib\\tests"){
-        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SVN_REPO) {
-            checkoutScm(checkoutClass: 'SubversionSCM', repositoryUrl: 'https://svn.blender.org/svnroot/bf-blender/trunk/lib/tests')
-        }
-    }
+   //dir("lib\\tests"){
+   //    withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SVN_REPO) {
+   //        checkoutScm(checkoutClass: 'SubversionSCM', repositoryUrl: 'https://svn.blender.org/svnroot/bf-blender/trunk/lib/tests')
+   //    }
+   //}
+   //
 
     dir("blender"){
         bat """
@@ -46,21 +48,21 @@ def executeBuildWindows(String osName, Map options)
         """
     }
 
-    """
-    dir("blender\\build_windows"){
-        try {
-            bat """
-                ctest -C Release -R opencl >> ..\\${STAGE_NAME}.test.log 2>&1
-            """
-        } catch (e) {
-            currentBuild.result = "UNSTABLE"
-        } finally {
-            archiveArtifacts artifacts: "build_windows\\tests\\**\\*.*", allowEmptyArchive: true
-            utils.publishReport(this, "${BUILD_URL}", "tests", "report.html", \
-                "Blender Report", "Test Report")
-        }
-    }
-    """
+    
+   //dir("blender\\build_windows"){
+   //    try {
+   //        bat """
+   //            ctest -C Release -R opencl >> ..\\${STAGE_NAME}.test.log 2>&1
+   //        """
+   //    } catch (e) {
+   //        currentBuild.result = "UNSTABLE"
+   //    } finally {
+   //        archiveArtifacts artifacts: "build_windows\\tests\\**\\*.*", allowEmptyArchive: true
+   //        utils.publishReport(this, "${BUILD_URL}", "tests", "report.html", \
+   //            "Blender Report", "Test Report")
+   //    }
+   //}
+    
 }
 
 
