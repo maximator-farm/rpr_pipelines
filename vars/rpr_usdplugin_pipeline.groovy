@@ -301,7 +301,7 @@ def executeBuildWindows(String osName, Map options) {
     if (options.rebuildUSD) {
         dir ("USD") {
             bat """
-                set PATH=c:\\python36\\;c:\\python36\\scripts\\;%PATH%;
+                set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}_USD.log 2>&1
                 
                 if exist USDgen rmdir /s/q USDgen
@@ -319,14 +319,14 @@ def executeBuildWindows(String osName, Map options) {
             options.win_tool_path = "C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}${options.win_houdini_python3}"
             bat """
                 mkdir build
-                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+                set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
                 set HFS=${options.win_tool_path}
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
             """
         } else {
             bat """
                 mkdir build
-                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+                set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ..\\${STAGE_NAME}.log 2>&1
             """
         } 
@@ -823,7 +823,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String projectBranch = "",
         String usdBranch = "master",
         String testsBranch = "master",
-        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080,AMD_RX6800;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7',
+        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7',
         String buildType = "Houdini",
         Boolean rebuildUSD = false,
         String houdiniVersion = "18.5.462",
