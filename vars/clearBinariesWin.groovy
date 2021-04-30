@@ -10,7 +10,7 @@ def call() {
             }
         """
     } catch (e) {
-        println("[ERROR] Can't clear Win binaries")
+        println("[ERROR] Failed to delete files in PluginsBinaries.")
         println(e.toString())
         println(e.getMessage())
     }
