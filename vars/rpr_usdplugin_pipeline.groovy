@@ -321,12 +321,14 @@ def executeBuildWindows(String osName, Map options) {
                 mkdir build
                 set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
                 set HFS=${options.win_tool_path}
+                python --version >> ..\\${STAGE_NAME}.log 2>&1
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
             """
         } else {
             bat """
                 mkdir build
                 set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
+                python --version >> ..\\${STAGE_NAME}.log 2>&1
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ..\\${STAGE_NAME}.log 2>&1
             """
         } 
@@ -384,11 +386,13 @@ def executeBuildOSX(String osName, Map options) {
             sh """
                 mkdir build
                 export HFS=${options.osx_tool_path}
+                python3 --version >> ../${STAGE_NAME}.log 2>&1
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
             sh """
                 mkdir build
+                python3 --version >> ../${STAGE_NAME}.log 2>&1
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ../${STAGE_NAME}.log 2>&1
             """
         }
@@ -452,11 +456,13 @@ def executeBuildUnix(String osName, Map options) {
             sh """
                 mkdir build
                 export HFS=${installation_path}/${options.unix_tool_path}
+                python3 --version >> ../${STAGE_NAME}.log 2>&1
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
             sh """
                 mkdir build
+                python3 --version >> ../${STAGE_NAME}.log 2>&1
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ../${STAGE_NAME}.log 2>&1
             """
         }
