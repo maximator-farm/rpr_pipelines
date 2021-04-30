@@ -444,7 +444,7 @@ def executeBuildUnix(String osName, Map options) {
         if (env.HOUDINI_INSTALLATION_PATH) {
             installation_path = "${env.HOUDINI_INSTALLATION_PATH}"
         } else {
-            installation_path = "/home/admin"
+            installation_path = "/home/${env.USERNAME}"
         }
         if (options.buildType == "Houdini") {
             options.unix_houdini_python3 = options.houdini_python3 ? "-py3" : "-py2"
