@@ -67,7 +67,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                         launchingGroupsNumber = 1
                     } else if (options["parallelExecutionType"] == TestsExecutionType.TAKE_ALL_NODES) {
                         List possibleNodes = nodesByLabel label: testerLabels, offline: true
-                        launchingGroupsNumber = possibleNodes.size()
+                        launchingGroupsNumber = possibleNodes.size() ?: 1
                     }
 
                     Map testsExecutors = [:]
