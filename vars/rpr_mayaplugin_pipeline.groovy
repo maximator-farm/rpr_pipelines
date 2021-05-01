@@ -526,6 +526,8 @@ def executeBuild(String osName, Map options)
             }
         }
 
+        outputEnvironmentInfo(osName)
+
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
                 case "Windows":
