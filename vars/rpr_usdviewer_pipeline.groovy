@@ -141,7 +141,8 @@ def executeTestCommand(String osName, String asicName, Map options) {
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
         if (testsNames.contains(".json")) {
-            // if tests package isn't splitted and it's execution of this package - replace test group for non-splitted package by empty string
+            // if tests package isn't splitted and it's execution of this package - replace test package by test group and test group by empty string
+            testsPackageName = options.tests
             testsNames = ""
         } else {
             // if tests package isn't splitted and it isn't execution of this package - replace tests package by empty string
@@ -747,16 +748,29 @@ def executePreBuild(Map options) {
                 }
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
                 String modifiedPackageName = "${options.testsPackage}~"
-                packageInfo["groups"].each {
+
+                // receive list of group names from package
+                List groupsFromPackage = []
+
+                if (packageInfo["groups"] instanceof Map) {
+                    groupsFromPackage = packageInfo["groups"].keySet() as List
+                } else {
+                    // iterate through all parts of package
+                    packageInfo["groups"].each() {
+                        groupsFromPackage.addAll(it.keySet() as List)
+                    }
+                }
+
+                groupsFromPackage.each {
                     if (options.isPackageSplitted) {
-                        tests << it.key
-                        options.groupsUMS << it.key
+                        tests << it
+                        options.groupsUMS << it
                     } else {
-                        if (tests.contains(it.key)) {
+                        if (tests.contains(it)) {
                             // add duplicated group name in name of package group name for exclude it
-                            modifiedPackageName = "${modifiedPackageName},${it.key}"
+                            modifiedPackageName = "${modifiedPackageName},${it}"
                         } else {
-                            options.groupsUMS << it.key
+                            options.groupsUMS << it
                         }
                     }
                 }
@@ -771,8 +785,17 @@ def executePreBuild(Map options) {
                     options.testsPackage = "none"
                 } else {
                     options.testsPackage = modifiedPackageName
-                    tests << modifiedPackageName
-                    options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                    // check that package is splitted to parts or not
+                    if (packageInfo["groups"] instanceof Map) {
+                        tests << "${modifiedPackageName}"
+                        options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                    } else {
+                        // add group stub for each part of package
+                        for (int i = 0; i < packageInfo["groups"].size(); i++) {
+                            tests << "${modifiedPackageName}".replace(".json", ".${i}.json")
+                            options.timeouts[options.testsPackage.replace(".json", ".${i}.json")] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                        }
+                    }
                 }
 
                 options.tests = tests
