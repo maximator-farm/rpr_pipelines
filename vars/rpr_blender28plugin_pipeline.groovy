@@ -855,10 +855,13 @@ def executePreBuild(Map options)
                         options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                     } else {
                         // add group stub for each part of package
-                        for (int i = 0; i < packageInfo["groups"].size(); i++) {
-                            options.engines.each { engine ->
+                        options.engines.each { engine ->
+                            for (int i = 0; i < packageInfo["groups"].size(); i++) {
                                 tests << "${modifiedPackageName}-${engine}".replace(".json", ".${i}.json")
                             }
+                        }
+
+                        for (int i = 0; i < packageInfo["groups"].size(); i++) {
                             options.timeouts[options.testsPackage.replace(".json", ".${i}.json")] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                         }
                     }
