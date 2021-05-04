@@ -401,18 +401,12 @@ def executeBuildWindows(Map options) {
         withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             bat """
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
-                cd USDPixar
-                git apply ../usd_dev.patch  >> ${STAGE_NAME}.USDPixar.log 2>&1
-                cd ..
 
-                python USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/windows/build --src RPRViewer/binary/windows/deps --openimageio RPRViewer/binary/windows/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
-                
-                set PXR_DIR=%CD%\\USDPixar
-                set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
-                cd HdRPRPlugin
-                cmake -B build -G "Visual Studio 15 2017 Win64" -Dpxr_DIR=%PXR_DIR% -DCMAKE_INSTALL_PREFIX=%INSTALL_PREFIX_DIR% -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE ^
-                    -DPXR_USE_PYTHON_3=ON -DMATERIALX_BUILD_PYTHON=ON -DMATERIALX_INSTALL_PYTHON=ON >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
-                cmake --build build --config Release --target install >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
+                RPRViewer\\tools\\build_usd_windows.bat >> ${STAGE_NAME}.USDPixar.log 2>&1
+            """
+
+            bat """
+                RPRViewer\\tools\\build_hdrpr_windows.bat >> ${STAGE_NAME}.HdRPRPlugin.log 2>&1
             """
         }
         String buildName = "RadeonProUSDViewer_Windows.zip"
@@ -433,19 +427,12 @@ def executeBuildWindows(Map options) {
 
             withEnv(["PYTHONPATH=%INST%\\lib\\python;%INST%\\lib"]) {
                 bat """
-                    set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
-                    set PACKAGE_PATH=%INSTALL_PREFIX_DIR%\\dist
-                    set PYTHONPATH=%INSTALL_PREFIX_DIR%\\lib\\python;%INSTALL_PREFIX_DIR%\\lib;%INSTALL_PREFIX_DIR%\\lib\\python\\pxr\\Usdviewq\\HdRPRPlugin\\python
-
-                    pyinstaller %CD%\\RPRViewer\\tools\\usdview_windows.spec --noconfirm --clean --distpath %PACKAGE_PATH% ^
-                        --workpath ${env.WORKSPACE}\\installer_build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                        
-                    XCOPY %PACKAGE_PATH%\\RPRViewer\\hdrpr\\lib\\* %PACKAGE_PATH%\\RPRViewer\\ /Y
+                    RPRViewer\\tools\\build_package_windows.bat >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                 """
 
                 dir("RPRViewer") {
                     bat """
-                        "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log 2>&1
+                        "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ..\\${STAGE_NAME}.USDViewerInstaller.log 2>&1
                     """
                     stash includes: "RPRViewer_Setup.exe", name: "appWindows"
                     options.pluginWinSha = sha1 "RPRViewer_Setup.exe"
@@ -489,17 +476,14 @@ def executeBuildOSX(Map options)
             export PYENV_ROOT="\$HOME/.pyenv"
             export PATH="\$PYENV_ROOT/shims:\$PYENV_ROOT/bin:\$PATH"
             pyenv rehash
-            # USD
-            python USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
-            # HdRprPlugin
-            export PXR_DIR=\$(pwd)/USDPixar
-            export INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
+
+            python --version
+
+            chmod u+x RPRViewer/tools/build_usd_mac.sh
+            RPRViewer/tools/build_usd_mac.sh >> ${STAGE_NAME}.USDPixar.log 2>&1
             
-            cd HdRPRPlugin
-            cmake -B build -Dpxr_DIR=\$PXR_DIR -DCMAKE_INSTALL_PREFIX=\$INSTALL_PREFIX_DIR -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE \
-                -DMATERIALX_PYTHON_PYBIND11_DIR=\$(pwd)/deps/MaterialX/source/PyMaterialX/PyBind11 \
-                -DPXR_USE_PYTHON_3=ON -DMATERIALX_BUILD_PYTHON=ON -DMATERIALX_INSTALL_PYTHON=ON >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
-            cmake --build build --config Release --target install >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
+            chmod u+x RPRViewer/tools/build_hdrpr_mac.sh
+            RPRViewer/tools/build_hdrpr_mac.sh >> ${STAGE_NAME}.HdRPRPlugin.log 2>&1
         """
     }
 
@@ -513,29 +497,15 @@ def executeBuildOSX(Map options)
                 
                 python --version
             
-                export INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
-                export MATERIALX_DIR=\$(python -c "import MaterialX as _; import os; print(os.path.dirname(_.__file__))")/
-                export PYTHONPATH=\$INSTALL_PREFIX_DIR/lib/python:\$INSTALL_PREFIX_DIR/lib:\$INSTALL_PREFIX_DIR/lib/python/pxr/Usdviewq/HdRPRPlugin/python
-                export PACKAGE_PATH=\$INSTALL_PREFIX_DIR/dist
-                python -m PyInstaller \$(pwd)/RPRViewer/tools/usdview_mac.spec --noconfirm --clean --distpath \
-                    \$PACKAGE_PATH --workpath \$INSTALL_PREFIX_DIR/build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                install_name_tool -add_rpath @loader_path/../../.. \$PACKAGE_PATH/RPRViewer/hdrpr/plugin/usd/hdRpr.dylib
-                rm \$PACKAGE_PATH/RPRViewer/librprUsd.dylib
-                install_name_tool -change @loader_path/../../librprUsd.dylib @loader_path/../../hdrpr/lib/librprUsd.dylib \
-                    \$PACKAGE_PATH/RPRViewer/rpr/RprUsd/_rprUsd.so >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                install_name_tool -add_rpath @loader_path/../.. \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib
-                cp \$PACKAGE_PATH/RPRViewer/hdrpr/lib/*.dylib \$PACKAGE_PATH/RPRViewer/
-                install_name_tool -change \$INSTALL_PREFIX_DIR/lib/libGLEW.2.0.0.dylib @rpath/libGLEW.2.0.0.dylib \
-                    \$PACKAGE_PATH/RPRViewer/hdrpr/plugin/usd/hdRpr.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                install_name_tool -change \$INSTALL_PREFIX_DIR/lib/libGLEW.2.0.0.dylib @rpath/libGLEW.2.0.0.dylib \
-                    \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                chmod u+x RPRViewer/tools/build_package_mac.sh
+                RPRViewer/tools/build_package_mac.sh >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
             """
 
             zip archive: false, dir: "RPRViewer/binary/mac/inst/dist/RPRViewer", glob: '', zipFile: "RadeonProUSDViewer_Package_OSX.zip"
         
             if (options.branch_postfix) {
                 sh """
-                    mv RadeonProUSDViewer_Package_OSX.zip "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).zip"
+                    mv RadeonProUSDViewer_Package_OSX.zip "RadeonProUSDViewer_Package_OSX_${options.pluginVersion}_(${options.branch_postfix}).zip"
                 """
             }
 
