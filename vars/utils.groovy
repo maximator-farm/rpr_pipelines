@@ -142,9 +142,9 @@ class utils {
 
                     reportFiles.split(",").each { reportFile ->
                         if (self.isUnix()) {
-                            self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${authReportLinkBase}/${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                            self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${authReportLinkBase}${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
                         } else {
-                            self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${authReportLinkBase}/${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                            self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${authReportLinkBase}${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
                         }
                     }
                 }
