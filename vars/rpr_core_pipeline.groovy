@@ -52,7 +52,7 @@ def getCoreSDK(String osName, Map options) {
                     clearBinariesWin()
 
                     println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    makeUnstash("WindowsSDK", false)
+                    makeUnstash(name: "WindowsSDK", unzip: false)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -110,7 +110,7 @@ def getCoreSDK(String osName, Map options) {
                     clearBinariesUnix()
 
                     println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    makeUnstash("OSXSDK", false)
+                    makeUnstash(name: "OSXSDK", unzip: false)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -169,7 +169,7 @@ def getCoreSDK(String osName, Map options) {
                     clearBinariesUnix()
 
                     println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    makeUnstash("${osName}SDK", false)
+                    makeUnstash(name: "${osName}SDK", unzip: false)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -420,7 +420,7 @@ def executeBuildWindows(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binWin64") {
             zip archive: true, dir: ".", glob: "", zipFile: "binWin64.zip"
-            makeStash(includes: "binWin64.zip", name: 'WindowsSDK', zip: false)
+            makeStash(includes: "binWin64.zip", name: 'WindowsSDK', preZip: false)
             options.pluginWinSha = sha1 "binWin64.zip"
         }
         if (options.sendToUMS) {
@@ -434,7 +434,7 @@ def executeBuildOSX(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binMacOS.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binMacOS") {
             zip archive: true, dir: ".", glob: "", zipFile: "binMacOS.zip"
-            makeStash(includes: "binMacOS.zip", name: "OSXSDK", zip: false)
+            makeStash(includes: "binMacOS.zip", name: "OSXSDK", preZip: false)
             options.pluginOSXSha = sha1 "binMacOS.zip"
         }
         if (options.sendToUMS) {
@@ -449,7 +449,7 @@ def executeBuildLinux(String osName, Map options) {
         // no artifacts in repo for ubuntu20
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
             zip archive: true, dir: ".", glob: "", zipFile: "bin${osName}.zip"
-            makeStash(includes: "bin${osName}.zip", name: "${osName}SDK", zip: false)
+            makeStash(includes: "bin${osName}.zip", name: "${osName}SDK", preZip: false)
             options.pluginUbuntuSha = sha1 "bin${osName}.zip"
         }
         if (options.sendToUMS) {
@@ -604,7 +604,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 testResultList.each() {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            makeUnstash("$it")
+                            makeUnstash(name: "$it")
                         } catch(e) {
                             echo "Can't unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))

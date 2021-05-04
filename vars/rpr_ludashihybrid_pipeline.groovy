@@ -55,7 +55,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
 
     try {
         outputEnvironmentInfo(osName, "${STAGE_NAME}.${options.RENDER_QUALITY}")
-        makeUnstash("app${osName}")
+        makeUnstash(name: "app${osName}")
         switch(osName) {
             case 'Windows':
                 unzip dir: '.', glob: '', zipFile: 'BaikalNext_Build-Windows.zip'
@@ -264,7 +264,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options['testsQuality'].split(",").each() { quality ->
                     testResultList.each() {
                         try {
-                            makeUnstash("${it}-${quality}")
+                            makeUnstash(name: "${it}-${quality}")
                             reportFiles += ", ${it}-${quality}_failures/report.html".replace("testResult-", "")
                         }
                         catch(e) {

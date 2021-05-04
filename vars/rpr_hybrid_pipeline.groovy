@@ -124,7 +124,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
     }
     
     try {
-        makeUnstash("app${osName}")
+        makeUnstash(name: "app${osName}")
         switch(osName) {
             case 'Windows':
                 unzip dir: '.', glob: '', zipFile: 'BaikalNext_Build-Windows.zip'
@@ -288,9 +288,9 @@ def executePerfTests(String osName, String asicName, Map options) {
 
         dir("BaikalNext") {
             dir("bin") {
-                makeUnstash("perf${osName}", false)
+                makeUnstash(name: "perf${osName}", unzip: false)
             }
-            makeUnstash("perfTestsConf")
+            makeUnstash(name: "perfTestsConf")
             dir("RprPerfTest/Scenarios") {
                 if (options.scenarios == "all") {
                     List scenariosList = []
@@ -435,7 +435,7 @@ def executeBuildWindows(Map options) {
         rename BaikalNext.zip BaikalNext_${STAGE_NAME}.zip
     """
     dir("Build/bin/${build_type}") {
-        makeStash(includes: "RprPerfTest.exe", name: "perfWindows", allowEmpty: true, zip: false)
+        makeStash(includes: "RprPerfTest.exe", name: "perfWindows", allowEmpty: true, preZip: false)
     }
 }
 
@@ -450,7 +450,7 @@ def executeBuildOSX(Map options) {
         mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
     """
     dir("Build/bin") {
-        makeStash(includes: "RprPerfTest", name: "perfOSX", allowEmpty: true, zip: false)
+        makeStash(includes: "RprPerfTest", name: "perfOSX", allowEmpty: true, preZip: false)
     }
 }
 
@@ -465,7 +465,7 @@ def executeBuildLinux(Map options) {
         mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
     """
     dir("Build/bin") {
-        makeStash(includes: "RprPerfTest", name: "perfUbuntu18", allowEmpty: true, zip: false)
+        makeStash(includes: "RprPerfTest", name: "perfUbuntu18", allowEmpty: true, preZip: false)
     }
 }
 
@@ -594,7 +594,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     options['testsQuality'].split(",").each() { quality ->
                         testResultList.each() {
                             try {
-                                makeUnstash("${it}-${quality}")
+                                makeUnstash(name: "${it}-${quality}")
                                 reportFiles += ", ${it}-${quality}_failures/report.html".replace("testResult-", "")
                             }
                             catch(e) {
@@ -620,7 +620,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 dir("SummaryReport") {
                     testResultList.each() {
                         try {
-                            makeUnstash("${it}")
+                            makeUnstash(name: "${it}")
                             reportFiles += ", ${it}-Failures/report.html".replace("testResult-", "")
                         }
                         catch(e) {
@@ -647,7 +647,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     testResultList.each() {
                         try {
                             dir("${it}".replace("testResult-", "")) {
-                                makeUnstash("${it.replace('testResult-', 'testPerfResult-')}")
+                                makeUnstash(name: "${it.replace('testResult-', 'testPerfResult-')}")
                             }
                         }
                         catch(e) {

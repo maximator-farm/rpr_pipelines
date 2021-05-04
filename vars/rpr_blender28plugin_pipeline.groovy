@@ -54,7 +54,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash("appWindows", false, options.storeOnNAS)
+                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -104,7 +104,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash("appOSX", false, options.storeOnNAS)
+                    makeUnstash(name: "appOSX", unzip: false, storeOnNAS: options.storeOnNAS)
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -154,7 +154,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash("app${osName}", false, options.storeOnNAS)
+                    makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -892,7 +892,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
-                                makeUnstash("$it", true, options.storeOnNAS)
+                                makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                             } catch(e) {
                                 echo "[ERROR] Failed to unstash ${it}"
                                 lostStashes.add("'${testName}'".replace("testResult-", ""))

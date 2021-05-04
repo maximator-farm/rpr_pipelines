@@ -20,7 +20,7 @@ def getCoreSDK(String osName, Map options)
                 clearBinariesWin()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash("WindowsSDK", false)
+                makeUnstash(name: "WindowsSDK", unzip: false)
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -44,7 +44,7 @@ def getCoreSDK(String osName, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash("OSXSDK", false)
+                makeUnstash(name: "OSXSDK", unzip: false)
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -68,7 +68,7 @@ def getCoreSDK(String osName, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash("Ubuntu18SDK", false)
+                makeUnstash(name: "Ubuntu18SDK", unzip: false)
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -359,7 +359,7 @@ def executeBuildWindows(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RPR/RadeonProRender/lib/x64") {
             zip archive: true, dir: ".", glob: "", zipFile: "binWin64.zip"
-            makeStash(includes: "binWin64.zip", name: 'WindowsSDK', zip: false)
+            makeStash(includes: "binWin64.zip", name: 'WindowsSDK', preZip: false)
             options.pluginWinSha = sha1 "binWin64.zip"
         }
         if (options.sendToUMS) {
@@ -373,7 +373,7 @@ def executeBuildOSX(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binMacOS.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binMacOS") {
             zip archive: true, dir: ".", glob: "", zipFile: "binMacOS.zip"
-            makeStash(includes: "binMacOS.zip", name: "OSXSDK", zip: false)
+            makeStash(includes: "binMacOS.zip", name: "OSXSDK", preZip: false)
             options.pluginOSXSha = sha1 "binMacOS.zip"
         }
         if (options.sendToUMS) {
@@ -387,7 +387,7 @@ def executeBuildLinux(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binUbuntu18.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
             zip archive: true, dir: ".", glob: "", zipFile: "binUbuntu18.zip"
-            makeStash(includes: "binUbuntu18.zip", name: "Ubuntu18SDK", zip: false)
+            makeStash(includes: "binUbuntu18.zip", name: "Ubuntu18SDK", preZip: false)
             options.pluginUbuntuSha = sha1 "binUbuntu18.zip"
         }
         if (options.sendToUMS) {
@@ -532,7 +532,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     testResultList.each() {
                         String stashName = it.replace("testResult", "unitTestFailures")
                         try {
-                            makeUnstash("${stashName}")
+                            makeUnstash(name: "${stashName}")
                             reportFiles += ", ${stashName}_failures/report.html".replace("unitTestFailures-", "")
                         } catch(e) {
                             println("[ERROR] Can't unstash ${stashName}")
@@ -555,7 +555,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 testResultList.each() {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            makeUnstash("$it")
+                            makeUnstash(name: "$it")
                         } catch(e) {
                             println("Can't unstash ${it}")
                             lostStashes.add("'$it'".replace("testResult-", ""))

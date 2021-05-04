@@ -11,8 +11,9 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
  *     excludes (optional) - String of comma separated patters of files which must be excluded
  *     debug (optional) - Print more info about making of stash (default - false)
  *     preZip (optional) - Make zip archive for stash (default - true)
- *     customLocation (optional) - custom path for stash
- *     postUnzip (optional) - unzip archive after unstash (to set 'unzip' parameter as true 'zip' parameter must be true)
+ *     customLocation (optional) - Custom path for stash
+ *     postUnzip (optional) - postUnzip archive after unstash (to set 'postUnzip' parameter as true 'preZip' parameter must be true)
+ *     storeOnNAS - Specify store data on NAS or make default Jenkins stash
  */
 def call(Map params) {
 
@@ -25,15 +26,15 @@ def call(Map params) {
         String includes = params["includes"]
         String excludes = params["excludes"]
         Boolean debug = params["debug"]
-        Boolean zip = params.containsKey("zip") ? params["zip"] : true
-        Boolean unzip = params.containsKey("unzip") ? (zip && params["unzip"]) : false
+        Boolean preZip = params.containsKey("preZip") ? params["preZip"] : true
+        Boolean postUnzip = params.containsKey("postUnzip") ? (preZip && params["postUnzip"]) : false
         Boolean storeOnNAS = params.containsKey("storeOnNAS") ? params["storeOnNAS"] : false
 
         if (storeOnNAS) {
             def includeParams = []
             def excludeParams = []
 
-            if (zip) {
+            if (preZip) {
                 if (includes) {
                     for (include in includes.split(",")) {
                         if (isUnix()) {
@@ -71,7 +72,7 @@ def call(Map params) {
 
             String zipName = "stash_${stashName}.zip"
 
-            if (zip) {
+            if (preZip) {
                 if (isUnix()) {
                     stdout = sh(returnStdout: true, script: "zip -r \"${zipName}\" . ${includeParams} ${excludeParams} -x '*@tmp*'")
                 } else {
@@ -99,13 +100,13 @@ def call(Map params) {
                         // Escaping of space characters should be done by different ways for local path and remote paths
                         // Read more about it here: https://rsync.samba.org/FAQ.html#9
                         if (isUnix()) {
-                            if (zip) {
+                            if (preZip) {
                                 status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " \"${zipName}\" \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
                             } else {
                                 status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " ${includes} \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
                             }
                         } else {
-                            if (zip) {
+                            if (preZip) {
                                 status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " \"${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
                             } else {
                                 status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " ${includes} \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
@@ -135,8 +136,8 @@ def call(Map params) {
                 }
             }
             
-            if (zip) {
-                if (unzip) {
+            if (preZip) {
+                if (postUnzip) {
                     withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                         if (isUnix()) {
                             stdout = sh(returnStdout: true, script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " \"${remotePath}${zipName}\" \"${remotePath}\" true")

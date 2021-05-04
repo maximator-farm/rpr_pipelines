@@ -26,7 +26,7 @@ def executeTests(String osName, String asicName, Map options)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
 
         outputEnvironmentInfo(osName)
-        makeUnstash("app${osName}")
+        makeUnstash(name: "app${osName}")
 
         dir('UnitTest') {
             executeTestCommand(osName)

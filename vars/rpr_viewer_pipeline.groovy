@@ -21,7 +21,7 @@ def getViewerTool(String osName, Map options)
                 clearBinariesWin()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash("appWindows", false)
+                makeUnstash(name: "appWindows", unzip: false)
                 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -49,7 +49,7 @@ def getViewerTool(String osName, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash("appUbuntu18", false)
+                makeUnstash(name: "appUbuntu18", unzip: false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -354,7 +354,7 @@ def executeBuildWindows(Map options)
         }
 
         zip archive: true, dir: "${options.DEPLOY_FOLDER}", glob: '', zipFile: "RprViewer_Windows.zip"
-        makeStash(includes: "RprViewer_Windows.zip", name: "appWindows", zip: false)
+        makeStash(includes: "RprViewer_Windows.zip", name: "appWindows", preZip: false)
         options.pluginWinSha = sha1 "RprViewer_Windows.zip"
                         
         if (options.sendToUMS) {
@@ -394,7 +394,7 @@ def executeBuildLinux(Map options)
         """
 
         zip archive: true, dir: "${options.DEPLOY_FOLDER}", glob: '', zipFile: "RprViewer_Ubuntu18.zip"
-        makeStash(includes: "RprViewer_Ubuntu18.zip", name: "appUbuntu18", zip: false)
+        makeStash(includes: "RprViewer_Ubuntu18.zip", name: "appUbuntu18", preZip: false)
         options.pluginUbuntuSha = sha1 "RprViewer_Ubuntu18.zip"
 
         if (options.sendToUMS) {
@@ -633,7 +633,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 testResultList.each() {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            makeUnstash("$it")
+                            makeUnstash(name: "$it")
                         } catch(e) {
                             echo "[ERROR] Failed to unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))

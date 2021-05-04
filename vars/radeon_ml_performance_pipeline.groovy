@@ -39,7 +39,7 @@ def executeTests(String osName, String asicName, Map options)
     try {
         outputEnvironmentInfo(osName, "${STAGE_NAME}")
         dir("RadeonML") {
-            makeUnstash("app${osName}", false)
+            makeUnstash(name: "app${osName}", unzip: false)
         }
 
         executeTestCommand(osName, asicName, options)
@@ -163,7 +163,7 @@ def executeBuild(String osName, Map options)
         }
 
         dir('build-Release/Release') {
-            makeStash(includes: '*', name: "app${osName}", zip: false)
+            makeStash(includes: '*', name: "app${osName}", preZip: false)
         }
     } catch (e) {
         println(e.getMessage())
@@ -187,7 +187,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 testResultList.each() {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            makeUnstash "$it"
+                            makeUnstash(name: "$it")
                         } catch (e) {
                             echo "Can't unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))

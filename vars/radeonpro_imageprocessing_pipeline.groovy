@@ -45,7 +45,7 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
     try {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName, "${STAGE_NAME}.${libType}")
-        makeUnstash("app_${libType}_${osName}")
+        makeUnstash(name: "app_${libType}_${osName}")
         executeTestCommand(osName, libType, options.testPerformance)
     } catch (e) {
         println(e.toString())
@@ -171,7 +171,7 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
     }
 
     dir("${options.packageName}-${osName}-static-runtime/bin") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}"
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}")
     }
 
     makeStash(includes: "models/**/*", name: "models")
@@ -346,8 +346,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
         dir("testResults") {
             testResultList.each() {
                 try {
-                    makeUnstash("${it}.dynamic")
-                    makeUnstash("${it}.static")
+                    makeUnstash(name: "${it}.dynamic")
+                    makeUnstash(name: "${it}.static")
                 } catch(e) {
                     echo "[ERROR] Failed to unstash ${it}"
                     println(e.toString());
@@ -379,21 +379,21 @@ def executeDeploy(Map options, List platformList, List testResultList)
         platformList.each() {
             dir(it) {
                 dir("Dynamic"){
-                    makeUnstash("deploy-dynamic-${it}")
+                    makeUnstash(name: "deploy-dynamic-${it}")
                 }
                 dir("Static"){
-                    makeUnstash("deploy-static-${it}")
+                    makeUnstash(name: "deploy-static-${it}")
                 }
                 dir("Static-Runtime"){
-                    unstash "deploy-static-runtime-${it}"
+                    makeUnstash(name: "deploy-static-runtime-${it}")
                 }
             }
         }
 
-        makeUnstash("models")
-        makeUnstash("samples")
-        makeUnstash("txtFiles")
-        makeUnstash("include")
+        makeUnstash(name: "models")
+        makeUnstash(name: "samples")
+        makeUnstash(name: "txtFiles")
+        makeUnstash(name: "include")
 
         bat """
             git add --all

@@ -29,7 +29,7 @@ def getViewerTool(String osName, Map options) {
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appWindows"
+                    makeUnstash(name: "appWindows")
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -808,7 +808,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 testResultList.each {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            makeUnstash("$it")
+                            makeUnstash(name: "$it")
                         } catch (e) {
                             println """
                                 [ERROR] Failed to unstash ${it}

@@ -9,7 +9,7 @@ def getTanTool(String osName, Map options) {
                 clearBinariesWin()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash("TAN_Windows", false)
+                makeUnstash(name: "TAN_Windows", unzip: false)
                 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -33,7 +33,7 @@ def getTanTool(String osName, Map options) {
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash("TAN_OSX", false)
+                makeUnstash(name: "TAN_OSX", unzip: false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -59,7 +59,7 @@ def getTanTool(String osName, Map options) {
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash("TAN_Ubuntu18", false)
+                makeUnstash(name: "TAN_Ubuntu18", unzip: false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -255,7 +255,7 @@ def executeBuildWindows(Map options) {
                                 bat """
                                     rename Windows_${win_build_name}.zip binWindows.zip
                                 """
-                                makeStash(includes: "binWindows.zip", name: 'TAN_Windows', zip: false)
+                                makeStash(includes: "binWindows.zip", name: 'TAN_Windows', preZip: false)
                                 options.pluginWinSha = sha1 "binWindows.zip"
 
                             } catch (FlowInterruptedException error) {
@@ -340,7 +340,7 @@ def executeBuildOSX(Map options) {
                             sh """
                                 mv MacOS_${osx_build_name}.tar.gz binMacOS.tar.gz
                             """
-                            makeStash(includes: "binMacOS.tar.gz", name: 'TAN_OSX', zip: false)
+                            makeStash(includes: "binMacOS.tar.gz", name: 'TAN_OSX', preZip: false)
                             options.pluginOSXSha = sha1 "binMacOS.tar.gz"
 
                         } catch (FlowInterruptedException error) {
@@ -417,7 +417,7 @@ def executeBuildLinux(String osName, Map options) {
                         sh """
                             mv Ubuntu18_${ub18_build_name}.tar.gz binUbuntu18.tar.gz
                         """
-                        makeStash(includes: "binUbuntu18.tar.gz", name: 'TAN_Ubuntu18', zip: false)
+                        makeStash(includes: "binUbuntu18.tar.gz", name: 'TAN_Ubuntu18', preZip: false)
                         options.pluginUbuntuSha = sha1 "binUbuntu18.tar.gz"
 
                     } catch (FlowInterruptedException error) {
@@ -555,7 +555,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             dir("allure-results") {
                 testResultList.each() {
                     try {
-                        makeUnstash("$it")
+                        makeUnstash(name: "$it")
                     } catch(e) {
                         println "[ERROR] Failed to unstash ${it}"
                         println(e.toString())

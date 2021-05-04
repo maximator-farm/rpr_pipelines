@@ -36,7 +36,7 @@ def executeBuildWindows(Map options) {
             bat """
                 rename Windows_${buildName}.zip PluginWindows.zip
             """
-            makeStash(includes: "PluginWindows.zip", name: 'appWindows', zip: false)
+            makeStash(includes: "PluginWindows.zip", name: 'appWindows', preZip: false)
             options.pluginWinSha = sha1 "PluginWindows.zip"
         }
     } catch (FlowInterruptedException error) {

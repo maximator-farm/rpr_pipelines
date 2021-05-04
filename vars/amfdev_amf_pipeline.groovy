@@ -14,7 +14,7 @@ def getAmfTool(String osName, String build_name, Map options)
                 clearBinariesWin()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash("AMF_Windows_${build_name}", false)
+                makeUnstash(name: "AMF_Windows_${build_name}", unzip: false)
                 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -38,7 +38,7 @@ def getAmfTool(String osName, String build_name, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash("AMF_OSX_${build_name}", false)
+                makeUnstash(name: "AMF_OSX_${build_name}", unzip: false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -62,7 +62,7 @@ def getAmfTool(String osName, String build_name, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash("AMF_Linux_${build_name}", false)
+                makeUnstash(name: "AMF_Linux_${build_name}", unzip: false)
                 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -444,7 +444,7 @@ def executeBuildWindows(Map options) {
                         bat """
                             rename Windows_${win_build_name}.zip binWindows.zip
                         """
-                        makeStash(includes: "binWindows.zip", name: "AMF_Windows_${win_build_name}", zip: false)
+                        makeStash(includes: "binWindows.zip", name: "AMF_Windows_${win_build_name}", preZip: false)
                         options[win_build_name + 'sha'] = sha1 "binWindows.zip"
                         println "[INFO] Saved sha: ${options[win_build_name + 'sha']}"
 
@@ -546,7 +546,7 @@ def executeBuildOSX(Map options) {
                         sh """
                             mv OSX_${osx_build_name}.zip binOSX.zip
                         """
-                        makeStash(includes: "binOSX.zip", name: "AMF_OSX_${osx_build_name}", zip: false)
+                        makeStash(includes: "binOSX.zip", name: "AMF_OSX_${osx_build_name}", preZip: false)
                         options[osx_build_name + 'sha'] = sha1 "binOSX.zip"
                         println "[INFO] Saved sha: ${options[osx_build_name + 'sha']}"
 
@@ -631,7 +631,7 @@ def executeBuildLinux(String osName, Map options) {
                     sh """
                         mv Linux_${linux_build_name}.zip binLinux.zip
                     """
-                    makeStash(includes: "binLinux.zip", name: "AMF_Linux_${linux_build_name}", zip: false)
+                    makeStash(includes: "binLinux.zip", name: "AMF_Linux_${linux_build_name}", preZip: false)
                     options[linux_build_name + 'sha'] = sha1 "binLinux.zip"
                     println "[INFO] Saved sha: ${options[linux_build_name + 'sha']}"
 
@@ -741,7 +741,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             testResultList.each() {
 
                 try {
-                    makeUnstash("$it")
+                    makeUnstash(name: "$it")
                 } catch(e) {
                     println("[ERROR] Failed to unstash ${it}")
                     println(e.toString())

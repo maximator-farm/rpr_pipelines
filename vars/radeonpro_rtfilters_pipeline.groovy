@@ -31,9 +31,9 @@ def executeTests(String osName, String asicName, Map options)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         
         outputEnvironmentInfo(osName)
-        makeUnstash("app${osName}")
+        makeUnstash(name: "app${osName}")
         bat "rmdir /s /q shaders"
-        makeUnstash("shaders${osName}")
+        makeUnstash(name: "shaders${osName}")
         
         if (options['updateRefs']) {
             println("Updating Reference Images")
@@ -134,7 +134,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             platformList.each() {
                 try {
                     dir(it) {
-                        makeUnstash("app${it}")
+                        makeUnstash(name: "app${it}")
                     }
                 } catch(e) {
                     println(e.toString())

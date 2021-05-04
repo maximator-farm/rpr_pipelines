@@ -3,17 +3,27 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 /**
  * Implementation of stashes through custom machine
  *
- * @param stashName Name of stash which will be unstashed
- * @param unzip Unzip content of stash
- * @param debug Print more info about making of stash (default - false)
+ * @param params Map with parameters
+ * Possible elements:
+ *     name - Name of stash which will be unstashed
+ *     unzip - Unzip content of stash (default - true)
+ *     storeOnNAS - Specify unstash data from NAS or make default Jenkins unstash
+ *     debug - Print more info about making of stash (default - false)
  */
-def call(String stashName, Boolean unzip = true, Boolean storeOnNAS = false, Boolean debug = false) {
+def call(Map params) {
 
     String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
     
     String stdout
+    String stashName
 
     try {
+        stashName = params["name"]
+
+        String unzip = params.containsKey("unzip") ? params["unzip"] : true
+        Boolean storeOnNAS = params.containsKey("storeOnNAS") ? params["storeOnNAS"] : false
+        Boolean debug = params["debug"]
+
         if (storeOnNAS) {
             int times = 3
             int retries = 0
