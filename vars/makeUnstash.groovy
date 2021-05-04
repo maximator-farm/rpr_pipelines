@@ -10,10 +10,7 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
  *     storeOnNAS - Specify unstash data from NAS or make default Jenkins unstash
  *     debug - Print more info about making of stash (default - false)
  */
-def call(Map params) {
-
-    String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
-    
+def call(Map params) {    
     String stdout
     String stashName
 
@@ -25,6 +22,8 @@ def call(Map params) {
         Boolean debug = params["debug"]
 
         if (storeOnNAS) {
+            String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
+
             int times = 3
             int retries = 0
             int status = 0
