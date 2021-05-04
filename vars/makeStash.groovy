@@ -10,9 +10,9 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
  *     includes (optional) - String of comma separated patters of files which must be included
  *     excludes (optional) - String of comma separated patters of files which must be excluded
  *     debug (optional) - Print more info about making of stash (default - false)
- *     zip (optional) - Make zip archive for stash (default - true)
+ *     preZip (optional) - Make zip archive for stash (default - true)
  *     customLocation (optional) - custom path for stash
- *     unzip (optional) - unzip archive after unstash (to set 'unzip' parameter as true 'zip' parameter must be true)
+ *     postUnzip (optional) - unzip archive after unstash (to set 'unzip' parameter as true 'zip' parameter must be true)
  */
 def call(Map params) {
 

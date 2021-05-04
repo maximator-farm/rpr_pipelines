@@ -469,7 +469,7 @@ def executeBuildWindows(Map options)
 
         //options.productCode = "unknown"
         options.pluginWinSha = sha1 'RadeonProRenderMaya.msi'
-        makeStash(includes: 'RadeonProRenderMaya.msi', name: 'appWindows', zip: false, storeOnNAS: options.storeOnNAS)
+        makeStash(includes: 'RadeonProRenderMaya.msi', name: 'appWindows', preZip: false, storeOnNAS: options.storeOnNAS)
 
         GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
     }
@@ -502,7 +502,7 @@ def executeBuildOSX(Map options)
             }
 
             sh "cp RadeonProRender*.dmg RadeonProRenderMaya.dmg"
-            makeStash(includes: 'RadeonProRenderMaya.dmg', name: "appOSX", zip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: 'RadeonProRenderMaya.dmg', name: "appOSX", preZip: false, storeOnNAS: options.storeOnNAS)
 
             // TODO: detect ID of installed plugin
             options.pluginOSXSha = sha1 'RadeonProRenderMaya.dmg'

@@ -499,7 +499,7 @@ def executeBuildWindows(Map options)
                 rename RadeonProRender*.zip RadeonProRenderBlender_Windows.zip
             """
 
-            makeStash(includes: "RadeonProRenderBlender_Windows.zip", name: "appWindows", zip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "RadeonProRenderBlender_Windows.zip", name: "appWindows", preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
@@ -542,7 +542,7 @@ def executeBuildOSX(Map options)
                 mv RadeonProRender*zip RadeonProRenderBlender_MacOS.zip
             """
 
-            makeStash(includes: "RadeonProRenderBlender_MacOS.zip", name: "appOSX", zip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "RadeonProRenderBlender_MacOS.zip", name: "appOSX", preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
@@ -586,7 +586,7 @@ def executeBuildLinux(String osName, Map options)
                 mv RadeonProRender*zip RadeonProRenderBlender_${osName}.zip
             """
 
-            makeStash(includes: "RadeonProRenderBlender_${osName}.zip", name: "app${osName}", zip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: "RadeonProRenderBlender_${osName}.zip", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
