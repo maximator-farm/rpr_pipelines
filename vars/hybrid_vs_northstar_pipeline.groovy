@@ -3,19 +3,24 @@ def executeBuildWindows(Map options) {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         
         bat """
-            cmake ./ -B ./build >> Build-Windows.log 2>&1
+            cmake ./ -B ./build >> ../${STAGE_NAME}.log 2>&1
         """
 
         dir("build") {
             bat """
-                cmake --build ./ --config Release >> ../Build-Windows.log 2>&1
+                cmake --build ./ --config Release >> ../../${STAGE_NAME}.log 2>&1
             """
 
-            dir("build\\release") {
+            String BUILD_NAME = "HybridVsNorthStar_Windows.zip"
+
+            dir("bin\\Release") {
                 zip archive: true, zipFile: "HybridVsNorthStar_Windows.zip"
             }
 
-            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            String archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
+            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
+            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, archiveUrl)
         }
     }
 }
@@ -126,8 +131,10 @@ def executePreBuild(Map options)
         // TODO configure tests
     }
 
-    stash includes: "resources/", name: "testResources", allowEmpty: false
-    stash includes: "third_party/*.dll", name: "enginesDlls", allowEmpty: false
+    dir('HybridVsNorthStar') {
+        stash includes: "resources/", name: "testResources", allowEmpty: false
+        stash includes: "third_party/*.dll", name: "enginesDlls", allowEmpty: false
+    }
 }
 
 
