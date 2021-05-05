@@ -131,9 +131,7 @@ def executePreBuild(Map options)
 }
 
 
-def call(String projectRepo = "git@github.com:Radeon-Pro/HybridVsNorthStar.git",
-    String projectBranch = "",
-    String testsBranch = "master",
+def call(String projectBranch = "",
     String platforms = 'Windows',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
@@ -143,6 +141,8 @@ def call(String projectRepo = "git@github.com:Radeon-Pro/HybridVsNorthStar.git",
     String parallelExecutionTypeString = "TakeAllNodes"
     )
 {
+    String projectRepo = "git@github.com:Radeon-Pro/HybridVsNorthStar.git",
+
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
     options["stage"] = "Init"
@@ -173,7 +173,6 @@ def call(String projectRepo = "git@github.com:Radeon-Pro/HybridVsNorthStar.git",
 
             options << [projectRepo:projectRepo,
                         projectBranch:projectBranch,
-                        testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
                         testsPackage:testsPackage,
