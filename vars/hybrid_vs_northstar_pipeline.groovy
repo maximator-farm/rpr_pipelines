@@ -141,7 +141,7 @@ def call(String projectBranch = "",
     String parallelExecutionTypeString = "TakeAllNodes"
     )
 {
-    String projectRepo = "git@github.com:Radeon-Pro/HybridVsNorthStar.git",
+    String projectRepo = "git@github.com:Radeon-Pro/HybridVsNorthStar.git"
 
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
