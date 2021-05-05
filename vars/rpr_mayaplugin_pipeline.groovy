@@ -171,7 +171,8 @@ def executeTestCommand(String osName, String asicName, Map options)
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
         if (options.parsedTests.contains(".json")) {
-            // if tests package isn't splitted and it's execution of this package - replace test group for non-splitted package by empty string
+            // if tests package isn't splitted and it's execution of this package - replace test package by test group and test group by empty string
+            testsPackageName = options.parsedTests
             testsNames = ""
         } else {
             // if tests package isn't splitted and it isn't execution of this package - replace tests package by empty string
@@ -526,6 +527,8 @@ def executeBuild(String osName, Map options)
             }
         }
 
+        outputEnvironmentInfo(osName)
+
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
                 case "Windows":
@@ -709,16 +712,29 @@ def executePreBuild(Map options)
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
                 String modifiedPackageName = "${options.testsPackage}~"
                 options.groupsUMS = tempTests.clone()
-                packageInfo["groups"].each() {
+
+                // receive list of group names from package
+                List groupsFromPackage = []
+
+                if (packageInfo["groups"] instanceof Map) {
+                    groupsFromPackage = packageInfo["groups"].keySet() as List
+                } else {
+                    // iterate through all parts of package
+                    packageInfo["groups"].each() {
+                        groupsFromPackage.addAll(it.keySet() as List)
+                    }
+                }
+
+                groupsFromPackage.each() {
                     if (options.isPackageSplitted) {
-                        tempTests << it.key
-                        options.groupsUMS << it.key
+                        tempTests << it
+                        options.groupsUMS << it
                     } else {
-                        if (tempTests.contains(it.key)) {
+                        if (tempTests.contains(it)) {
                             // add duplicated group name in name of package group name for exclude it
-                            modifiedPackageName = "${modifiedPackageName},${it.key}"
+                            modifiedPackageName = "${modifiedPackageName},${it}"
                         } else {
-                            options.groupsUMS << it.key
+                            options.groupsUMS << it
                         }
                     }
                 }
@@ -739,10 +755,24 @@ def executePreBuild(Map options)
                     options.testsPackage = "none"
                 } else {
                     options.testsPackage = modifiedPackageName
-                    options.engines.each { engine ->
-                        tests << "${modifiedPackageName}-${engine}"
+                    // check that package is splitted to parts or not
+                    if (packageInfo["groups"] instanceof Map) {
+                        options.engines.each { engine ->
+                            tests << "${modifiedPackageName}-${engine}"
+                        } 
+                        options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                    } else {
+                        // add group stub for each part of package
+                        options.engines.each { engine ->
+                            for (int i = 0; i < packageInfo["groups"].size(); i++) {
+                                tests << "${modifiedPackageName}-${engine}".replace(".json", ".${i}.json")
+                            }
+                        }
+
+                        for (int i = 0; i < packageInfo["groups"].size(); i++) {
+                            options.timeouts[options.testsPackage.replace(".json", ".${i}.json")] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                        }
                     }
-                    options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
             } else if (options.tests) {
                 options.groupsUMS = options.tests.split(" ") as List
@@ -1108,9 +1138,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         splitTestsExecution:splitTestsExecution,
                         sendToUMS:sendToUMS,
                         gpusCount:gpusCount,
-                        TEST_TIMEOUT:150,
-                        ADDITIONAL_XML_TIMEOUT:30,
-                        NON_SPLITTED_PACKAGE_TIMEOUT:105,
+                        TEST_TIMEOUT:90,
+                        ADDITIONAL_XML_TIMEOUT:15,
+                        NON_SPLITTED_PACKAGE_TIMEOUT:45,
                         DEPLOY_TIMEOUT:180,
                         TESTER_TAG:tester_tag,
                         universePlatforms: universePlatforms,
