@@ -16,7 +16,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 
             if (options.recreateCondaEnv) {
                     bat """
-                        call C:\\Users\\Gdansk\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
+                        call C:\\Users\\${env.USERNAME}\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env remove --name upscalers_pytorch >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env create --force --quiet --name upscalers_pytorch -f upscalers_pytorch.yml -v >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda activate upscalers_pytorch >> ${STAGE_NAME}_init_env.log 2>&1
@@ -28,7 +28,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                     """
                 } else {
                     bat """
-                        call C:\\Users\\Gdansk\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
+                        call C:\\Users\\${env.USERNAME}\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda env update --prune --quiet --name upscalers_pytorch -f upscalers_pytorch.yml -v >> ${STAGE_NAME}_init_env.log 2>&1
                         call conda activate upscalers_pytorch >> ${STAGE_NAME}_init_env.log 2>&1
                         call ipython kernel install --user --name upscalers_pytorch
@@ -48,10 +48,9 @@ def executeTestCommand(String osName, String asicName, Map options)
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "in_progress", options, NotificationConfiguration.EXECUTE_TEST, BUILD_URL)
                             println "[INFO] Current notebook: ${test}.ipynb"
                             bat """
-                                call C:\\Users\\Gdansk\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
+                                call C:\\Users\\${env.USERNAME}\\anaconda3\\Scripts\\activate.bat >> ${STAGE_NAME}_init_env.log 2>&1
                                 call conda activate upscalers_pytorch >> ${STAGE_NAME}_${test}.log 2>&1
                                 jupyter nbconvert --to html --execute --ExecutePreprocessor.timeout=${options.notebooksTimeout} --ExecutePreprocessor.kernel_name=upscalers_pytorch --output tested/tested_${test} ${test}.ipynb >> ..\\${STAGE_NAME}_${test}.log 2>&1
-
                             """
                             utils.publishReport(this, BUILD_URL, "tested", "tested_${test}.html", "${test} report", "Test Report")
                             GithubNotificator.updateStatus("Test", "${asicName}-${osName}-${test}", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/${test.replace("_", "_5f")}_20report")
@@ -81,7 +80,7 @@ def executeTestCommand(String osName, String asicName, Map options)
 def executeTests(String osName, String asicName, Map options)
 {
     try {
-        
+
         timeout(time: "10", unit: "MINUTES") {
             cleanWS(osName)
             checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
@@ -99,7 +98,7 @@ def executeTests(String osName, String asicName, Map options)
     } catch (e) {
         println(e.toString())
         println(e.getMessage())
-        
+
         if (e instanceof ExpectedExceptionWrapper) {
             throw new ExpectedExceptionWrapper(e.getMessage(), e.getCause())
         } else {
@@ -165,7 +164,7 @@ def executePreBuild(Map options)
     if (env.BRANCH_NAME && options.githubNotificator) {
         options.githubNotificator.initChecks(options, BUILD_URL, true, false, false)
     }
-    
+
 }
 
 
@@ -173,7 +172,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {}
 
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:NVIDIA_RTX2080',
+         String platforms = 'Windows:NVIDIA_RTX5000',
          Boolean executeAllTests = true,
          String tests = "0000_index,0010_config,0015_utils,0018_pytorch_utils,0020_plot,0030_image,0050_colormaps,0070_SSIM",
          String customTests = "",
