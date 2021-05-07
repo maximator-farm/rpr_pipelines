@@ -269,6 +269,128 @@ def executePreBuild(Map options)
 }
 
 
+def executeDeploy(Map options, List platformList, List testResultList) {
+    try {
+        if (options['executeTests'] && testResultList) {
+            withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+                checkoutScm(branchName: "northstar_baselines_compare", repositoryUrl: "git@github.com:luxteam/jobs_launcher.git")
+            }
+
+            dir("summaryTestResults") {
+                testResultList.each {
+                    dir(it.replace("testResult-", "")) {
+                        dir("RPR") {
+                            try {
+                                unstash("${it}-HybridPro")
+                            } catch (e) {
+                                println("Can't unstash ${it}-HybridPro")
+                                println(e.toString())
+                            }
+                        }
+
+                        dir("NorthStar") {
+                            try {
+                                unstash("${it}-Northsta64")
+                            } catch (e) {
+                                println("Can't unstash ${it}-Northsta64")
+                                println(e.toString())
+                            }
+                        }
+                    }
+                }
+            }
+
+            try {
+                GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
+                withEnv(["FIRST_ENGINE_NAME=HybridPro", "SECOND_ENGINE_NAME=Northstar64", "SHOW_SYNC_TIME=false", 
+                    "SHOW_RENDER_LOGS=true", "REPORT_TOOL=HybridVsNs"]) {
+
+                    bat """
+                        build_performance_comparison_report.bat ..\\\\report\\\\RPR ..\\\\report\\\\NorthStar ..\\\\report
+                    """
+                }
+            } catch (e) {
+                String errorMessage = utils.getReportFailReason(e.getMessage())
+                GithubNotificator.updateStatus("Deploy", "Building test report", "failure", options, errorMessage, "${BUILD_URL}")
+                if (utils.isReportFailCritical(e.getMessage())) {
+                    options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
+                    println """
+                        [ERROR] Failed to build test report.
+                        ${e.toString()}
+                    """
+                    if (!options.testDataSaved) {
+                        try {
+                            // Save test data for access it manually anyway
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", "Test Report", "Summary Report, Performance Report, Compare Report")
+                            options.testDataSaved = true
+                        } catch(e1) {
+                            println """
+                                [WARNING] Failed to publish test data.
+                                ${e1.toString()}
+                                ${e.toString()}
+                            """
+                        }
+                    }
+                    throw e
+                } else {
+                    currentBuild.result = "FAILURE"
+                    options.problemMessageManager.saveGlobalFailReason(errorMessage)
+                }
+            }
+
+            try {
+                dir("jobs_launcher") {
+                    archiveArtifacts "launcher.engine.log"
+                }
+            } catch(e) {
+                println """
+                    [ERROR] during archiving launcher.engine.log
+                    ${e.toString()}
+                """
+            }
+
+            Map summaryTestResults = [:]
+            try {
+                def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
+                summaryTestResults = [passed: summaryReport.passed, failed: summaryReport.failed, error: summaryReport.error]
+                if (summaryReport.error > 0) {
+                    println("[INFO] Some tests marked as error. Build result = FAILURE.")
+                    currentBuild.result = "FAILURE"
+                    options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
+                }
+                else if (summaryReport.failed > 0) {
+                    println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
+                    currentBuild.result = "UNSTABLE"
+                    options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
+                }
+            } catch(e) {
+                println """
+                    [ERROR] CAN'T GET TESTS STATUS
+                    ${e.toString()}
+                """
+                options.problemMessageManager.saveUnstableReason(NotificationConfiguration.CAN_NOT_GET_TESTS_STATUS)
+                currentBuild.result = "UNSTABLE"
+            }
+
+            withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html", \
+                    "Test Report", "Summary Report, Performance Report")
+                if (summaryTestResults) {
+                    // add in description of status check information about tests statuses
+                    // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
+                } else {
+                    GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
+                }
+            }
+        }
+    } catch (e) {
+        println(e.toString())
+        throw e
+    }
+}
+
+
 def call(String projectBranch = "",
     String platforms = 'Windows',
     String updateRefs = 'No',
@@ -327,7 +449,7 @@ def call(String projectBranch = "",
                         ]
         }
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString())
