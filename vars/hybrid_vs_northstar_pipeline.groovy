@@ -23,7 +23,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
                         run.bat ${options.testsPackage} \"${options.tests}\" HybridPro >> \"../${STAGE_NAME}_HybridPro_${options.currentTry}.log\" 2>&1
                     """
 
-                    utils.moveFiles(this, osName, "..\\Work", "..\\Work-Hybrid")
+                    utils.moveFiles(this, osName, "..\\Work", "..\\Work-HybridPro")
 
                     bat """
                         run.bat ${options.testsPackage} \"${options.tests}\" Northstar64 >> \"../${STAGE_NAME}_Northstar64_${options.currentTry}.log\" 2>&1
@@ -60,7 +60,7 @@ def executeTests(String osName, String asicName, Map options) {
                 unstash("testResources")
 
                 // Bug of tool (it can't work without resources in current dir)
-                dir("jobs_test_hybrid_vs_ns/scripts") {
+                dir("scripts") {
                     unstash("testResources")
                 }
             }
@@ -68,7 +68,7 @@ def executeTests(String osName, String asicName, Map options) {
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
             timeout(time: "5", unit: "MINUTES") {
-                dir("jobs_test_hybrid_vs_ns/HybridVsNs") {
+                dir("HybridVsNs") {
                     prepareTool(osName, options)
                 }
             }
@@ -101,10 +101,10 @@ def executeTests(String osName, String asicName, Map options) {
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
 
             if (stashResults) {
-                dir("Work-Hybrid") {
-                    stash includes: '**/*', name: "${options.testResultsName}-Hybrid", allowEmpty: true
+                dir("Work-HybridPro/Results/HybridVsNs") {
+                    stash includes: '**/*', name: "${options.testResultsName}-HybridPro", allowEmpty: true
                 }
-                dir("Work-Northstar64") {
+                dir("Work-Northstar64/Results/HybridVsNs") {
                     stash includes: '**/*', name: "${options.testResultsName}-Northstar64", allowEmpty: true
                 }
             } else {
@@ -263,7 +263,9 @@ def executePreBuild(Map options)
 
     dir('HybridVsNorthStar') {
         stash includes: "resources/", name: "testResources", allowEmpty: false
-        stash includes: "third_party/*.dll", name: "enginesDlls", allowEmpty: false
+        dir("third_party") {
+            stash includes: "*.dll", name: "enginesDlls", allowEmpty: false
+        }
     }
 }
 
@@ -277,8 +279,8 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             dir("summaryTestResults") {
                 testResultList.each {
-                    dir(it.replace("testResult-", "")) {
-                        dir("RPR") {
+                    dir("RPR") {
+                        dir(it.replace("testResult-", "")) {
                             try {
                                 unstash("${it}-HybridPro")
                             } catch (e) {
@@ -286,8 +288,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                                 println(e.toString())
                             }
                         }
+                    }
 
-                        dir("NorthStar") {
+                    dir("NorthStar") {
+                        dir(it.replace("testResult-", "")) {
                             try {
                                 unstash("${it}-Northstar64")
                             } catch (e) {
@@ -302,10 +306,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["FIRST_ENGINE_NAME=HybridPro", "SECOND_ENGINE_NAME=Northstar64", "SHOW_SYNC_TIME=false", 
-                    "SHOW_RENDER_LOGS=true", "REPORT_TOOL=HybridVsNs"]) {
+                    "SHOW_RENDER_LOGS=true", "REPORT_TOOL=HybridVsNs", "USE_BASELINES=false"]) {
 
                     bat """
-                        build_performance_comparison_report.bat ..\\\\report\\\\RPR ..\\\\report\\\\NorthStar ..\\\\report
+                        build_performance_comparison_report.bat summaryTestResults\\\\RPR summaryTestResults\\\\NorthStar summaryTestResults
                     """
                 }
             } catch (e) {
