@@ -23,13 +23,13 @@ def executeTestCommand(String osName, String asicName, Map options) {
                         run.bat ${options.testsPackage} \"${options.tests}\" HybridPro >> \"../${STAGE_NAME}_HybridPro_${options.currentTry}.log\" 2>&1
                     """
 
-                    utils.moveFiles(this, osName, "Work", "Work-Hybrid")
+                    utils.moveFiles(this, osName, "..\\Work", "..\\Work-Hybrid")
 
                     bat """
                         run.bat ${options.testsPackage} \"${options.tests}\" Northstar64 >> \"../${STAGE_NAME}_Northstar64_${options.currentTry}.log\" 2>&1
                     """
 
-                    utils.moveFiles(this, osName, "Work", "Work-Northstar64")
+                    utils.moveFiles(this, osName, "..\\Work", "..\\Work-Northstar64")
                     break
 
                 case 'OSX':
@@ -143,9 +143,8 @@ def executeBuildWindows(Map options) {
 
             dir("bin\\Release") {
                 zip archive: true, zipFile: "HybridVsNorthStar_Windows.zip"
+                stash(includes: "HybridVsNorthStar_Windows.zip", name: "Tool_Windows")
             }
-
-            stash(includes: "HybridVsNorthStar_Windows.zip", name: "Tool_Windows")
 
             String archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
@@ -290,9 +289,9 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
                         dir("NorthStar") {
                             try {
-                                unstash("${it}-Northsta64")
+                                unstash("${it}-Northstar64")
                             } catch (e) {
-                                println("Can't unstash ${it}-Northsta64")
+                                println("Can't unstash ${it}-Northstar64")
                                 println(e.toString())
                             }
                         }
@@ -399,6 +398,7 @@ def call(String projectBranch = "",
     String testsPackage = "",
     String tests = "",
     Boolean splitTestsExecution = true,
+    String tester_tag = "HybridVsNs",
     String parallelExecutionTypeString = "TakeAllNodes"
     )
 {
@@ -439,6 +439,7 @@ def call(String projectBranch = "",
                         enableNotifications:enableNotifications,
                         testsPackage:testsPackage,
                         tests:tests,
+                        PRJ_NAME:"HybridVsNorthStar",
                         splitTestsExecution:splitTestsExecution,
                         gpusCount:gpusCount,
                         nodeRetry: nodeRetry,
@@ -447,7 +448,8 @@ def call(String projectBranch = "",
                         TEST_TIMEOUT: 30,
                         DEPLOY_TIMEOUT: 15,
                         parallelExecutionType:parallelExecutionType,
-                        parallelExecutionTypeString: parallelExecutionTypeString
+                        parallelExecutionTypeString: parallelExecutionTypeString,
+                        TESTER_TAG:tester_tag
                         ]
         }
 
