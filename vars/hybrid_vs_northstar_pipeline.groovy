@@ -1,3 +1,131 @@
+def prepareTool(String osName, Map options) {
+    switch(osName) {
+        case "Windows":
+            unstash("Tool_Windows")
+            unzip(zipFile: "HybridVsNorthStar_Windows.zip")
+            unstash("enginesDlls")
+            break
+        case "OSX":
+            println("Unsupported OS")
+            break
+        default:
+            println("Unsupported OS")
+    }
+}
+
+
+def executeTestCommand(String osName, String asicName, Map options) {
+    timeout(time: options.TEST_TIMEOUT, unit: 'MINUTES') {
+        dir('scripts') {
+            switch(osName) {
+                case 'Windows':
+                    bat """
+                        run.bat ${options.testsPackage} \"${options.tests}\" HybridPro >> \"../${STAGE_NAME}_HybridPro_${options.currentTry}.log\" 2>&1
+                    """
+
+                    utils.moveFiles(this, osName, "Work", "Work-Hybrid")
+
+                    bat """
+                        run.bat ${options.testsPackage} \"${options.tests}\" Northstar64 >> \"../${STAGE_NAME}_Northstar64_${options.currentTry}.log\" 2>&1
+                    """
+
+                    utils.moveFiles(this, osName, "Work", "Work-Northstar64")
+                    break
+
+                case 'OSX':
+                    println("Unsupported OS")
+                    break
+
+                default:
+                    println("Unsupported OS")
+            }
+        }
+    }
+}
+
+
+def executeTests(String osName, String asicName, Map options) {
+    // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
+    Boolean stashResults = true
+    try {
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            timeout(time: "5", unit: "MINUTES") {
+                cleanWS(osName)
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_hybrid_vs_ns.git")
+            }
+        }
+
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
+            timeout(time: "5", unit: "MINUTES") {
+                unstash("testResources")
+
+                // Bug of tool (it can't work without resources in current dir)
+                dir("jobs_test_hybrid_vs_ns/scripts") {
+                    unstash("testResources")
+                }
+            }
+        }
+
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+            timeout(time: "5", unit: "MINUTES") {
+                dir("jobs_test_hybrid_vs_ns/HybridVsNs") {
+                    prepareTool(osName, options)
+                }
+            }
+        }
+
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
+            executeTestCommand(osName, asicName, options)
+        }
+
+        options.executeTestsFinished = true
+    } catch (e) {
+        if (options.currentTry < options.nodeReallocateTries) {
+            stashResults = false
+        }
+        println e.toString()
+        if (e instanceof ExpectedExceptionWrapper) {
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, e.getMessage(), "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper(e.getMessage(), e.getCause())
+        } else {
+            GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.REASON_IS_NOT_IDENTIFIED, "${BUILD_URL}")
+            throw new ExpectedExceptionWrapper(NotificationConfiguration.REASON_IS_NOT_IDENTIFIED, e)
+        }
+    } finally {
+        try {
+            dir(options.stageName) {
+                utils.moveFiles(this, osName, "../*.log", ".")
+                utils.moveFiles(this, osName, "../scripts/*.log", ".")
+                utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
+            }
+            archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
+
+            if (stashResults) {
+                dir("Work-Hybrid") {
+                    stash includes: '**/*', name: "${options.testResultsName}-Hybrid", allowEmpty: true
+                }
+                dir("Work-Northstar64") {
+                    stash includes: '**/*', name: "${options.testResultsName}-Northstar64", allowEmpty: true
+                }
+            } else {
+                println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
+            }
+        } catch (e) {
+            // throw exception in finally block only if test stage was finished
+            if (options.executeTestsFinished) {
+                if (e instanceof ExpectedExceptionWrapper) {
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, e.getMessage(), "${BUILD_URL}")
+                    throw e
+                } else {
+                    GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, NotificationConfiguration.FAILED_TO_SAVE_RESULTS, "${BUILD_URL}")
+                    throw new ExpectedExceptionWrapper(NotificationConfiguration.FAILED_TO_SAVE_RESULTS, e)
+                }
+            }
+        }
+    }
+}
+
+
 def executeBuildWindows(Map options) {
     dir('HybridVsNorthStar') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
@@ -16,6 +144,8 @@ def executeBuildWindows(Map options) {
             dir("bin\\Release") {
                 zip archive: true, zipFile: "HybridVsNorthStar_Windows.zip"
             }
+
+            stash(includes: "HybridVsNorthStar_Windows.zip", name: "Tool_Windows")
 
             String archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
@@ -104,15 +234,6 @@ def executePreBuild(Map options)
         }
 
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
-            if (options['incrementVersion']) {
-                withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
-                    GithubNotificator githubNotificator = new GithubNotificator(this, options)
-                    githubNotificator.init(options)
-                    options["githubNotificator"] = githubNotificator
-                    githubNotificator.initPreBuild("${BUILD_URL}")
-                }
-            }
-
             currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
             currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
             currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -120,15 +241,25 @@ def executePreBuild(Map options)
         }
     }
 
-    if (env.BRANCH_NAME && options.githubNotificator) {
-        options.githubNotificator.initChecks(options, "${BUILD_URL}")
-    }
-
-    def tests = []
-    options.timeouts = [:]
-
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
-        // TODO configure tests
+        dir('jobs_test_hybrid_vs_ns') {
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_hybrid_vs_ns.git')
+
+            options['testsBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            dir('jobs_launcher') {
+                options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+            }
+            println "[INFO] Test branch hash: ${options['testsBranch']}"
+
+            if (options.testsPackage != "none") {
+                def groupNames = readJSON(file: "jobs/${options.testsPackage}")["groups"].collect { it.key }
+                // json means custom test suite. Split doesn't supported
+                options.tests = groupNames.join(" ")
+                options.testsPackage = "none"
+            }
+
+            options.testsList = ['']
+        }
     }
 
     dir('HybridVsNorthStar') {
@@ -188,12 +319,15 @@ def call(String projectBranch = "",
                         gpusCount:gpusCount,
                         nodeRetry: nodeRetry,
                         platforms:platforms,
+                        BUILD_TIMEOUT: 15,
+                        TEST_TIMEOUT: 30,
+                        DEPLOY_TIMEOUT: 15,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString
                         ]
         }
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString())
