@@ -392,6 +392,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 
 def call(String projectBranch = "",
+    String testsBranch = "master",
     String platforms = 'Windows',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
