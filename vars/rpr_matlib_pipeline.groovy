@@ -1,14 +1,9 @@
-def executeTestCommand(String osName)
-{
-}
+def executeTestCommand(String osName) {}
 
-def executeTests(String osName, String asicName, Map options)
-{
-}
+def executeTests(String osName, String asicName, Map options) {}
 
-def executeBuildWindows()
-{
-    withEnv(["PATH=c:\\python35\\;c:\\python35\\scripts\\;${PATH}"]) {
+def executeBuildWindows() {
+    withEnv(["PATH=c:\\python39\\;c:\\python39\\scripts\\;${PATH}"]) {
         bat """
             pushd MatLibPkg
             build_windows_installer.cmd >> ..\\${STAGE_NAME}.log 2>&1        
@@ -17,8 +12,7 @@ def executeBuildWindows()
     }
 }
 
-def executeBuildOSX()
-{
+def executeBuildOSX() {
     sh """
         pushd MatLibPkg
         ./build_osx_installer.sh >> ../${STAGE_NAME}.log 2>&1
@@ -27,8 +21,7 @@ def executeBuildOSX()
     """
 }
 
-def executeBuildLinux()
-{
+def executeBuildLinux() {
     sh """
         cd MatLibPkg
         ./build_linux_installer.sh >> ../${STAGE_NAME}.log 2>&1
@@ -37,38 +30,34 @@ def executeBuildLinux()
     """
 }
 
-def executePreBuild(Map options)
-{
-    checkOutBranchOrScm(options['projectBranch'], options['projectURL'])
+def executePreBuild(Map options) {
+    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
-    options.AUTHOR_NAME = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
     options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-    options.commitShortSHA = options.commitSHA[0..6]
 
-    println "The last commit was written by ${options.AUTHOR_NAME}."
-    println "Commit message: ${options.commitMessage}"
-    println "Commit SHA: ${options.commitSHA}"
-    println "Commit shortSHA: ${options.commitShortSHA}"
+    println("The last commit was written by ${options.commitAuthor}.")
+    println("Commit message: ${options.commitMessage}")
+    println("Commit SHA: ${options.commitSHA}")
 
-    if (options.projectBranch) {
+    if (options.projectBranch){
         currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
     } else {
         currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
     }
 
-    currentBuild.description += "<b>Commit author:</b> ${options.AUTHOR_NAME}<br/>"
+    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 }
 
-def executeBuild(String osName, Map options)
-{
+def executeBuild(String osName, Map options) {
     try {
-        checkOutBranchOrScm(options['projectBranch'], options['projectURL'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
 
-        switch(osName) {
+        switch (osName) {
             case 'Windows': 
                 executeBuildWindows()
                 break
@@ -87,27 +76,20 @@ def executeBuild(String osName, Map options)
     }
 }
 
-def executeDeploy(Map options, List platformList, List testResultList)
-{
-}
+def executeDeploy(Map options, List platformList, List testResultList) {}
 
-def call(String projectBranch = "",
-         String projectURL = 'git@github.com:Radeon-Pro/RadeonProRenderPkgPlugin.git',
+def call(String projectBranch = "master",
+         String projectRepo = 'git@github.com:Radeon-Pro/RadeonProRenderPkgPlugin.git',
          String platforms = 'Windows;OSX;Ubuntu18',
-         Boolean enableNotifications = true)
-{
-    String PRJ_ROOT="rpr-plugins"
-    String PRJ_NAME="RadeonProRenderMaterialLibrary"
-    
+         Boolean enableNotifications = true) {
+
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                            [projectBranch:projectBranch,
                             enableNotifications:enableNotifications,
                             executeBuild:true,
                             executeTests:false,
-                            PRJ_NAME:PRJ_NAME,
-                            PRJ_ROOT:PRJ_ROOT,
+                            PRJ_NAME:"RadeonProRenderMaterialLibrary",
+                            PRJ_ROOT:"rpr-plugins",
                             BUILD_TIMEOUT:'25',
-                            TEST_TIMEOUT:'25',
-                            projectURL:projectURL,
-                            retriesForTestStage:1])
+                            projectRepo:projectRepo])
 }

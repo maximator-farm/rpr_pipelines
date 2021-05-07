@@ -20,8 +20,7 @@ def executeBuildWindows(Map options)
 
     configurations.each() { KEY, VALUE ->
         try {
-
-            checkOutBranchOrScm(options.projectBranch, "git@github.com:Radeon-Pro/RadeonProVulkanWrapper.git")
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
 
             if (KEY == "KHR_ON"){
                 bat """
@@ -132,7 +131,7 @@ def executeBuildLinux(Map options, String osName="linux")
    
     if (osName == "Ubuntu18") {
 
-        checkOutBranchOrScm(options.projectBranch, "git@github.com:Radeon-Pro/RadeonProVulkanWrapper.git")
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
 
         sh """
             mkdir build
@@ -171,7 +170,7 @@ def executeBuildLinux(Map options, String osName="linux")
 def executeBuild(String osName, Map options)
 {
     try {
-        checkOutBranchOrScm(options.projectBranch, "git@github.com:Radeon-Pro/RadeonProVulkanWrapper.git")
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
 
         switch(osName) {
@@ -197,7 +196,7 @@ def executeBuild(String osName, Map options)
 def executePreBuild(Map options)
 {
     dir('RadeonProVulkanWrapper') {
-        checkOutBranchOrScm(options.projectBranch, "git@github.com:Radeon-Pro/RadeonProVulkanWrapper.git")
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
@@ -210,7 +209,7 @@ def executePreBuild(Map options)
             try {
                 bat "tools\\doxygen\\doxygen.exe tools\\doxygen\\Doxyfile >> doxygen_build.log 2>&1"
                 archiveArtifacts allowEmptyArchive: true, artifacts: 'doxygen_build.log'
-                sendFiles('./docs/', "/volume1/CIS/doxygen-docs")
+                uploadFiles('./docs/', "/volume1/CIS/doxygen-docs")
             } catch(e) {
                 println("Can't build doxygen documentation")
                 println(e.toString())
@@ -234,6 +233,7 @@ def call(String projectBranch = "",
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                            [projectBranch:projectBranch,
+                            projectRepo:"git@github.com:Radeon-Pro/RadeonProVulkanWrapper.git",
                             updateRefs:updateRefs,
                             enableNotifications:enableNotifications,
                             PRJ_NAME:'RadeonProVulkanWrapper',

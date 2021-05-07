@@ -40,6 +40,12 @@ public class NotificationConfiguration {
 
         "exceptions": [
             [
+                "class": Exception, "problemMessage": "PR is not mergeable.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": ["Not mergeable"],
+                "githubNotification": ["status": "failure"]
+            ],
+            [
                 "class": "TimeoutExceeded", "problemMessage": "Failed to download source code repository due to timeout.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
                 "githubNotification": ["status": "timed_out"]
@@ -81,6 +87,18 @@ public class NotificationConfiguration {
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Failed to download the USD repository.", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
+    def static DOWNLOAD_SVN_REPO = [
+        "begin": ["message": "Downloading the SVN repository."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to download the SVN repository.", 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
                 "githubNotification": ["status": "failure"]
             ]
@@ -147,6 +165,20 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static BUILD_PACKAGE_USD_VIEWER = [
+        "begin": ["message": "Creating USD Viewer package."],
+
+        "end": ["message": "USD Viewer package was successfully created."],
+
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "Failed to create USD Viewer package.", 
+                "rethrow": ExceptionThrowType.RETHROW,
+                "githubNotification": ["status": "failure"]
+            ]
+        ]
+    ]
+
     def static DOWNLOAD_SCENES = [
         "begin": ["message": "Downloading test scenes."],
 
@@ -201,6 +233,43 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static INSTALL_PLUGIN_DIRT = [
+        "begin": ["message": "Installing the plugin (dirt install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to install the plugin due to timeout (dirt install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to install new plugin (dirt install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
+    def static INSTALL_PLUGIN_CLEAN = [
+        "begin": ["message": "Installing the plugin (clean install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to install the plugin due to timeout (clean install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to uninstall old plugin (clean install).", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": ["Failed to uninstall old plugin"]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to install the plugin (clean install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
     def static INSTALL_HOUDINI = [
         "begin": ["message": "Installing Houdini."],
 
@@ -248,6 +317,48 @@ public class NotificationConfiguration {
             ],
             [
                 "class": Exception, "problemMessage": "Failed to build cache.", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
+    def static BUILD_CACHE_DIRT = [
+        "begin": ["message": "Building cache (dirt install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to build cache due to timeout (dirt install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "No output image after cache building (dirt install).", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [NO_OUTPUT_IMAGE]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to build cache (dirt install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
+            ]
+        ]
+    ]
+
+    def static BUILD_CACHE_CLEAN = [
+        "begin": ["message": "Building cache (clean install)."],
+
+        "exceptions": [
+            [
+                "class": "TimeoutExceeded", "problemMessage": "Failed to build cache due to timeout (clean install).", 
+                "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
+                "githubNotification": ["status": "timed_out"]
+            ],
+            [
+                "class": Exception, "problemMessage": "No output image after cache building (clean install).", 
+                "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
+                "getMessage": [NO_OUTPUT_IMAGE]
+            ],
+            [
+                "class": Exception, "problemMessage": "Failed to build cache (clean install).", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER
             ]
         ]
@@ -326,6 +437,14 @@ public class NotificationConfiguration {
     def static SOME_TESTS_FAILED = "Some tests were marked as failed. Check the report for details."
 
     def static ALL_TESTS_PASSED = "Tests completed successfully."
+
+    def static EXECUTE_TEST = "Executing test..."
+
+    def static TEST_PASSED = "Test completed successfully."
+
+    def static TEST_FAILED = "Test execution failed."
+
+    def static TEST_NOT_FOUND = "Test not found."
 
     def static FAILED_TO_SAVE_RESULTS = "An error occurred while saving test results. Please contact support."
 

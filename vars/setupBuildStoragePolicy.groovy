@@ -123,7 +123,7 @@ def isWeeklyJob(){
 
 
 def isMasterBranch(){
-    return env.BRANCH_NAME && env.BRANCH_NAME == "master"
+    return env.BRANCH_NAME && (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "main")
 }
 
 

@@ -15,7 +15,7 @@ def executeConfiguration(osName, attemptNum, Map options) {
 				cleanWS(osName)
 				// Download render service scripts
 				try {
-					checkOutBranchOrScm(options['scripts_branch'], 'git@github.com:luxteam/render_service_scripts.git')
+					checkoutScm(branchName: options.scripts_branch, repositoryUrl: 'git@github.com:luxteam/render_service_scripts.git')
 					dir(".\\install"){
 						bat '''
 						install_pylibs.bat

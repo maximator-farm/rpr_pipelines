@@ -77,7 +77,6 @@ def executeTestCommand(String osName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-
     // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
     Boolean stashResults = true
 
@@ -86,7 +85,7 @@ def executeTests(String osName, String asicName, Map options)
         timeout(time: "5", unit: 'MINUTES') {
             try {
                 cleanWS(osName)
-                checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_ai2rpr.git')
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
                 dir('jobs/Scripts') {
                     unstash "conversionScript"
                 }
@@ -97,7 +96,7 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
-        downloadAssets("/${options.PRJ_PATH}/ArnoldAssets/", 'ArnoldAssets')
+        downloadAssets("/${options.PRJ_PATH}/VRay2MayaAssets/", 'VRay2MayaAssets')
 
         try {
             Boolean newPluginInstalled = false
@@ -109,7 +108,7 @@ def executeTests(String osName, String asicName, Map options)
             if (newPluginInstalled) {
                 timeout(time: "5", unit: 'MINUTES') {
                     buildRenderCache(osName, options.toolVersion, options.stageName)
-                    if (!fileExists("./Work/Results/ai2rpr/cache_building.jpg")) {
+                    if(!fileExists("./Work/Results/vray2rpr/cache_building.jpg")){
                         println "[ERROR] Failed to build cache on ${env.NODE_NAME}. No output image found."
                         throw new Exception("No output image during build cache")
                     }
@@ -126,8 +125,8 @@ def executeTests(String osName, String asicName, Map options)
         String REF_PATH_PROFILE="${options.REF_PATH}/${asicName}-${osName}"
         String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
 
-        String REF_PATH_PROFILE_OR="${options.REF_PATH}/Redshift-${osName}"
-        String JOB_PATH_PROFILE_OR="${options.JOB_PATH}/Redshift-${osName}"
+        String REF_PATH_PROFILE_OR="${options.REF_PATH}/VRay-${osName}"
+        String JOB_PATH_PROFILE_OR="${options.JOB_PATH}/VRay-${osName}"
 
         outputEnvironmentInfo(osName)
 
@@ -139,11 +138,15 @@ def executeTests(String osName, String asicName, Map options)
                 bat "make_original_baseline.bat"
             }
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE_OR)
-        } else if (options['updateRefs']) {
+        }
+
+        if (options['updateRefs']) {
             executeTestCommand(osName, options)
             executeGenTestRefCommand(osName, options)
             sendFiles('./Work/Baseline/', REF_PATH_PROFILE)
-        } else {   
+        }
+
+        if (!options['updateORRefs'] && !options['updateRefs']) {	
             try {
                 options.tests.split(" ").each() {
                     receiveFiles("${REF_PATH_PROFILE}/${it}", './Work/Baseline/')
@@ -160,6 +163,7 @@ def executeTests(String osName, String asicName, Map options)
             }
             executeTestCommand(osName, options)
         }
+
     } catch (e) {
         if (options.currentTry < options.nodeReallocateTries) {
             stashResults = false
@@ -173,15 +177,14 @@ def executeTests(String osName, String asicName, Map options)
         archiveArtifacts artifacts: "*.log", allowEmptyArchive: true
         if (stashResults) {
             dir('Work') {
-                if (fileExists("Results/ai2rpr/session_report.json")) {
+                if (fileExists("Results/vray2rpr/session_report.json")) {
 
                     def sessionReport = null
-                    sessionReport = readJSON file: 'Results/ai2rpr/session_report.json'
+                    sessionReport = readJSON file: 'Results/vray2rpr/session_report.json'
 
                     // if none launched tests - mark build failed
-                    if (sessionReport.summary.total == 0)
-                    {
-                        options.failureMessage = "None test was finished for: ${asicName}-${osName}"
+                    if (sessionReport.summary.total == 0) {
+                        options.failureMessage = "Noone test was finished for: ${asicName}-${osName}"
                     }
 
                     // deinstalling broken addon
@@ -189,7 +192,7 @@ def executeTests(String osName, String asicName, Map options)
                         installMSIPlugin(osName, "Maya", options, false, true)
                     }
 
-                    echo "Stashing test results to : ${options.testResultsName}"
+                    println("Stashing test results to : ${options.testResultsName}")
                     stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
                 }
             }
@@ -200,9 +203,10 @@ def executeTests(String osName, String asicName, Map options)
 
 def executePreBuild(Map options)
 {
+    options.executeBuild = false
+
     // manual job
     if (options.forceBuild) {
-        options.executeBuild = true
         options.executeTests = true
     // auto job
     } else {
@@ -220,10 +224,9 @@ def executePreBuild(Map options)
         }
     }
 
-    dir('Arnold2RPRConvertTool-Maya') {
-        checkOutBranchOrScm(options['projectBranch'], 'git@github.com:luxteam/Arnold2RPRConvertTool-Maya.git')
-
-        stash includes: "convertAI2RPR.py", name: "conversionScript"
+    dir('Vray2RPRConvertTool-Maya') {
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: 'git@github.com:luxteam/Vray2RPRConvertTool-Maya.git')
+        stash includes: "convertVR2RPR.py", name: "conversionScript"
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
@@ -239,10 +242,10 @@ def executePreBuild(Map options)
             currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
         }
 
-        options.pluginVersion = version_read("convertAI2RPR.py", 'ARNOLD2RPR_CONVERTER_VERSION = ')
+        options.pluginVersion = version_read("convertVR2RPR.py", 'VR2RPR_CONVERTER_VERSION = ')
 
         if (options['incrementVersion']) {
-            if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
+            if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
                 println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
                 println "[INFO] Current build version: ${options.pluginVersion}"
@@ -250,13 +253,13 @@ def executePreBuild(Map options)
                 new_version = version_inc(options.pluginVersion, 3)
                 
                 println "[INFO] New build version: ${new_version}"
-                version_write("convertAI2RPR.py", 'ARNOLD2RPR_CONVERTER_VERSION = ', new_version)
+                version_write("convertVR2RPR.py", 'VR2RPR_CONVERTER_VERSION = ', new_version)
 
-                options.pluginVersion = version_read("convertAI2RPR.py", 'ARNOLD2RPR_CONVERTER_VERSION = ')
+                options.pluginVersion = version_read("convertVR2RPR.py", 'VR2RPR_CONVERTER_VERSION = ')
                 println "[INFO] Updated build version: ${options.pluginVersion}"
 
                 bat """
-                  git add convertAI2RPR.py
+                  git add convertVR2RPR.py
                   git commit -m "buildmaster: version update to ${options.pluginVersion}"
                   git push origin HEAD:develop
                 """
@@ -269,10 +272,10 @@ def executePreBuild(Map options)
         currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
         bat """
-            rename convertAI2RPR.py convertAI2RPR_${options.pluginVersion}.py
+            rename convertVR2RPR.py convertVR2RPR_${options.pluginVersion}.py
         """
-        archiveArtifacts "convertAI2RPR*.py"
-        String BUILD_NAME = "convertAI2RPR${options.pluginVersion}.py"
+        archiveArtifacts "convertVR2RPR*.py"
+        String BUILD_NAME = "convertVR2RPR${options.pluginVersion}.py"
         rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${BUILD_URL}/artifact/${BUILD_NAME}">[BUILD ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
     }
 
@@ -280,10 +283,11 @@ def executePreBuild(Map options)
 
     def tests = []
     if (options.testsPackage != "none") {
-        dir('jobs_test_ai2rpr') {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_ai2rpr.git')
+        dir('jobs_test_vr2rpr_maya') {
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
             // json means custom test suite. Split doesn't supported
-            if (options.testsPackage.endsWith('.json')) {
+            if(options.testsPackage.endsWith('.json'))
+            {
                 options.testsList = ['']
             }
             // options.splitTestsExecution = false
@@ -296,7 +300,8 @@ def executePreBuild(Map options)
             options.testsPackage = "none"
         }
     } else {
-        options.tests.split(" ").each() {
+        options.tests.split(" ").each()
+        {
             tests << "${it}"
         }
         options.testsList = tests
@@ -304,12 +309,11 @@ def executePreBuild(Map options)
 
 }
 
-
 def executeDeploy(Map options, List platformList, List testResultList)
 {
     try {
         if (options['executeTests'] && testResultList) {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_ai2rpr.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_vr2rpr_maya.git')
 
             dir("summaryTestResults") {
                 testResultList.each() {
@@ -332,7 +336,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}"]) {
                     dir("jobs_launcher") {
                         bat """
-                            build_reports.bat ..\\summaryTestResults Arnold2RPR-Maya ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
+                            build_reports.bat ..\\summaryTestResults VRay2RPR ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                         """
                     }
                 }
@@ -357,7 +361,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 if (summaryReport.error > 0) {
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
                     currentBuild.result = "FAILURE"
-                } else if (summaryReport.failed > 0) {
+                }
+                else if (summaryReport.failed > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
                 }
@@ -385,7 +390,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
     } finally {}
 }
 
-
 def call(String customBuildLinkWindows = "",
          String projectBranch = "",
          String testsBranch = "master",
@@ -398,7 +402,7 @@ def call(String customBuildLinkWindows = "",
          String tests = "",
          String toolVersion = "2020",
          Boolean isPreBuilt = true,
-         Boolean forceBuild = false) {
+         Boolean forceBuild = false){
     try {
         if (!customBuildLinkWindows) {
             withCredentials([string(credentialsId: 'buildsURL', variable: 'BUILDS_URL')]) {
@@ -406,7 +410,7 @@ def call(String customBuildLinkWindows = "",
             }
         }
 
-        String PRJ_NAME="Arnold2RPRConvertTool-Maya"
+        String PRJ_NAME="Vray2RPRConvertTool-Maya"
         String PRJ_ROOT="rpr-tools"
 
         multiplatform_pipeline(platforms, this.&executePreBuild, null, this.&executeTests, this.&executeDeploy,
@@ -425,7 +429,7 @@ def call(String customBuildLinkWindows = "",
                                 isPreBuilt:isPreBuilt,
                                 forceBuild:forceBuild,
                                 reportName:'Test_20Report',
-                                TESTER_TAG:"ArnoldMaya",
+                                TESTER_TAG:"VrayMaya",
                                 TEST_TIMEOUT:120])
     } catch(e) {
         currentBuild.result = "FAILED"

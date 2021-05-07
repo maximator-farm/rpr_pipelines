@@ -2,7 +2,7 @@ def deployRML(Map options, String buildType) {
     try {
         if (env.TAG_NAME) {
             dir("rml-deploy") {
-                checkOutBranchOrScm("master", "${options.gitlabURLSSH}/servants/rml-deploy.git", true, null, null, false, true, "radeonprorender-gitlab")
+                checkoutScm(branchName: "master", repositoryUrl: "${options.gitlabURLSSH}/servants/rml-deploy.git", credentialsId: "radeonprorender-gitlab")
                 switch (env.CIS_OS) {
                     case "Windows":
                         bat """
@@ -109,7 +109,7 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
     downloadFiles("/volume1/Assets/rpr_ml_assets/", assetsDir)
 
     ws("WS/${options.PRJ_NAME}-FT") {
-        checkOutBranchOrScm(options['testsBranch'], "${options.gitlabURL}/rml/ft_engine.git", true, null, null, false, true, "radeonprorender-gitlab", false)
+        checkoutScm(branchName: options.testsBranch, repositoryUrl: "${options.gitlabURL}/rml/ft_engine.git", credentialsId: "radeonprorender-gitlab")
         try {
             dir("rml_release") {
                 unstash "app${osName}"
@@ -358,7 +358,7 @@ def executeBuildLinux(Map options)
 
 def executePreBuild(Map options)
 {
-    checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
@@ -411,7 +411,7 @@ def executeBuild(String osName, Map options)
     String context = "[${options.PRJ_NAME}] [BUILD] ${osName}"
 
     try {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
 
         downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
         downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
@@ -441,7 +441,7 @@ def executeBuild(String osName, Map options)
     } finally {
         if (env.CHANGE_ID) {
             String status = error_message ? "failure" : "success"
-            pullRequest.createStatus("${status}", context, "Build finished as '${status}'", "${env.BUILD_URL}/artifact/${STAGE_NAME}.log")
+            pullRequest.createStatus("${status}", context, "Build finished as '${status}'", "${env.BUILD_URL}/artifact/${STAGE_NAME}_Release.log")
             options['commitContexts'].remove(context)
         }
         archiveArtifacts "*.log"
@@ -461,7 +461,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7;OSX:AMD_RXVEGA',
+         String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080TI;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7;OSX:AMD_RXVEGA',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
          Boolean enableNotifications = true,
          Boolean executeFT = true)

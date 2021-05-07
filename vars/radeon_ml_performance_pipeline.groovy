@@ -14,7 +14,7 @@ def executeTests(String osName, String asicName, Map options)
     try {
         timeout(time: "5", unit: 'MINUTES') {
             cleanWS(osName)
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_ml.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_ml.git')
             println("[INFO] Preparing on ${env.NODE_NAME} successfully finished.")
         }
     } catch (e) {
@@ -43,15 +43,13 @@ def executeTests(String osName, String asicName, Map options)
         }
 
         executeTestCommand(osName, asicName, options)
-    }
-    catch (e) {
+    } catch (e) {
         println(e.toString())
         println(e.getMessage())
         error_message = e.getMessage()
         currentBuild.result = "FAILED"
         throw e
-    }
-    finally {
+    } finally {
         dir("${options.stageName}") {
             utils.moveFiles(this, osName, "../*.log", ".")
             utils.moveFiles(this, osName, "../scripts/*.log", ".")
@@ -115,7 +113,7 @@ def executeBuildWindows(Map options)
 
 def executePreBuild(Map options)
 {
-    checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
@@ -143,9 +141,8 @@ def executeBuild(String osName, Map options)
     String error_message = ""
     String context = "[${options.PRJ_NAME}] [BUILD] ${osName}"
 
-    try
-    {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+    try {
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
 
         downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
         downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
@@ -181,29 +178,22 @@ def executeBuild(String osName, Map options)
 def executeDeploy(Map options, List platformList, List testResultList)
 {
     try {
-        if(options['executeTests'] && testResultList)
-        {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_ml.git')
+        if (options['executeTests'] && testResultList) {
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: 'git@github.com:luxteam/jobs_test_ml.git')
 
             List lostStashes = []
 
-            dir("summaryTestResults")
-            {
-                testResultList.each()
-                {
-                    dir("$it".replace("testResult-", ""))
-                    {
-                        try
-                        {
+            dir("summaryTestResults") {
+                testResultList.each() {
+                    dir("$it".replace("testResult-", "")) {
+                        try {
                             unstash "$it"
-                        }catch(e)
-                        {
+                        } catch (e) {
                             echo "Can't unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))
                             println(e.toString());
                             println(e.getMessage());
                         }
-
                     }
                 }
             }
@@ -233,11 +223,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         println(e.getMessage())
                     }
                 }
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"])
-                {
-                    dir("jobs_launcher")
-                    {
-                        if(options.projectBranch != "") {
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
+                    dir("jobs_launcher") {
+                        if (options.projectBranch != "") {
                             options.branchName = options.projectBranch
                         } else {
                             options.branchName = env.BRANCH_NAME
@@ -290,22 +278,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
             }
 
-            try
-            {
+            try {
                 dir("jobs_launcher") {
                     archiveArtifacts "launcher.engine.log"
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println("[ERROR] during archiving launcher.engine.log")
                 println(e.toString())
                 println(e.getMessage())
             }
 
             Map summaryTestResults = [:]
-            try
-            {
+            try {
                 def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
                 summaryTestResults['passed'] = summaryReport.passed
                 summaryTestResults['failed'] = summaryReport.failed
@@ -318,21 +302,16 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
                 }
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
                 println("[ERROR] CAN'T GET TESTS STATUS")
                 currentBuild.result = "UNSTABLE"
             }
 
-            try
-            {
+            try {
                 options.testsStatus = readFile("summaryTestResults/slack_status.json")
-            }
-            catch(e)
-            {
+            } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
                 options.testsStatus = ""
@@ -341,28 +320,22 @@ def executeDeploy(Map options, List platformList, List testResultList)
             utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                 "Test Report", "Summary Report, Performance Report, Compare Report")
         }
-    }
-    catch (e) {
+    } catch (e) {
         println(e.toString())
         println(e.getMessage())
         throw e
     }
-    finally
-    {}
 }
 
 def call(String projectBranch = "",
          String testsBranch = "master",
          String testsPackage = "",
          String tests = "",
-         String platforms = 'Windows:NVIDIA_RTX2080',
+         String platforms = 'Windows:NVIDIA_RTX2080TI',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
          Boolean enableNotifications = false,
          Boolean collectTrackedMetrics = true)
 {
-    String PRJ_ROOT='rpr-ml'
-    String PRJ_NAME='RadeonML'
-
     println "Platforms: ${platforms}"
     println "Tests: ${tests}"
     println "Tests package: ${testsPackage}"
@@ -372,8 +345,8 @@ def call(String projectBranch = "",
              projectBranch:projectBranch,
              testsBranch:testsBranch,
              enableNotifications:enableNotifications,
-             PRJ_NAME:PRJ_NAME,
-             PRJ_ROOT:PRJ_ROOT,
+             PRJ_NAME:'RadeonML',
+             PRJ_ROOT:'rpr-ml',
              projectRepo:projectRepo,
              testsPackage:testsPackage,
              tests:tests.replace(',', ' '),

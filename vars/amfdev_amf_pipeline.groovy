@@ -138,28 +138,28 @@ def updateTestResults(String osName, String configuration) {
             currentBuild.result = "UNSTABLE"
         }
         dir("jobs_launcher") {
-            checkOutBranchOrScm("master", "git@github.com:luxteam/jobs_launcher.git")
+            checkoutScm(branchName: "master", repositoryUrl: "git@github.com:luxteam/jobs_launcher.git")
             def machineInfoJson
             String machineInfoRaw, renderDevice
             dir('core') {
                 switch(osName) {
                     case 'Windows':
                         machineInfoRaw = bat(
-                            script: "set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH% & python -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
+                            script: "set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH% & python -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
                             returnStdout: true
                         ).split('\r\n')[2].trim()
                         renderDevice = bat(
-                            script: "set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH% & python -c \"from system_info import get_gpu; print(get_gpu())\"", 
+                            script: "set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH% & python -c \"from system_info import get_gpu; print(get_gpu())\"", 
                             returnStdout: true
                         ).split('\r\n')[2].trim()
                         break
                     default:
                         machineInfoRaw = sh(
-                            script: "python3 -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
+                            script: "python3.9 -c \"from system_info import get_machine_info; print(get_machine_info())\"", 
                             returnStdout: true
                         )
                         renderDevice = sh(
-                            script: "python3 -c \"from system_info import get_gpu; print(get_gpu())\"", 
+                            script: "python3.9 -c \"from system_info import get_gpu; print(get_gpu())\"", 
                             returnStdout: true
                         )
                         break
@@ -657,7 +657,7 @@ def executeBuildLinux(String osName, Map options) {
 def executeBuild(String osName, Map options) {
     try {
 
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         
         switch(osName) {
             case 'Windows':
@@ -704,7 +704,7 @@ def executePreBuild(Map options) {
 
     if (!env.CHANGE_URL) {
 
-        checkOutBranchOrScm(options.projectBranch, options.projectRepo, true)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
         if (options.projectBranch) {
             currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
@@ -753,11 +753,11 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
         dir("amf-report") {
             String branchName = env.BRANCH_NAME ?: options.projectBranch
-            checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
 
             dir("amf/public/proj/OpenAMF_Autotests/Reports") {
                 bat """
-                    set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%
+                    set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%
                     pip install --user -r requirements.txt >> ${STAGE_NAME}.requirements.log 2>&1
                     python MakeReport.py --commit_hash "${options.commitSHA}" --branch_name "${branchName}" --commit_datetime "${options.commitDatetime}" --commit_message "${utils.escapeCharsByUnicode(options.commitMessage)}" --test_results ..\\..\\..\\..\\..\\..\\testResults\\
                 """
@@ -771,7 +771,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
     String projectRepo = "git@github.com:luxteam/AMF.git",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2070S,NVIDIA_RTX2080;OSX:AMD_RXVEGA',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI;OSX:AMD_RXVEGA',
     String buildConfiguration = "release",
     String winVisualStudioVersion = "2017,2019",
     String winLibraryType = "static",

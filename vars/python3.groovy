@@ -6,11 +6,11 @@ def call(String command, String version = "") {
     println(command)
     String ret
 
-    if(isUnix()) {
-        version = version.isEmpty() ? 3 : version
+    if (isUnix()) {
+        version = version.isEmpty() ? "3.9" : version
         ret = sh(returnStdout: true, script:"python${version} ${command}")
     } else {
-        version = version.isEmpty() ? "35" : version
+        version = version.isEmpty() ? "39" : version
         withEnv(["PATH=c:\\python${version}\\;c:\\python${version}\\scripts\\;${PATH}"]) {
             ret = bat(
                 script: """

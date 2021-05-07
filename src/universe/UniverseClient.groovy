@@ -232,11 +232,15 @@ class UniverseClient {
      * @param func function to be retried
      * @param validResponseCodes response codes that will be indicated as OK
      * @param allowAborting allow method to be canceled by aborting of build or not
+     *
+     * @return Returns true if some attempt was successful else returns false
      */
     def retryWrapper(func, validResponseCodes = [200], allowAborting = true) {
         def attempt = 0
         def attempts = 5
         def timeout = 30 // seconds
+        
+        Boolean successfullyDone = false
 
         this.context.waitUntil {
             if (attempt == attempts) {
@@ -249,7 +253,8 @@ class UniverseClient {
 
             try {
                 def response = func.call()
-                if( validResponseCodes.contains(response.status)){
+                if (validResponseCodes.contains(response.status)) {
+                    successfullyDone = true
                     return true //break the loop
                 }
                 switch(response.status){
@@ -274,6 +279,8 @@ class UniverseClient {
                 return false // continue loop
             }
         }
+        
+        return successfullyDone
     }
 
     /**
@@ -331,8 +338,9 @@ class UniverseClient {
             this.context.echo "SPLITTED JOB NAME = ${splittedJobName}"
             this.context.echo "JOB_NAME = ${splittedJobName[0]}"
 
+            // env.JOB_NAME doesn't contains /job/ between package and job name (it's required to build correct url)
             def references = [
-                "jenkins_report": "${env.JENKINS_URL}job/${env.JOB_NAME}/${env.BUILD_NUMBER}"
+                "jenkins_report": "${env.JENKINS_URL}job/${env.JOB_NAME.replace('/', '/job/')}/${env.BUILD_NUMBER}"
             ]
 
             def tags = []
@@ -396,7 +404,12 @@ class UniverseClient {
             def content = jsonSlurper.parseText(res.content)
             this.build = content["build"]
             this.context.echo content["msg"]
-            
+
+            return res
+        }
+        
+        
+        if (retryWrapper(request)) {
             if (this.is_parent || (!this.child_of && !this.is_parent)) {
                 if (front_url) {
                     if (this.context.currentBuild.description == null) {
@@ -407,10 +420,7 @@ class UniverseClient {
                     }
                 }
             }
-
-            return res
         }
-        retryWrapper(request)
     }
 
     /**
@@ -501,7 +511,7 @@ class UniverseClient {
             def buildBody = [
                 'problem_message': msg
             ]
-
+            
             def res = this.context.httpRequest(
                 consoleLogResponseBody: true,
                 contentType: 'APPLICATION_JSON',

@@ -47,7 +47,7 @@ def executeBuildOSX(Map options)
 
 def executeBuild(String osName, Map options)
 {
-    checkOutBranchOrScm(options.projectBranch, "git@github.com:Radeon-Pro/RadeonProRenderC4DPlugin.git")
+    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
     outputEnvironmentInfo(osName)
 
     try {
@@ -72,7 +72,7 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
-    checkOutBranchOrScm(options.projectBranch, "git@github.com:Radeon-Pro/RadeonProRenderC4DPlugin.git", true)
+    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
@@ -115,6 +115,7 @@ def call(String projectBranch = "",
 {
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
             [projectBranch:projectBranch,
+             projectRepo: "git@github.com:Radeon-Pro/RadeonProRenderC4DPlugin.git",
              testsBranch:testsBranch,
              updateRefs:updateRefs,
              enableNotifications:enableNotifications,

@@ -31,7 +31,7 @@ def call(String local_path, String server_path, String customKeys = "", String r
             println(e.toString())
             println(e.getMessage())
             println(e.getStackTrace())
+            sleep(60)
         }
-        sleep(60)
     }
 }

@@ -166,7 +166,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_houdini.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
                 println "[INFO] Preparing on ${env.NODE_NAME} successfully finished."
             }
         }
@@ -301,7 +301,7 @@ def executeBuildWindows(String osName, Map options) {
     if (options.rebuildUSD) {
         dir ("USD") {
             bat """
-                set PATH=c:\\python36\\;c:\\python36\\scripts\\;%PATH%;
+                set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ${STAGE_NAME}_USD.log 2>&1
                 
                 if exist USDgen rmdir /s/q USDgen
@@ -319,14 +319,16 @@ def executeBuildWindows(String osName, Map options) {
             options.win_tool_path = "C:\\Program Files\\Side Effects Software\\Houdini ${options.houdiniVersion}${options.win_houdini_python3}"
             bat """
                 mkdir build
-                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+                set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
                 set HFS=${options.win_tool_path}
+                python --version >> ..\\${STAGE_NAME}.log 2>&1
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" >> ..\\${STAGE_NAME}.log 2>&1
             """
         } else {
             bat """
                 mkdir build
-                set PATH=c:\\python35\\;c:\\python35\\scripts\\;%PATH%;
+                set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH%;
+                python --version >> ..\\${STAGE_NAME}.log 2>&1
                 python pxr\\imaging\\plugin\\hdRpr\\package\\generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ..\\${STAGE_NAME}.log 2>&1
             """
         } 
@@ -340,7 +342,7 @@ def executeBuildWindows(String osName, Map options) {
             }
             archiveArtifacts "hdRpr*.tar.gz"
             String buildName = "${options.win_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}/artifact/${buildName}"
+            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
@@ -384,11 +386,13 @@ def executeBuildOSX(String osName, Map options) {
             sh """
                 mkdir build
                 export HFS=${options.osx_tool_path}
+                python3 --version >> ../${STAGE_NAME}.log 2>&1
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
             sh """
                 mkdir build
+                python3 --version >> ../${STAGE_NAME}.log 2>&1
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ../${STAGE_NAME}.log 2>&1
             """
         }
@@ -402,7 +406,7 @@ def executeBuildOSX(String osName, Map options) {
             }
             archiveArtifacts "hdRpr*.tar.gz"
             String buildName = "${options.osx_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}/artifact/${buildName}"
+            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
@@ -444,7 +448,7 @@ def executeBuildUnix(String osName, Map options) {
         if (env.HOUDINI_INSTALLATION_PATH) {
             installation_path = "${env.HOUDINI_INSTALLATION_PATH}"
         } else {
-            installation_path = "/home/admin"
+            installation_path = "/home/\$(eval whoami)"
         }
         if (options.buildType == "Houdini") {
             options.unix_houdini_python3 = options.houdini_python3 ? "-py3" : "-py2"
@@ -452,11 +456,13 @@ def executeBuildUnix(String osName, Map options) {
             sh """
                 mkdir build
                 export HFS=${installation_path}/${options.unix_tool_path}
+                python3 --version >> ../${STAGE_NAME}.log 2>&1
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" >> ../${STAGE_NAME}.log 2>&1
             """
         } else {
             sh """
                 mkdir build
+                python3 --version >> ../${STAGE_NAME}.log 2>&1
                 python3 pxr/imaging/plugin/hdRpr/package/generatePackage.py -i "." -o "build" --cmake_options " -Dpxr_DIR=../USD/USDinst" >> ../${STAGE_NAME}.log 2>&1
             """
         }
@@ -479,7 +485,7 @@ def executeBuildUnix(String osName, Map options) {
             if (osName == "Ubuntu18") options.unix_build_name = options.ubuntu_build_name else options.unix_build_name = options.centos_build_name
             archiveArtifacts "hdRpr*.tar.gz"
             String buildName = "${options.unix_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}/artifact/${buildName}"
+            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
             rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
@@ -513,14 +519,14 @@ def executeBuild(String osName, Map options) {
     try {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
             dir ("RadeonProRenderUSD") {
-                checkOutBranchOrScm(options.projectBranch, options.projectRepo)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
             }
         }
 
         if (options.rebuildUSD) {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_USD_REPO) {
                 dir('USD') {
-                    checkOutBranchOrScm(options["usdBranch"], "git@github.com:PixarAnimationStudios/USD.git")
+                    checkoutScm(branchName: options.usdBranch, repositoryUrl: "git@github.com:PixarAnimationStudios/USD.git")
                 }
             }
         }
@@ -580,7 +586,7 @@ def executePreBuild(Map options) {
 
     dir('RadeonProRenderUSD') {
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            checkOutBranchOrScm(options["projectBranch"], options["projectRepo"], true)
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
         }
 
         options.commitAuthor = utils.getBatOutput(this, "git show -s --format=%%an HEAD ")
@@ -640,7 +646,7 @@ def executePreBuild(Map options) {
     options.groupsUMS = []
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_houdini') {
-            checkOutBranchOrScm(options['testsBranch'], 'git@github.com:luxteam/jobs_test_houdini.git')
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
             dir('jobs_launcher') {
                 options['jobsLauncherBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
             }
@@ -650,14 +656,13 @@ def executePreBuild(Map options) {
             if (options.testsPackage != "none") {
                 def groupNames = readJSON(file: "jobs/${options.testsPackage}")["groups"].collect { it.key }
                 // json means custom test suite. Split doesn't supported
-                options.tests = groupNames
+                options.tests = groupNames.join(" ")
                 options.groupsUMS = groupNames
                 options.testsPackage = "none"
             } else {
                 options.groupsUMS = options.tests.split(" ")
             }
             options.testsList = ['']
-            options.tests = options.tests.join(" ")
         }
         if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
@@ -673,7 +678,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkOutBranchOrScm(options["testsBranch"], "git@github.com:luxteam/jobs_test_houdini.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_houdini.git")
             }
             List lostStashes = []
             dir("summaryTestResults") {
@@ -824,7 +829,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String projectBranch = "",
         String usdBranch = "master",
         String testsBranch = "master",
-        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080,AMD_RX6800;OSX:AMD_RXVEGA;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7',
+        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800;OSX:AMD_RXVEGA,AMD_RX5700XT;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7',
         String buildType = "Houdini",
         Boolean rebuildUSD = false,
         String houdiniVersion = "18.5.462",

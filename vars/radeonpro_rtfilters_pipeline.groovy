@@ -28,7 +28,7 @@ def executeTests(String osName, String asicName, Map options)
     String JOB_PATH_PROFILE="${options.JOB_PATH}/${asicName}-${osName}"
     
     try {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         
         outputEnvironmentInfo(osName)
         unstash "app${osName}"
@@ -86,7 +86,7 @@ def executeBuildLinux(Map options)
 def executePreBuild(Map options)
 {
     dir('RadeonProVulkanWrapper') {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
         options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
         commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
@@ -100,10 +100,10 @@ def executePreBuild(Map options)
 def executeBuild(String osName, Map options)
 {
     try {
-        checkOutBranchOrScm(options['projectBranch'], options['projectRepo'])
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName)
 
-        switch(osName) {
+        switch (osName) {
             case 'Windows': 
                 executeBuildWindows(options) 
                 break
