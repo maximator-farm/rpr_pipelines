@@ -24,6 +24,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         pip install C:\\AMD\\OpenEXR-1.3.2-cp38-cp38-win_amd64.whl >> ${STAGE_NAME}_init_env.log 2>&1
                         pip install -e . >> ${STAGE_NAME}_init_env.log 2>&1
                         mkdir nbs\\tested
+                        call delete_auto_generated_files_upscaler
                     """
                 } else {
                     bat """
@@ -35,6 +36,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                         pip install C:\\AMD\\OpenEXR-1.3.2-cp38-cp38-win_amd64.whl >> ${STAGE_NAME}_init_env.log 2>&1
                         pip install -e . >> ${STAGE_NAME}_init_env.log 2>&1
                         mkdir nbs\\tested
+                        call delete_auto_generated_files_upscaler
                     """
                 }
             }
