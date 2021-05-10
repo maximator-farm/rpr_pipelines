@@ -102,10 +102,10 @@ def executeTests(String osName, String asicName, Map options) {
 
             if (stashResults) {
                 dir("Work-HybridPro/Results/HybridVsNs") {
-                    stash includes: '**/*', name: "${options.testResultsName}-HybridPro", allowEmpty: true
+                    stash includes: "**/*", excludes: "session_report.json", name: "${options.testResultsName}-HybridPro", allowEmpty: true
                 }
                 dir("Work-Northstar64/Results/HybridVsNs") {
-                    stash includes: '**/*', name: "${options.testResultsName}-Northstar64", allowEmpty: true
+                    stash includes: "**/*", excludes: "session_report.json", name: "${options.testResultsName}-Northstar64", allowEmpty: true
                 }
             } else {
                 println "[INFO] Task ${options.tests} on ${options.nodeLabels} labels will be retried."
@@ -341,27 +341,22 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 }
             }
 
+            Map summaryTestResults = ["passed": 0, "failed": 0, "error": 0]
             try {
-                dir("jobs_launcher") {
-                    archiveArtifacts "launcher.engine.log"
-                }
-            } catch(e) {
-                println """
-                    [ERROR] during archiving launcher.engine.log
-                    ${e.toString()}
-                """
-            }
+                def summaryReport = readJSON file: 'summaryTestResults/summary_report.json'
 
-            Map summaryTestResults = [:]
-            try {
-                def summaryReport = readJSON file: 'summaryTestResults/summary_status.json'
-                summaryTestResults = [passed: summaryReport.passed, failed: summaryReport.failed, error: summaryReport.error]
-                if (summaryReport.error > 0) {
+                summaryReport.each { configuration ->
+                    summaryTestResults["passed"] += configuration.value["summary"]["passed"]
+                    summaryTestResults["failed"] += configuration.value["summary"]["failed"]
+                    summaryTestResults["error"] += configuration.value["summary"]["error"]
+                }
+
+                if (summaryTestResults["error"] > 0) {
                     println("[INFO] Some tests marked as error. Build result = FAILURE.")
                     currentBuild.result = "FAILURE"
                     options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
                 }
-                else if (summaryReport.failed > 0) {
+                else if (summaryTestResults["failed"] > 0) {
                     println("[INFO] Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
                     options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
