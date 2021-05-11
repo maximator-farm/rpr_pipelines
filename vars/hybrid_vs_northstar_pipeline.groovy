@@ -18,7 +18,7 @@ Boolean update_binaries(Map params) {
     String newBinaryFilePath = findFiles(glob: newBinaryFile)[0].path
 
     dir("HybridVsNorthStar") {
-        checkoutScm(branchName: "master", repositoryUrl: PROJECT_REPO)
+        checkoutScm(branchName: "main", repositoryUrl: PROJECT_REPO)
 
         dir("third_party") {
             if (compareChecksum) {
@@ -32,8 +32,12 @@ Boolean update_binaries(Map params) {
                 }
             }
 
+            println("Remove")
+
             utils.removeFile(this, osName, targetFileName)
-            utils.copyFile(this, osName, newBinaryFilePath, targetFileName)
+            println("Copy")
+            utils.copyFiles(this, osName, newBinaryFilePath, targetFileName)
+            println("Finished")
         }
     }
 
