@@ -32,12 +32,8 @@ Boolean update_binaries(Map params) {
                 }
             }
 
-            println("Remove")
-
             utils.removeFile(this, osName, targetFileName)
-            println("Copy")
             utils.copyFiles(this, osName, newBinaryFilePath, targetFileName)
-            println("Finished")
         }
     }
 

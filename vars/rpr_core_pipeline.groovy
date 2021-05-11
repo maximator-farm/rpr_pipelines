@@ -426,11 +426,16 @@ def executeBuildWindows(Map options) {
         if (options.sendToUMS) {
             options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderSDK\\RadeonProRender\\binWin64", "binWin64.zip", false)
         }
+    }
 
-        //if (env.BRANCH_NAME == "master") {
-        if (true) {
-            hybrid_vs_northstar_pipeline.update_binaries(newBinaryFile: "RadeonProRenderSDK\\RadeonProRender\\binWin64\\Northstar64.dll", 
-                targetFileName: "Northstar64.dll", osName: "Windows", compareChecksum: true)
+    //if (env.BRANCH_NAME == "master") {
+    if (true) {
+        withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.UPDATE_BINARIES) {
+
+            hybrid_vs_northstar_pipeline.update_binaries(
+                newBinaryFile: "RadeonProRenderSDK\\RadeonProRender\\binWin64\\Northstar64.dll", 
+                targetFileName: "Northstar64.dll", osName: "Windows", compareChecksum: true
+            )
         }
     }
 }

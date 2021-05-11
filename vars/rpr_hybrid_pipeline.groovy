@@ -437,6 +437,17 @@ def executeBuildWindows(Map options) {
     dir("Build/bin/${build_type}") {
         stash includes: "RprPerfTest.exe", name: "perfWindows", allowEmpty: true
     }
+
+    //if (env.BRANCH_NAME == "master") {
+    if (true) {
+        withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.UPDATE_BINARIES) {
+
+            hybrid_vs_northstar_pipeline.update_binaries(
+                newBinaryFile: "Build\\_CPack_Packages\\win64\\ZIP\\BaikalNext\bin\\HybridPro.dll", 
+                targetFileName: "HybridPro.dll", osName: "Windows", compareChecksum: true
+            )
+        }
+    }
 }
 
 

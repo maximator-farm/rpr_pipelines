@@ -141,6 +141,15 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static UPDATE_BINARIES = [
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "[WARNING] Failed to update binaries.", 
+                "rethrow": ExceptionThrowType.NO, "scope": ProblemMessageManager.SPECIFIC
+            ]
+        ]
+    ]
+
     def static BUILD_SOURCE_CODE = [
         "exceptions": [
             [
