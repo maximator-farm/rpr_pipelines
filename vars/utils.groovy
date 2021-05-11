@@ -225,7 +225,7 @@ class utils {
                     source = source.replace('/', '\\\\')
                     destination = destination.replace('/', '\\\\')
                     self.bat """
-                        xcopy /s/y/i \"${source}\" \"${destination}\"
+                        echo F | xcopy /s/y/i \"${source}\" \"${destination}\"
                     """
                     break
                 // OSX & Ubuntu18

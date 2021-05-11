@@ -443,7 +443,7 @@ def executeBuildWindows(Map options) {
         withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.UPDATE_BINARIES) {
 
             hybrid_vs_northstar_pipeline.update_binaries(
-                newBinaryFile: "Build\\_CPack_Packages\\win64\\ZIP\\BaikalNext\bin\\HybridPro.dll", 
+                newBinaryFile: "Build\\_CPack_Packages\\win64\\ZIP\\BaikalNext\\bin\\HybridPro.dll", 
                 targetFileName: "HybridPro.dll", osName: "Windows", compareChecksum: true
             )
         }

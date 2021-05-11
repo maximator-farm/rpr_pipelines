@@ -15,7 +15,13 @@ Boolean update_binaries(Map params) {
     }
 
     // get absolute file path
-    String newBinaryFilePath = findFiles(glob: newBinaryFile)[0].path
+    String newBinaryFilePath = ""
+
+    if (isUnix()) {
+        newBinaryFilePath = "${env.WORKSPACE}/${newBinaryFile}"
+    } else {
+        newBinaryFilePath = "${env.WORKSPACE}\\${newBinaryFile}"
+    }
 
     dir("HybridVsNorthStar") {
         checkoutScm(branchName: "main", repositoryUrl: PROJECT_REPO)
