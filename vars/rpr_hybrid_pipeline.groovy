@@ -450,14 +450,20 @@ def executeBuildWindows(Map options) {
         }
     }
 
-    if (options.comparisionBranch) {
-        dir("HybridVsNorthstar") {
-           checkoutScm(branchName: "main", repositoryUrl: hybrid_vs_northstar_pipeline.PROJECT_REPO)
+    try {
+        if (options.comparisionBranch) {
+            dir("HybridVsNorthstar") {
+               checkoutScm(branchName: "main", repositoryUrl: hybrid_vs_northstar_pipeline.PROJECT_REPO)
 
-           bat """
-               git push origin HEAD:${options.comparisionBranch}
-           """
+               bat """
+                   git checkout -b ${options.comparisionBranch}
+                   git push origin ${options.comparisionBranch}
+               """
+            }
         }
+    } catch (e) {
+        println("[ERROR] Failed to create branch in HybridVsNorthstar repo")
+        println(e)
     }
 }
 
@@ -569,17 +575,17 @@ def executePreBuild(Map options) {
 
     if (!options.isLegacyBranch && env.BRANCH_NAME) {
         // save name of new branch for hybrid_vs_northstar
-        String comparisionBranch = "Hybrid_${env.BRANCH_NAME}"
-        String searchResult = ""
+        String comparisionBranch = "hybrid_${env.BRANCH_NAME}"
+        String[] searchResult = ""
 
         dir("HybridVsNorthstar") {
            checkoutScm(branchName: "main", repositoryUrl: hybrid_vs_northstar_pipeline.PROJECT_REPO)
 
-           searchResult = bat (script: "git branch --list ${comparisionBranch}",returnStdout: true).split('\r\n')[2].trim()
+           searchResult = bat(script: "git branch --list ${comparisionBranch}",returnStdout: true).split('\r\n')
         }
 
         // check that branch doesn't exist
-        if (!searchResult) {
+        if (searchResult.length == 2) {
             options.comparisionBranch = comparisionBranch
         }
     }

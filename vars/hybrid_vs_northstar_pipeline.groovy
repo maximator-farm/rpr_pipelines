@@ -257,6 +257,7 @@ def executePreBuild(Map options)
        options['executeBuild'] = true
        options['executeTests'] = true
        options['tests'] = "General"
+       options['testsPackage'] = "none"
     // manual job
     } else {
         println "[INFO] Manual job launch detected"
