@@ -428,8 +428,7 @@ def executeBuildWindows(Map options) {
         }
     }
 
-    //if (env.BRANCH_NAME == "master") {
-    if (true) {
+    if (env.BRANCH_NAME == "master") {
         withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.UPDATE_BINARIES) {
 
             hybrid_vs_northstar_pipeline.update_binaries(
