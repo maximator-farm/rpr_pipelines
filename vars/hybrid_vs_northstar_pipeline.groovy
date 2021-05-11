@@ -39,7 +39,22 @@ Boolean update_binaries(Map params) {
             }
 
             utils.removeFile(this, osName, targetFileName)
-            utils.copyFiles(this, osName, newBinaryFilePath, targetFileName)
+            utils.copyFile(this, osName, newBinaryFilePath, targetFileName)
+        }
+
+        switch(osName) {
+            case "Windows":
+                bat """
+                    git add third_party
+                    git commit -m "buildmaster: update ${targetFileName}"
+                    git push origin HEAD:main
+                """
+                break
+            case "OSX":
+                println("Unsupported OS")
+                break
+            default:
+                println("Unsupported OS")
         }
     }
 

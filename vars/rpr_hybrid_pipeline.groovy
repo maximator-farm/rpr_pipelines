@@ -438,8 +438,9 @@ def executeBuildWindows(Map options) {
         stash includes: "RprPerfTest.exe", name: "perfWindows", allowEmpty: true
     }
 
+    // FIXME: delete comment when Hybrid from current master will work with MaterialX
     //if (env.BRANCH_NAME == "master") {
-    if (true) {
+    if (false) {
         withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.UPDATE_BINARIES) {
 
             hybrid_vs_northstar_pipeline.update_binaries(

@@ -218,7 +218,7 @@ class utils {
         }
     }
 
-    static def copyFiles(Object self, String osName, String source, String destination) {
+    static def copyFile(Object self, String osName, String source, String destination) {
         try {
             switch(osName) {
                 case 'Windows':
@@ -231,7 +231,7 @@ class utils {
                 // OSX & Ubuntu18
                 default:
                     self.sh """
-                        cp -r ${source} ${destination}
+                        cp ${source} ${destination}
                     """
             }
         } catch(Exception e) {
