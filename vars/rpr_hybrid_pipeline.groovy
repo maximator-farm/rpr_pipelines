@@ -457,6 +457,7 @@ def executeBuildWindows(Map options) {
 
                bat """
                    git checkout -b ${options.comparisionBranch}
+                   git commit --allow-empty -m "Triggered by Build #${env.BUILD_NUMBER}"
                    git push origin ${options.comparisionBranch}
                """
             }
@@ -575,7 +576,7 @@ def executePreBuild(Map options) {
 
     if (!options.isLegacyBranch && env.BRANCH_NAME) {
         // save name of new branch for hybrid_vs_northstar
-        String comparisionBranch = "hybrid_${env.BRANCH_NAME}"
+        String comparisionBranch = "hybrid_auto_${env.BRANCH_NAME}"
         String[] searchResult = ""
 
         dir("HybridVsNorthstar") {

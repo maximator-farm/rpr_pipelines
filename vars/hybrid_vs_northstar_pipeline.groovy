@@ -67,7 +67,12 @@ def prepareTool(String osName, Map options) {
         case "Windows":
             unstash("Tool_Windows")
             unzip(zipFile: "HybridVsNorthStar_Windows.zip")
-            unstash("enginesDlls")
+            if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith("hybrid_auto_")) {
+                unstash("Northstar64Dll")
+                unstash("HybridProDll")
+            } else {
+                unstash("enginesDlls")
+            }
             break
         case "OSX":
             println("Unsupported OS")
@@ -319,7 +324,42 @@ def executePreBuild(Map options)
     dir('HybridVsNorthStar') {
         stash includes: "resources/", name: "testResources", allowEmpty: false
         dir("third_party") {
-            stash includes: "*.dll", name: "enginesDlls", allowEmpty: false
+            stash includes: "Northstar64.dll", name: "Northstar64Dll", allowEmpty: false
+
+            if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith("hybrid_auto_")) {
+
+                options.hybridBuildNumber = options.commitMessage.replace("Triggered by Build #", "") as Integer
+
+                String branchName = env.BRANCH_NAME.split("_", 3)[2]
+
+                String jenkinsUrl
+
+                withCredentials([string(credentialsId: 'jenkinsURL', variable: 'JENKINS_URL')]) {
+                    jenkinsUrl = "${JENKINS_URL}"
+                }
+
+                withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
+                    // branches and PRs have different url base
+                    if (branchName.startsWith("PR-")) {
+                        jenkinsUrl = "${jenkinsUrl}/view/change-requests/job/${branchName}/${options.hybridBuildNumber}/artifact/Build"
+                    } else {
+                        jenkinsUrl = "${jenkinsUrl}/job/${branchName}/${options.hybridBuildNumber}/artifact/Build"
+                    }
+
+                    bat """
+                        curl --retry 5 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "${jenkinsUrl}/BaikalNext_Build-Windows.zip"
+                    """
+                }
+
+                unzip(zipFile: "BaikalNext_Build-Windows.zip")
+
+                dir("BaikalNext/bin") {
+                    stash includes: "HybridPro.dll", name: "HybridProDll", allowEmpty: false
+                }
+            } else {
+                stash includes: "*.dll", name: "enginesDlls", allowEmpty: false
+            }
+            
         }
     }
 }
