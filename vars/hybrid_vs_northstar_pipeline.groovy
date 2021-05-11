@@ -479,7 +479,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows',
+    String platforms = "Windows:NVIDIA_RTX2080TI,AMD_RX6800",
     Boolean enableNotifications = true,
     String testsPackage = "",
     String tests = "",
