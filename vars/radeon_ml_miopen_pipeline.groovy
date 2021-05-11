@@ -88,7 +88,7 @@ def executePreBuild(Map options)
 {
     checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
 
-    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ", returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
     options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
     println "The last commit was written by ${options.commitAuthor}."
@@ -107,11 +107,7 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-    options.commit = bat (
-        script: '''@echo off
-                   git rev-parse --short=6 HEAD''',
-        returnStdout: true
-    ).trim()
+    options.commit = bat (script: "git rev-parse --short=6 HEAD", returnStdout: true).trim()
 
     String branch = env.BRANCH_NAME ? env.BRANCH_NAME : env.Branch
     options.branch = branch.replace('origin/', '')
@@ -152,7 +148,7 @@ def executeBuild(String osName, Map options)
         }
 
         if (options.updateBinaries) {
-            uploadFiles("release/*", "/volume1/CIS/rpr-ml/MIOpen/${osName}")
+            uploadFiles("release", "/volume1/CIS/rpr-ml/MIOpen/${osName}")
         }
 
     } catch (e) {
