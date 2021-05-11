@@ -335,17 +335,10 @@ def executePreBuild(Map options)
                 String jenkinsUrl
 
                 withCredentials([string(credentialsId: 'jenkinsURL', variable: 'JENKINS_URL')]) {
-                    jenkinsUrl = "${JENKINS_URL}"
+                    jenkinsUrl = "${JENKINS_URL}/job/RadeonProRender-Hybrid/job/${branchName}/${options.hybridBuildNumber}/artifact/Build"
                 }
 
                 withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkinsCredentials', usernameVariable: 'JENKINS_USERNAME', passwordVariable: 'JENKINS_PASSWORD']]) {
-                    // branches and PRs have different url base
-                    if (branchName.startsWith("PR-")) {
-                        jenkinsUrl = "${jenkinsUrl}/view/change-requests/job/${branchName}/${options.hybridBuildNumber}/artifact/Build"
-                    } else {
-                        jenkinsUrl = "${jenkinsUrl}/job/${branchName}/${options.hybridBuildNumber}/artifact/Build"
-                    }
-
                     bat """
                         curl --retry 5 -L -O -J -u %JENKINS_USERNAME%:%JENKINS_PASSWORD% "${jenkinsUrl}/BaikalNext_Build-Windows.zip"
                     """
