@@ -91,6 +91,7 @@ def executePreBuild(Map options)
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ", returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
     options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    options.commitShortSHA = options.commitSHA[0..6]
     println "The last commit was written by ${options.commitAuthor}."
     println "Commit message: ${options.commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
@@ -107,12 +108,10 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-    options.commit = bat (script: "git rev-parse --short=6 HEAD", returnStdout: true).trim()
-
     String branch = env.BRANCH_NAME ? env.BRANCH_NAME : env.Branch
     options.branch = branch.replace('origin/', '')
 
-    String packageName = "miopen" + (options.branch ? '-' + options.branch : '') + (options.commit ? '-' + options.commit : '')
+    String packageName = "miopen" + (options.branch ? '-' + options.branch : '') + (options.commitShortSHA ? '-' + options.commitShortSHA : '')
     options.packageName = packageName.replaceAll('[^a-zA-Z0-9-_.]+','')
 
     if (env.CHANGE_URL) {
