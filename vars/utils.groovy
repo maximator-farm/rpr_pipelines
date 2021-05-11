@@ -218,6 +218,29 @@ class utils {
         }
     }
 
+    static def copyFiles(Object self, String osName, String source, String destination) {
+        try {
+            switch(osName) {
+                case 'Windows':
+                    source = source.replace('/', '\\\\')
+                    destination = destination.replace('/', '\\\\')
+                    self.bat """
+                        xcopy /s/y/i \"${source}\" \"${destination}\"
+                    """
+                    break
+                // OSX & Ubuntu18
+                default:
+                    self.sh """
+                        cp -r ${source} ${destination}
+                    """
+            }
+        } catch(Exception e) {
+            self.println("[ERROR] Can't copy files")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    }
+
     static def removeFile(Object self, String osName, String fileName) {
         try {
             switch(osName) {

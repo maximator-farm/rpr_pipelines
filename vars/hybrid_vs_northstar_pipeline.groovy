@@ -1,3 +1,46 @@
+import groovy.transform.Field
+
+
+@Field final String PROJECT_REPO = "git@github.com:Radeon-Pro/HybridVsNorthStar.git"
+
+
+Boolean update_binaries(Map params) {
+    String newBinaryFile = params["newBinaryFile"]
+    String targetFileName = params["targetFileName"]
+    String osName = params["osName"]
+    Boolean compareChecksum = params.containsKey("compareChecksum") ? params["compareChecksum"] : false
+
+    if (targetFileName != "HybridPro.dll" && targetFileName != "Northstar64.dll") {
+       throw new Exception("Unknown target binary file");
+    }
+
+    // get absolute file path
+    String newBinaryFilePath = findFiles(glob: newBinaryFile)[0].path
+
+    dir("HybridVsNorthStar") {
+        checkoutScm(branchName: "master", repositoryUrl: PROJECT_REPO)
+
+        dir("third_party") {
+            if (compareChecksum) {
+                String newFileSha = sha1(newBinaryFilePath)
+                String targetFileSha = sha1(targetFileName)
+
+                if (newFileSha == targetFileSha) {
+                    println("[INFO] target binary file and new one have same sha. Skip updating")
+
+                    return false
+                }
+            }
+
+            utils.removeFile(this, osName, targetFileName)
+            utils.copyFile(this, osName, newBinaryFilePath, targetFileName)
+        }
+    }
+
+    return true
+}
+
+
 def prepareTool(String osName, Map options) {
     switch(osName) {
         case "Windows":
@@ -159,7 +202,7 @@ def executeBuild(String osName, Map options) {
     try {
         dir("HybridVsNorthStar") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
             }
         }
 
@@ -400,7 +443,6 @@ def call(String projectBranch = "",
     String parallelExecutionTypeString = "TakeAllNodes"
     )
 {
-    String projectRepo = "git@github.com:Radeon-Pro/HybridVsNorthStar.git"
 
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -430,7 +472,7 @@ def call(String projectBranch = "",
             println "Split tests execution: ${splitTestsExecution}"
             println "Tests execution type: ${parallelExecutionType}"
 
-            options << [projectRepo:projectRepo,
+            options << [projectRepo:PROJECT_REPO,
                         projectBranch:projectBranch,
                         testsBranch:testsBranch,
                         enableNotifications:enableNotifications,
