@@ -449,6 +449,16 @@ def executeBuildWindows(Map options) {
             )
         }
     }
+
+    if (options.comparisionBranch) {
+        dir("HybridVsNorthstar") {
+           checkoutScm(branchName: "main", repositoryUrl: hybrid_vs_northstar_pipeline.PROJECT_REPO)
+
+           bat """
+               git push origin HEAD:${options.comparisionBranch}
+           """
+        }
+    }
 }
 
 
@@ -556,6 +566,23 @@ def executePreBuild(Map options) {
     options.commitMessage = options.commitMessage.join('\n')
 
     println "Commit list message: ${options.commitMessage}"
+
+    if (!options.isLegacyBranch && env.BRANCH_NAME) {
+        // save name of new branch for hybrid_vs_northstar
+        String comparisionBranch = "Hybrid_${env.BRANCH_NAME}"
+        String searchResult = ""
+
+        dir("HybridVsNorthstar") {
+           checkoutScm(branchName: "main", repositoryUrl: hybrid_vs_northstar_pipeline.PROJECT_REPO)
+
+           searchResult = bat (script: "git branch --list ${comparisionBranch}",returnStdout: true).split('\r\n')[2].trim()
+        }
+
+        // check that branch doesn't exist
+        if (!searchResult) {
+            options.comparisionBranch = comparisionBranch
+        }
+    }
     
     // set pending status for all
     if (env.CHANGE_ID) {
@@ -710,6 +737,8 @@ def call(String projectBranch = "",
          Boolean enableNotifications = true,
          String cmakeKeys = "-DCMAKE_BUILD_TYPE=Release -DBAIKAL_ENABLE_RPR=ON -DBAIKAL_NEXT_EMBED_KERNELS=ON") {
 
+    Boolean isLegacyBranch = false
+
     if (testsQuality == "none") {
         println "[INFO] Convert none quality to empty string"
         testsQuality = ""
@@ -718,6 +747,7 @@ def call(String projectBranch = "",
     if ((env.BRANCH_NAME && env.BRANCH_NAME == "1.xx") || (env.CHANGE_TARGET && env.CHANGE_TARGET == "1.xx") || (projectBranch == "1.xx")) {
         testsQuality = "low,medium,high"
         scenarios = ""
+        isLegacyBranch = true
     }
 
     println "Test quality: ${testsQuality}"
@@ -745,5 +775,6 @@ def call(String projectBranch = "",
                             TEST_TIMEOUT:60,
                             cmakeKeys:cmakeKeys,
                             retriesForTestStage:1,
-                            successfulTests:successfulTests])
+                            successfulTests:successfulTests,
+                            isLegacyBranch:isLegacyBranch])
 }
