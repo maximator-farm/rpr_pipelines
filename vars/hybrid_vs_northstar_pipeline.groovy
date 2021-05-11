@@ -253,20 +253,10 @@ def executePreBuild(Map options)
 {
     // auto job
     if (env.BRANCH_NAME) {
-        if (env.CHANGE_URL) {
-            println "[INFO] Branch was detected as Pull Request"
-            options.executeBuild = true
-            options.executeTests = true
-            options.testsPackage = "regression.json"
-        } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
-           println "[INFO] ${env.BRANCH_NAME} branch was detected"
-           options['executeBuild'] = true
-           options['executeTests'] = true
-           options['testsPackage'] = "regression.json"
-        } else {
-            println "[INFO] ${env.BRANCH_NAME} branch was detected"
-            options['testsPackage'] = "regression.json"
-        }
+    println "[INFO] Branch was detected as build of autojob"
+       options['executeBuild'] = true
+       options['executeTests'] = true
+       options['tests'] = "General"
     // manual job
     } else {
         println "[INFO] Manual job launch detected"
