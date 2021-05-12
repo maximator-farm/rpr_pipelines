@@ -431,7 +431,7 @@ def executeBuildWindows(Map options) {
     if (env.BRANCH_NAME == "master") {
         withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.UPDATE_BINARIES) {
 
-            hybrid_vs_northstar_pipeline.update_binaries(
+            hybrid_vs_northstar_pipeline.updateBinaries(
                 newBinaryFile: "RadeonProRenderSDK\\RadeonProRender\\binWin64\\Northstar64.dll", 
                 targetFileName: "Northstar64.dll", osName: "Windows", compareChecksum: true
             )

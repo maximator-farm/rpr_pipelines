@@ -4,7 +4,7 @@ import groovy.transform.Field
 @Field final String PROJECT_REPO = "git@github.com:Radeon-Pro/HybridVsNorthStar.git"
 
 
-Boolean update_binaries(Map params) {
+Boolean updateBinaries(Map params) {
     String newBinaryFile = params["newBinaryFile"]
     String targetFileName = params["targetFileName"]
     String osName = params["osName"]
@@ -353,6 +353,39 @@ def executePreBuild(Map options)
                 stash includes: "*.dll", name: "enginesDlls", allowEmpty: false
             }
             
+        }
+
+        // if something was merged into master branch of Hybrid it could trigger build in master branch of HybridVsNorthstar autojob
+        if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+            String jenkinsUrl
+            withCredentials([string(credentialsId: 'jenkinsURL', variable: 'JENKINS_URL')]) {
+                jenkinsUrl = JENKINS_URL
+            }
+
+            // get name and color (~status) of each branch/PR in Hybrid autojob
+            def hybridJobInfo = httpRequest(
+                url: "${jenkinsUrl}/job/RadeonProRender-Hybrid/api/json?tree=jobs[name,color]",
+                authentication: "jenkinsCredentials",
+                httpMode: "GET"
+            )
+
+            def hybridJobInfoParsed = github_release_pipeline.parseResponse(hybridJobInfo.content)[jobs]
+
+            hybridJobInfoParsed.each { item ->
+                if (item["color"] == "disabled") {
+                    String possibleBranchName = "hybrid_auto_${item.name}"
+
+                    Boolean branchExists = bat(script: "git branch --list ${possibleBranchName}",returnStdout: true)
+                        .split('\r\n').length > 2
+
+                    if (branchExists) {
+                        // branch/PR doesn't exist. Remove remote branch
+                        bat """
+                            git push -d origin ${possibleBranchName}
+                        """
+                    }
+                }
+            }
         }
     }
 }

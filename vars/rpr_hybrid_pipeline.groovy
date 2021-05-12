@@ -443,7 +443,7 @@ def executeBuildWindows(Map options) {
     if (false) {
         withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.UPDATE_BINARIES) {
 
-            hybrid_vs_northstar_pipeline.update_binaries(
+            hybrid_vs_northstar_pipeline.updateBinaries(
                 newBinaryFile: "Build\\_CPack_Packages\\win64\\ZIP\\BaikalNext\\bin\\HybridPro.dll", 
                 targetFileName: "HybridPro.dll", osName: "Windows", compareChecksum: true
             )
@@ -458,7 +458,7 @@ def executeBuildWindows(Map options) {
                bat """
                    git checkout -b ${options.comparisionBranch}
                    git commit --allow-empty -m "Triggered by Build #${env.BUILD_NUMBER}"
-                   git push origin ${options.comparisionBranch}
+                   git push origin ${options.comparisionBranch} --force
                """
             }
         }
@@ -577,16 +577,17 @@ def executePreBuild(Map options) {
     if (!options.isLegacyBranch && env.BRANCH_NAME) {
         // save name of new branch for hybrid_vs_northstar
         String comparisionBranch = "hybrid_auto_${env.BRANCH_NAME}"
-        String[] searchResult = ""
+        Booelan branchNotExists = false
 
         dir("HybridVsNorthstar") {
-           checkoutScm(branchName: "main", repositoryUrl: hybrid_vs_northstar_pipeline.PROJECT_REPO)
+            checkoutScm(branchName: "main", repositoryUrl: hybrid_vs_northstar_pipeline.PROJECT_REPO)
 
-           searchResult = bat(script: "git branch --list ${comparisionBranch}",returnStdout: true).split('\r\n')
+            branchNotExists = bat(script: "git branch --list ${comparisionBranch}",returnStdout: true)
+                .split('\r\n').length == 2
         }
 
         // check that branch doesn't exist
-        if (searchResult.length == 2) {
+        if (branchNotExists) {
             options.comparisionBranch = comparisionBranch
         }
     }
