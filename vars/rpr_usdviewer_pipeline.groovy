@@ -408,6 +408,10 @@ def executeBuildWindows(Map options) {
             bat """
                 RPRViewer\\tools\\build_hdrpr_windows.bat >> ${STAGE_NAME}.HdRPRPlugin.log 2>&1
             """
+
+            bat """
+                RPRViewer\\tools\\build_compatibility_checker_windows.bat >> ${STAGE_NAME}.CompatibilityChecker.log 2>&1
+            """
         }
         String buildName = "RadeonProUSDViewer_Windows.zip"
         withNotifications(title: "Windows", options: options, artifactUrl: "${BUILD_URL}/artifact/${buildName}", configuration: NotificationConfiguration.BUILD_PACKAGE_USD_VIEWER)  {
