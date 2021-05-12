@@ -37,7 +37,7 @@ def executeBuildUbuntu(String osName, Map options)
         export BOOST_ROOT=/usr/local
         mkdir build
         cd build
-        cmake -DRIF_BUILD=1 -DMIOPEN_BACKEND=OpenCL .. >> ../${STAGE_NAME}.log 2>&1
+        cmake -DRIF_BUILD=1 -DMIOPEN_BACKEND=OpenCL -DBoost_NO_BOOST_CMAKE=ON .. >> ../${STAGE_NAME}.log 2>&1
         cmake --build . --config Release >> ../${STAGE_NAME}.log 2>&1
     """
  
