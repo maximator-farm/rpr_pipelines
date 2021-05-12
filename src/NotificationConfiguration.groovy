@@ -150,12 +150,12 @@ public class NotificationConfiguration {
             ]
         ],
 
-        "rebootConfiguration": {
+        "rebootConfiguration": [
             "AnyTool": false,
-            "Tools": {
+            "Tools": [
                 "USDViewer": ["Windows"]
-            }
-        }
+            ]
+        ]
     ]
 
     def static BUILD_PACKAGE = [
@@ -232,12 +232,12 @@ public class NotificationConfiguration {
                 "class": "TimeoutExceeded", "problemMessage": "Failed to install the plugin due to timeout.", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
                 "githubNotification": ["status": "timed_out"],
-                "rebootConfiguration": {
+                "rebootConfiguration": [
                     "AnyTool": false,
-                    "Tools": {
+                    "Tools": [
                         "RadeonProRenderMayaPlugin": ["AMD_RX5700XT-OSX"]
-                    }
-                }
+                    ]
+                ]
             ],
             [
                 "class": Exception, "problemMessage": "Failed to install the plugin.", 
@@ -307,12 +307,12 @@ public class NotificationConfiguration {
                 "class": "TimeoutExceeded", "problemMessage": "Failed to build cache due to timeout.", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
                 "githubNotification": ["status": "timed_out"],
-                "rebootConfiguration": {
+                "rebootConfiguration": [
                     "AnyTool": false,
-                    "Tools": {
+                    "Tools": [
                         "RadeonProRenderMayaPlugin": ["AMD_RX5700XT-OSX"]
-                    }
-                }
+                    ]
+                ]
             ],
             [
                 "class": Exception, "problemMessage": PLUGIN_NOT_FOUND, 
@@ -333,12 +333,12 @@ public class NotificationConfiguration {
                 "class": Exception, "problemMessage": NO_OUTPUT_IMAGE, 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
                 "getMessage": [NO_OUTPUT_IMAGE],
-                "rebootConfiguration": {
+                "rebootConfiguration": [
                     "AnyTool": false,
-                    "Tools": {
+                    "Tools": [
                         "RadeonProRenderMayaPlugin": ["AMD_RX5700XT-OSX"]
-                    }
-                }
+                    ]
+                ]
             ],
             [
                 "class": Exception, "problemMessage": "Failed to build cache.", 

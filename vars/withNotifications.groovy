@@ -135,12 +135,20 @@ def saveProblemMessage(Map options, Map exception, String message, String stage 
 def processReboot(Map rebootConfiguration, Map options) {
     Boolean reboot = false
 
+    String machineConfiguration = ""
+
+    if (options.containsKey("")) {
+        machineConfiguration = options["osName"]
+    } else {
+        machineConfiguration = "${options.asicName}-${options.osName}"
+    }
+
     if (rebootConfiguration.containsKey("AnyTool") && rebootConfiguration["AnyTool"]) {
         reboot = true
     } else if (rebootConfiguration.containsKey("Tools")) {
         rebootConfiguration["Tools"].each { tool ->
             if (tool.key == options["PRJ_NAME"]) {
-                if (tool.value == true || (tool.value instanceof List && tool.value.contains(options["stage"]))) {
+                if (tool.value == true || (tool.value instanceof List && tool.value.contains(machineConfiguration))) {
                     reboot = true
 
                     return
@@ -150,6 +158,8 @@ def processReboot(Map rebootConfiguration, Map options) {
     }
 
     if (reboot) {
-        utils(this, options["stage"].split("-")[1])
+        println("[${this.class.getName()}][INFO] Reboot machine")
+
+        utils.reboot(this, options["osName"])
     }
 }
