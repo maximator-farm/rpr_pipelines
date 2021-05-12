@@ -552,19 +552,6 @@ def executeBuild(String osName, Map options) {
             options.universeManager.sendToMINIO(options, osName, "..", "*.log")
             options.universeManager.finishBuildStage(osName)
         }
-        // Restart builder
-        switch (osName) {
-            case "Windows":
-                bat """
-                    shutdown /r /f /t 0
-                """
-                break
-            case "OSX":
-                println "MacOS doesn't require restart"
-                break
-            default:
-                println "Linux isn't supported"
-        }
     }
 }
 

@@ -370,4 +370,29 @@ class utils {
     static String getBatOutput(Object self, String command) {
         return self.bat(script: "@${command}", returnStdout: true).trim()
     }
+
+    static def reboot(Object self, String osName) {
+        try {
+            switch(osName) {
+                case "Windows":
+                    self.bat """
+                        shutdown /r /f /t 0
+                    """
+                    break
+                case "OSX":
+                    self.sh """
+                        shutdown -r now
+                    """
+                // Ubuntu
+                default:
+                    self.sh """
+                        shutdown -h now
+                    """
+            }
+        } catch (e) {
+            self.println("[ERROR] Failed to reboot machine")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    } 
 }

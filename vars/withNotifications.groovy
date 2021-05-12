@@ -45,6 +45,11 @@ def call(Map blockOptions, Closure code) {
 
         code()
 
+        // reboot machine if it's necessary
+        if (configuration.containsKey("rebootConfiguration")) {
+            processReboot(configuration["rebootConfiguration"], options)
+        }
+
         if (configuration.end?.message) {
             GithubNotificator.updateStatus(options["stage"], title, "success",
                 options, configuration["end"]["message"], artifactUrl)
@@ -56,6 +61,7 @@ def call(Map blockOptions, Closure code) {
                 || (exception["class"] == "TimeoutExceeded" && utils.isTimeoutExceeded(e))) {
                 // check existence of some messages in exception if it's required
                 Boolean exceptionFound = true
+
                 if (exception["getMessage"]) {
                     exceptionFound = false
                     if (e.getMessage()) {
@@ -67,12 +73,19 @@ def call(Map blockOptions, Closure code) {
                         }
                     }
                 }
+
                 if (exceptionFound) {
+                    // reboot machine if it's necessary
+                    if (exception.containsKey("rebootConfiguration")) {
+                        processReboot(exception["rebootConfiguration"], options)
+                    }
+
                     if (!printMessage && options.problemMessageManager && (options["stage"] != "Test")) {
                         saveProblemMessage(options, exception, exception["problemMessage"], options["stage"], options["osName"])
                     } else {
                         println(exception["problemMessage"])
                     }
+
                     switch(exception["rethrow"]) {
                         case ExceptionThrowType.RETHROW:
                             throw e
@@ -84,17 +97,20 @@ def call(Map blockOptions, Closure code) {
                             println(e.toString())
                             println(e.getMessage())
                     }
+
                     if (exception["githubNotification"]) {
                         GithubNotificator.updateStatus(options["stage"], title, exception["githubNotification"]["status"], 
                             options, exception["githubNotification"]["message"] ?: exception["problemMessage"])
+
+                        return
                     }
-                    return
                 }
             }
+
+            // exception wasn't found in configuration. Rethrow it
+            println("[${this.class.getName()}][WARNING] Exception wasn't found in configuration")
+            throw e
         }
-        // exception wasn't found in configuration. Rethrow it
-        println("[${this.class.getName()}][WARNING] Exception wasn't found in configuration")
-        throw e
     }
 }
 
@@ -112,5 +128,28 @@ def saveProblemMessage(Map options, Map exception, String message, String stage 
         default:
             // SPECIFIC scope is default scope
             options.problemMessageManager.saveSpecificFailReason(message, stage, osName)
+    }
+}
+
+
+def processReboot(Map rebootConfiguration, Map options) {
+    Boolean reboot = false
+
+    if (rebootConfiguration.containsKey("AnyTool") && rebootConfiguration["AnyTool"]) {
+        reboot = true
+    } else if (rebootConfiguration.containsKey("Tools")) {
+        rebootConfiguration["Tools"].each { tool ->
+            if (tool.key == options["PRJ_NAME"]) {
+                if (tool.value == true || (tool.value instanceof List && tool.value.contains(options["stage"]))) {
+                    reboot = true
+
+                    return
+                }
+            }
+        }
+    }
+
+    if (reboot) {
+        utils(this, options["stage"].split("-")[1])
     }
 }
