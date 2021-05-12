@@ -580,15 +580,16 @@ def executePreBuild(Map options) {
         Booelan branchNotExists = false
 
         dir("HybridVsNorthstar") {
-            checkoutScm(branchName: "main", repositoryUrl: hybrid_vs_northstar_pipeline.PROJECT_REPO)
+            String comparisionRepoUrl = hybrid_vs_northstar_pipeline.PROJECT_REPO
 
-            branchNotExists = bat(script: "git branch --list ${comparisionBranch}",returnStdout: true)
+            checkoutScm(branchName: "main", repositoryUrl: comparisionRepoUrl)
+
+            Booelan branchNotExists = bat(script: "git ls-remote --heads ${comparisionRepoUrl} ${comparisionBranch}", returnStdout: true)
                 .split('\r\n').length == 2
-        }
 
-        // check that branch doesn't exist
-        if (branchNotExists) {
-            options.comparisionBranch = comparisionBranch
+            if (branchNotExists) {
+                options.comparisionBranch = comparisionBranch
+            }
         }
     }
     

@@ -356,7 +356,7 @@ def executePreBuild(Map options)
         }
 
         // if something was merged into master branch of Hybrid it could trigger build in master branch of HybridVsNorthstar autojob
-        if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
+        if (env.BRANCH_NAME && env.BRANCH_NAME == "main") {
             String jenkinsUrl
             withCredentials([string(credentialsId: 'jenkinsURL', variable: 'JENKINS_URL')]) {
                 jenkinsUrl = JENKINS_URL
@@ -369,13 +369,13 @@ def executePreBuild(Map options)
                 httpMode: "GET"
             )
 
-            def hybridJobInfoParsed = github_release_pipeline.parseResponse(hybridJobInfo.content)[jobs]
+            def hybridJobInfoParsed = github_release_pipeline.parseResponse(hybridJobInfo.content)["jobs"]
 
             hybridJobInfoParsed.each { item ->
                 if (item["color"] == "disabled") {
                     String possibleBranchName = "hybrid_auto_${item.name}"
 
-                    Boolean branchExists = bat(script: "git branch --list ${possibleBranchName}",returnStdout: true)
+                    Boolean branchExists = bat(script: "git ls-remote --heads ${PROJECT_REPO} ${possibleBranchName}",returnStdout: true)
                         .split('\r\n').length > 2
 
                     if (branchExists) {
@@ -383,6 +383,8 @@ def executePreBuild(Map options)
                         bat """
                             git push -d origin ${possibleBranchName}
                         """
+
+                        println("[INFO] branch ${possibleBranchName} was removed")
                     }
                 }
             }
