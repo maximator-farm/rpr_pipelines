@@ -577,14 +577,13 @@ def executePreBuild(Map options) {
     if (!options.isLegacyBranch && env.BRANCH_NAME) {
         // save name of new branch for hybrid_vs_northstar
         String comparisionBranch = "hybrid_auto_${env.BRANCH_NAME}"
-        Booelan branchNotExists = false
 
         dir("HybridVsNorthstar") {
             String comparisionRepoUrl = hybrid_vs_northstar_pipeline.PROJECT_REPO
 
             checkoutScm(branchName: "main", repositoryUrl: comparisionRepoUrl)
 
-            Booelan branchNotExists = bat(script: "git ls-remote --heads ${comparisionRepoUrl} ${comparisionBranch}", returnStdout: true)
+            Boolean branchNotExists = bat(script: "git ls-remote --heads ${comparisionRepoUrl} ${comparisionBranch}", returnStdout: true)
                 .split('\r\n').length == 2
 
             if (branchNotExists) {
