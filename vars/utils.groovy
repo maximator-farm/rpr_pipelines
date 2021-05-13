@@ -381,7 +381,7 @@ class utils {
                     break
                 case "OSX":
                     self.sh """
-                        shutdown -r now
+                        sudo shutdown -r now
                     """
                 // Ubuntu
                 default:
