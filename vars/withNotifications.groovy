@@ -26,7 +26,22 @@
  *             githubNotification - Map with values which describe params for updating status in Github repo
  *             Possible elements:
  *                 status - Status which will be set
- *                 message (optional) - New message for status check 
+ *                 message (optional) - New message for status check
+ *             rebootConfiguration - Map with description of reboot configuration
+ *             Structure of Map:
+ *                 AnyTool (optional) - boolean which specifies should reboot work for any tools or not
+ *                 Tools - Map of Maps with description of each tool (key is tool)
+ *                 Possible format of values:
+ *                     Boolean which describe should all GPU-osName for specified tool be rebooted or not
+ *                     List of OS or GPU-osName which should be rebooted
+ *         rebootConfiguration - Map with description of reboot configuration
+ *         Structure of Map:
+ *             AnyTool (optional) - boolean which specifies should reboot work for any tools or not
+ *             Tools - Map of Maps with description of each tool (key is tool)
+ *             Possible format of values:
+ *                 Boolean which describe should all GPU-osName for specified tool be rebooted or not
+ *                 List of OS or GPU-osName which should be rebooted
+ *
  * @param code Block of code which is executed
  */
 def call(Map blockOptions, Closure code) {

@@ -371,6 +371,10 @@ class utils {
         return self.bat(script: "@${command}", returnStdout: true).trim()
     }
 
+    /**
+     * Reboot current node
+     * @param osName - OS name of current node
+     */
     static def reboot(Object self, String osName) {
         try {
             switch(osName) {
