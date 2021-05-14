@@ -295,7 +295,7 @@ def executePreBuild(Map options)
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
     options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-    options.commit = bat (script:"git rev-parse --short=6 HEAD", returnStdout: true).trim()
+    options.commitShortSHA = options.commitSHA[0..6]
     println "The last commit was written by ${options.commitAuthor}."
     println "Commit message: ${options.commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
@@ -303,9 +303,9 @@ def executePreBuild(Map options)
     String branch = env.BRANCH_NAME ? env.BRANCH_NAME : env.Branch
     options.branch = branch.replace('origin/', '')
 
-    options.packageName = getArtifactName('radeonimagefilters', options.branch, options.commit)
-    options.modelsName = getArtifactName('models', options.branch, options.commit)
-    options.samplesName = getArtifactName('samples', options.branch, options.commit)
+    options.packageName = getArtifactName('radeonimagefilters', options.branch, options.commitShortSHA)
+    options.modelsName = getArtifactName('models', options.branch, options.commitShortSHA)
+    options.samplesName = getArtifactName('samples', options.branch, options.commitShortSHA)
 }
 
 
