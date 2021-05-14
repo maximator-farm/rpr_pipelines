@@ -81,6 +81,7 @@ class GithubApiProvider {
                 context.println("[WARNING] No http response exception appeared")
                 context.println(e.toString())
                 context.println(e.getMessage())
+                sleep(90)
             }
         }
     }
