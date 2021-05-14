@@ -1,5 +1,6 @@
 import groovy.json.JsonSlurperClassic
 import groovy.json.JsonOutput
+import org.apache.http.NoHttpResponseException
 
 
 /**
@@ -56,20 +57,31 @@ class GithubApiProvider {
     }
 
     private def withInstallationAuthorization(String organization_name, Closure function) {
-        if (!installation_token) {
-            receiveInstallationToken(organization_name)
-        }
-        def response = function()
-        if (response.status == 401) {
-            receiveInstallationToken(organization_name)
-        } else {
-            return parseResponse(response.content)
-        }
-        response = function()
-        if (response.status == 401) {
-            throw new Exception("Could not authorize request with token ${installation_token}")
-        } else {
-            return parseResponse(response.content)
+        int times = 3
+        int retries = 0
+
+        while (retries++ < times) {
+            try {
+                if (!installation_token) {
+                    receiveInstallationToken(organization_name)
+                }
+                def response = function()
+                if (response.status == 401) {
+                    receiveInstallationToken(organization_name)
+                } else {
+                    return parseResponse(response.content)
+                }
+                response = function()
+                if (response.status == 401) {
+                    throw new Exception("Could not authorize request with token ${installation_token}")
+                } else {
+                    return parseResponse(response.content)
+                }
+            } catch(NoHttpResponseException e) {
+                context.println("[WARNING] No http response exception appeared")
+                context.println(e.toString())
+                context.println(e.getMessage())
+            }
         }
     }
 
