@@ -212,7 +212,8 @@ def executeTestCommand(String osName, String asicName, Map options)
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
         if (options.parsedTests.contains(".json")) {
-            // if tests package isn't splitted and it's execution of this package - replace test group for non-splitted package by empty string
+            // if tests package isn't splitted and it's execution of this package - replace test package by test group and test group by empty string
+            testsPackageName = options.parsedTests
             testsNames = ""
         } else {
             // if tests package isn't splitted and it isn't execution of this package - replace tests package by empty string
@@ -466,8 +467,10 @@ def executeBuildWindows(Map options)
     dir('RadeonProRenderBlenderAddon\\BlenderPkg') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         bat """
-            build_win.cmd >> ../../${STAGE_NAME}.log  2>&1
+            cd ..
+            build.cmd >> ../../${STAGE_NAME}.log  2>&1
         """
+        python3("create_zip_addon.py >> ../../${STAGE_NAME}.log 2>&1")
 
         dir('.build') {
             bat """
@@ -508,8 +511,10 @@ def executeBuildOSX(Map options)
     dir('RadeonProRenderBlenderAddon/BlenderPkg') {
         GithubNotificator.updateStatus("Build", "OSX", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-OSX.log")
         sh """
+            cd ..
             ./build_osx.sh >> ../../${STAGE_NAME}.log  2>&1
         """
+        python3("create_zip_addon.py >> ../../${STAGE_NAME}.log 2>&1")
 
         dir('.build') {
             sh """
@@ -549,8 +554,10 @@ def executeBuildLinux(String osName, Map options)
     dir('RadeonProRenderBlenderAddon/BlenderPkg') {
         GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         sh """
-            ./build_linux.sh >> ../../${STAGE_NAME}.log  2>&1
+            cd ..
+            ./build.sh >> ../../${STAGE_NAME}.log  2>&1
         """
+        python3("create_zip_addon.py >> ../../${STAGE_NAME}.log 2>&1")
 
         dir('.build') {
 
@@ -796,16 +803,29 @@ def executePreBuild(Map options)
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
                 String modifiedPackageName = "${options.testsPackage}~"
                 options.groupsUMS = tempTests.clone()
-                packageInfo["groups"].each() {
+
+                // receive list of group names from package
+                List groupsFromPackage = []
+
+                if (packageInfo["groups"] instanceof Map) {
+                    groupsFromPackage = packageInfo["groups"].keySet() as List
+                } else {
+                    // iterate through all parts of package
+                    packageInfo["groups"].each() {
+                        groupsFromPackage.addAll(it.keySet() as List)
+                    }
+                }
+
+                groupsFromPackage.each() {
                     if (options.isPackageSplitted) {
-                        tempTests << it.key
-                        options.groupsUMS << it.key
+                        tempTests << it
+                        options.groupsUMS << it
                     } else {
-                        if (tempTests.contains(it.key)) {
+                        if (tempTests.contains(it)) {
                             // add duplicated group name in name of package group name for exclude it
-                            modifiedPackageName = "${modifiedPackageName},${it.key}"
+                            modifiedPackageName = "${modifiedPackageName},${it}"
                         } else {
-                            options.groupsUMS << it.key
+                            options.groupsUMS << it
                         }
                     }
                 }
@@ -827,10 +847,24 @@ def executePreBuild(Map options)
                     options.testsPackage = "none"
                 } else {
                     options.testsPackage = modifiedPackageName
-                    options.engines.each { engine ->
-                        tests << "${modifiedPackageName}-${engine}"
+                    // check that package is splitted to parts or not
+                    if (packageInfo["groups"] instanceof Map) {
+                        options.engines.each { engine ->
+                            tests << "${modifiedPackageName}-${engine}"
+                        } 
+                        options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                    } else {
+                        // add group stub for each part of package
+                        options.engines.each { engine ->
+                            for (int i = 0; i < packageInfo["groups"].size(); i++) {
+                                tests << "${modifiedPackageName}-${engine}".replace(".json", ".${i}.json")
+                            }
+                        }
+
+                        for (int i = 0; i < packageInfo["groups"].size(); i++) {
+                            options.timeouts[options.testsPackage.replace(".json", ".${i}.json")] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                        }
                     }
-                    options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                 }
             } else if (options.tests) {
                 options.groupsUMS = options.tests.split(" ") as List
@@ -1067,7 +1101,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderBlenderAddon.git",
     String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu18:AMD_RadeonVII;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
@@ -1211,9 +1245,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         splitTestsExecution:splitTestsExecution,
                         sendToUMS: sendToUMS,
                         gpusCount:gpusCount,
-                        TEST_TIMEOUT:180,
-                        ADDITIONAL_XML_TIMEOUT:30,
-                        NON_SPLITTED_PACKAGE_TIMEOUT:90,
+                        TEST_TIMEOUT:135,
+                        ADDITIONAL_XML_TIMEOUT:15,
+                        NON_SPLITTED_PACKAGE_TIMEOUT:60,
                         DEPLOY_TIMEOUT:180,
                         TESTER_TAG:tester_tag,
                         universePlatforms: universePlatforms,

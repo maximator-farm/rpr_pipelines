@@ -62,9 +62,19 @@ def checkExistenceOfPlugin(String osName, Map options) {
 def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true, String customPluginName = "") {
     String uninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
 
-    try {
-        String logPostfix = cleanInstall ? "clean" : "dirt"
+    String installerName = ""
+    String logPostfix = cleanInstall ? "clean" : "dirt"
 
+    if (customPluginName) {
+        installerName = customPluginName
+        logPostfix = "_custom"
+    } else if (options['isPreBuilt']) {
+        installerName = "${options.pluginWinSha}.exe"
+    } else {
+        installerName = "${options.commitSHA}.exe"
+    }
+
+    try {
         if (cleanInstall && checkExistenceOfPlugin(osName, options)) {
             println "[INFO] Uninstalling Inventor Plugin"
             bat """
@@ -78,20 +88,8 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
     try {
         println "[INFO] Install Inventor Plugin"
 
-        String installerName = ""
-        String logPostfix = ""
-
-        if (customPluginName) {
-            installerName = customPluginName
-            logPostfix = "_custom"
-        } else if (options['isPreBuilt']) {
-            installerName = "${options.pluginWinSha}.exe"
-        } else {
-            installerName = "${options.commitSHA}.exe"
-        }
-
         bat """
-            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.install${logPostfix}.log
+            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART /LOG=${options.stageName}${logPostfix}_${options.currentTry}.install${logPostfix}.log
         """
     } catch (e) {
         throw new Exception("Failed to install new plugin")
@@ -143,7 +141,8 @@ def executeTestCommand(String osName, String asicName, Map options) {
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
         if (testsNames.contains(".json")) {
-            // if tests package isn't splitted and it's execution of this package - replace test group for non-splitted package by empty string
+            // if tests package isn't splitted and it's execution of this package - replace test package by test group and test group by empty string
+            testsPackageName = options.tests
             testsNames = ""
         } else {
             // if tests package isn't splitted and it isn't execution of this package - replace tests package by empty string
@@ -213,13 +212,13 @@ def executeTests(String osName, String asicName, Map options) {
 
             println "Install \"baseline\" plugin"
 
-            timeout(time: "5", unit: "MINUTES") {
-                installInventorPlugin(osName, options, true, baselinePluginPath.split("/")[-1])
+            timeout(time: "15", unit: "MINUTES") {
+                installInventorPlugin(osName, options, false, baselinePluginPath.split("/")[-1])
             }
 
             println "Start \"dirt\" installation"
 
-            timeout(time: "5", unit: "MINUTES") {
+            timeout(time: "8", unit: "MINUTES") {
                 installInventorPlugin(osName, options, false)
             }
         }
@@ -246,7 +245,7 @@ def executeTests(String osName, String asicName, Map options) {
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
-            timeout(time: "5", unit: "MINUTES") {
+            timeout(time: "15", unit: "MINUTES") {
                 installInventorPlugin(osName, options, true)
             }
         }
@@ -309,7 +308,6 @@ def executeTests(String osName, String asicName, Map options) {
         options.executeTestsFinished = true
 
     } catch (e) {
-        options.problemMessageManager.saveSpecificFailReason("${e.getMessage()} (try #${options.currentTry})", options["stageName"], osName)
         if (options.currentTry < options.nodeReallocateTries - 1) {
             stashResults = false
         } else {
@@ -403,18 +401,16 @@ def executeBuildWindows(Map options) {
         withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/${STAGE_NAME}.HdRPRPlugin.log", configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             bat """
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" >> ${STAGE_NAME}.EnvVariables.log 2>&1
-                cd USDPixar
-                git apply ../usd_dev.patch  >> ${STAGE_NAME}.USDPixar.log 2>&1
-                cd ..
 
-                python USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/windows/build --src RPRViewer/binary/windows/deps RPRViewer/binary/windows/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
-                
-                set PXR_DIR=%CD%\\USDPixar
-                set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
-                cd HdRPRPlugin
-                cmake -B build -G "Visual Studio 15 2017 Win64" -Dpxr_DIR=%PXR_DIR% -DCMAKE_INSTALL_PREFIX=%INSTALL_PREFIX_DIR% -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE ^
-                    -DPXR_USE_PYTHON_3=ON -DMATERIALX_BUILD_PYTHON=ON -DMATERIALX_INSTALL_PYTHON=ON >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
-                cmake --build build --config Release --target install >> ..\\${STAGE_NAME}.HdRPRPlugin.log 2>&1
+                RPRViewer\\tools\\build_usd_windows.bat >> ${STAGE_NAME}.USDPixar.log 2>&1
+            """
+
+            bat """
+                RPRViewer\\tools\\build_hdrpr_windows.bat >> ${STAGE_NAME}.HdRPRPlugin.log 2>&1
+            """
+
+            bat """
+                RPRViewer\\tools\\build_compatibility_checker_windows.bat >> ${STAGE_NAME}.CompatibilityChecker.log 2>&1
             """
         }
         String buildName = "RadeonProUSDViewer_Windows.zip"
@@ -435,19 +431,12 @@ def executeBuildWindows(Map options) {
 
             withEnv(["PYTHONPATH=%INST%\\lib\\python;%INST%\\lib"]) {
                 bat """
-                    set INSTALL_PREFIX_DIR=%CD%\\RPRViewer\\binary\\windows\\inst
-                    set PACKAGE_PATH=%INSTALL_PREFIX_DIR%\\dist
-                    set PYTHONPATH=%INSTALL_PREFIX_DIR%\\lib\\python;%INSTALL_PREFIX_DIR%\\lib;%INSTALL_PREFIX_DIR%\\lib\\python\\pxr\\Usdviewq\\HdRPRPlugin\\python
-
-                    pyinstaller %CD%\\RPRViewer\\tools\\usdview_windows.spec --noconfirm --clean --distpath %PACKAGE_PATH% ^
-                        --workpath ${env.WORKSPACE}\\installer_build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                        
-                    XCOPY %PACKAGE_PATH%\\RPRViewer\\hdrpr\\lib\\* %PACKAGE_PATH%\\RPRViewer\\ /Y
+                    RPRViewer\\tools\\build_package_windows.bat >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
                 """
 
                 dir("RPRViewer") {
                     bat """
-                        "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ../${STAGE_NAME}.USDViewerInstaller.log 2>&1
+                        "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ..\\${STAGE_NAME}.USDViewerInstaller.log 2>&1
                     """
                     stash includes: "RPRViewer_Setup.exe", name: "appWindows"
                     options.pluginWinSha = sha1 "RPRViewer_Setup.exe"
@@ -460,7 +449,7 @@ def executeBuildWindows(Map options) {
 
                     archiveArtifacts artifacts: "RPRViewer_Setup*.exe", allowEmptyArchive: false
                     String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
-                    String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+                    String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
                     rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
                     /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
@@ -491,17 +480,14 @@ def executeBuildOSX(Map options)
             export PYENV_ROOT="\$HOME/.pyenv"
             export PATH="\$PYENV_ROOT/shims:\$PYENV_ROOT/bin:\$PATH"
             pyenv rehash
-            # USD
-            python USDPixar/build_scripts/build_usd.py --build RPRViewer/binary/mac/build --src RPRViewer/binary/mac/deps RPRViewer/binary/mac/inst >> ${STAGE_NAME}.USDPixar.log 2>&1
-            # HdRprPlugin
-            export PXR_DIR=\$(pwd)/USDPixar
-            export INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
+
+            python --version
+
+            chmod u+x RPRViewer/tools/build_usd_mac.sh
+            RPRViewer/tools/build_usd_mac.sh >> ${STAGE_NAME}.USDPixar.log 2>&1
             
-            cd HdRPRPlugin
-            cmake -B build -Dpxr_DIR=\$PXR_DIR -DCMAKE_INSTALL_PREFIX=\$INSTALL_PREFIX_DIR -DRPR_BUILD_AS_HOUDINI_PLUGIN=FALSE \
-                -DMATERIALX_PYTHON_PYBIND11_DIR=\$(pwd)/deps/MaterialX/source/PyMaterialX/PyBind11 \
-                -DPXR_USE_PYTHON_3=ON -DMATERIALX_BUILD_PYTHON=ON -DMATERIALX_INSTALL_PYTHON=ON >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
-            cmake --build build --config Release --target install >> ../${STAGE_NAME}.HdRPRPlugin.log 2>&1
+            chmod u+x RPRViewer/tools/build_hdrpr_mac.sh
+            RPRViewer/tools/build_hdrpr_mac.sh >> ${STAGE_NAME}.HdRPRPlugin.log 2>&1
         """
     }
 
@@ -515,35 +501,21 @@ def executeBuildOSX(Map options)
                 
                 python --version
             
-                export INSTALL_PREFIX_DIR=\$(pwd)/RPRViewer/binary/mac/inst
-                export MATERIALX_DIR=\$(python -c "import MaterialX as _; import os; print(os.path.dirname(_.__file__))")/
-                export PYTHONPATH=\$INSTALL_PREFIX_DIR/lib/python:\$INSTALL_PREFIX_DIR/lib:\$INSTALL_PREFIX_DIR/lib/python/pxr/Usdviewq/HdRPRPlugin/python
-                export PACKAGE_PATH=\$INSTALL_PREFIX_DIR/dist
-                python -m PyInstaller \$(pwd)/RPRViewer/tools/usdview_mac.spec --noconfirm --clean --distpath \
-                    \$PACKAGE_PATH --workpath \$INSTALL_PREFIX_DIR/build >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                install_name_tool -add_rpath @loader_path/../../.. \$PACKAGE_PATH/RPRViewer/hdrpr/plugin/usd/hdRpr.dylib
-                rm \$PACKAGE_PATH/RPRViewer/librprUsd.dylib
-                install_name_tool -change @loader_path/../../librprUsd.dylib @loader_path/../../hdrpr/lib/librprUsd.dylib \
-                    \$PACKAGE_PATH/RPRViewer/rpr/RprUsd/_rprUsd.so >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                install_name_tool -add_rpath @loader_path/../.. \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib
-                cp \$PACKAGE_PATH/RPRViewer/hdrpr/lib/*.dylib \$PACKAGE_PATH/RPRViewer/
-                install_name_tool -change \$INSTALL_PREFIX_DIR/lib/libGLEW.2.0.0.dylib @rpath/libGLEW.2.0.0.dylib \
-                    \$PACKAGE_PATH/RPRViewer/hdrpr/plugin/usd/hdRpr.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
-                install_name_tool -change \$INSTALL_PREFIX_DIR/lib/libGLEW.2.0.0.dylib @rpath/libGLEW.2.0.0.dylib \
-                    \$PACKAGE_PATH/RPRViewer/hdrpr/lib/librprUsd.dylib >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
+                chmod u+x RPRViewer/tools/build_package_mac.sh
+                RPRViewer/tools/build_package_mac.sh >> ${STAGE_NAME}.USDViewerPackage.log 2>&1
             """
 
             zip archive: false, dir: "RPRViewer/binary/mac/inst/dist/RPRViewer", glob: '', zipFile: "RadeonProUSDViewer_Package_OSX.zip"
         
             if (options.branch_postfix) {
                 sh """
-                    mv RadeonProUSDViewer_Package_OSX.zip "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).zip"
+                    mv RadeonProUSDViewer_Package_OSX.zip "RadeonProUSDViewer_Package_OSX_${options.pluginVersion}_(${options.branch_postfix}).zip"
                 """
             }
 
             archiveArtifacts artifacts: "RadeonProUSDViewer_Package*.zip", allowEmptyArchive: false
             String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).zip" : "RadeonProUSDViewer_Package_OSX.zip"
-            String pluginUrl = "${BUILD_URL}/artifact/${BUILD_NAME}"
+            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
             rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
 
             /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
@@ -750,16 +722,29 @@ def executePreBuild(Map options) {
                 }
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
                 String modifiedPackageName = "${options.testsPackage}~"
-                packageInfo["groups"].each {
+
+                // receive list of group names from package
+                List groupsFromPackage = []
+
+                if (packageInfo["groups"] instanceof Map) {
+                    groupsFromPackage = packageInfo["groups"].keySet() as List
+                } else {
+                    // iterate through all parts of package
+                    packageInfo["groups"].each() {
+                        groupsFromPackage.addAll(it.keySet() as List)
+                    }
+                }
+
+                groupsFromPackage.each {
                     if (options.isPackageSplitted) {
-                        tests << it.key
-                        options.groupsUMS << it.key
+                        tests << it
+                        options.groupsUMS << it
                     } else {
-                        if (tests.contains(it.key)) {
+                        if (tests.contains(it)) {
                             // add duplicated group name in name of package group name for exclude it
-                            modifiedPackageName = "${modifiedPackageName},${it.key}"
+                            modifiedPackageName = "${modifiedPackageName},${it}"
                         } else {
-                            options.groupsUMS << it.key
+                            options.groupsUMS << it
                         }
                     }
                 }
@@ -774,8 +759,17 @@ def executePreBuild(Map options) {
                     options.testsPackage = "none"
                 } else {
                     options.testsPackage = modifiedPackageName
-                    tests << modifiedPackageName
-                    options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                    // check that package is splitted to parts or not
+                    if (packageInfo["groups"] instanceof Map) {
+                        tests << "${modifiedPackageName}"
+                        options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                    } else {
+                        // add group stub for each part of package
+                        for (int i = 0; i < packageInfo["groups"].size(); i++) {
+                            tests << "${modifiedPackageName}".replace(".json", ".${i}.json")
+                            options.timeouts[options.testsPackage.replace(".json", ".${i}.json")] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
+                        }
+                    }
                 }
 
                 options.tests = tests
@@ -961,7 +955,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
          String testsBranch = "master",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800,NVIDIA_RTX2080TI',
          String updateRefs = 'No',
          Boolean enableNotifications = true,
          String testsPackage = "",
@@ -971,7 +965,7 @@ def call(String projectBranch = "",
          String tester_tag = 'USDViewer',
          String customBuildLinkWindows = "",
          String parallelExecutionTypeString = "TakeAllNodes",
-         Integer testCaseRetries = 3,
+         Integer testCaseRetries = 2,
          Boolean sendToUMS = true,
          String baselinePluginPath = "/volume1/CIS/bin-storage/RPRViewer_Setup.release-99.exe") {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -1004,9 +998,9 @@ def call(String projectBranch = "",
                         DEPLOY_FOLDER: "USDViewer",
                         testsPackage: testsPackage,
                         BUILD_TIMEOUT: 120,
-                        TEST_TIMEOUT: 90,
+                        TEST_TIMEOUT: 195,
                         ADDITIONAL_XML_TIMEOUT: 15,
-                        NON_SPLITTED_PACKAGE_TIMEOUT: 60,
+                        NON_SPLITTED_PACKAGE_TIMEOUT: 150,
                         DEPLOY_TIMEOUT: 45,
                         tests: tests,
                         customBuildLinkWindows: customBuildLinkWindows,
