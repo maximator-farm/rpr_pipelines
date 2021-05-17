@@ -112,7 +112,7 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
         checkoutScm(branchName: options.testsBranch, repositoryUrl: "${options.gitlabURL}/rml/ft_engine.git", credentialsId: "radeonprorender-gitlab")
         try {
             dir("rml_release") {
-                unstash "app${osName}"
+                makeUnstash(name: "app${osName}")
             }
             outputEnvironmentInfo(osName, "${STAGE_NAME}.ft")
             switch (osName) {
@@ -157,7 +157,7 @@ def executeTests(String osName, String asicName, Map options)
 
     try {
         outputEnvironmentInfo(osName, "${STAGE_NAME}.UnitTests")
-        unstash "app${osName}"
+        makeUnstash(name: "app${osName}")
 
         executeUnitTestsCommand(osName, options)
     } catch (e) {
@@ -431,7 +431,7 @@ def executeBuild(String osName, Map options)
         }
 
         dir('build-Release/Release') {
-            stash includes: '*', name: "app${osName}"
+            makeStash(includes: '*', name: "app${osName}")
         }
     } catch (e) {
         println(e.getMessage())

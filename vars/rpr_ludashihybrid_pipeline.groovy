@@ -55,7 +55,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
 
     try {
         outputEnvironmentInfo(osName, "${STAGE_NAME}.${options.RENDER_QUALITY}")
-        unstash "app${osName}"
+        makeUnstash(name: "app${osName}")
         switch(osName) {
             case 'Windows':
                 unzip dir: '.', glob: '', zipFile: 'BaikalNext_Build-Windows.zip'
@@ -85,7 +85,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options)
                 python3("hybrid_report.py --xml_path ../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-${options.RENDER_QUALITY}_failures")
             }
 
-            stash includes: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures/**/*", name: "testResult-${asicName}-${osName}-${options.RENDER_QUALITY}", allowEmpty: true
+            makeStash(includes: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures/**/*", name: "testResult-${asicName}-${osName}-${options.RENDER_QUALITY}", allowEmpty: true)
 
             utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-${options.RENDER_QUALITY}_failures", "report.html", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures")
 
@@ -235,7 +235,7 @@ def executeBuild(String osName, Map options)
         }
 
         dir('Build') {
-            stash includes: "BaikalNext_${STAGE_NAME}*", name: "app${osName}"
+            makeStash(includes: "BaikalNext_${STAGE_NAME}*", name: "app${osName}")
         }
     } catch (e) {
         println(e.getMessage())
@@ -264,7 +264,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 options['testsQuality'].split(",").each() { quality ->
                     testResultList.each() {
                         try {
-                            unstash "${it}-${quality}"
+                            makeUnstash(name: "${it}-${quality}")
                             reportFiles += ", ${it}-${quality}_failures/report.html".replace("testResult-", "")
                         }
                         catch(e) {

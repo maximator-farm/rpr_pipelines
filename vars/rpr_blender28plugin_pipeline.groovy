@@ -54,7 +54,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appWindows"
+                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -104,7 +104,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appOSX"
+                    makeUnstash(name: "appOSX", unzip: false, storeOnNAS: options.storeOnNAS)
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -154,7 +154,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "app${osName}"
+                    makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -422,7 +422,8 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         println("Stashing test results to : ${options.testResultsName}")
-                        stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+                        
+                        utils.stashTestData(this, options, options.storeOnNAS)
 
                         // deinstalling broken addon
                         // if test group is fully errored or number of test cases is equal to zero
@@ -499,7 +500,7 @@ def executeBuildWindows(Map options)
                 rename RadeonProRender*.zip RadeonProRenderBlender_Windows.zip
             """
 
-            stash includes: "RadeonProRenderBlender_Windows.zip", name: "appWindows"
+            makeStash(includes: "RadeonProRenderBlender_Windows.zip", name: "appWindows", preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
@@ -542,7 +543,7 @@ def executeBuildOSX(Map options)
                 mv RadeonProRender*zip RadeonProRenderBlender_MacOS.zip
             """
 
-            stash includes: "RadeonProRenderBlender_MacOS.zip", name: "appOSX"
+            makeStash(includes: "RadeonProRenderBlender_MacOS.zip", name: "appOSX", preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
@@ -586,7 +587,7 @@ def executeBuildLinux(String osName, Map options)
                 mv RadeonProRender*zip RadeonProRenderBlender_${osName}.zip
             """
 
-            stash includes: "RadeonProRenderBlender_${osName}.zip", name: "app${osName}"
+            makeStash(includes: "RadeonProRenderBlender_${osName}.zip", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
@@ -919,7 +920,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
-                                unstash "$it"
+                                makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                             } catch(e) {
                                 echo "[ERROR] Failed to unstash ${it}"
                                 lostStashes.add("'${testName}'".replace("testResult-", ""))
@@ -1003,7 +1004,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 if (!options.testDataSaved) {
                     try {
                         // Save test data for access it manually anyway
-                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
+                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
                         options.testDataSaved = true 
                     } catch(e1) {
                         println("[WARNING] Failed to publish test data.")
@@ -1068,7 +1069,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
@@ -1269,7 +1270,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
-                        testCaseRetries:testCaseRetries
+                        testCaseRetries:testCaseRetries,
+                        storeOnNAS: true
                         ]
 
             if (sendToUMS) {

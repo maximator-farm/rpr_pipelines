@@ -52,7 +52,7 @@ def getMayaPluginInstaller(String osName, Map options) {
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appWindows"
+                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -102,7 +102,7 @@ def getMayaPluginInstaller(String osName, Map options) {
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appOSX"
+                    makeUnstash(name: "appOSX", unzip: false, storeOnNAS: options.storeOnNAS)
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -385,7 +385,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         println("Stashing test results to : ${options.testResultsName}")
-                        stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+                        utils.stashTestData(this, options, options.storeOnNAS)
 
                         // deinstalling broken addon
                         // if test group is fully errored or number of test cases is equal to zero
@@ -470,7 +470,7 @@ def executeBuildWindows(Map options)
 
         //options.productCode = "unknown"
         options.pluginWinSha = sha1 'RadeonProRenderMaya.msi'
-        stash includes: 'RadeonProRenderMaya.msi', name: 'appWindows'
+        makeStash(includes: 'RadeonProRenderMaya.msi', name: 'appWindows', preZip: false, storeOnNAS: options.storeOnNAS)
 
         GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
     }
@@ -503,7 +503,7 @@ def executeBuildOSX(Map options)
             }
 
             sh "cp RadeonProRender*.dmg RadeonProRenderMaya.dmg"
-            stash includes: 'RadeonProRenderMaya.dmg', name: "appOSX"
+            makeStash(includes: 'RadeonProRenderMaya.dmg', name: "appOSX", preZip: false, storeOnNAS: options.storeOnNAS)
 
             // TODO: detect ID of installed plugin
             options.pluginOSXSha = sha1 'RadeonProRenderMaya.dmg'
@@ -827,7 +827,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
-                                unstash "$it"
+                                makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                             } catch(e) {
                                 println "[ERROR] Failed to unstash ${it}"
                                 lostStashes.add("'${testName}'".replace("testResult-", ""))
@@ -911,7 +911,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 if (!options.testDataSaved) {
                     try {
                         // Save test data for access it manually anyway
-                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
+                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
                         options.testDataSaved = true 
                     } catch(e1) {
                         println("[WARNING] Failed to publish test data.")
@@ -977,7 +977,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
@@ -1161,7 +1161,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
-                        testCaseRetries:testCaseRetries
+                        testCaseRetries:testCaseRetries,
+                        storeOnNAS: true
                         ]
 
             if (sendToUMS) {

@@ -53,7 +53,7 @@ def getMaxPluginInstaller(String osName, Map options)
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appWindows"
+                    makeUnstash(name: "appWindows", unzip: false)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -247,7 +247,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         println("Stashing test results to : ${options.testResultsName}")
-                        stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+                        makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
 
                         // deinstalling broken addon
                         // if test group is fully errored or number of test cases is equal to zero
@@ -326,7 +326,7 @@ def executeBuildWindows(Map options)
 
         options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
         println "[INFO] Built MSI product code: ${options.productCode}"
-        stash includes: 'RadeonProRenderMax.msi', name: 'appWindows'
+        makeStash(includes: 'RadeonProRenderMax.msi', name: 'appWindows', preZip: false)
 
         GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
     }
@@ -595,7 +595,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 testResultList.each() {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            unstash "$it"
+                            makeUnstash(name: "$it")
                         } catch(e) {
                             echo "Can't unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))

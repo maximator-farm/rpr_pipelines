@@ -20,7 +20,7 @@ def getCoreSDK(String osName, Map options)
                 clearBinariesWin()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "WindowsSDK"
+                makeUnstash(name: "WindowsSDK", unzip: false)
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -44,7 +44,7 @@ def getCoreSDK(String osName, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "OSXSDK"
+                makeUnstash(name: "OSXSDK", unzip: false)
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -68,7 +68,7 @@ def getCoreSDK(String osName, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                unstash "Ubuntu18SDK"
+                makeUnstash(name: "Ubuntu18SDK", unzip: false)
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -159,7 +159,7 @@ def executeUnitTests(String osName, String asicName, Map options)
             python3("hybrid_report.py --xml_path ../${STAGE_NAME}.gtest.xml --images_basedir ../RadeonProRenderSDK/Northstar/UnitTest/result  --report_path ../${asicName}-${osName}_failures --tool_name \"Core Internal\" --compare_with_refs=False")
         }
 
-        stash includes: "${asicName}-${osName}_failures/**/*", name: "unitTestFailures-${asicName}-${osName}", allowEmpty: true
+        makeStash(includes: "${asicName}-${osName}_failures/**/*", name: "unitTestFailures-${asicName}-${osName}", allowEmpty: true)
 
         utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}_failures", "report.html", "${STAGE_NAME}_failures", "${STAGE_NAME}_failures")
     } finally {
@@ -311,7 +311,7 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         println("Stashing test results to : ${options.testResultsName}")
-                        stash includes: '**/*', excludes: '**/cache/**', name: "${options.testResultsName}", allowEmpty: true
+                        makeStash(includes: '**/*', excludes: '**/cache/**', name: "${options.testResultsName}", allowEmpty: true)
 
                         // reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
@@ -359,7 +359,7 @@ def executeBuildWindows(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RPR/RadeonProRender/lib/x64") {
             zip archive: true, dir: ".", glob: "", zipFile: "binWin64.zip"
-            stash includes: "binWin64.zip", name: 'WindowsSDK'
+            makeStash(includes: "binWin64.zip", name: 'WindowsSDK', preZip: false)
             options.pluginWinSha = sha1 "binWin64.zip"
         }
         if (options.sendToUMS) {
@@ -373,7 +373,7 @@ def executeBuildOSX(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binMacOS.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binMacOS") {
             zip archive: true, dir: ".", glob: "", zipFile: "binMacOS.zip"
-            stash includes: "binMacOS.zip", name: "OSXSDK"
+            makeStash(includes: "binMacOS.zip", name: "OSXSDK", preZip: false)
             options.pluginOSXSha = sha1 "binMacOS.zip"
         }
         if (options.sendToUMS) {
@@ -387,7 +387,7 @@ def executeBuildLinux(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binUbuntu18.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
             zip archive: true, dir: ".", glob: "", zipFile: "binUbuntu18.zip"
-            stash includes: "binUbuntu18.zip", name: "Ubuntu18SDK"
+            makeStash(includes: "binUbuntu18.zip", name: "Ubuntu18SDK", preZip: false)
             options.pluginUbuntuSha = sha1 "binUbuntu18.zip"
         }
         if (options.sendToUMS) {
@@ -532,7 +532,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     testResultList.each() {
                         String stashName = it.replace("testResult", "unitTestFailures")
                         try {
-                            unstash "${stashName}"
+                            makeUnstash(name: "${stashName}")
                             reportFiles += ", ${stashName}_failures/report.html".replace("unitTestFailures-", "")
                         } catch(e) {
                             println("[ERROR] Can't unstash ${stashName}")
@@ -541,7 +541,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         }
                     }
                 }
-                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles}", "Failures Report", "${STAGE_NAME}_failures")
+                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^, ', '')}", "Failures Report", "${STAGE_NAME}_failures")
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
@@ -555,7 +555,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 testResultList.each() {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            unstash "$it"
+                            makeUnstash(name: "$it")
                         } catch(e) {
                             println("Can't unstash ${it}")
                             lostStashes.add("'$it'".replace("testResult-", ""))

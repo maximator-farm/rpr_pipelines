@@ -86,14 +86,94 @@ class utils {
         }
     }
 
-    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "") {
-        Map params = [allowMissing: false,
-                      alwaysLinkToLastBuild: false,
-                      keepAll: true,
-                      reportDir: reportDir,
-                      reportFiles: reportFiles,
-                      // TODO: custom reportName (issues with escaping)
-                      reportName: reportName]
+    static def stashTestData(Object self, Map options, Boolean publishOnNAS = false) {
+        if (publishOnNAS) {
+            String engine = ""
+            String stashName = ""
+            String reportName = ""
+            List testsResultsParts = options.testResultsName.split("-") as List
+            if (options.containsKey("engines") && options.containsKey("enginesNames")) {
+                engine = testsResultsParts[-1]
+                // Remove "testResult" prefix and engine from stash name
+                stashName = testsResultsParts.subList(1, testsResultsParts.size() - 1).join("-")
+            } else {
+                // Remove "testResult" prefix from stash name
+                stashName = testsResultsParts.subList(1, testsResultsParts.size()).join("-")
+            }
+
+            if (engine) {
+                String engineName = options.enginesNames[options.engines.indexOf(engine)]
+                reportName = "Test_Report_${engineName}"
+            } else {
+                reportName = "Test_Report"
+            }
+
+            String path = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/${stashName}/"
+            self.makeStash(includes: '**/*', name: stashName, allowEmpty: true, customLocation: path, preZip: true, postUnzip: true, storeOnNAS: true)
+            self.makeStash(includes: '*.json', excludes: '*/events/*.json', name: options.testResultsName, allowEmpty: true, storeOnNAS: true)
+        } else {
+            self.makeStash(includes: '**/*', name: options.testResultsName, allowEmpty: true)
+        }
+    }
+
+    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false) {
+        Map params
+
+        if (publishOnNAS) {
+            String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
+
+            self.dir(reportDir) {
+                // upload report to NAS in archive and unzip it
+                self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, preZip: true, postUnzip: true, storeOnNAS: true)
+            }
+
+            String reportLinkBase
+
+            self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
+                self.string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
+                reportLinkBase = self.REMOTE_URL
+            }
+
+            reportLinkBase = "${reportLinkBase}/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
+            
+            self.dir("redirect_links") {
+                self.withCredentials([self.usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
+                    String authReportLinkBase = reportLinkBase.replace("https://", "https://${self.NAS_USER}:${self.NAS_PASSWORD}@")
+
+                    reportFiles.split(",").each { reportFile ->
+                        if (self.isUnix()) {
+                            self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${authReportLinkBase}${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                        } else {
+                            self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${authReportLinkBase}${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                        }
+                    }
+                }
+            }
+            
+            def updateReportFiles = []
+            reportFiles.split(",").each() { reportFile ->
+                updateReportFiles << reportFile.trim().replace("/", "_")
+            }
+            
+            updateReportFiles = updateReportFiles.join(", ")
+
+            params = [allowMissing: false,
+                          alwaysLinkToLastBuild: false,
+                          keepAll: true,
+                          reportDir: "redirect_links",
+                          reportFiles: updateReportFiles,
+                          // TODO: custom reportName (issues with escaping)
+                          reportName: reportName]
+        } else {
+            params = [allowMissing: false,
+                          alwaysLinkToLastBuild: false,
+                          keepAll: true,
+                          reportDir: reportDir,
+                          reportFiles: reportFiles,
+                          // TODO: custom reportName (issues with escaping)
+                          reportName: reportName]
+        }
+
         if (reportTitles) {
             params['reportTitles'] = reportTitles
         }

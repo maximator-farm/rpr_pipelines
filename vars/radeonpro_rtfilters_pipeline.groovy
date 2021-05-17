@@ -31,9 +31,9 @@ def executeTests(String osName, String asicName, Map options)
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         
         outputEnvironmentInfo(osName)
-        unstash "app${osName}"
+        makeUnstash(name: "app${osName}")
         bat "rmdir /s /q shaders"
-        unstash "shaders${osName}"
+        makeUnstash(name: "shaders${osName}")
         
         if (options['updateRefs']) {
             println("Updating Reference Images")
@@ -114,8 +114,8 @@ def executeBuild(String osName, Map options)
                 executeBuildLinux(options)
         }
         
-        stash includes: 'Build/**/*', name: "app${osName}"
-        stash includes: 'shaders/**/*/', name: "shaders${osName}"
+        makeStash(includes: 'Build/**/*', name: "app${osName}")
+        makeStash(includes: 'shaders/**/*/', name: "shaders${osName}")
     } catch (e) {
         currentBuild.result = "FAILED"
         throw e
@@ -134,7 +134,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             platformList.each() {
                 try {
                     dir(it) {
-                        unstash "app${it}"
+                        makeUnstash(name: "app${it}")
                     }
                 } catch(e) {
                     println(e.toString())

@@ -49,7 +49,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appWindows"
+                    makeUnstash(name: "appWindows", unzip: false)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -342,7 +342,7 @@ def executeTests(String osName, String asicName, Map options) {
                         }
 
                         println "Stashing test results to : ${options.testResultsName}"
-                        stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+                        makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
 
                         // deinstalling broken addon
                         // if test group is fully errored or number of test cases is equal to zero
@@ -416,7 +416,7 @@ def executeBuildWindows(Map options) {
                 rename BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_Windows.zip
             """
 
-            stash includes: "BlenderUSDHydraAddon_Windows.zip", name: "appWindows"
+            makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: "appWindows", preZip: false)
 
             GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
@@ -465,7 +465,7 @@ def executeBuildLinux(String osName, Map options) {
                 mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
             """
 
-            stash includes: "BlenderUSDHydraAddon_${osName}.zip", name: "app${osName}"
+            makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: "app${osName}", preZip: false)
 
             GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
@@ -754,7 +754,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
-                                unstash "$it"
+                                makeUnstash(name: "$it")
                             } catch(e) {
                                 println("[ERROR] Failed to unstash ${it}")
                                 lostStashes.add("'${testName}'".replace("testResult-", ""))
