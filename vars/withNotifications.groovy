@@ -152,10 +152,10 @@ def processReboot(Map rebootConfiguration, Map options) {
 
     String machineConfiguration = ""
 
-    if (options.containsKey("")) {
-        machineConfiguration = options["osName"]
-    } else {
+    if (options.containsKey("asicName")) {
         machineConfiguration = "${options.asicName}-${options.osName}"
+    } else {
+        machineConfiguration = options["osName"]
     }
 
     if (rebootConfiguration.containsKey("AnyTool") && rebootConfiguration["AnyTool"]) {
