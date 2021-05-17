@@ -450,22 +450,7 @@ def executeBuildWindows(Map options) {
         }
     }
 
-    try {
-        if (options.comparisionBranch) {
-            dir("HybridVsNorthstar") {
-               checkoutScm(branchName: "main", repositoryUrl: hybrid_vs_northstar_pipeline.PROJECT_REPO)
-
-               bat """
-                   git checkout -b ${options.comparisionBranch}
-                   git commit --allow-empty -m "Triggered by Build #${env.BUILD_NUMBER}"
-                   git push origin ${options.comparisionBranch} --force
-               """
-            }
-        }
-    } catch (e) {
-        println("[ERROR] Failed to create branch in HybridVsNorthstar repo")
-        println(e)
-    }
+    hybrid_vs_northstar_pipeline.createHybridBranch(options)
 }
 
 
