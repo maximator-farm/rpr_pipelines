@@ -437,6 +437,20 @@ def executeBuildWindows(Map options) {
     dir("Build/bin/${build_type}") {
         stash includes: "RprPerfTest.exe", name: "perfWindows", allowEmpty: true
     }
+
+    // FIXME: delete comment when Hybrid from current master will work with MaterialX
+    //if (env.BRANCH_NAME == "master") {
+    if (false) {
+        withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.UPDATE_BINARIES) {
+
+            hybrid_vs_northstar_pipeline.updateBinaries(
+                newBinaryFile: "Build\\_CPack_Packages\\win64\\ZIP\\BaikalNext\\bin\\HybridPro.dll", 
+                targetFileName: "HybridPro.dll", osName: "Windows", compareChecksum: true
+            )
+        }
+    }
+
+    hybrid_vs_northstar_pipeline.createHybridBranch(options)
 }
 
 
@@ -544,6 +558,24 @@ def executePreBuild(Map options) {
     options.commitMessage = options.commitMessage.join('\n')
 
     println "Commit list message: ${options.commitMessage}"
+
+    if (!options.isLegacyBranch && env.BRANCH_NAME) {
+        // save name of new branch for hybrid_vs_northstar
+        String comparisionBranch = "hybrid_auto_${env.BRANCH_NAME}"
+
+        dir("HybridVsNorthstar") {
+            String comparisionRepoUrl = hybrid_vs_northstar_pipeline.PROJECT_REPO
+
+            checkoutScm(branchName: "main", repositoryUrl: comparisionRepoUrl)
+
+            Boolean branchNotExists = bat(script: "git ls-remote --heads ${comparisionRepoUrl} ${comparisionBranch}", returnStdout: true)
+                .split('\r\n').length == 2
+
+            if (branchNotExists) {
+                options.comparisionBranch = comparisionBranch
+            }
+        }
+    }
     
     // set pending status for all
     if (env.CHANGE_ID) {
@@ -698,6 +730,8 @@ def call(String projectBranch = "",
          Boolean enableNotifications = true,
          String cmakeKeys = "-DCMAKE_BUILD_TYPE=Release -DBAIKAL_ENABLE_RPR=ON -DBAIKAL_NEXT_EMBED_KERNELS=ON") {
 
+    Boolean isLegacyBranch = false
+
     if (testsQuality == "none") {
         println "[INFO] Convert none quality to empty string"
         testsQuality = ""
@@ -706,6 +740,7 @@ def call(String projectBranch = "",
     if ((env.BRANCH_NAME && env.BRANCH_NAME == "1.xx") || (env.CHANGE_TARGET && env.CHANGE_TARGET == "1.xx") || (projectBranch == "1.xx")) {
         testsQuality = "low,medium,high"
         scenarios = ""
+        isLegacyBranch = true
     }
 
     println "Test quality: ${testsQuality}"
@@ -733,5 +768,6 @@ def call(String projectBranch = "",
                             TEST_TIMEOUT:60,
                             cmakeKeys:cmakeKeys,
                             retriesForTestStage:1,
-                            successfulTests:successfulTests])
+                            successfulTests:successfulTests,
+                            isLegacyBranch:isLegacyBranch])
 }

@@ -427,6 +427,16 @@ def executeBuildWindows(Map options) {
             options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderSDK\\RadeonProRender\\binWin64", "binWin64.zip", false)
         }
     }
+
+    if (env.BRANCH_NAME == "master") {
+        withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.UPDATE_BINARIES) {
+
+            hybrid_vs_northstar_pipeline.updateBinaries(
+                newBinaryFile: "RadeonProRenderSDK\\RadeonProRender\\binWin64\\Northstar64.dll", 
+                targetFileName: "Northstar64.dll", osName: "Windows", compareChecksum: true
+            )
+        }
+    }
 }
 
 def executeBuildOSX(Map options) {
