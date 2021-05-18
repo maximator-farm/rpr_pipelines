@@ -17,7 +17,7 @@ def call(Map params) {
     try {
         stashName = params["name"]
 
-        String unzip = params.containsKey("unzip") ? params["unzip"] : true
+        Booelan unzip = params.containsKey("unzip") ? params["unzip"] : true
         Boolean storeOnNAS = params.containsKey("storeOnNAS") ? params["storeOnNAS"] : false
         Boolean debug = params["debug"]
 
