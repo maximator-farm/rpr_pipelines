@@ -109,7 +109,7 @@ def executeTestCommand(String asicName, String osName, Map options) {
 
 
 def executeTestsCustomQuality(String osName, String asicName, Map options) {
-    validateDriver(osName, asicName, ["Ubuntu-NVIDIA": "455.46.04"], options)
+    //validateDriver(osName, asicName, ["Ubuntu-NVIDIA": "460.80"], options)
        
     cleanWS(osName)
     String error_message = ""
