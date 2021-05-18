@@ -161,13 +161,13 @@ def call(Map params) {
             Map stashParams = [name: stashName]
 
             if (includes) {
-                params["includes"] = includes
+                stashParams["includes"] = includes
             }
             if (excludes) {
-                params["excludes"] = excludes
+                stashParams["excludes"] = excludes
             }
             if (allowEmpty) {
-                params["allowEmpty"] = allowEmpty
+                stashParams["allowEmpty"] = allowEmpty
             }
 
             stash(stashParams)
