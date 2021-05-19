@@ -138,8 +138,6 @@ def call(String projectBranch = "",
             }
 
             println "Platforms: ${platforms}"
-            println "Tests: ${tests}"
-            println "Tests package: ${testsPackage}"
 
             options << [projectRepo: PROJECT_REPO,
                         projectBranch: projectBranch,
