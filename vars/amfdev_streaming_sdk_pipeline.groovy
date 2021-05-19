@@ -10,7 +10,7 @@ def executeBuildWindows(Map options) {
 
         bat """
             set msbuild="${options.msBuildPath}"
-            %msbuild% ${options.buildSln} /target:build /maxcpucount /property:Configuration=Debug;Platform=x64 >> ..\\..\\..\\..\\${STAGE_NAME}.log 2>&1
+            %msbuild% ${options.buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=Debug;Platform=x64 >> ..\\..\\..\\..\\${STAGE_NAME}.log 2>&1
         """
     }
 
@@ -118,7 +118,7 @@ def call(String projectBranch = "",
     Map options = [:]
     options["stage"] = "Init"
     options["problemMessageManager"] = problemMessageManager
-    options["msBuildPath"] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe"
+    options["msBuildPath"] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
     options["buildSln"] = "StreamingSDK_vs2019.sln"
     options["winArtifactsDir"] = "vs2019x64Debug"
 
