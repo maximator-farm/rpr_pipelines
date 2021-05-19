@@ -10,19 +10,19 @@ def executeBuildWindows(Map options) {
 
         bat """
             set msbuild="${options.msBuildPath}"
-            %msbuild% ${option.buildSln} /target:build /maxcpucount /property:Configuration=Debug;Platform=x64 >> ..\\..\\..\\..\\..\\${STAGE_NAME}.log 2>&1
+            %msbuild% ${options.buildSln} /target:build /maxcpucount /property:Configuration=Debug;Platform=x64 >> ..\\..\\..\\..\\${STAGE_NAME}.log 2>&1
         """
     }
 
-    dir("StreamingSDK\\amf\\bin\\vs2019x64Release") {
+    String archiveUrl = ""
+
+    dir("StreamingSDK\\amf\\bin\\${options.winArtifactsDir}") {
         String BUILD_NAME = "StreamingSDK_Windows.zip"
 
-        dir("bin\\Release") {
-            zip archive: true, zipFile: "StreamingSDK_Windows.zip"
-            makeStash(includes: "StreamingSDK_Windows.zip", name: "StreamingSDK_Windows")
-        }
+        zip archive: true, zipFile: "StreamingSDK_Windows.zip"
+        makeStash(includes: "StreamingSDK_Windows.zip", name: "StreamingSDK_Windows")
 
-        String archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
+        archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
         rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
     }
 
@@ -80,7 +80,9 @@ def executePreBuild(Map options) {
     }
 
     if (!env.CHANGE_URL) {
-        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+        if ("StreamingSDK") {
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+        }
 
         if (options.projectBranch) {
             currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
@@ -118,6 +120,7 @@ def call(String projectBranch = "",
     options["problemMessageManager"] = problemMessageManager
     options["msBuildPath"] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe"
     options["buildSln"] = "StreamingSDK_vs2019.sln"
+    options["winArtifactsDir"] = "vs2019x64Debug"
 
     def nodeRetry = []
 
@@ -146,7 +149,7 @@ def call(String projectBranch = "",
                         nodeRetry: nodeRetry,
                         platforms: platforms,
                         BUILD_TIMEOUT: 15,
-                        BUILDER_TAG: "StreamingSDK",
+                        BUILDER_TAG: "BuilderStreamingSDK",
                         TESTER_TAG: testerTag
                         ]
         }
