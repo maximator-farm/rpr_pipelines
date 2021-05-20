@@ -18,7 +18,7 @@ def executeBuildWindows(Map options) {
             String buildSln = ""
             String winArtifactsDir = "vs${winVSVersion}x64${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
 
-            switch(osName) {
+            switch(winVSVersion) {
                 case "2017":
                     buildSln = "StreamingSDK_vs2017.sln"
                     msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe"
@@ -50,7 +50,7 @@ def executeBuildWindows(Map options) {
                 String BUILD_NAME = "StreamingSDK_Windows_${winBuildName}.zip"
 
                 zip archive: true, zipFile: BUILD_NAME
-                makeStash(includes: "StreamingSDK_Windows.zip", name: BUILD_NAME)
+                makeStash(includes: BUILD_NAME, name: BUILD_NAME)
 
                 archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
                 rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
