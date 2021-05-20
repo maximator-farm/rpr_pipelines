@@ -5,28 +5,60 @@ import groovy.transform.Field
 
 
 def executeBuildWindows(Map options) {
-    dir("StreamingSDK\\amf\\protected\\samples") {
-        GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
+    options.buildConfiguration.each() { winBuildConf ->
+        options.winVisualStudioVersion.each() { winVSVersion ->
 
-        bat """
-            set msbuild="${options.msBuildPath}"
-            %msbuild% ${options.buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=Debug;Platform=x64 >> ..\\..\\..\\..\\${STAGE_NAME}.log 2>&1
-        """
+            println "Current build configuration: ${winBuildConf}."
+            println "Current VS version: ${winVSVersion}."
+
+            String winBuildName = "${winBuildConf}_vs${winVSVersion}"
+            String logName = "${STAGE_NAME}.${winBuildName}.log"
+
+            String msBuildPath = ""
+            String buildSln = ""
+            String winArtifactsDir = "vs${winVSVersion}x64${winBuildConf.substring(0, 1).toUpperCase() + winBuildConf.substring(1).toLowerCase()}"
+
+            switch(osName) {
+                case "2017":
+                    buildSln = "StreamingSDK_vs2017.sln"
+                    msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe"
+                    break
+                case "2019":
+                    buildSln = "StreamingSDK_vs2019.sln"
+                    msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
+
+                    if (!fileExists(msBuildPath)) {
+                        msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe"
+                    }
+                    break
+                default:
+                    throw Exception("Unsupported VS version")
+            }
+
+            dir("StreamingSDK\\amf\\protected\\samples") {
+                GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
+
+                bat """
+                    set msbuild="${msBuildPath}"
+                    %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
+                """
+            }
+
+            String archiveUrl = ""
+
+            dir("StreamingSDK\\amf\\bin\\${winArtifactsDir}") {
+                String BUILD_NAME = "StreamingSDK_Windows_${winBuildName}.zip"
+
+                zip archive: true, zipFile: BUILD_NAME
+                makeStash(includes: "StreamingSDK_Windows.zip", name: BUILD_NAME)
+
+                archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
+                rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+            }
+        }
     }
 
-    String archiveUrl = ""
-
-    dir("StreamingSDK\\amf\\bin\\${options.winArtifactsDir}") {
-        String BUILD_NAME = "StreamingSDK_Windows.zip"
-
-        zip archive: true, zipFile: "StreamingSDK_Windows.zip"
-        makeStash(includes: "StreamingSDK_Windows.zip", name: "StreamingSDK_Windows")
-
-        archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-        rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
-    }
-
-    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, archiveUrl)
+    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
 }
 
 
@@ -109,6 +141,8 @@ def executePreBuild(Map options) {
 
 def call(String projectBranch = "",
     String platforms = "Windows",
+    String buildConfiguration = "release",
+    String winVisualStudioVersion = "2017,2019",
     Boolean enableNotifications = true,
     String testerTag = "StreamingSDK"
     )
@@ -118,9 +152,6 @@ def call(String projectBranch = "",
     Map options = [:]
     options["stage"] = "Init"
     options["problemMessageManager"] = problemMessageManager
-    options["msBuildPath"] = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
-    options["buildSln"] = "StreamingSDK_vs2019.sln"
-    options["winArtifactsDir"] = "vs2019x64Debug"
 
     def nodeRetry = []
 
@@ -137,12 +168,20 @@ def call(String projectBranch = "",
                 }
             }
 
+            buildConfiguration = buildConfiguration.split(',')
+            winVisualStudioVersion = winVisualStudioVersion.split(',')
+
             println "Platforms: ${platforms}"
+
+            println "Win build configuration: ${buildConfiguration}"
+            println "Win visual studio version: ${winVisualStudioVersion}"
 
             options << [projectRepo: PROJECT_REPO,
                         projectBranch: projectBranch,
                         enableNotifications: enableNotifications,
                         PRJ_NAME: "StreamingSDK",
+                        buildConfiguration:buildConfiguration,
+                        winVisualStudioVersion:winVisualStudioVersion,
                         gpusCount: gpusCount,
                         nodeRetry: nodeRetry,
                         platforms: platforms,
