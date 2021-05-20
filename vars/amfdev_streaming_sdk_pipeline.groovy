@@ -50,7 +50,10 @@ def executeBuildWindows(Map options) {
                 String BUILD_NAME = "StreamingSDK_Windows_${winBuildName}.zip"
 
                 zip archive: true, zipFile: BUILD_NAME
-                makeStash(includes: BUILD_NAME, name: BUILD_NAME)
+
+                if (options.winTestingBuildName == winBuildName) {
+                    makeStash(includes: BUILD_NAME, name: BUILD_NAME)
+                }
 
                 archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
                 rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
@@ -143,6 +146,7 @@ def call(String projectBranch = "",
     String platforms = "Windows",
     String buildConfiguration = "release",
     String winVisualStudioVersion = "2017,2019",
+    String winTestingBuildName = "release_vs2019",
     Boolean enableNotifications = true,
     String testerTag = "StreamingSDK"
     )
@@ -173,15 +177,17 @@ def call(String projectBranch = "",
 
             println "Platforms: ${platforms}"
 
-            println "Win build configuration: ${buildConfiguration}"
+            println "Build configuration: ${buildConfiguration}"
             println "Win visual studio version: ${winVisualStudioVersion}"
+            println "Win testing build name: ${winTestingBuildName}"
 
             options << [projectRepo: PROJECT_REPO,
                         projectBranch: projectBranch,
                         enableNotifications: enableNotifications,
                         PRJ_NAME: "StreamingSDK",
-                        buildConfiguration:buildConfiguration,
-                        winVisualStudioVersion:winVisualStudioVersion,
+                        buildConfiguration: buildConfiguration,
+                        winVisualStudioVersion: winVisualStudioVersion,
+                        winTestingBuildName: winTestingBuildName,
                         gpusCount: gpusCount,
                         nodeRetry: nodeRetry,
                         platforms: platforms,
