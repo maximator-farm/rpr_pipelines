@@ -44,9 +44,11 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
         def testTasks = [:]
         gpuNames.split(',').each() {
             String asicName = it
+
+            String taskName = "Test-${asicName}-${osName}"
             
-            testTasks["Test-${asicName}-${osName}"] = {
-                stage("Test-${asicName}-${osName}") {
+            testTasks[taskName] = {
+                stage(taskName) {
                     // if not split - testsList doesn't exists
                     // TODO: replace testsList check to splitExecution var
                     options.testsList = options.testsList ?: ['']
@@ -108,6 +110,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 newOptions["stage"] = "Test"
                                 newOptions["asicName"] = asicName
                                 newOptions["osName"] = osName
+                                newOptions["taskName"] = taskName
                                 newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                 newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
                                 newOptions['tests'] = testName ?: options.tests

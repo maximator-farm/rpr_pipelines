@@ -4,6 +4,84 @@ import groovy.transform.Field
 @Field final String PROJECT_REPO = "git@github.com:amfdev/StreamingSDK.git"
 
 
+String getClientLabels(Map options) {
+    return "${options.osName} && ${options.TESTER_TAG}"
+}
+
+
+Boolean isIdleClient(Map options) {
+    def suitableNodes = nodesByLabel label: getClientLabels(options), offline: false
+
+    suitableNodes.each { node ->
+        if (utils.isNodeIdle(node)) {
+            return true
+        }
+    }
+
+    return false
+}
+
+
+def prepareTool(String osName, Map options) {
+    switch(osName) {
+        case "Windows":
+            unstash("ToolWindows")
+            unzip(zipFile: "${options.winTestingBuildName}.zip")
+            break
+        case "OSX":
+            println("Unsupported OS")
+            break
+        default:
+            println("Unsupported OS")
+    }
+}
+
+
+def executeTestsClient(String osName, String asicName, Map options) {
+    node(getClientLabels(options)) {
+        timeout(time: "${stageTimeout}", unit: "MINUTES") {
+            ws("WS/${options.PRJ_NAME}_${stageName}") {
+                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+                    timeout(time: "5", unit: "MINUTES") {
+                        dir("StreamingSDK") {
+                            prepareTool(osName, options)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+def executeTestsServer(String osName, String asicName, Map options) {
+    withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+        timeout(time: "5", unit: "MINUTES") {
+            dir("StreamingSDK") {
+                prepareTool(osName, options)
+            }
+        }
+    }
+}
+
+
+def executeTests(String osName, String asicName, Map options) {
+    // used for mark stash results or not. It needed for not stashing failed tasks which will be retried.
+    Boolean stashResults = true
+
+    try {
+        // create client and server threads and run them parallel
+        Map threads = [:]
+        thread["client"] = { executeTestsClient(osName, asicName, options) }
+        thread["server"] = { executeTestsServer(osName, asicName, options) }
+
+        parallel threads
+    } catch (e) {
+
+    }
+}
+
+
 def executeBuildWindows(Map options) {
     options.buildConfiguration.each() { winBuildConf ->
         options.winVisualStudioVersion.each() { winVSVersion ->
@@ -52,7 +130,7 @@ def executeBuildWindows(Map options) {
                 zip archive: true, zipFile: BUILD_NAME
 
                 if (options.winTestingBuildName == winBuildName) {
-                    makeStash(includes: BUILD_NAME, name: BUILD_NAME)
+                    makeStash(includes: BUILD_NAME, name: "ToolWindows")
                 }
 
                 archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
@@ -114,31 +192,31 @@ def executePreBuild(Map options) {
         }
     }
 
-    if (!env.CHANGE_URL) {
-        if ("StreamingSDK") {
-            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
-        }
-
-        if (options.projectBranch) {
-            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-        } else {
-            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-        }
-
-        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-        options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
-        options.commitSHA = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-        options.commitShortSHA = options.commitSHA[0..6]
-
-        println "The last commit was written by ${options.commitAuthor}."
-        println "Commit message: ${options.commitMessage}"
-        println "Commit SHA: ${options.commitSHA}"
-        println "Commit shortSHA: ${options.commitShortSHA}"
-
-        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+    if ("StreamingSDK") {
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
     }
+
+    if (options.projectBranch) {
+        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+    } else {
+        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+    }
+
+    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+    options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
+    options.commitSHA = bat(script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    options.commitShortSHA = options.commitSHA[0..6]
+
+    println "The last commit was written by ${options.commitAuthor}."
+    println "Commit message: ${options.commitMessage}"
+    println "Commit SHA: ${options.commitSHA}"
+    println "Commit shortSHA: ${options.commitShortSHA}"
+
+    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+
+    options.testsList = ['']
 }
 
 
@@ -148,6 +226,8 @@ def call(String projectBranch = "",
     String winVisualStudioVersion = "2017,2019",
     String winTestingBuildName = "release_vs2019",
     Boolean enableNotifications = true,
+    String testsPackage = "",
+    String tests = "",
     String testerTag = "StreamingSDK"
     )
 {
@@ -176,6 +256,8 @@ def call(String projectBranch = "",
             winVisualStudioVersion = winVisualStudioVersion.split(',')
 
             println "Platforms: ${platforms}"
+            println "Tests: ${tests}"
+            println "Tests package: ${testsPackage}"
 
             println "Build configuration: ${buildConfiguration}"
             println "Win visual studio version: ${winVisualStudioVersion}"
@@ -184,6 +266,8 @@ def call(String projectBranch = "",
             options << [projectRepo: PROJECT_REPO,
                         projectBranch: projectBranch,
                         enableNotifications: enableNotifications,
+                        testsPackage:testsPackage,
+                        tests:tests,
                         PRJ_NAME: "StreamingSDK",
                         buildConfiguration: buildConfiguration,
                         winVisualStudioVersion: winVisualStudioVersion,
@@ -193,7 +277,8 @@ def call(String projectBranch = "",
                         platforms: platforms,
                         BUILD_TIMEOUT: 15,
                         BUILDER_TAG: "BuilderStreamingSDK",
-                        TESTER_TAG: testerTag
+                        TESTER_TAG: testerTag,
+                        testsPreCondition: this.&isIdleClient()
                         ]
         }
 

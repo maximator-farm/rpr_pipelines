@@ -71,6 +71,14 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                     continue
                 }
             }
+
+            // check that there is some condition which should be true before take node
+            if (options.containsKey("testsPreCondition")) {
+                while (!options["testsPreCondition"](options)) {
+                    sleep(60)
+                }
+            }
+
             node(labels) {
                 timeout(time: "${stageTimeout}", unit: 'MINUTES') {
                     ws("WS/${options.PRJ_NAME}_${stageName}") {

@@ -501,5 +501,10 @@ class utils {
             self.println(e.toString())
             self.println(e.getMessage())
         }
-    } 
+    }
+
+    @NonCPS
+    static Boolean isNodeIdle(String nodeName) {
+        return jenkins.model.Jenkins.instance.getNode(nodeName).getComputer().countIdle() > 0
+    }
 }
