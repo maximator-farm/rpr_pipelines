@@ -5,7 +5,7 @@ import groovy.transform.Field
 
 
 String getClientLabels(Map options) {
-    return "${options.osName} && ${options.TESTER_TAG}"
+    return "${options.osName} && ${options.TESTER_TAG} && ${options.CLIENT_TAG}"
 }
 
 
@@ -228,7 +228,7 @@ def call(String projectBranch = "",
     Boolean enableNotifications = true,
     String testsPackage = "",
     String tests = "",
-    String testerTag = "StreamingSDK"
+    String testerTag = "StreamingSDKServer"
     )
 {
 
@@ -278,6 +278,7 @@ def call(String projectBranch = "",
                         BUILD_TIMEOUT: 15,
                         BUILDER_TAG: "BuilderStreamingSDK",
                         TESTER_TAG: testerTag,
+                        CLIENT_TAG: "StreamingSDKClient",
                         testsPreCondition: this.&isIdleClient()
                         ]
         }
