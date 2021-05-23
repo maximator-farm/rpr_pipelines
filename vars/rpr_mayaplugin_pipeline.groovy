@@ -243,7 +243,7 @@ def executeTests(String osName, String asicName, Map options)
 
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
                 if (newPluginInstalled) {
-                    timeout(time: "12", unit: "MINUTES") {
+                    timeout(time: "20", unit: "MINUTES") {
                         buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
                         String cacheImgPath = "./Work/Results/Maya/cache_building.jpg"
                         if(!fileExists(cacheImgPath)){
