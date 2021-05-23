@@ -242,7 +242,7 @@ def executeTests(String osName, String asicName, Map options) {
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             archiveArtifacts artifacts: "${env.STAGE_NAME}_RIF_Trace/**/*.*", allowEmptyArchive: true
             if (options.sendToUMS) {
-                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log")
+                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
             }
             if (stashResults) {
                 dir('Work') {

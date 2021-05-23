@@ -188,8 +188,9 @@ abstract class UniverseManager {
      * @param filesPath Path to directory with files
      * @param pattern Pattern of target files
      * @param saveLog Save log about sending files to MINIO in Jenkins artifacts of current Jenkins build or not
+     * @param destDir Path to directory to save file to
      */
-    def sendToMINIO(Map options, String osName, String filesPath, String pattern, Boolean saveLog = true) {
+    def sendToMINIO(Map options, String osName, String filesPath, String pattern, Boolean saveLog = true, String destDir = "") {
         downloadJobsLauncher(osName, options)
 
         context.dir("jobs_launcher") {
@@ -201,17 +202,18 @@ abstract class UniverseManager {
                             "UMS_BUILD_ID_DEV=${options.buildIdDev}", "UMS_JOB_ID_DEV=${options.jobIdDev}",
                             "MINIO_ENDPOINT=" + context.MINIO_ENDPOINT, "MINIO_ACCESS_KEY=" + context.MINIO_ACCESS_KEY,
                             "MINIO_SECRET_KEY=" + context.MINIO_SECRET_KEY]) {
+                            destDir = destDir ? "\"${destDir}\"" : ""
                             switch(osName) {
                                 case "Windows":
                                     filesPath = filesPath.replace('/', '\\\\')
                                     context.bat """
-                                        send_to_minio.bat \"${filesPath}\" \"${pattern}\"
+                                        send_to_minio.bat \"${filesPath}\" \"${pattern}\" ${destDir}
                                     """
                                     break
                                 default:
                                     context.sh """
                                         chmod u+x send_to_minio.sh
-                                        ./send_to_minio.sh ${filesPath} \"${pattern}\"
+                                        ./send_to_minio.sh ${filesPath} \"${pattern}\" ${destDir}
                                     """
                             }
                         }
