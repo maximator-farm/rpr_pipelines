@@ -116,9 +116,9 @@ def call(Map blockOptions, Closure code) {
                     if (exception["githubNotification"]) {
                         GithubNotificator.updateStatus(options["stage"], title, exception["githubNotification"]["status"], 
                             options, exception["githubNotification"]["message"] ?: exception["problemMessage"])
-
-                        return
                     }
+
+                    return
                 }
             }
 
