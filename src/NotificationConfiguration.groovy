@@ -480,6 +480,12 @@ public class NotificationConfiguration {
 
     def static TEST_NOT_FOUND = "Test not found."
 
+    def static EXECUTE_UNIT_TESTS = "Executing unit tests."
+
+    def static UNIT_TESTS_PASSED = "Unit tests passed."
+
+    def static UNIT_TESTS_FAILED = "Unit tests failed."
+
     def static FAILED_TO_SAVE_RESULTS = "An error occurred while saving test results. Please contact support."
 
     def static BUILDING_REPORT = "Building test report."
@@ -499,8 +505,6 @@ public class NotificationConfiguration {
     def static LOST_CONNECTION_WITH_MACHINE = "Lost connection with machine. Please contact support."
 
     def static CAN_NOT_GET_TESTS_STATUS = "Can't get tests status."
-
-    def static EXECUTE_UNIT_TESTS = "Executing unit tests."
 
     def static INVALID_PLUGIN_SIZE = "Invalid plugin (size is less than 10Mb)."
 
