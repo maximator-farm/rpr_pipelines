@@ -1,4 +1,5 @@
 import groovy.transform.Field
+import java.util.concurrent.ConcurrentHashMap
 
 
 @Field final String PROJECT_REPO = "git@github.com:amfdev/StreamingSDK.git"
@@ -37,19 +38,36 @@ def prepareTool(String osName, Map options) {
 }
 
 
+def getServerIpAddress(String osName, Map options) {
+    switch(osName) {
+        case "Windows":
+            return bat(script: "echo %IP_ADDRESS%",returnStdout: true).split('\r\n')[2].trim()
+        case "OSX":
+            println("Unsupported OS")
+            break
+        default:
+            println("Unsupported OS")
+    }
+}
+
+
 def executeTestsClient(String osName, String asicName, Map options) {
     try {
-        node(getClientLabels(options)) {
-            timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
-                ws("WS/${options.PRJ_NAME}_${options.stageName}") {
-                    timeout(time: "5", unit: "MINUTES") {
-                        dir("StreamingSDK") {
-                            prepareTool(osName, options)
-                        }
-                    }
-                }
+        timeout(time: "5", unit: "MINUTES") {
+            dir("StreamingSDK") {
+                prepareTool(osName, options)
             }
         }
+
+        options["clientInfo"]["ready"] = true
+        println("[INFO] Client is ready to run tests")
+
+        while (!options["serverInfo"]["ready"]) {
+            sleep(30)
+        }
+
+        println("Client is synchronized with state of server. Start tests")
+        // run tests
     } catch (e) {
         println "[ERROR] Failed during tests on client"
         println "Exception: ${e.toString()}"
@@ -69,6 +87,19 @@ def executeTestsServer(String osName, String asicName, Map options) {
                 }
             }
         }
+
+        options["serverInfo"]["ipAddress"] = getServerIpAddress(osName, options)
+        println("[INFO] IPv4 address of server: ${options.serverInfo.ipAddress}")
+        
+        options["serverInfo"]["ready"] = true
+        println("[INFO] Server is ready to run tests")
+
+        while (!options["clientInfo"]["ready"]) {
+            sleep(30)
+        }
+
+        println("Server is synchronized with state of client. Start tests")
+        // run tests
     } catch (e) {
         println "[ERROR] Failed during tests on server"
         println "Exception: ${e.toString()}"
@@ -84,11 +115,22 @@ def executeTests(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
+        options["clientInfo"] = new ConcurrentHashMap()
+        options["serverInfo"] = new ConcurrentHashMap()
+
         println("[INFO] Start Client and Server processes for ${asicName}-${osName}")
         // create client and server threads and run them parallel
         Map threads = [:]
         println(1)
-        threads["client"] = { executeTestsClient(osName, asicName, options) }
+        threads["client"] = { 
+            node(getClientLabels(options)) {
+                timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
+                    ws("WS/${options.PRJ_NAME}_${options.stageName}") {
+                        executeTestsClient(osName, asicName, options)
+                    }
+                }
+            }
+        }
         threads["server"] = { executeTestsServer(osName, asicName, options) }
 
         parallel threads
