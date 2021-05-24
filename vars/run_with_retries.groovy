@@ -73,7 +73,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             }
 
             // check that there is some condition which should be true before take node
-            if (options.containsKey("testsPreCondition")) {
+            if (stageName == "Test" && options.containsKey("testsPreCondition")) {
                 while (!options["testsPreCondition"](options)) {
                     sleep(60)
                 }

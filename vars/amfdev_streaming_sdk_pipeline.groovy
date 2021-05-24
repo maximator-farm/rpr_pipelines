@@ -12,7 +12,7 @@ String getClientLabels(Map options) {
 Boolean isIdleClient(Map options) {
     def suitableNodes = nodesByLabel label: getClientLabels(options), offline: false
 
-    suitableNodes.each { node ->
+    for (node in suitableNodes) {
         if (utils.isNodeIdle(node)) {
             return true
         }
@@ -38,10 +38,10 @@ def prepareTool(String osName, Map options) {
 
 
 def executeTestsClient(String osName, String asicName, Map options) {
-    node(getClientLabels(options)) {
-        timeout(time: "${stageTimeout}", unit: "MINUTES") {
-            ws("WS/${options.PRJ_NAME}_${stageName}") {
-                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+    try {
+        node(getClientLabels(options)) {
+            timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
+                ws("WS/${options.PRJ_NAME}_${options.stageName}") {
                     timeout(time: "5", unit: "MINUTES") {
                         dir("StreamingSDK") {
                             prepareTool(osName, options)
@@ -50,17 +50,31 @@ def executeTestsClient(String osName, String asicName, Map options) {
                 }
             }
         }
+    } catch (e) {
+        println "[ERROR] Failed during tests on client"
+        println "Exception: ${e.toString()}"
+        println "Exception message: ${e.getMessage()}"
+        println "Exception cause: ${e.getCause()}"
+        println "Exception stack trace: ${e.getStackTrace()}"
     }
 }
 
 
 def executeTestsServer(String osName, String asicName, Map options) {
-    withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
-        timeout(time: "5", unit: "MINUTES") {
-            dir("StreamingSDK") {
-                prepareTool(osName, options)
+    try {
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
+            timeout(time: "5", unit: "MINUTES") {
+                dir("StreamingSDK") {
+                    prepareTool(osName, options)
+                }
             }
         }
+    } catch (e) {
+        println "[ERROR] Failed during tests on server"
+        println "Exception: ${e.toString()}"
+        println "Exception message: ${e.getMessage()}"
+        println "Exception cause: ${e.getCause()}"
+        println "Exception stack trace: ${e.getStackTrace()}"
     }
 }
 
@@ -70,10 +84,12 @@ def executeTests(String osName, String asicName, Map options) {
     Boolean stashResults = true
 
     try {
+        println("[INFO] Start Client and Server processes for ${asicName}-${osName}")
         // create client and server threads and run them parallel
         Map threads = [:]
-        thread["client"] = { executeTestsClient(osName, asicName, options) }
-        thread["server"] = { executeTestsServer(osName, asicName, options) }
+        println(1)
+        threads["client"] = { executeTestsClient(osName, asicName, options) }
+        threads["server"] = { executeTestsServer(osName, asicName, options) }
 
         parallel threads
     } catch (e) {
@@ -130,7 +146,8 @@ def executeBuildWindows(Map options) {
                 zip archive: true, zipFile: BUILD_NAME
 
                 if (options.winTestingBuildName == winBuildName) {
-                    makeStash(includes: BUILD_NAME, name: "ToolWindows")
+                    utils.moveFiles(this, "Windows", BUILD_NAME, "${options.winTestingBuildName}.zip")
+                    makeStash(includes: "${options.winTestingBuildName}.zip", name: "ToolWindows")
                 }
 
                 archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
@@ -231,6 +248,8 @@ def call(String projectBranch = "",
     String testerTag = "StreamingSDKServer"
     )
 {
+    
+    platforms = "Windows:AMD_RX5700XT"
 
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
@@ -279,11 +298,11 @@ def call(String projectBranch = "",
                         BUILDER_TAG: "BuilderStreamingSDK",
                         TESTER_TAG: testerTag,
                         CLIENT_TAG: "StreamingSDKClient",
-                        testsPreCondition: this.&isIdleClient()
+                        testsPreCondition: this.&isIdleClient
                         ]
         }
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString())
