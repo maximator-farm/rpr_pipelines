@@ -104,14 +104,13 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
 
     println "Set timeout to ${testTimeout}"
     timeout(time: testTimeout, unit: 'MINUTES') {
-        UniverseManager.executeTests(osName, asicName, options) {
+        dir("scripts") {
             switch (osName) {
                 case "Windows":
-                    dir('scripts') {
-                        bat """
-                            run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" ${options.testCaseRetries} ${options.serverInfo.gpuName} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
-                        """
-                    }
+                    bat """
+                        run.bat \"${testsPackageName}\" \"testsNames\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" ${options.testCaseRetries} ${options.serverInfo.gpuName} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    """
+
                     break
 
                 case "OSX":
@@ -126,7 +125,7 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
 }
 
 
-def saveResults(Map options, String executionType, Boolean stashResults, Boolean executeTestsFinished) {
+def saveResults(String osName, Map options, String executionType, Boolean stashResults, Boolean executeTestsFinished) {
     try {
         dir(options.stageName) {
             utils.moveFiles(this, osName, "../*.log", ".")
@@ -163,7 +162,7 @@ def saveResults(Map options, String executionType, Boolean stashResults, Boolean
                         }
                     } else {
                         println "Stashing logs to : ${options.testResultsName}_client"
-                        makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_client", allowEmpty: true)
+                        makeStash(includes: '**/*_client.log', name: "${options.testResultsName}_client", allowEmpty: true)
                     }
                 }
             }
@@ -183,6 +182,8 @@ def saveResults(Map options, String executionType, Boolean stashResults, Boolean
 
 
 def executeTestsClient(String osName, String asicName, Map options) {
+    Boolean stashResults = true
+
     try {
 
         timeout(time: "10", unit: "MINUTES") {
@@ -210,24 +211,26 @@ def executeTestsClient(String osName, String asicName, Map options) {
         options["clientInfo"]["executeTestsFinished"] = true
 
     } catch (e) {
-        println "[ERROR] Failed during tests on client"
-        println "Exception: ${e.toString()}"
-        println "Exception message: ${e.getMessage()}"
-        println "Exception cause: ${e.getCause()}"
-        println "Exception stack trace: ${e.getStackTrace()}"
-    } finally {
         if (options.currentTry < options.nodeReallocateTries - 1) {
             stashResults = false
         } else {
             currentBuild.result = "FAILURE"
         }
 
-        saveResults(options, "client", stashResults, options["clientInfo"]["executeTestsFinished"])
+        println "[ERROR] Failed during tests on client"
+        println "Exception: ${e.toString()}"
+        println "Exception message: ${e.getMessage()}"
+        println "Exception cause: ${e.getCause()}"
+        println "Exception stack trace: ${e.getStackTrace()}"
+    } finally {
+        saveResults(osName, options, "client", stashResults, options["clientInfo"]["executeTestsFinished"])
     }
 }
 
 
 def executeTestsServer(String osName, String asicName, Map options) {
+    Boolean stashResults = true
+
     try {
 
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
@@ -267,19 +270,19 @@ def executeTestsServer(String osName, String asicName, Map options) {
         options["serverInfo"]["executeTestsFinished"] = true
 
     } catch (e) {
-        println "[ERROR] Failed during tests on server"
-        println "Exception: ${e.toString()}"
-        println "Exception message: ${e.getMessage()}"
-        println "Exception cause: ${e.getCause()}"
-        println "Exception stack trace: ${e.getStackTrace()}"
-    } finally {
         if (options.currentTry < options.nodeReallocateTries - 1) {
             stashResults = false
         } else {
             currentBuild.result = "FAILURE"
         }
 
-        saveResults(options, "server", stashResults, options["serverInfo"]["executeTestsFinished"])
+        println "[ERROR] Failed during tests on server"
+        println "Exception: ${e.toString()}"
+        println "Exception message: ${e.getMessage()}"
+        println "Exception cause: ${e.getCause()}"
+        println "Exception stack trace: ${e.getStackTrace()}"
+    } finally {
+        saveResults(osName, options, "server", stashResults, options["serverInfo"]["executeTestsFinished"])
     }
 }
 
@@ -295,8 +298,8 @@ def executeTests(String osName, String asicName, Map options) {
         println("[INFO] Start Client and Server processes for ${asicName}-${osName}")
         // create client and server threads and run them parallel
         Map threads = [:]
-        println(1)
-        threads["client"] = { 
+
+        threads["${options.stageName}-client"] = { 
             node(getClientLabels(options)) {
                 timeout(time: options.TEST_TIMEOUT, unit: "MINUTES") {
                     ws("WS/${options.PRJ_NAME}_Test") {
@@ -305,7 +308,8 @@ def executeTests(String osName, String asicName, Map options) {
                 }
             }
         }
-        threads["server"] = { executeTestsServer(osName, asicName, options) }
+
+        threads["${options.stageName}-server"] = { executeTestsServer(osName, asicName, options) }
 
         parallel threads
     } catch (e) {
@@ -775,6 +779,7 @@ def call(String projectBranch = "",
                         testsPackage:testsPackage,
                         tests:tests,
                         PRJ_NAME: "StreamingSDK",
+                        splitTestsExecution: true,
                         buildConfiguration: buildConfiguration,
                         winVisualStudioVersion: winVisualStudioVersion,
                         winTestingBuildName: winTestingBuildName,
@@ -793,7 +798,7 @@ def call(String projectBranch = "",
                         ]
         }
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, null, options)
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
     } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString())
