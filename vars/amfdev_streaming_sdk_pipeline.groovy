@@ -162,7 +162,8 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                         }
                     } else {
                         println "Stashing logs to : ${options.testResultsName}_server"
-                        makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_server", allowEmpty: true)
+                        makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_server_logs", allowEmpty: true)
+                        makeStash(includes: '**/*.json', name: "${options.testResultsName}_server", allowEmpty: true)
                     }
                 }
             }
@@ -573,14 +574,17 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 unstashCrashInfo(options["nodeRetry"])
                 testResultList.each {
                     dir("${it}".replace("testResult-", "")) {
+                        Boolean groupLost = false
+
                         try {
-                            makeUnstash(name: "${it}_server")
+                            makeUnstash(name: "${it}_server_logs")
                         } catch (e) {
                             println """
-                                [ERROR] Failed to unstash ${it}_server
+                                [ERROR] Failed to unstash ${it}_server_logs
                                 ${e.toString()}
                             """
-                            lostStashes << ("'${it}'".replace("testResult-", ""))
+
+                            groupLost = true
                         }
 
                         try {
@@ -590,9 +594,38 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                                 [ERROR] Failed to unstash ${it}_client
                                 ${e.toString()}
                             """
+
+                            groupLost = true
+                        }
+
+                        if (groupLost) {
+                            lostStashes << ("'${it}'".replace("testResult-", ""))
                         }
                     }
                 }
+            }
+
+            dir("serverTestResults") {
+                testResultList.each {
+                    dir("${it}".replace("testResult-", "")) {
+                        try {
+                            makeUnstash(name: "${it}_server")
+                        } catch (e) {
+                            println """
+                                [ERROR] Failed to unstash ${it}_server
+                                ${e.toString()}
+                            """
+                        }
+                    }
+                }
+            }
+
+            try {
+                dir ("scripts") {
+                    python3("unite_case_results --target_dir \"..\\summaryTestResults\" --source_dir \"..\\serverTestResults\"")
+                }
+            } catch (e) {
+                println "[ERROR] Can't unite server and client test results"
             }
 
             try {
@@ -788,6 +821,7 @@ def call(String projectBranch = "",
                         platforms: platforms,
                         clientTag: clientTag,
                         BUILD_TIMEOUT: 15,
+                        TEST_TIMEOUT: 60,
                         ADDITIONAL_XML_TIMEOUT: 15,
                         BUILDER_TAG: "BuilderStreamingSDK",
                         TESTER_TAG: testerTag,
