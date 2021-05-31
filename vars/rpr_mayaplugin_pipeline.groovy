@@ -554,6 +554,10 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
+    if (env.BRANCH_NAME.contains("PR-208")) {
+        options.toolVersion = "2022"
+    }
+
     // manual job with prebuilt plugin
     if (options.isPreBuilt) {
         println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
