@@ -108,7 +108,7 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
             switch (osName) {
                 case "Windows":
                     bat """
-                        run.bat \"${testsPackageName}\" \"testsNames\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" ${options.testCaseRetries} ${options.serverInfo.gpuName} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                        run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                     """
 
                     break
@@ -139,7 +139,7 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
             dir("Work") {
                 if (fileExists("Results/StreamingSDK/session_report.json")) {
 
-                    if (executionType == "server") {
+                    if (executionType == "client") {
                         def sessionReport = readJSON file: "Results/StreamingSDK/session_report.json"
 
                         if (sessionReport.summary.error > 0) {
@@ -150,8 +150,8 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                             GithubNotificator.updateStatus("Test", options['stageName'], "success", options, NotificationConfiguration.ALL_TESTS_PASSED, "${BUILD_URL}")
                         }
 
-                        println "Stashing all test results to : ${options.testResultsName}_server"
-                        makeStash(includes: '**/*', name: "${options.testResultsName}_server", allowEmpty: true)
+                        println "Stashing all test results to : ${options.testResultsName}_client"
+                        makeStash(includes: '**/*', name: "${options.testResultsName}_client", allowEmpty: true)
                         // reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
                             if (sessionReport.summary.total != sessionReport.summary.skipped) {
@@ -161,8 +161,8 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                             }
                         }
                     } else {
-                        println "Stashing logs to : ${options.testResultsName}_client"
-                        makeStash(includes: '**/*_client.log', name: "${options.testResultsName}_client", allowEmpty: true)
+                        println "Stashing logs to : ${options.testResultsName}_server"
+                        makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_server", allowEmpty: true)
                     }
                 }
             }
