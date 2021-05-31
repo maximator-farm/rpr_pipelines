@@ -622,7 +622,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             try {
                 dir ("scripts") {
-                    python3("unite_case_results --target_dir \"..\\summaryTestResults\" --source_dir \"..\\serverTestResults\"")
+                    python3("unite_case_results.py --target_dir \"..\\summaryTestResults\" --source_dir \"..\\serverTestResults\"")
                 }
             } catch (e) {
                 println "[ERROR] Can't unite server and client test results"
