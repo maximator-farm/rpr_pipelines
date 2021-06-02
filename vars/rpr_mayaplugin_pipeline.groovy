@@ -554,7 +554,7 @@ def executeBuild(String osName, Map options)
 
 def executePreBuild(Map options)
 {
-    if (env.BRANCH_NAME.contains("PR-208")) {
+    if (env.BRANCH_NAME && env.BRANCH_NAME.contains("PR-208")) {
         options.toolVersion = "2022"
     }
 
