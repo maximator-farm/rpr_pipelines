@@ -309,7 +309,7 @@ def makeDeploy(Map options, String engine = "") {
     if (executeDeploy && executeDeployStage) {
         String stageName = engine ? "Deploy-${options.enginesNames[options.engines.indexOf(engine)]}" : "Deploy"
         stage(stageName) {
-            def reportBuilderLabels = "Windows && ReportBuilder"
+            def reportBuilderLabels = "Windows && Tester"
 
             options["stage"] = "Deploy"
             def retringFunction = { nodesList, currentTry ->
@@ -321,7 +321,7 @@ def makeDeploy(Map options, String engine = "") {
                 println("[INFO] Deploy stage finished without unexpected exception. Clean workspace")
                 cleanWS("Windows")
             }
-            run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options, [], 2)
+            run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options, [], 3)
         }
     }
 }
