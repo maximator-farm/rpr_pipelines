@@ -383,20 +383,33 @@ def executeTests(String osName, String asicName, Map options) {
 }
 
 
-def executeBuildWindows(Map options) {
+def executeBuildWindows(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-Windows.log")
         
         withEnv(["PATH=c:\\python39\\;c:\\python39\\scripts\\;${PATH}"]) {
-            bat """
-                set HDUSD_LIBS_DIR=..\\libs
-                python --version >> ..\\${STAGE_NAME}.log  2>&1
-                python tools\\generate_mx_classes.py >> ..\\${STAGE_NAME}.log  2>&1
-                python tools\\create_zip_addon.py >> ..\\${STAGE_NAME}.log  2>&1
-            """
+            if (options.rebuildDeps) {
+                bat """
+                    if exist ..\\bin rmdir /Q /S ..\\bin
+                    if exist ..\\libs rmdir /Q /S ..\\libs
+                    python --version >> ..\\${STAGE_NAME}.log  2>&1
+                    python -m pip install PySide2 >> ..\\${STAGE_NAME}.log  2>&1
+                    python -m pip install PyOpenGL >> ..\\${STAGE_NAME}.log  2>&1
+                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
+                    call python tools\\build.py -all -bin-dir ..\\bin -G "Visual Studio 15 2017 Win64" >> ..\\${STAGE_NAME}.log  2>&1
+                """
+
+                uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+            } else {
+                bat """
+                    python --version >> ..\\${STAGE_NAME}.log  2>&1
+                    call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat" amd64 >> ..\\${STAGE_NAME}.log  2>&1
+                    python tools\\build.py -libs -mx-classes -addon -bin-dir ..\\bin -G "Visual Studio 15 2017 Win64" >> ..\\${STAGE_NAME}.log  2>&1
+                """
+            }
         }
 
-        dir("build") {
+        dir("install") {
             bat """
                 rename hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_Windows.zip
             """
@@ -424,7 +437,7 @@ def executeBuildWindows(Map options) {
 }
 
 
-def executeBuildOSX(Map options) {
+def executeBuildOSX(String osName, Map options) {
 }
 
 
@@ -432,14 +445,24 @@ def executeBuildLinux(String osName, Map options) {
     dir('BlenderUSDHydraAddon') {
         GithubNotificator.updateStatus("Build", "${osName}", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/Build-${osName}.log")
         
-        sh """
-            export HDUSD_LIBS_DIR=../libs
-            python3.9 --version >> ../${STAGE_NAME}.log  2>&1
-            python3.9 tools/generate_mx_classes.py >> ../${STAGE_NAME}.log  2>&1
-            python3.9 tools/create_zip_addon.py >> ../${STAGE_NAME}.log  2>&1
-        """
+        if (options.rebuildDeps) {
+            sh """
+                rm -rf ../bin
+                rm -rf ../libs
+                export OS=
+                python --version >> ../${STAGE_NAME}.log  2>&1
+                python tools/build.py -all -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
+            """
+            uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+        } else {
+           sh """
+                export OS=
+                python --version >> ../${STAGE_NAME}.log  2>&1
+                python tools/build.py -libs -mx-classes -addon -bin-dir ../bin >> ../${STAGE_NAME}.log  2>&1
+            """
+        }
 
-        dir("build") {
+        dir("install") {
             sh """
                 mv hdusd*.zip BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip
             """
@@ -475,7 +498,10 @@ def executeBuildLinux(String osName, Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
-        downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/libs/*", "libs")
+
+        if (!options.rebuildDeps) {
+            downloadFiles("/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin/*", "bin")
+        }
 
         dir("BlenderUSDHydraAddon") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
@@ -488,7 +514,7 @@ def executeBuild(String osName, Map options) {
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
                 case "Windows":
-                    executeBuildWindows(options)
+                    executeBuildWindows(osName, options)
                     break
                 case "OSX":
                     println("Unsupported OS")
@@ -940,6 +966,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
     String projectBranch = "",
     String testsBranch = "master",
     String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800;Ubuntu20:AMD_RadeonVII',
+    Boolean rebuildDeps = false,
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
@@ -1050,6 +1077,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         PRJ_NAME:"BlenderUSDHydraPlugin",
                         PRJ_ROOT:"rpr-plugins",
                         incrementVersion:incrementVersion,
+                        rebuildDeps:rebuildDeps,
                         testsPackage:testsPackage,
                         tests:tests,
                         toolVersion:toolVersion,
