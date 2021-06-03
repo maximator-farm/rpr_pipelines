@@ -309,7 +309,13 @@ def makeDeploy(Map options, String engine = "") {
     if (executeDeploy && executeDeployStage) {
         String stageName = engine ? "Deploy-${options.enginesNames[options.engines.indexOf(engine)]}" : "Deploy"
         stage(stageName) {
-            def reportBuilderLabels = "Windows && Tester"
+            def reportBuilderLabels = ""
+
+            if (options.PRJ_NAME == "RadeonProImageProcessor" || options.PRJ_NAME == "RadeonML") {
+                reportBuilderLabels = "Windows && ReportBuilder"
+            } else {
+                reportBuilderLabels = "Windows && Tester"
+            }
 
             options["stage"] = "Deploy"
             def retringFunction = { nodesList, currentTry ->
