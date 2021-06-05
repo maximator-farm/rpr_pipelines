@@ -56,30 +56,36 @@ def getServerIpAddress(String osName, Map options) {
 }
 
 
-def getGPUName(String osName) {
+def getGPUName() {
     try {
-        String renderDevice = ""
+        String renderDevice
 
         dir("jobs_launcher") {
             dir("core") {
-                switch(osName) {
-                    case "Windows":
-                        renderDevice = bat(
-                            script: "set PATH=c:\\python39\\;c:\\python39\\scripts\\;%PATH% & python -c \"from system_info import get_gpu; print(get_gpu())\"", 
-                            returnStdout: true
-                        ).split('\r\n')[2].trim()
-                        break
-                    default:
-                        renderDevice = sh(
-                            script: "python3.9 -c \"from system_info import get_gpu; print(get_gpu())\"", 
-                            returnStdout: true
-                        )
-                        break
-                }
+                renderDevice = python3("-c \"from system_info import get_gpu; print(get_gpu())\"")
             }
         }
 
         return renderDevice
+    } catch (e) {
+        println("[ERROR] Failed to get GPU name")
+        throw e
+    }
+}
+
+
+def getOSName() {
+    try {
+        String machineInfoRaw,  machineInfoJson
+
+        dir("jobs_launcher") {
+            dir("core") {
+                machineInfoRaw = python3("-c \"from system_info import get_machine_info; print(get_machine_info())\"")
+            }
+        }
+
+        machineInfoJson = utils.parseJson(this, machineInfoRaw.replaceAll("\'", "\""))
+        return machineInfoJson["os"]
     } catch (e) {
         println("[ERROR] Failed to get GPU name")
         throw e
@@ -108,7 +114,7 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
             switch (osName) {
                 case "Windows":
                     bat """
-                        run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                        run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                     """
 
                     break
@@ -252,8 +258,11 @@ def executeTestsServer(String osName, String asicName, Map options) {
         options["serverInfo"]["ipAddress"] = getServerIpAddress(osName, options)
         println("[INFO] IPv4 address of server: ${options.serverInfo.ipAddress}")
 
-        options["serverInfo"]["gpuName"] = getGPUName(osName)
+        options["serverInfo"]["gpuName"] = getGPUName()
         println("[INFO] Name of GPU on server machine: ${options.serverInfo.gpuName}")
+		
+        options["serverInfo"]["osName"] = getOSName()
+        println("[INFO] Name of OS on server machine: ${options.serverInfo.osName}")
         
         options["serverInfo"]["ready"] = true
         println("[INFO] Server is ready to run tests")
