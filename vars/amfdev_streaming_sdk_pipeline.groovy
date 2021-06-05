@@ -405,6 +405,8 @@ def executeBuild(String osName, Map options) {
             }
         }
 
+        utils.removeFile(this, osName, "*.log")
+
         outputEnvironmentInfo(osName)
 
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
