@@ -94,8 +94,29 @@ def getOSName() {
 }
 
 
+def closeGames(String osName, Map options) {
+    try {
+        switch(osName) {
+            case "Windows":
+                bat """
+                    taskkill /f /im \"borderlands3.exe\"
+                """
+
+                break
+            case "OSX":
+                println("Unsupported OS")
+                break
+            default:
+                println("Unsupported OS")
+        }
+    } catch (e) {
+        self.println("[ERROR] Failed to close games")
+        self.println(e)
+    }
+}
+
+
 def executeTestCommand(String osName, String asicName, Map options, String executionType) {
-    def testTimeout = options.timeouts["${options.tests}"]
     String testsNames = options.tests
     String testsPackageName = options.testsPackage
     if (options.testsPackage != "none" && !options.isPackageSplitted) {
@@ -109,24 +130,21 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         }
     }
 
-    println "Set timeout to ${testTimeout}"
-    timeout(time: testTimeout, unit: 'MINUTES') {
-        dir("scripts") {
-            switch (osName) {
-                case "Windows":
-                    bat """
-                        run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
-                    """
+    dir("scripts") {
+        switch (osName) {
+            case "Windows":
+                bat """
+                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                """
 
-                    break
+                break
 
-                case "OSX":
-                    println "OSX isn't supported"
-                    break
+            case "OSX":
+                println "OSX isn't supported"
+                break
 
-                default:
-                    println "Linux isn't supported"
-            }
+            default:
+                println "Linux isn't supported"
         }
     }
 }
@@ -314,6 +332,8 @@ def executeTestsServer(String osName, String asicName, Map options) {
         options["serverInfo"]["finished"] = true
 
         saveResults(osName, options, "server", stashResults, options["serverInfo"]["executeTestsFinished"])
+
+        closeGames(osName, options)
     }
 }
 
@@ -503,7 +523,6 @@ def executePreBuild(Map options) {
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
     def tests = []
-    options.timeouts = [:]
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir("jobs_test_streaming_sdk") {
@@ -561,10 +580,6 @@ def executePreBuild(Map options) {
                     }
                 }
                 options.tests = utils.uniteSuites(this, "jobs/weights.json", tests)
-                options.tests.each {
-                    def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                    options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
-                }
                 modifiedPackageName = modifiedPackageName.replace('~,', '~')
 
                 if (options.isPackageSplitted) {
@@ -574,7 +589,6 @@ def executePreBuild(Map options) {
                     // check that package is splitted to parts or not
                     if (packageInfo["groups"] instanceof Map) {
                         tests << "${modifiedPackageName}"
-                        options.timeouts[options.testsPackage] = options.NON_SPLITTED_PACKAGE_TIMEOUT + options.ADDITIONAL_XML_TIMEOUT
                     } else {
                         // add group stub for each part of package
                         for (int i = 0; i < packageInfo["groups"].size(); i++) {
@@ -584,20 +598,13 @@ def executePreBuild(Map options) {
                     }
                 }
 
-                options.tests = tests
-            } else {
-                options.tests = utils.uniteSuites(this, "jobs/weights.json", options.tests.split(" ") as List)
-                options.tests.each {
-                    def xml_timeout = utils.getTimeoutFromXML(this, "${it}", "simpleRender.py", options.ADDITIONAL_XML_TIMEOUT)
-                    options.timeouts["${it}"] = (xml_timeout > 0) ? xml_timeout : options.TEST_TIMEOUT
-                }
+                options.testsList = [""]
+                options.tests = tests.join(" ")
             }
         }
         if (env.BRANCH_NAME && options.githubNotificator) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
-        options.testsList = options.tests
-        println "timeouts: ${options.timeouts}"
     }
 }
 
@@ -861,7 +868,7 @@ def call(String projectBranch = "",
                         platforms: platforms,
                         clientTag: clientTag,
                         BUILD_TIMEOUT: 15,
-                        TEST_TIMEOUT: 60,
+                        TEST_TIMEOUT: 210,
                         ADDITIONAL_XML_TIMEOUT: 15,
                         BUILDER_TAG: "BuilderStreamingSDK",
                         TESTER_TAG: testerTag,
