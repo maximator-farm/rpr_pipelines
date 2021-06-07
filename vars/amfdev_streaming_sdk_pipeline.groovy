@@ -209,6 +209,10 @@ def executeTestsClient(String osName, String asicName, Map options) {
         println("[INFO] Client is ready to run tests")
 
         while (!options["serverInfo"]["ready"]) {
+            if (options["serverInfo"]["failed"]) {
+                throw new Exception("Server was failed")
+            }
+
             sleep(30)
         }
 
@@ -219,6 +223,10 @@ def executeTestsClient(String osName, String asicName, Map options) {
         options["clientInfo"]["executeTestsFinished"] = true
 
     } catch (e) {
+        options["clientInfo"]["ready"] = false
+        options["clientInfo"]["failed"] = true
+        options["clientInfo"]["exception"] = e
+
         if (options.currentTry < options.nodeReallocateTries - 1) {
             stashResults = false
         } else {
@@ -231,6 +239,8 @@ def executeTestsClient(String osName, String asicName, Map options) {
         println "Exception cause: ${e.getCause()}"
         println "Exception stack trace: ${e.getStackTrace()}"
     } finally {
+        options["clientInfo"]["finished"] = true
+
         saveResults(osName, options, "client", stashResults, options["clientInfo"]["executeTestsFinished"])
     }
 }
@@ -269,6 +279,10 @@ def executeTestsServer(String osName, String asicName, Map options) {
         println("[INFO] Server is ready to run tests")
 
         while (!options["clientInfo"]["ready"]) {
+            if (options["clientInfo"]["failed"]) {
+                throw new Exception("Client was failed")
+            }
+
             sleep(30)
         }
 
@@ -281,6 +295,10 @@ def executeTestsServer(String osName, String asicName, Map options) {
         options["serverInfo"]["executeTestsFinished"] = true
 
     } catch (e) {
+        options["serverInfo"]["ready"] = false
+        options["serverInfo"]["failed"] = true
+        options["serverInfo"]["exception"] = e
+
         if (options.currentTry < options.nodeReallocateTries - 1) {
             stashResults = false
         } else {
@@ -293,6 +311,8 @@ def executeTestsServer(String osName, String asicName, Map options) {
         println "Exception cause: ${e.getCause()}"
         println "Exception stack trace: ${e.getStackTrace()}"
     } finally {
+        options["serverInfo"]["finished"] = true
+
         saveResults(osName, options, "server", stashResults, options["serverInfo"]["executeTestsFinished"])
     }
 }
@@ -323,6 +343,14 @@ def executeTests(String osName, String asicName, Map options) {
         threads["${options.stageName}-server"] = { executeTestsServer(osName, asicName, options) }
 
         parallel threads
+
+        if (options["serverInfo"]["failed"]) {
+            def exception = options["serverInfo"]["exception"]
+            throw new ExpectedExceptionWrapper("Server side tests got an error: ${exception.getMessage()}", exception)
+        } else if (options["clientInfo"]["failed"]) {
+            def exception = options["clientInfo"]["exception"]
+            throw new ExpectedExceptionWrapper("Client side tests got an error: ${exception.getMessage()}", exception)
+        }
     } catch (e) {
         if (e instanceof ExpectedExceptionWrapper) {
             GithubNotificator.updateStatus("Test", options['stageName'], "failure", options, "${e.getMessage()}", "${BUILD_URL}")
