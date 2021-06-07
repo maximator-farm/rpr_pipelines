@@ -213,7 +213,7 @@ def executeTestsClient(String osName, String asicName, Map options) {
                 throw new Exception("Server was failed")
             }
 
-            sleep(30)
+            sleep(5)
         }
 
         println("Client is synchronized with state of server. Start tests")
@@ -283,7 +283,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
                 throw new Exception("Client was failed")
             }
 
-            sleep(30)
+            sleep(5)
         }
 
         println("Server is synchronized with state of client. Start tests")
