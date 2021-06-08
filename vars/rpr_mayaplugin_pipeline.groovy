@@ -208,6 +208,22 @@ def executeTestCommand(String osName, String asicName, Map options)
     }
 }
 
+def prepareTraceDir(String osName) {
+    switch(osName) {
+        case 'Windows':
+            println("Not implemented yet")
+            break
+        case 'OSX':
+            dir("/Users/user/JN") {
+                utils.removeFile(this, osName, "maya_rpr_sdk_trace")
+                utils.makeDir(this, osName, "maya_rpr_sdk_trace")
+            }
+            break
+        default:
+            println("[WARNING] ${osName} is not supported")
+    }
+}
+
 def collectTrace(String osName) {
     switch(osName) {
         case 'Windows':
@@ -236,6 +252,8 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
     
     try {
+        prepareTraceDir(osName)
+
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)

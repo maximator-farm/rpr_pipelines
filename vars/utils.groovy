@@ -342,6 +342,27 @@ class utils {
         }
     }
 
+    static def makeDir(Object self, String osName, String fileName) {
+        try {
+            switch(osName) {
+                case 'Windows':
+                    self.bat """
+                        mkdir \"${fileName}\"
+                    """
+                    break
+                // OSX & Ubuntu18
+                default:
+                    self.sh """
+                        mkdir \"${fileName}\"
+                    """
+            }
+        } catch(Exception e) {
+            self.println("[ERROR] Can't remove file")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    }
+
     @NonCPS
     static def parseJson(Object self, String jsonString) {
         try {
