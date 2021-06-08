@@ -195,6 +195,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 case 'OSX':
                     dir('scripts') {
                         sh """
+                            RPR_MAYA_TRACE_PATH=/Users/user/JN/maya_rpr_sdk_trace
                             ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\" 2>&1
                         """
                     }
@@ -203,6 +204,21 @@ def executeTestCommand(String osName, String asicName, Map options)
                     println("[WARNING] ${osName} is not supported")
             }
         }
+    }
+}
+
+def collectTrace() {
+    switch(osName) {
+        case 'Windows':
+            println("Not implemented yet")
+            break
+        case 'OSX':
+            dir("/Users/user/JN") {
+                zip archive: true, dir: "maya_rpr_sdk_trace", zipFile: "trace.zip", archive: true
+            }
+            break
+        default:
+            println("[WARNING] ${osName} is not supported")
     }
 }
 
@@ -365,6 +381,9 @@ def executeTests(String osName, String asicName, Map options)
             if (options.sendToUMS) {
                 options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
             }
+
+            collectTrace()
+
             if (stashResults) {
                 dir('Work') {
                     if (fileExists("Results/Maya/session_report.json")) {
