@@ -77,7 +77,7 @@ def getGPUName() {
 def getOSName() {
     try {
         String machineInfoRaw
-		def machineInfoJson
+        def machineInfoJson
 
         dir("jobs_launcher") {
             dir("core") {
@@ -289,7 +289,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
 
         options["serverInfo"]["gpuName"] = getGPUName()
         println("[INFO] Name of GPU on server machine: ${options.serverInfo.gpuName}")
-		
+        
         options["serverInfo"]["osName"] = getOSName()
         println("[INFO] Name of OS on server machine: ${options.serverInfo.osName}")
         
@@ -696,7 +696,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         }
 
                         bat """
-                            build_reports.bat ..\\summaryTestResults "USDViewer" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
+                            build_reports.bat ..\\summaryTestResults "StreamingSDK" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                         """                      
                     }
                 }
@@ -859,7 +859,7 @@ def call(String projectBranch = "",
                         testsPackage:testsPackage,
                         tests:tests,
                         PRJ_NAME: "StreamingSDK",
-                        splitTestsExecution: true,
+                        splitTestsExecution: false,
                         buildConfiguration: buildConfiguration,
                         winVisualStudioVersion: winVisualStudioVersion,
                         winTestingBuildName: winTestingBuildName,
@@ -868,7 +868,8 @@ def call(String projectBranch = "",
                         platforms: platforms,
                         clientTag: clientTag,
                         BUILD_TIMEOUT: 15,
-                        TEST_TIMEOUT: 210,
+                        TEST_TIMEOUT: 300,
+                        DEPLOY_TIMEOUT:30,
                         ADDITIONAL_XML_TIMEOUT: 15,
                         BUILDER_TAG: "BuilderStreamingSDK",
                         TESTER_TAG: testerTag,
