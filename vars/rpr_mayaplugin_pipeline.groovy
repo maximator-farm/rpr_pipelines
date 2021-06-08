@@ -196,7 +196,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 case 'OSX':
                     dir('scripts') {
                         sh """
-                            RPR_MAYA_TRACE_PATH=/Users/user/JN/maya_rpr_sdk_trace
+                            export RPR_MAYA_TRACE_PATH=/Users/user/JN/maya_rpr_sdk_trace
                             ./run.sh ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\" 2>&1
                         """
                     }
@@ -208,7 +208,7 @@ def executeTestCommand(String osName, String asicName, Map options)
     }
 }
 
-def collectTrace() {
+def collectTrace(String osName) {
     switch(osName) {
         case 'Windows':
             println("Not implemented yet")
@@ -383,7 +383,7 @@ def executeTests(String osName, String asicName, Map options)
                 options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
             }
 
-            collectTrace()
+            collectTrace(osName)
 
             if (stashResults) {
                 dir('Work') {
