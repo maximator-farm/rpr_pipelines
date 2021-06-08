@@ -188,6 +188,7 @@ def executeTestCommand(String osName, String asicName, Map options)
                 case 'Windows':
                     dir('scripts') {
                         bat """
+                            set RPR_MAYA_TRACE_PATH=C:\\JN\\maya_rpr_sdk_trace
                             run.bat ${options.renderDevice} \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.SPU} ${options.iter} ${options.theshold} ${options.toolVersion} ${options.engine} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
                         """
                     }
@@ -214,7 +215,7 @@ def collectTrace() {
             break
         case 'OSX':
             dir("/Users/user/JN") {
-                zip archive: true, dir: "maya_rpr_sdk_trace", zipFile: "trace.zip", archive: true
+                zip archive: true, dir: "maya_rpr_sdk_trace", zipFile: "trace.zip"
             }
             break
         default:
