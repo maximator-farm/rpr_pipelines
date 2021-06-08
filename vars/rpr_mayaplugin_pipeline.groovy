@@ -231,7 +231,7 @@ def collectTrace(String osName) {
             break
         case 'OSX':
             dir("/Users/user/JN") {
-                zip archive: true, dir: "maya_rpr_sdk_trace", zipFile: "trace.zip"
+                zip archive: true, dir: "maya_rpr_sdk_trace", zipFile: "trace.zip", overwrite: true
             }
             break
         default:
