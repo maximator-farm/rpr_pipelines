@@ -134,7 +134,7 @@ def executeUnitTests(String osName, String asicName, Map options)
 {
     dir("RadeonProRenderSDK") {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-            timeout(time: "10", unit: "MINUTES") {
+            timeout(time: "20", unit: "MINUTES") {
                 cleanWS(osName)
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, prBranchName: options.prBranchName, prRepoName: options.prRepoName)
             }
@@ -143,7 +143,7 @@ def executeUnitTests(String osName, String asicName, Map options)
 
     dir("frUnittestdata") {
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_UNIT_TESTS_REPO) {
-            timeout(time: "30", unit: "MINUTES") {
+            timeout(time: "40", unit: "MINUTES") {
                 checkoutScm(branchName: options.unitTestsBranch, repositoryUrl: "git@github.com:amdadvtech/frUnittestdata.git")
             }
         }
@@ -202,7 +202,15 @@ def executeTestCommand(String osName, String asicName, Map options)
 
 def executeTests(String osName, String asicName, Map options)
 {
-    executeUnitTests(osName, asicName, options)
+    try {
+        executeUnitTests(osName, asicName, options)
+    } catch (e) {
+        println "[ERROR] Failed to execute unit tests on ${asicName}-${osName}"
+        println "Exception: ${e.toString()}"
+        println "Exception message: ${e.getMessage()}"
+        println "Exception cause: ${e.getCause()}"
+        println "Exception stack trace: ${e.getStackTrace()}"
+    }
 
     // check that current platform is in list of platforms for which render should be executed
     if (!(options.renderPlatforms.contains(osName) && options.renderPlatforms.contains(asicName))) {
@@ -581,7 +589,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 dir("jobs_launcher") {
                     bat """
-                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString().replace(" ", "")}\" \"\" \"{}\"
+                        count_lost_tests.bat \"${lostStashes}\" .. ..\\summaryTestResults \"${options.splitTestsExecution}\" \"${options.testsPackage}\" \"${options.tests.toString()}\" \"\" \"{}\"
                     """
                 }
             } catch (e) {
@@ -827,7 +835,7 @@ def call(String projectBranch = "",
                         executeBuild:true,
                         executeTests:true,
                         reportName:'Test_20Report',
-                        TEST_TIMEOUT:150,
+                        TEST_TIMEOUT:180,
                         width:width,
                         gpusCount:gpusCount,
                         height:height,
