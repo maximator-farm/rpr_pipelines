@@ -15,10 +15,12 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                 try {
                     withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
                         utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "Failed to find any node with labels '${labels}'")
-                        options.nodeNotFoundMessageSent = true
+                    }
                 } catch (e) {
                     println("[WARNING] Could not send message to slack")
                 }
+
+                options.nodeNotFoundMessageSent = true
             }
         }
         sleep(time: 5, unit: 'MINUTES')
