@@ -12,9 +12,12 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
         println "[INFO] Couldn't find suitable nodes. Search will be retried after pause"
         if (!options.nodeNotFoundMessageSent) {
             node ("master") {
-                withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
-                    utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "Failed to find any node with labels '${labels}'")
-                    options.nodeNotFoundMessageSent = true
+                try {
+                    withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
+                        utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "Failed to find any node with labels '${labels}'")
+                        options.nodeNotFoundMessageSent = true
+                } catch (e) {
+                    println("[WARNING] Could not send message to slack")
                 }
             }
         }
@@ -136,21 +139,26 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             } else if (exceptionClassName.contains("RemotingSystemException")) {
                 
                 try {
-                    // take master node for send exception in Slack channel
-                    node ("master") {
-                        withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
-                            utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "${nodeName}: RemotingSystemException appeared. Node is going to be marked as offline")
-                            utils.markNodeOffline(this, nodeName, "RemotingSystemException appeared. This node was marked as offline")
-                            utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "${nodeName}: Node was marked as offline")
+                    try {
+                        // take master node for send exception in Slack channel
+                        node ("master") {
+                            withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
+                                utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "${nodeName}: RemotingSystemException appeared. Node is going to be marked as offline")
+                                utils.markNodeOffline(this, nodeName, "RemotingSystemException appeared. This node was marked as offline")
+                                utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "${nodeName}: Node was marked as offline")
+                            }
+                        }
+                    } catch (e3) {
+                        node ("master") {
+                            withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
+                                utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "Failed to mark node '${nodeName}' as offline")
+                            }
                         }
                     }
                 } catch (e2) {
-                    node ("master") {
-                        withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
-                            utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "Failed to mark node '${nodeName}' as offline")
-                        }
-                    }
+                    println("[WARNING] Could not send message to slack")
                 }
+
             } else if (exceptionClassName.contains("ClosedChannelException")) {
                 GithubNotificator.updateStatus(stageName, title, "failure", options, NotificationConfiguration.LOST_CONNECTION_WITH_MACHINE)
             }
