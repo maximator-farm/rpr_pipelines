@@ -45,24 +45,52 @@ def executeRender(osName, gpuName, attemptNum, Map options) {
 						if not exist "..\\..\\RenderServiceStorage" mkdir "..\\..\\RenderServiceStorage"
 					"""
 					render_service_clear_scenes(osName)
-					Boolean sceneExists = fileExists "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}"
-					if (sceneExists) {
-						print("[INFO] Scene is copying from Render Service Storage on this PC")
-						bat """
-							copy "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}" "${scene_name}"
-						"""
-					} else {
-						print("[INFO] Scene wasn't found in Render Service Storage on this PC. Downloading it.")
-						withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+					if (options.fileSource == 'Storage') {
+						Boolean sceneExists = fileExists "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}"
+						if (sceneExists) {
+							print("[INFO] Scene is copying from Render Service Storage on this PC")
 							bat """
-								curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.scene}"
+								copy "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}" "${scene_name}"
+							"""
+						} else {
+							print("[INFO] Scene wasn't found in Render Service Storage on this PC. Downloading it.")
+							withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'renderServiceCredentials', usernameVariable: 'DJANGO_USER', passwordVariable: 'DJANGO_PASSWORD']]) {
+								bat """
+									curl -o "${scene_name}" -u %DJANGO_USER%:%DJANGO_PASSWORD% "${options.scene}"
+								"""
+							}
+							
+							bat """
+								if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
+								copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}"
 							"""
 						}
+					} else if (options.fileSource == 'Repository') {
+						def usernameOption = ""
+						def passwordOption = ""
 						
-						bat """
-							if not exist "..\\..\\RenderServiceStorage\\${scene_user}\\" mkdir "..\\..\\RenderServiceStorage\\${scene_user}"
-							copy "${scene_name}" "..\\..\\RenderServiceStorage\\${scene_user}\\${options.sceneHash}"
-						"""
+						if (options.repoLogin) {
+							usernameOption  = "--username ${options.repoLogin}"
+						}
+						
+						if (options.repoPassword) {
+							withCredentials([string(credentialsId: "renderServiceKey", variable: "RS_PRIVKEY")]) {
+								withEnv(["RS_PRIVKEY=${RS_PRIVKEY}"]) {
+									def decryptedPassword = python3(".\\render_service_scripts\\decrypt_password.py --crypto ${options.repoPassword}").split('\r\n')[2].trim()
+									passwordOption  = "--password ${decryptedPassword}"
+								}
+							}
+						}
+						
+						print("Checkout SVN repository and copy it to the workspace")
+						def ret = bat(
+							script: """
+									@svn co ${usernameOption} ${passwordOption} ${options.repoUrl} ..\\..\\RenderServiceStorage\\${scene_user}\\${options.repoUuid}"
+									robocopy "..\\..\\RenderServiceStorage\\${scene_user}\\${options.repoUuid}" "repo" /s /e
+									""",
+							returnStatus: true
+						)
+						print("Status: ${ret}")
 					}
 				} catch(FlowInterruptedException e) {
 					throw e
@@ -230,8 +258,16 @@ def startRender(osName, deviceName, renderDevice, options) {
 				stage("Storage pre-check") {
 					ws("WS/${options.PRJ_NAME}_Render") {
 						try {
-							Boolean sceneExists = fileExists "..\\..\\RenderServiceStorage\\${options.sceneUser}\\${options.sceneHash}"
-							if (sceneExists) {
+							Boolean sceneOrRepoExists
+							switch (options.fileSource) {
+								case 'Storage':
+									sceneOrRepoExists = fileExists "..\\..\\RenderServiceStorage\\${options.sceneUser}\\${options.sceneHash}"
+									break
+								case 'Repository':
+									sceneOrRepoExists = fileExists "..\\..\\RenderServiceStorage\\${options.sceneUser}\\${options.repoUuid}"
+									break
+							}
+							if (sceneOrRepoExists) {
 								print("[INFO] Scene exists on this PC. Trying to execute the job")
 								stage("Render") {
 									timeout(time: 65, unit: 'MINUTES') {
@@ -332,6 +368,7 @@ def call(String PCs = '',
 	String scene = '',  
 	String pluginLink = '',
 	String sceneName = '',
+	String relPath = '',
 	String sceneUser = '',
 	String maxAttempts = '',
 	String options = '',
@@ -339,12 +376,15 @@ def call(String PCs = '',
 	String djangoUrl = '',
 	String scriptsBranch = '',
 	String sceneHash = '',
-	String pluginHash = ''
+	String pluginHash = '',
+	String fileSource = '',
+	String repository = ''
 	) {
 	String PRJ_ROOT='RenderServiceRenderJob'
 	String PRJ_NAME='RenderServiceRenderJob' 
 
 	def optionsMap = parseOptions(options)
+	def repositoryMap = parseOptions(repository)
 
 	main(PCs,[
 		enableNotifications:false,
@@ -355,6 +395,7 @@ def call(String PCs = '',
 		scene:scene,
 		pluginLink:pluginLink,
 		sceneName:sceneName,
+		relPath: relPath,
 		sceneUser:sceneUser,
 		maxAttempts:maxAttempts,
 		minSamples:optionsMap.min_samples,
@@ -371,6 +412,12 @@ def call(String PCs = '',
 		django_url:djangoUrl,
 		scripts_branch:scriptsBranch,
 		sceneHash:sceneHash,
-		pluginHash:pluginHash
+		pluginHash:pluginHash,
+		fileSource: fileSource,
+		repoName: repositoryMap.name,
+		repoUrl: repositoryMap.url,
+		repoLogin: repositoryMap.login,
+		repoPassword: repositoryMap.password,
+		repoUuid: repositoryMap.uuid
 		])
 	}
