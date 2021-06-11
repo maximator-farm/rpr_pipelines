@@ -808,11 +808,9 @@ def call(String projectBranch = "",
     String buildConfiguration = "release",
     String winVisualStudioVersion = "2017,2019",
     String winTestingBuildName = "release_vs2019",
-    Boolean enableNotifications = true,
     String testsPackage = "",
     String tests = "",
     String testerTag = "StreamingSDKServer",
-    String parallelExecutionTypeString = "TakeAllNodes",
     Integer testCaseRetries = 2
     )
 {
@@ -843,7 +841,6 @@ def call(String projectBranch = "",
                 Platforms: ${platforms}
                 Tests: ${tests}
                 Tests package: ${testsPackage}
-                Tests execution type: ${parallelExecutionTypeString}
             """
 
             println """
@@ -855,7 +852,7 @@ def call(String projectBranch = "",
             options << [projectRepo: PROJECT_REPO,
                         projectBranch: projectBranch,
                         testsBranch: testsBranch,
-                        enableNotifications: enableNotifications,
+                        enableNotifications: false,
                         testsPackage:testsPackage,
                         tests:tests,
                         PRJ_NAME: "StreamingSDK",
@@ -875,8 +872,6 @@ def call(String projectBranch = "",
                         TESTER_TAG: testerTag,
                         CLIENT_TAG: "StreamingSDKClient && (${clientTag})",
                         testsPreCondition: this.&isIdleClient,
-                        parallelExecutionType: TestsExecutionType.valueOf(parallelExecutionTypeString),
-                        parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries: testCaseRetries
                         ]
         }
