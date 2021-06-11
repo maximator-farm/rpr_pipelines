@@ -94,6 +94,19 @@ def getOSName() {
 }
 
 
+def getCommunicationPort(String osName, Map options) {
+    switch(osName) {
+        case "Windows":
+            return bat(script: "echo %COMMUNICATION_PORT%",returnStdout: true).split('\r\n')[2].trim()
+        case "OSX":
+            println("Unsupported OS")
+            break
+        default:
+            println("Unsupported OS")
+    }
+}
+
+
 def closeGames(String osName, Map options) {
     try {
         switch(osName) {
@@ -134,7 +147,7 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         switch (osName) {
             case "Windows":
                 bat """
-                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                 """
 
                 break
@@ -292,6 +305,9 @@ def executeTestsServer(String osName, String asicName, Map options) {
         
         options["serverInfo"]["osName"] = getOSName()
         println("[INFO] Name of OS on server machine: ${options.serverInfo.osName}")
+
+        options["serverInfo"]["communicationPort"] = getCommunicationPort()
+        println("[INFO] Name of OS on server machine: ${options.serverInfo.communicationPort}")
         
         options["serverInfo"]["ready"] = true
         println("[INFO] Server is ready to run tests")
