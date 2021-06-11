@@ -306,8 +306,8 @@ def executeTestsServer(String osName, String asicName, Map options) {
         options["serverInfo"]["osName"] = getOSName()
         println("[INFO] Name of OS on server machine: ${options.serverInfo.osName}")
 
-        options["serverInfo"]["communicationPort"] = getCommunicationPort()
-        println("[INFO] Name of OS on server machine: ${options.serverInfo.communicationPort}")
+        options["serverInfo"]["communicationPort"] = getCommunicationPort(osName, options)
+        println("[INFO] Communication port: ${options.serverInfo.communicationPort}")
         
         options["serverInfo"]["ready"] = true
         println("[INFO] Server is ready to run tests")
