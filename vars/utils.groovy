@@ -46,19 +46,19 @@ class utils {
     }
 
     static void printError(Object self, String content){
-        self.printColor(this, "[ERROR] " + content, "RED", "DEFAULTB")
+        utils.printColor(this, "[ERROR] " + content, "RED", "DEFAULTB")
     }
 
     static void printDebug(Object self, String content){
-        self.printColor(this, "[DEBUG CRITICAL] " + content, "RED", "DEFAULTB")
+        utils.printColor(this, "[DEBUG CRITICAL] " + content, "RED", "DEFAULTB")
     }
 
     static void printInfo(Object self, String content){
-        self.printColor(this, "[INFO] " + content, "BLUE", "DEFAULTB")
+        utils.printColor(this, "[INFO] " + content, "BLUE", "DEFAULTB")
     }
 
     static void printWarning(Object self, String content){
-        self.printColor(this, "[WARNING] " + content, "ORANGE", "DEFAULTB")
+        utils.printColor(this, "[WARNING] " + content, "ORANGE", "DEFAULTB")
     }
 
     static int getTimeoutFromXML(Object self, String tests, String keyword, Integer additional_xml_timeout) {
