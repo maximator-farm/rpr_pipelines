@@ -400,15 +400,25 @@ def executeBuildWindows(Map options) {
             switch(winVSVersion) {
                 case "2017":
                     buildSln = "StreamingSDK_vs2017.sln"
-                    msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe"
+
+                    msBuildPath = bat(script: "echo %VS2017_PATH%",returnStdout: true).split('\r\n')[2].trim()
+
+                    if (!msBuildPath) {
+                        println("[WARNING] Env variable with VS 2017 path wasn't found. Use default path instead")
+                        msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe"
+                    }
+                    
                     break
                 case "2019":
                     buildSln = "StreamingSDK_vs2019.sln"
-                    msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
 
-                    if (!fileExists(msBuildPath)) {
-                        msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\MSBuild\\Current\\Bin\\MSBuild.exe"
+                    msBuildPath = bat(script: "echo %VS2019_PATH%",returnStdout: true).split('\r\n')[2].trim()
+
+                    if (!msBuildPath) {
+                        println("[WARNING] Env variable with VS 2017 path wasn't found. Use default path instead")
+                        msBuildPath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
                     }
+
                     break
                 default:
                     throw Exception("Unsupported VS version")
