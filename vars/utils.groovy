@@ -40,7 +40,7 @@ class utils {
     static void printColor(Object self, String content, String textColor, String backgroundColor){
         Color text = textColor
         Color background = backgroundColor
-        ansiColor('xterm') {
+        self.ansiColor('xterm') {
             self.println(background.value + text.value + content + "\033[0m")
         }
     }
