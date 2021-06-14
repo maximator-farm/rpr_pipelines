@@ -848,14 +848,14 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
 def call(String projectBranch = "",
     String testsBranch = "master",
-    String platforms = "Windows",
-    String clientTag = "gpuAMD_RX480",
+    String platforms = "Windows:AMD_RX5700XT",
+    String clientTag = "gpuAMD_RX5700XT",
     String buildConfiguration = "release",
     String winVisualStudioVersion = "2017,2019",
     String winTestingBuildName = "release_vs2019",
-    String testsPackage = "",
+    String testsPackage = "General.json",
     String tests = "",
-    String testerTag = "StreamingSDKServer",
+    String testerTag = "StreamingSDK",
     Integer testCaseRetries = 2
     )
 {
