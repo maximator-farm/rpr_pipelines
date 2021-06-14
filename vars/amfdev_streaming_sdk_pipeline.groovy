@@ -231,6 +231,18 @@ def executeTestsClient(String osName, String asicName, Map options) {
         }
 
         timeout(time: "5", unit: "MINUTES") {
+            dir("jobs_launcher/install"){
+                bat """
+                    install_pylibs.bat
+                """
+            }
+
+            dir("scripts"){
+                bat """
+                    install_pylibs.bat
+                """
+            }
+
             dir("StreamingSDK") {
                 prepareTool(osName, options)
             }
@@ -291,6 +303,18 @@ def executeTestsServer(String osName, String asicName, Map options) {
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
             timeout(time: "5", unit: "MINUTES") {
+                dir("jobs_launcher/install"){
+                    bat """
+                        install_pylibs.bat
+                    """
+                }
+
+                dir("scripts"){
+                    bat """
+                        install_pylibs.bat
+                    """
+                }
+
                 dir("StreamingSDK") {
                     prepareTool(osName, options)
                 }
