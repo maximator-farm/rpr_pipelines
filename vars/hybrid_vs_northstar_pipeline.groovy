@@ -532,10 +532,12 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
             }
-            GithubNotificator githubNotificator = new GithubNotificator(this, options)
-            githubNotificator.init(options)
-            options["githubNotificator"] = githubNotificator
-            GithubNotificator.sendPullRequestComment(options.hybridPullUrl, "Hybrid vs Northstar comparison report (MaterialX) - ${BUILD_URL}Test_20Report", options)
+            if (options.hybridPullUrl) {
+                GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                githubNotificator.init(options)
+                options["githubNotificator"] = githubNotificator
+                GithubNotificator.sendPullRequestComment(options.hybridPullUrl, "Hybrid vs Northstar comparison report (MaterialX) - ${BUILD_URL}Test_20Report", options)
+            }
         }
     } catch (e) {
         println(e.toString())
