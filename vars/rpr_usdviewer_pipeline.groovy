@@ -29,7 +29,7 @@ def getViewerTool(String osName, Map options) {
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "appWindows")
+                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -348,7 +348,8 @@ def executeTests(String osName, String asicName, Map options) {
                         }
 
                         println "Stashing test results to : ${options.testResultsName}"
-                        makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
+
+                        utils.stashTestData(this, options, options.storeOnNAS)
                         // reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
                             if (sessionReport.summary.total != sessionReport.summary.skipped) {
@@ -436,7 +437,8 @@ def executeBuildWindows(Map options) {
                     bat """
                         "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer.iss >> ..\\${STAGE_NAME}.USDViewerInstaller.log 2>&1
                     """
-                    stash includes: "RPRViewer_Setup.exe", name: "appWindows"
+
+                    makeStash(includes: "RPRViewer_Setup.exe", name: "appWindows", preZip: false, storeOnNAS: options.storeOnNAS)
                     options.pluginWinSha = sha1 "RPRViewer_Setup.exe"
 
                     if (options.branch_postfix) {
@@ -792,7 +794,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 testResultList.each {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            makeUnstash(name: "$it")
+                            makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                         } catch (e) {
                             println """
                                 [ERROR] Failed to unstash ${it}
@@ -849,8 +851,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     if (!options.testDataSaved) {
                         try {
                             // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report", "Summary Report, Performance Report, Compare Report")
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
                             options.testDataSaved = true 
                         } catch (e1) {
                             println """
@@ -920,8 +921,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary Report, Performance Report, Compare Report")
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
                 if (summaryTestResults) {
                     GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
                             "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
@@ -997,7 +997,8 @@ def call(String projectBranch = "",
                         testCaseRetries: testCaseRetries,
                         universePlatforms: convertPlatforms(platforms),
                         sendToUMS: sendToUMS,
-                        baselinePluginPath: baselinePluginPath
+                        baselinePluginPath: baselinePluginPath,
+                        storeOnNAS: true
                         ]
             if (sendToUMS) {
                 UniverseManager manager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)
