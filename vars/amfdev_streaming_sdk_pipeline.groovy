@@ -8,6 +8,7 @@ import TestsExecutionType
 
 
 @Field final String PROJECT_REPO = "git@github.com:amfdev/StreamingSDK.git"
+@Field final String TESTS_REPO = "git@github.com:luxteam/jobs_test_streaming_sdk.git"
 
 
 String getClientLabels(Map options) {
@@ -227,7 +228,7 @@ def executeTestsClient(String osName, String asicName, Map options) {
 
         timeout(time: "10", unit: "MINUTES") {
             cleanWS(osName)
-            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_streaming_sdk.git")
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
         }
 
         timeout(time: "5", unit: "MINUTES") {
@@ -297,7 +298,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_streaming_sdk.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
             }
         }
 
@@ -566,7 +567,7 @@ def executePreBuild(Map options) {
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir("jobs_test_streaming_sdk") {
-            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_streaming_sdk.git")
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
             options["testsBranch"] = utils.getBatOutput(this, "git log --format=%%H -1 ")
             dir('jobs_launcher') {
                 options['jobsLauncherBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
@@ -658,7 +659,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options["executeTests"] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_streaming_sdk.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
             }
 
             List lostStashes = []
