@@ -857,7 +857,9 @@ def call(String projectBranch = "",
     String testsPackage = "General.json",
     String tests = "",
     String testerTag = "StreamingSDK",
-    Integer testCaseRetries = 2
+    Integer testCaseRetries = 2,
+    Boolean clientCollectTraces = false,
+    Boolean serverCollectTraces = false
     )
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
