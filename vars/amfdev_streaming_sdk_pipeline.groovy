@@ -209,6 +209,7 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                         println "Stashing logs to : ${options.testResultsName}_server"
                         makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_server_logs", allowEmpty: true)
                         makeStash(includes: '**/*.json', name: "${options.testResultsName}_server", allowEmpty: true)
+                        makeStash(includes: '**/*_server.zip', name: "${options.testResultsName}_server_traces", allowEmpty: true)
                     }
                 }
             }
@@ -695,6 +696,15 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                             """
 
                             groupLost = true
+                        }
+
+                        try {
+                            makeUnstash(name: "${it}_server_traces")
+                        } catch (e) {
+                            println """
+                                [ERROR] Failed to unstash ${it}_server_traces
+                                ${e.toString()}
+                            """
                         }
 
                         if (groupLost) {
