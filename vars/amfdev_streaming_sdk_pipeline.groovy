@@ -144,11 +144,17 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         }
     }
 
+    String collectTraces = "False"
+
+    if ((options.executionType == "server" && options.serverCollectTraces) || (options.executionType == "client" && options.clientCollectTraces)) {
+        collectTraces = "True"
+    }
+
     dir("scripts") {
         switch (osName) {
             case "Windows":
                 bat """
-                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" ${collectTraces} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\" 2>&1
                 """
 
                 break
@@ -920,7 +926,9 @@ def call(String projectBranch = "",
                         TESTER_TAG: testerTag,
                         CLIENT_TAG: "StreamingSDKClient && (${clientTag})",
                         testsPreCondition: this.&isIdleClient,
-                        testCaseRetries: testCaseRetries
+                        testCaseRetries: testCaseRetries,
+                        clientCollectTraces:clientCollectTraces,
+                        serverCollectTraces:serverCollectTraces
                         ]
         }
 
