@@ -124,8 +124,8 @@ def closeGames(String osName, Map options) {
                 println("Unsupported OS")
         }
     } catch (e) {
-        self.println("[ERROR] Failed to close games")
-        self.println(e)
+        println("[ERROR] Failed to close games")
+        println(e)
     }
 }
 
@@ -749,8 +749,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
             try {
+                Boolean showGPUViewTraces = options.clientCollectTraces || options.serverCollectTraces
+
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}", "SHOW_GPUVIEW_TRACES=${showGPUViewTraces}"]) {
                     dir("jobs_launcher") {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         dir("..\\summaryTestResults") {
