@@ -146,7 +146,7 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
 
     String collectTraces = "False"
 
-    if ((options.executionType == "server" && options.serverCollectTraces) || (options.executionType == "client" && options.clientCollectTraces)) {
+    if ((executionType == "server" && options.serverCollectTraces) || (executionType == "client" && options.clientCollectTraces)) {
         collectTraces = "True"
     }
 
