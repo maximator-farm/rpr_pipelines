@@ -112,9 +112,15 @@ def closeGames(String osName, Map options) {
     try {
         switch(osName) {
             case "Windows":
-                bat """
-                    taskkill /f /im \"borderlands3.exe\"
-                """
+                if (options.engine == "Borderlands3") {
+                    bat """
+                        taskkill /f /im \"borderlands3.exe\"
+                    """
+                } else if (options.engine == "Valorant") {
+                    bat """
+                        taskkill /f /im \"VALORANT-Win64-Shipping.exe\"
+                    """
+                }
 
                 break
             case "OSX":
@@ -148,7 +154,7 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         switch (osName) {
             case "Windows":
                 bat """
-                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                 """
 
                 break
