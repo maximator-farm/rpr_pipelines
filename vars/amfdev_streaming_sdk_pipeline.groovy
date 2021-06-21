@@ -639,7 +639,8 @@ def executePreBuild(Map options) {
                     }
                 }
 
-                options.testsList = [""]
+                // launch tests for each game separately
+                options.testsList = options.games.split(",")
                 options.tests = tests.join(" ")
             }
         }
@@ -655,8 +656,9 @@ def executePreBuild(Map options) {
 }
 
 
-def executeDeploy(Map options, List platformList, List testResultList) {
+def executeDeploy(Map options, List platformList, List testResultList, String game) {
     try {
+
         if (options["executeTests"] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
@@ -742,8 +744,8 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         }
 
                         bat """
-                            build_reports.bat ..\\summaryTestResults "StreamingSDK" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
-                        """                      
+                            build_reports.bat ..\\summaryTestResults "StreamingSDK" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(game)}\"
+                        """
                     }
                 }
             } catch (e) {
@@ -759,7 +761,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         try {
                             // Save test data for access it manually anyway
                             utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report", "Summary Report, Performance Report, Compare Report")
+                                "Test Report ${game}", "Summary Report, Performance Report, Compare Report")
                             options.testDataSaved = true 
                         } catch (e1) {
                             println """
@@ -859,7 +861,8 @@ def call(String projectBranch = "",
     String testerTag = "StreamingSDK",
     Integer testCaseRetries = 2,
     Boolean clientCollectTraces = false,
-    Boolean serverCollectTraces = false
+    Boolean serverCollectTraces = false,
+    String games = "Borderlands3, Valorant"
     )
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -920,7 +923,8 @@ def call(String projectBranch = "",
                         TESTER_TAG: testerTag,
                         CLIENT_TAG: "StreamingSDKClient && (${clientTag})",
                         testsPreCondition: this.&isIdleClient,
-                        testCaseRetries: testCaseRetries
+                        testCaseRetries: testCaseRetries,
+                        engines: games
                         ]
         }
 

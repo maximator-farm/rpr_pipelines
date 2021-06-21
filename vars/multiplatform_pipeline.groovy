@@ -113,7 +113,13 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                 newOptions["taskName"] = taskName
                                 newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                 newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
-                                newOptions['tests'] = testName ?: options.tests
+                                if (!options.splitTestsExecution && testName) {
+                                    // case for non splitted projects with multiple engines (e.g. Streaming SDK with multiple games)
+                                    newOptions['engine'] = testName
+                                    newOptions['tests'] = options.tests
+                                } else {
+                                    newOptions['tests'] = testName ?: options.tests
+                                }
 
                                 def retringFunction = { nodesList, currentTry ->
                                     try {
@@ -168,7 +174,11 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             testsOrTestPackage = newOptions['tests']
                                         } else {
                                             //all non splitTestsExecution and non regression builds (e.g. any build of core)
-                                            testsOrTestPackage = 'DefaultExecution'
+                                            if (testName) {
+                                                testsOrTestPackage = testName
+                                            } else {
+                                                testsOrTestPackage = 'DefaultExecution'
+                                            }
                                         }
 
                                         if (!expectedExceptionMessage) {
@@ -310,7 +320,14 @@ def makeDeploy(Map options, String engine = "") {
         executeDeployStage = false
     }
     if (executeDeploy && executeDeployStage) {
-        String stageName = engine ? "Deploy-${options.enginesNames[options.engines.indexOf(engine)]}" : "Deploy"
+        String stageName
+
+        if (options.enginesNames) {
+            stageName = engine ? "Deploy-${options.enginesNames[options.engines.indexOf(engine)]}" : "Deploy"
+        } else {
+            stageName = engine ? "Deploy-${engine}" : "Deploy"
+        }
+
         stage(stageName) {
             def reportBuilderLabels = "Windows && ReportBuilder"
 
