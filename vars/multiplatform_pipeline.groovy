@@ -525,7 +525,15 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
 
                 if (options.engines) {
                     options.engines.each { engine ->
-                        tasks["Deploy-${options.enginesNames[options.engines.indexOf(engine)]}"] = {
+                        String stageName
+
+                        if (options.enginesNames) {
+                            stageName = "Deploy-${options.enginesNames[options.engines.indexOf(engine)]}"
+                        } else {
+                            stageName = "Deploy-${engine}"
+                        }
+
+                        tasks[stageName] = {
                             if (testsLeft[engine] != null) {
                                 while (testsLeft[engine] != 0) {
                                     sleep(120)
@@ -563,7 +571,14 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                     options.engines.each {
                         if (testsLeft && testsLeft[it] != 0) {
                             // Build was aborted. Make reports from existing data
-                            tasks["Deploy-${options.enginesNames[options.engines.indexOf(it)]}"] = {
+                            String stageName
+
+                            if (options.enginesNames) {
+                                stageName = "Deploy-${options.enginesNames[options.engines.indexOf(it)]}"
+                            } else {
+                                stageName = "Deploy-${it}"
+                            }
+                            tasks[stageName] = {
                                 makeDeploy(options, it)
                             }
                         }

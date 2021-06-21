@@ -645,11 +645,12 @@ def executePreBuild(Map options) {
                     }
                 }
 
-                // launch tests for each game separately
-                options.testsList = options.games.split(",")
                 options.tests = tests.join(" ")
             }
         }
+
+        // launch tests for each game separately
+        options.testsList = options.engines
 
         if (!options.tests && options.testsPackage == "none") {
             options.executeTests = false
@@ -767,7 +768,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                         try {
                             // Save test data for access it manually anyway
                             utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report ${game}", "Summary Report, Performance Report, Compare Report")
+                                "Test Report (${game})", "Summary Report, Performance Report, Compare Report")
                             options.testDataSaved = true 
                         } catch (e1) {
                             println """
@@ -838,7 +839,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary Report, Performance Report, Compare Report")
+                    "Test Report (${game})", "Summary Report, Performance Report, Compare Report")
                 if (summaryTestResults) {
                     GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
                             "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
@@ -868,7 +869,7 @@ def call(String projectBranch = "",
     Integer testCaseRetries = 2,
     Boolean clientCollectTraces = false,
     Boolean serverCollectTraces = false,
-    String games = "Borderlands3, Valorant"
+    String games = "Borderlands3,Valorant"
     )
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -930,7 +931,7 @@ def call(String projectBranch = "",
                         CLIENT_TAG: "StreamingSDKClient && (${clientTag})",
                         testsPreCondition: this.&isIdleClient,
                         testCaseRetries: testCaseRetries,
-                        engines: games
+                        engines: games.split(",") as List
                         ]
         }
 
