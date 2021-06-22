@@ -120,6 +120,10 @@ def closeGames(String osName, Map options) {
                     bat """
                         taskkill /f /im \"VALORANT-Win64-Shipping.exe\"
                     """
+                } else if (options.engine == "ApexLegends") {
+                    bat """
+                        taskkill /f /im \"r5apex.exe\"
+                    """
                 }
 
                 break
@@ -873,7 +877,7 @@ def call(String projectBranch = "",
     Integer testCaseRetries = 2,
     Boolean clientCollectTraces = false,
     Boolean serverCollectTraces = false,
-    String games = "Borderlands3,Valorant"
+    String games = "Borderlands3,ApexLegends"
     )
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
