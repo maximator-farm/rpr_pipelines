@@ -675,33 +675,37 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             dir("summaryTestResults") {
                 unstashCrashInfo(options["nodeRetry"])
                 testResultList.each {
-                    dir("${it}".replace("testResult-", "")) {
-                        Boolean groupLost = false
+                    Boolean groupLost = false
 
-                        try {
-                            makeUnstash(name: "${it}_server_logs")
-                        } catch (e) {
-                            println """
-                                [ERROR] Failed to unstash ${it}_server_logs
-                                ${e.toString()}
-                            """
+                    if (it.endsWith(game)) {
+                        List testNameParts = it.split("-") as List
+                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                        dir(testName.replace("testResult-", "")) {
+                            try {
+                                makeUnstash(name: "${it}_server_logs")
+                            } catch (e) {
+                                println """
+                                    [ERROR] Failed to unstash ${it}_server_logs
+                                    ${e.toString()}
+                                """
 
-                            groupLost = true
-                        }
+                                groupLost = true
+                            }
 
-                        try {
-                            makeUnstash(name: "${it}_client")
-                        } catch (e) {
-                            println """
-                                [ERROR] Failed to unstash ${it}_client
-                                ${e.toString()}
-                            """
+                            try {
+                                makeUnstash(name: "${it}_client")
+                            } catch (e) {
+                                println """
+                                    [ERROR] Failed to unstash ${it}_client
+                                    ${e.toString()}
+                                """
 
-                            groupLost = true
-                        }
+                                groupLost = true
+                            }
 
-                        if (groupLost) {
-                            lostStashes << ("'${it}'".replace("testResult-", ""))
+                            if (groupLost) {
+                                lostStashes << ("'${it}'".replace("testResult-", ""))
+                            }
                         }
                     }
                 }
@@ -768,7 +772,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                         try {
                             // Save test data for access it manually anyway
                             utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report (${game})", "Summary Report, Performance Report, Compare Report")
+                                "Test Report ${game}", "Summary Report, Performance Report, Compare Report")
                             options.testDataSaved = true 
                         } catch (e1) {
                             println """
@@ -839,7 +843,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report (${game})", "Summary Report, Performance Report, Compare Report")
+                    "Test Report ${game}", "Summary Report, Performance Report, Compare Report")
                 if (summaryTestResults) {
                     GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
                             "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
