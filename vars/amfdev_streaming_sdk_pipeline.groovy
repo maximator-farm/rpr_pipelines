@@ -877,7 +877,7 @@ def call(String projectBranch = "",
     Integer testCaseRetries = 2,
     Boolean clientCollectTraces = false,
     Boolean serverCollectTraces = false,
-    String games = "ApexLegends"
+    String games = "Valorant"
     )
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
