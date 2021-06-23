@@ -134,8 +134,8 @@ def closeGames(String osName, Map options) {
                 println("Unsupported OS")
         }
     } catch (e) {
-        self.println("[ERROR] Failed to close games")
-        self.println(e)
+        println("[ERROR] Failed to close games")
+        println(e)
     }
 }
 
@@ -154,11 +154,17 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         }
     }
 
+    String collectTraces = "False"
+
+    if ((executionType == "server" && options.serverCollectTraces) || (executionType == "client" && options.clientCollectTraces)) {
+        collectTraces = "True"
+    }
+
     dir("scripts") {
         switch (osName) {
             case "Windows":
                 bat """
-                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                 """
 
                 break
@@ -213,6 +219,7 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                         println "Stashing logs to : ${options.testResultsName}_server"
                         makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_server_logs", allowEmpty: true)
                         makeStash(includes: '**/*.json', name: "${options.testResultsName}_server", allowEmpty: true)
+                        makeStash(includes: '**/*_server.zip', name: "${options.testResultsName}_server_traces", allowEmpty: true)
                     }
                 }
             }
@@ -707,6 +714,15 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 groupLost = true
                             }
 
+                            try {
+                                makeUnstash(name: "${it}_server_traces")
+                            } catch (e) {
+                                println """
+                                    [ERROR] Failed to unstash ${it}_server_traces
+                                    ${e.toString()}
+                                """
+                            }
+
                             if (groupLost) {
                                 lostStashes << ("'${it}'".replace("testResult-", ""))
                             }
@@ -750,8 +766,10 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
             try {
+                Boolean showGPUViewTraces = options.clientCollectTraces || options.serverCollectTraces
+
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
+                withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}", "SHOW_GPUVIEW_TRACES=${showGPUViewTraces}"]) {
                     dir("jobs_launcher") {
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         dir("..\\summaryTestResults") {
@@ -931,15 +949,18 @@ def call(String projectBranch = "",
                         platforms: platforms,
                         clientTag: clientTag,
                         BUILD_TIMEOUT: 15,
-                        TEST_TIMEOUT: 300,
-                        DEPLOY_TIMEOUT:30,
+                        // update timeouts dynamicly based on number of cases + traces are generated or not
+                        TEST_TIMEOUT: 360,
+                        DEPLOY_TIMEOUT: 90,
                         ADDITIONAL_XML_TIMEOUT: 15,
                         BUILDER_TAG: "BuilderStreamingSDK",
                         TESTER_TAG: testerTag,
                         CLIENT_TAG: "StreamingSDKClient && (${clientTag})",
                         testsPreCondition: this.&isIdleClient,
                         testCaseRetries: testCaseRetries,
-                        engines: games.split(",") as List
+                        engines: games.split(",") as List,
+                        clientCollectTraces:clientCollectTraces,
+                        serverCollectTraces:serverCollectTraces
                         ]
         }
 
