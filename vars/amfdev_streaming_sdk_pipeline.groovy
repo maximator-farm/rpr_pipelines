@@ -699,6 +699,11 @@ def executePreBuild(Map options) {
             }
         }
 
+        // clear games list if there isn't any test group in build or games string is empty
+        if (!options.tests || !options.games) {
+            options.engines = []
+        }
+
         // launch tests for each game separately
         options.testsList = options.engines
 
@@ -1006,6 +1011,7 @@ def call(String projectBranch = "",
                         testsPreCondition: this.&isIdleClient,
                         testCaseRetries: testCaseRetries,
                         engines: games.split(",") as List,
+                        games: games,
                         clientCollectTraces:clientCollectTraces,
                         serverCollectTraces:serverCollectTraces
                         ]
