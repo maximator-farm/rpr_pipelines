@@ -14,7 +14,7 @@ import universe.*
 def installHoudiniPlugin(String osName, Map options) {
     switch(osName) {
         case 'Windows':
-            unstash "appWindows"
+            makeUnstash(name: "appWindows", unzip: false)
             bat """
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa e hdRpr_${osName}.tar.gz
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa x tmpPackage.tar 
@@ -24,7 +24,7 @@ def installHoudiniPlugin(String osName, Map options) {
             break
 
         case "OSX":
-            unstash "appOSX"
+            makeUnstash(name: "appOSX", unzip: false)
             sh """
                 tar -xzf hdRpr_${osName}.tar.gz 
                 cd hdRpr*
@@ -34,7 +34,7 @@ def installHoudiniPlugin(String osName, Map options) {
             break
 
         default:
-            unstash "app${osName}"
+            makeUnstash(name: "app${osName}", unzip: false)
             sh """
                 tar -xzf hdRpr_${osName}.tar.gz
                 cd hdRpr*
@@ -242,7 +242,7 @@ def executeTests(String osName, String asicName, Map options) {
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             archiveArtifacts artifacts: "${env.STAGE_NAME}_RIF_Trace/**/*.*", allowEmptyArchive: true
             if (options.sendToUMS) {
-                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log")
+                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
             }
             if (stashResults) {
                 dir('Work') {
@@ -260,7 +260,7 @@ def executeTests(String osName, String asicName, Map options) {
                         }
 
                         println "Stashing test results to : ${options.testResultsName}"
-                        stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
+                        makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
 
                         println "Total: ${sessionReport.summary.total}"
                         println "Error: ${sessionReport.summary.error}"
@@ -351,7 +351,7 @@ def executeBuildWindows(String osName, Map options) {
                 }
             }
             bat "rename hdRpr* hdRpr_${osName}.tar.gz"
-            stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
+            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
@@ -415,7 +415,7 @@ def executeBuildOSX(String osName, Map options) {
                 }
             }
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
-            stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
+            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
@@ -494,7 +494,7 @@ def executeBuildUnix(String osName, Map options) {
                 }
             }
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
-            stash includes: "hdRpr_${osName}.tar.gz", name: "app${osName}"
+            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
@@ -686,7 +686,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 testResultList.each {
                     dir(it.replace("testResult-", "")) {
                         try {
-                            unstash it
+                            makeUnstash(name: it)
                         } catch (e) {
                             println "Can't unstash ${it}"
                             lostStashes << "'$it'".replace("testResult-", "")
@@ -829,7 +829,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String projectBranch = "",
         String usdBranch = "master",
         String testsBranch = "master",
-        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800;OSX:AMD_RXVEGA,AMD_RX5700XT;Ubuntu18:AMD_RadeonVII,NVIDIA_RTX2070;CentOS7',
+        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800;OSX:AMD_RXVEGA,AMD_RX5700XT;Ubuntu20:AMD_RadeonVII;Ubuntu18:NVIDIA_RTX2070;CentOS7',
         String buildType = "Houdini",
         Boolean rebuildUSD = false,
         String houdiniVersion = "18.5.462",

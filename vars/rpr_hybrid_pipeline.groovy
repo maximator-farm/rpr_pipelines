@@ -124,7 +124,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
     }
     
     try {
-        unstash "app${osName}"
+        makeUnstash(name: "app${osName}")
         switch(osName) {
             case 'Windows':
                 unzip dir: '.', glob: '', zipFile: 'BaikalNext_Build-Windows.zip'
@@ -156,7 +156,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
                     python3("hybrid_report.py --xml_path ../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-${options.RENDER_QUALITY}_failures")
                 }
 
-                stash includes: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures/**/*", name: "testResult-${asicName}-${osName}-${options.RENDER_QUALITY}", allowEmpty: true
+                makeStash(includes: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures/**/*", name: "testResult-${asicName}-${osName}-${options.RENDER_QUALITY}", allowEmpty: true)
 
                 utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-${options.RENDER_QUALITY}_failures", "report.html", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures")
 
@@ -173,7 +173,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
                     python3("hybrid_report.py --xml_path ../${STAGE_NAME}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-Failures")
                 }
 
-                stash includes: "${asicName}-${osName}-Failures/**/*", name: "testResult-${asicName}-${osName}", allowEmpty: true
+                makeStash(includes: "${asicName}-${osName}-Failures/**/*", name: "testResult-${asicName}-${osName}", allowEmpty: true)
 
                 utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-Failures", "report.html", "${STAGE_NAME}_Failures", "${STAGE_NAME}_Failures")
 
@@ -288,9 +288,9 @@ def executePerfTests(String osName, String asicName, Map options) {
 
         dir("BaikalNext") {
             dir("bin") {
-                unstash "perf${osName}"
+                makeUnstash(name: "perf${osName}", unzip: false)
             }
-            unstash "perfTestsConf"
+            makeUnstash(name: "perfTestsConf")
             dir("RprPerfTest/Scenarios") {
                 if (options.scenarios == "all") {
                     List scenariosList = []
@@ -331,7 +331,7 @@ def executePerfTests(String osName, String asicName, Map options) {
         archiveArtifacts "*.log"
 
         dir("BaikalNext/RprPerfTest/Reports") {
-            stash includes: "*.json", name: "testPerfResult-${asicName}-${osName}", allowEmpty: true
+            makeStash(includes: "*.json", name: "testPerfResult-${asicName}-${osName}", allowEmpty: true)
 
             // check results
             if (!options.updateRefsPerf) {
@@ -435,8 +435,22 @@ def executeBuildWindows(Map options) {
         rename BaikalNext.zip BaikalNext_${STAGE_NAME}.zip
     """
     dir("Build/bin/${build_type}") {
-        stash includes: "RprPerfTest.exe", name: "perfWindows", allowEmpty: true
+        makeStash(includes: "RprPerfTest.exe", name: "perfWindows", allowEmpty: true, preZip: false)
     }
+
+    // FIXME: delete comment when Hybrid from current master will work with MaterialX
+    //if (env.BRANCH_NAME == "master") {
+    if (false) {
+        withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.UPDATE_BINARIES) {
+
+            hybrid_vs_northstar_pipeline.updateBinaries(
+                newBinaryFile: "Build\\_CPack_Packages\\win64\\ZIP\\BaikalNext\\bin\\HybridPro.dll", 
+                targetFileName: "HybridPro.dll", osName: "Windows", compareChecksum: true
+            )
+        }
+    }
+
+    hybrid_vs_northstar_pipeline.createHybridBranch(options)
 }
 
 
@@ -450,7 +464,7 @@ def executeBuildOSX(Map options) {
         mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
     """
     dir("Build/bin") {
-        stash includes: "RprPerfTest", name: "perfOSX", allowEmpty: true
+        makeStash(includes: "RprPerfTest", name: "perfOSX", allowEmpty: true, preZip: false)
     }
 }
 
@@ -465,7 +479,7 @@ def executeBuildLinux(Map options) {
         mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
     """
     dir("Build/bin") {
-        stash includes: "RprPerfTest", name: "perfUbuntu18", allowEmpty: true
+        makeStash(includes: "RprPerfTest", name: "perfUbuntu18", allowEmpty: true, preZip: false)
     }
 }
 
@@ -493,7 +507,7 @@ def executeBuild(String osName, Map options) {
         }
 
         dir('Build') {
-            stash includes: "BaikalNext_${STAGE_NAME}*", name: "app${osName}"
+            makeStash(includes: "BaikalNext_${STAGE_NAME}*", name: "app${osName}")
         }
     } catch (e) {
         println(e.getMessage())
@@ -536,7 +550,7 @@ def executePreBuild(Map options) {
         println("Build was detected as Pull Request")
     }
 
-    stash includes: "RprPerfTest/", name: "perfTestsConf", allowEmpty: true
+    makeStash(includes: "RprPerfTest/", name: "perfTestsConf", allowEmpty: true)
 
     options.commitMessage = []
     commitMessage = commitMessage.split('\r\n')
@@ -544,6 +558,24 @@ def executePreBuild(Map options) {
     options.commitMessage = options.commitMessage.join('\n')
 
     println "Commit list message: ${options.commitMessage}"
+
+    if (!options.isLegacyBranch && env.CHANGE_URL) {
+        // save name of new branch for hybrid_vs_northstar
+        String comparisionBranch = "hybrid_auto_${env.BRANCH_NAME}"
+
+        dir("HybridVsNorthstar") {
+            String comparisionRepoUrl = hybrid_vs_northstar_pipeline.PROJECT_REPO
+
+            checkoutScm(branchName: "main", repositoryUrl: comparisionRepoUrl)
+
+            Boolean branchNotExists = bat(script: "git ls-remote --heads ${comparisionRepoUrl} ${comparisionBranch}", returnStdout: true)
+                .split('\r\n').length == 2
+
+            if (branchNotExists) {
+                options.comparisionBranch = comparisionBranch
+            }
+        }
+    }
     
     // set pending status for all
     if (env.CHANGE_ID) {
@@ -594,7 +626,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     options['testsQuality'].split(",").each() { quality ->
                         testResultList.each() {
                             try {
-                                unstash "${it}-${quality}"
+                                makeUnstash(name: "${it}-${quality}")
                                 reportFiles += ", ${it}-${quality}_failures/report.html".replace("testResult-", "")
                             }
                             catch(e) {
@@ -620,7 +652,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 dir("SummaryReport") {
                     testResultList.each() {
                         try {
-                            unstash "${it}"
+                            makeUnstash(name: "${it}")
                             reportFiles += ", ${it}-Failures/report.html".replace("testResult-", "")
                         }
                         catch(e) {
@@ -647,7 +679,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     testResultList.each() {
                         try {
                             dir("${it}".replace("testResult-", "")) {
-                                unstash "${it.replace('testResult-', 'testPerfResult-')}"
+                                makeUnstash(name: "${it.replace('testResult-', 'testPerfResult-')}")
                             }
                         }
                         catch(e) {
@@ -698,6 +730,8 @@ def call(String projectBranch = "",
          Boolean enableNotifications = true,
          String cmakeKeys = "-DCMAKE_BUILD_TYPE=Release -DBAIKAL_ENABLE_RPR=ON -DBAIKAL_NEXT_EMBED_KERNELS=ON") {
 
+    Boolean isLegacyBranch = false
+
     if (testsQuality == "none") {
         println "[INFO] Convert none quality to empty string"
         testsQuality = ""
@@ -706,6 +740,7 @@ def call(String projectBranch = "",
     if ((env.BRANCH_NAME && env.BRANCH_NAME == "1.xx") || (env.CHANGE_TARGET && env.CHANGE_TARGET == "1.xx") || (projectBranch == "1.xx")) {
         testsQuality = "low,medium,high"
         scenarios = ""
+        isLegacyBranch = true
     }
 
     println "Test quality: ${testsQuality}"
@@ -733,5 +768,6 @@ def call(String projectBranch = "",
                             TEST_TIMEOUT:60,
                             cmakeKeys:cmakeKeys,
                             retriesForTestStage:1,
-                            successfulTests:successfulTests])
+                            successfulTests:successfulTests,
+                            isLegacyBranch:isLegacyBranch])
 }

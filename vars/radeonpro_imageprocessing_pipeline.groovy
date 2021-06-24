@@ -45,7 +45,7 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
     try {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName, "${STAGE_NAME}.${libType}")
-        unstash "app_${libType}_${osName}"
+        makeUnstash(name: "app_${libType}_${osName}")
         executeTestCommand(osName, libType, options.testPerformance)
     } catch (e) {
         println(e.toString())
@@ -72,7 +72,7 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
                     """
                     break
             }
-            stash includes: "${STAGE_NAME}.${libType}.gtest.xml, ${STAGE_NAME}.${libType}.csv", name: "${options.testResultsName}.${libType}", allowEmpty: true
+            makeStash(includes: "${STAGE_NAME}.${libType}.gtest.xml, ${STAGE_NAME}.${libType}.csv", name: "${options.testResultsName}.${libType}", allowEmpty: true)
         }
         junit "*.gtest.xml"
     }
@@ -93,16 +93,6 @@ def executeTests(String osName, String asicName, Map options)
         println(e.getStackTrace()) 
     }
 
-    try {
-        executeTestsForCustomLib(osName, 'static', options)
-    } catch (e) {
-        testsFailed = true
-        println("Error during testing static lib")
-        println(e.toString())
-        println(e.getMessage())
-        println(e.getStackTrace())   
-    }
-
     if (testsFailed) {
         currentBuild.result = "FAILED"
         error "Error during testing"
@@ -121,12 +111,6 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
         %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.dynamic.log 2>&1
         cd ..
 
-        mkdir build-${options.packageName}-${osName}-static
-        cd build-${options.packageName}-${osName}-static
-        cmake .. -DADL_PROFILING=ON -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static -DRIF_STATIC_LIB=ON >> ..\\${STAGE_NAME}.static.log 2>&1
-        %msbuild% INSTALL.vcxproj -property:Configuration=Release >> ..\\${STAGE_NAME}.static.log 2>&1
-        cd ..
-
         mkdir build-${options.packageName}-${osName}-static-runtime
         cd build-${options.packageName}-${osName}-static-runtime
         cmake .. -DADL_PROFILING=ON -G "Visual Studio 15 2017 Win64" -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static-runtime -DRIF_STATIC_RUNTIME_LIB=ON >> ..\\${STAGE_NAME}.static-runtime.log 2>&1
@@ -136,23 +120,14 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
 
     // Stash for testing only
     dir("${options.packageName}-${osName}-dynamic") {
-        stash includes: "bin/*", name: "app_dynamic_${osName}"
-    }
-
-    dir("${options.packageName}-${osName}-static") {
-        stash includes: "bin/*", name: "app_static_${osName}"
+        makeStash(includes: "bin/*", name: "app_dynamic_${osName}")
     }
 
     bat """
         xcopy README.md ${options.packageName}-${osName}-dynamic\\README.md* /y
-        xcopy README.md ${options.packageName}-${osName}-static\\README.md* /y
         xcopy README.md ${options.packageName}-${osName}-static-runtime\\README.md* /y
 
         cd ${options.packageName}-${osName}-dynamic
-        del /S UnitTest*
-        cd ..
-
-        cd ${options.packageName}-${osName}-static
         del /S UnitTest*
         cd ..
 
@@ -163,23 +138,19 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
 
     // Stash for github repo
     dir("${options.packageName}-${osName}-dynamic/bin") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}"
-    }
-
-    dir("${options.packageName}-${osName}-static/bin") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-${osName}"
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}")
     }
 
     dir("${options.packageName}-${osName}-static-runtime/bin") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}"
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}")
     }
 
-    stash includes: "models/**/*", name: "models"
-    stash includes: "samples/**/*", name: "samples"
-    stash includes: "include/**/*", name: "include"
+    makeStash(includes: "models/**/*", name: "models")
+    makeStash(includes: "samples/**/*", name: "samples")
+    makeStash(includes: "include/**/*", name: "include")
 
     dir ('src') {
-        stash includes: "License.txt", name: "txtFiles"
+        makeStash(includes: "License.txt", name: "txtFiles")
     }
 
     bat """
@@ -189,19 +160,17 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
         mkdir RIF_Models
 
         xcopy ${options.packageName}-${osName}-dynamic RIF_Dynamic\\${options.packageName}-${osName}-dynamic /s/y/i
-        xcopy ${options.packageName}-${osName}-static RIF_Static\\${options.packageName}-${osName}-static /s/y/i
         xcopy ${options.packageName}-${osName}-static-runtime RIF_Static_Runtime\\${options.packageName}-${osName}-static-runtime /s/y/i
         xcopy samples RIF_Samples\\samples /s/y/i
         xcopy models RIF_Models\\models /s/y/i
     """
 
     zip archive: true, dir: 'RIF_Dynamic', glob: '', zipFile: "${options.packageName}-${osName}-dynamic.zip"
-    zip archive: true, dir: 'RIF_Static', glob: '', zipFile: "${options.packageName}-${osName}-static.zip"
     zip archive: true, dir: 'RIF_Static_Runtime', glob: '', zipFile: "${options.packageName}-${osName}-static-runtime.zip"
     zip archive: true, dir: 'RIF_Samples', glob: '', zipFile: "${options.samplesName}.zip"
     zip archive: true, dir: 'RIF_Models', glob: '', zipFile: "${options.modelsName}.zip"
 
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}artifact/${options.packageName}-${osName}-dynamic.zip">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static.zip">static</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.zip">static-runtime</a> </h4>"""
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}artifact/${options.packageName}-${osName}-dynamic.zip">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.zip">static-runtime</a> </h4>"""
     rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Samples: <a href="${BUILD_URL}artifact/${options.samplesName}.zip">${options.samplesName}.zip</a></h4>"""
     rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Models: <a href="${BUILD_URL}artifact/${options.modelsName}.zip">${options.modelsName}.zip</a></h4>"""
 }
@@ -220,13 +189,6 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
         make install >> ../${STAGE_NAME}.dynamic.log 2>&1
         cd ..
 
-        mkdir build-${options.packageName}-${osName}-static
-        cd build-${options.packageName}-${osName}-static
-        cmake .. -DADL_PROFILING=ON ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static -DRIF_STATIC_LIB=ON >> ../${STAGE_NAME}.static.log 2>&1
-        make -j 8 ${SRC_BUILD} >> ../${STAGE_NAME}.static.log 2>&1
-        make install >> ../${STAGE_NAME}.static.log 2>&1
-        cd ..
-
         mkdir build-${options.packageName}-${osName}-static-runtime
         cd build-${options.packageName}-${osName}-static-runtime
         cmake .. -DADL_PROFILING=ON ${cmakeKeys} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-static-runtime -DRIF_STATIC_RUNTIME_LIB=ON >> ../${STAGE_NAME}.static-runtime.log 2>&1
@@ -234,51 +196,55 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
         make install >> ../${STAGE_NAME}.static-runtime.log 2>&1
         cd ..
     """
+    
+    if (compilerName == "clang-5.0") {
+        sh """
+            export CXX=clang++-9
+            cd build-${options.packageName}-${osName}-dynamic
+            rm -rd *
+            cmake .. ${cmakeKeys} -DRIF_UNITTEST=ON -DRIF_UNITTEST_ONLY=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../${options.packageName}-${osName}-dynamic >> ../${STAGE_NAME}.dynamic.log 2>&1
+            make -j 8 >> ../${STAGE_NAME}.dynamic.log 2>&1
+            make install >> ../${STAGE_NAME}.dynamic.log 2>&1
+            cd ..
+
+        """
+    }
 
     // Stash for testing
     dir("${options.packageName}-${osName}-dynamic") {
-        stash includes: "bin/*", name: "app_dynamic_${osName}"
-    }
-
-    dir("${options.packageName}-${osName}-static") {
-        stash includes: "bin/*", name: "app_static_${osName}"
+        makeStash(includes: "bin/*", name: "app_dynamic_${osName}")
     }
 
     sh """
         cp README.md ${options.packageName}-${osName}-dynamic
-        cp README.md ${options.packageName}-${osName}-static
         cp README.md ${options.packageName}-${osName}-static-runtime
     """
 
+    sh """
+        rm ${options.packageName}-${osName}-dynamic/bin/UnitTest*
+    """
     if (compilerName != "clang-5.0") {
         sh """
-            rm ${options.packageName}-${osName}-dynamic/bin/UnitTest*
-            rm ${options.packageName}-${osName}-static/bin/UnitTest*
             rm ${options.packageName}-${osName}-static-runtime/bin/UnitTest*
         """
     }
 
     sh """
         tar cf ${options.packageName}-${osName}-dynamic.tar ${options.packageName}-${osName}-dynamic
-        tar cf ${options.packageName}-${osName}-static.tar ${options.packageName}-${osName}-static
         tar cf ${options.packageName}-${osName}-static-runtime.tar ${options.packageName}-${osName}-static-runtime
     """
 
     archiveArtifacts "${options.packageName}-${osName}*.tar"
 
     dir("${options.packageName}-${osName}-dynamic/bin/") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}"
-    }
-
-    dir("${options.packageName}-${osName}-static/bin/") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-${osName}"
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}")
     }
 
     dir("${options.packageName}-${osName}-static-runtime/bin/") {
         stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}"
     }
 
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}artifact/${options.packageName}-${osName}-dynamic.tar">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static.tar">static</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.tar">static-runtime</a> </h4>"""
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}artifact/${options.packageName}-${osName}-dynamic.tar">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.tar">static-runtime</a> </h4>"""
 }
 
 
@@ -314,7 +280,6 @@ def executeBuild(String osName, Map options)
     try {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName, "${STAGE_NAME}.dynamic")
-        outputEnvironmentInfo(osName, "${STAGE_NAME}.static")
         outputEnvironmentInfo(osName, "${STAGE_NAME}.static-runtime")
 
         switch(osName) {
@@ -325,7 +290,7 @@ def executeBuild(String osName, Map options)
                 executeBuildUnix(options.cmakeKeys, osName, options, 'clang')
                 break
             case 'Ubuntu18-Clang':
-                executeBuildUnix("${options.cmakeKeys} -DRIF_UNITTEST=OFF -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, options, 'clang-5.0')
+                executeBuildUnix("${options.cmakeKeys} -DRIF_UNITTEST=OFF -DRIF_ADL_INCLUDE=ON -DCMAKE_CXX_FLAGS=\"-D_GLIBCXX_USE_CXX11_ABI=0\"", osName, options, 'clang-5.0')
                 break
             default:
                 executeBuildUnix(options.cmakeKeys, osName, options)
@@ -346,8 +311,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
         dir("testResults") {
             testResultList.each() {
                 try {
-                    unstash "${it}.dynamic"
-                    unstash "${it}.static"
+                    makeUnstash(name: "${it}.dynamic")
                 } catch(e) {
                     echo "[ERROR] Failed to unstash ${it}"
                     println(e.toString());
@@ -379,21 +343,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
         platformList.each() {
             dir(it) {
                 dir("Dynamic"){
-                    unstash "deploy-dynamic-${it}"
-                }
-                dir("Static"){
-                    unstash "deploy-static-${it}"
+                    makeUnstash(name: "deploy-dynamic-${it}")
                 }
                 dir("Static-Runtime"){
-                    unstash "deploy-static-runtime-${it}"
+                    makeUnstash(name: "deploy-static-runtime-${it}")
                 }
             }
         }
 
-        unstash "models"
-        unstash "samples"
-        unstash "txtFiles"
-        unstash "include"
+        makeUnstash(name: "models")
+        makeUnstash(name: "samples")
+        makeUnstash(name: "txtFiles")
+        makeUnstash(name: "include")
 
         bat """
             git add --all
@@ -405,7 +366,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
 }
 
 def call(String projectBranch = "",
-         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu18:NVIDIA_RTX2070,AMD_RadeonVII;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT;CentOS7;Ubuntu18-Clang',
+         String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT;CentOS7;Ubuntu18-Clang',
          Boolean updateRefs = false,
          Boolean enableNotifications = true,
          String cmakeKeys = '',
@@ -415,7 +376,7 @@ def call(String projectBranch = "",
     println "TAG_NAME: ${env.TAG_NAME}"
 
     def deployStage = env.TAG_NAME || testPerformance ? this.&executeDeploy : null
-    platforms = env.TAG_NAME ? "Windows;Ubuntu18;Ubuntu18-Clang;Ubuntu20;OSX;CentOS7;" : platforms
+    platforms = env.TAG_NAME ? "Windows;Ubuntu18-Clang;Ubuntu20;OSX;CentOS7;" : platforms
 
     def nodeRetry = []
 

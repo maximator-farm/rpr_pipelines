@@ -53,7 +53,7 @@ def getMaxPluginInstaller(String osName, Map options)
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "appWindows"
+                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -225,7 +225,7 @@ def executeTests(String osName, String asicName, Map options)
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             if (options.sendToUMS) {
-                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log")
+                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
             }
             if (stashResults) {
                 dir('Work') {
@@ -247,8 +247,8 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         println("Stashing test results to : ${options.testResultsName}")
-                        stash includes: '**/*', name: "${options.testResultsName}", allowEmpty: true
 
+                        utils.stashTestData(this, options, options.storeOnNAS)
                         // deinstalling broken addon
                         // if test group is fully errored or number of test cases is equal to zero
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
@@ -326,7 +326,7 @@ def executeBuildWindows(Map options)
 
         options.productCode = python3("getMsiProductCode.py").split('\r\n')[2].trim()[1..-2]
         println "[INFO] Built MSI product code: ${options.productCode}"
-        stash includes: 'RadeonProRenderMax.msi', name: 'appWindows'
+        makeStash(includes: 'RadeonProRenderMax.msi', name: 'appWindows', preZip: false, storeOnNAS: options.storeOnNAS)
 
         GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
     }
@@ -595,7 +595,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 testResultList.each() {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            unstash "$it"
+                            makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                         } catch(e) {
                             echo "Can't unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))
@@ -653,8 +653,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     if (!options.testDataSaved) {
                         try {
                             // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report", "Summary Report, Performance Report, Compare Report")
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
                             options.testDataSaved = true 
                         } catch(e1) {
                             println("[WARNING] Failed to publish test data.")
@@ -723,8 +722,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary Report, Performance Report, Compare Report")
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
@@ -884,7 +882,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
-                        parallelExecutionTypeString: parallelExecutionTypeString
+                        parallelExecutionTypeString: parallelExecutionTypeString,
+                        storeOnNAS: true
                         ]
 
             if (sendToUMS) {

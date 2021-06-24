@@ -19,9 +19,9 @@ def call(String local_path, String server_path, String customKeys = "", String r
                 // Avoid warnings connected with using Groovy String interpolation with credentials
                 // See docs for more details: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#string-interpolation
                 if (isUnix()) {
-                    sh '$CIS_TOOLS/uploadFiles.sh' + " \"${local_path}\" ${server_path} " + '$REMOTE_HOST' + " \"${customKeys}\""
+                    sh '$CIS_TOOLS/uploadFiles.sh' + " \"${local_path}\" \"${server_path}\" " + '$REMOTE_HOST' + " \"${customKeys}\""
                 } else {
-                    bat '%CIS_TOOLS%\\uploadFiles.bat' + " \"${local_path}\" ${server_path} " + '%REMOTE_HOST%' + " \"${customKeys}\""
+                    bat '%CIS_TOOLS%\\uploadFiles.bat' + " \"${local_path}\" \"${server_path}\" " + '%REMOTE_HOST%' + " \"${customKeys}\""
                 }
             }
         } catch (FlowInterruptedException error) {

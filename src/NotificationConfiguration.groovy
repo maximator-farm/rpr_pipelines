@@ -141,12 +141,28 @@ public class NotificationConfiguration {
         ]
     ]
 
+    def static UPDATE_BINARIES = [
+        "exceptions": [
+            [
+                "class": Exception, "problemMessage": "[WARNING] Failed to update binaries.", 
+                "rethrow": ExceptionThrowType.NO, "scope": ProblemMessageManager.SPECIFIC
+            ]
+        ]
+    ]
+
     def static BUILD_SOURCE_CODE = [
         "exceptions": [
             [
                 "class": Exception, "problemMessage": "Failed to build the project.", 
                 "rethrow": ExceptionThrowType.RETHROW,
                 "githubNotification": ["status": "failure"]
+            ]
+        ],
+
+        "rebootConfiguration": [
+            "AnyTool": false,
+            "Tools": [
+                "USDViewer": ["Windows"]
             ]
         ]
     ]
@@ -224,7 +240,13 @@ public class NotificationConfiguration {
             [
                 "class": "TimeoutExceeded", "problemMessage": "Failed to install the plugin due to timeout.", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
-                "githubNotification": ["status": "timed_out"]
+                "githubNotification": ["status": "timed_out"],
+                "rebootConfiguration": [
+                    "AnyTool": false,
+                    "Tools": [
+                        "RadeonProRenderMayaPlugin": ["AMD_RX5700XT-OSX"]
+                    ]
+                ]
             ],
             [
                 "class": Exception, "problemMessage": "Failed to install the plugin.", 
@@ -293,7 +315,13 @@ public class NotificationConfiguration {
             [
                 "class": "TimeoutExceeded", "problemMessage": "Failed to build cache due to timeout.", 
                 "rethrow": ExceptionThrowType.THROW_IN_WRAPPER,
-                "githubNotification": ["status": "timed_out"]
+                "githubNotification": ["status": "timed_out"],
+                "rebootConfiguration": [
+                    "AnyTool": false,
+                    "Tools": [
+                        "RadeonProRenderMayaPlugin": ["AMD_RX5700XT-OSX"]
+                    ]
+                ]
             ],
             [
                 "class": Exception, "problemMessage": PLUGIN_NOT_FOUND, 
@@ -313,7 +341,13 @@ public class NotificationConfiguration {
             [
                 "class": Exception, "problemMessage": NO_OUTPUT_IMAGE, 
                 "rethrow": ExceptionThrowType.RETHROW, "scope": ProblemMessageManager.SPECIFIC,
-                "getMessage": [NO_OUTPUT_IMAGE]
+                "getMessage": [NO_OUTPUT_IMAGE],
+                "rebootConfiguration": [
+                    "AnyTool": false,
+                    "Tools": [
+                        "RadeonProRenderMayaPlugin": ["AMD_RX5700XT-OSX"]
+                    ]
+                ]
             ],
             [
                 "class": Exception, "problemMessage": "Failed to build cache.", 
@@ -446,6 +480,12 @@ public class NotificationConfiguration {
 
     def static TEST_NOT_FOUND = "Test not found."
 
+    def static EXECUTE_UNIT_TESTS = "Executing unit tests."
+
+    def static UNIT_TESTS_PASSED = "Unit tests passed."
+
+    def static UNIT_TESTS_FAILED = "Unit tests failed."
+
     def static FAILED_TO_SAVE_RESULTS = "An error occurred while saving test results. Please contact support."
 
     def static BUILDING_REPORT = "Building test report."
@@ -465,8 +505,6 @@ public class NotificationConfiguration {
     def static LOST_CONNECTION_WITH_MACHINE = "Lost connection with machine. Please contact support."
 
     def static CAN_NOT_GET_TESTS_STATUS = "Can't get tests status."
-
-    def static EXECUTE_UNIT_TESTS = "Executing unit tests."
 
     def static INVALID_PLUGIN_SIZE = "Invalid plugin (size is less than 10Mb)."
 
