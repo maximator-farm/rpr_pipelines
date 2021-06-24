@@ -923,7 +923,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
 def call(String projectBranch = "",
     String testsBranch = "master",
-    String platforms = "Windows:AMD_RX5700XT",
+    String platforms = "Windows:AMD_RX5700XT;Android",
     String clientTag = "gpuAMD_RX5700XT",
     String winBuildConfiguration = "release",
     String winVisualStudioVersion = "2017,2019",
