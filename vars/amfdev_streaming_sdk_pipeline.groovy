@@ -442,7 +442,7 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(Map options) {
-    options.buildConfiguration.each() { winBuildConf ->
+    options.winBuildConfiguration.each() { winBuildConf ->
         options.winVisualStudioVersion.each() { winVSVersion ->
 
             println "Current build configuration: ${winBuildConf}."
@@ -496,10 +496,46 @@ def executeBuildWindows(Map options) {
                 archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
                 rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
             }
+
         }
     }
 
     GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
+}
+
+
+def executeBuildAndroid(Map options) {
+    options.androidBuildConfiguration.each() { androidBuildConf ->
+
+        println "Current build configuration: ${androidBuildConf}."
+
+        String androidBuildName = "${androidBuildConf}"
+        String logName = "${STAGE_NAME}.${androidBuildName}.log"
+
+        String androidBuildKeys = "asseble${androidBuildConf.substring(0, 1).toUpperCase() + androidBuildConf.substring(1).toLowerCase()}"
+
+        dir("StreamingSDK/amf/protected/samples/CPPSamples/RemoteGameClientAndroid") {
+            GithubNotificator.updateStatus("Build", "Android", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
+
+            bat """
+                gradlew.bat ${androidBuildKeys} >> ..\\..\\..\\..\\..\\..\\${logName} 2>&1
+            """
+
+            String archiveUrl = ""
+
+            dir("app/build/outputs/apk/arm/${androidBuildConf}") {
+                String BUILD_NAME = "StreamingSDK_Android_${androidBuildName}.zip"
+
+                zip archive: true, zipFile: BUILD_NAME, glob: "app-arm-${androidBuildConf}.apk"
+
+                archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
+                rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${archiveUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+            }
+        }
+
+    }
+
+    GithubNotificator.updateStatus("Build", "Android", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE)
 }
 
 
@@ -519,6 +555,9 @@ def executeBuild(String osName, Map options) {
             switch(osName) {
                 case "Windows":
                     executeBuildWindows(options)
+                    break
+                case "Android":
+                    executeBuildAndroid(options)
                     break
                 case "OSX":
                     println("Unsupported OS")
@@ -886,7 +925,7 @@ def call(String projectBranch = "",
     String testsBranch = "master",
     String platforms = "Windows:AMD_RX5700XT",
     String clientTag = "gpuAMD_RX5700XT",
-    String buildConfiguration = "release",
+    String winBuildConfiguration = "release",
     String winVisualStudioVersion = "2017,2019",
     String winTestingBuildName = "release_vs2019",
     String testsPackage = "General.json",
@@ -895,7 +934,8 @@ def call(String projectBranch = "",
     Integer testCaseRetries = 2,
     Boolean clientCollectTraces = false,
     Boolean serverCollectTraces = false,
-    String games = "Valorant"
+    String games = "Valorant",
+    String androidBuildConfiguration = "debug"
     )
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -918,7 +958,7 @@ def call(String projectBranch = "",
                 }
             }
 
-            buildConfiguration = buildConfiguration.split(',')
+            winBuildConfiguration = winBuildConfiguration.split(',')
             winVisualStudioVersion = winVisualStudioVersion.split(',')
 
             println """
@@ -928,9 +968,13 @@ def call(String projectBranch = "",
             """
 
             println """
-                Build configuration: ${buildConfiguration}"
+                Win build configuration: ${winBuildConfiguration}"
                 Win visual studio version: ${winVisualStudioVersion}"
                 Win testing build name: ${winTestingBuildName}
+            """
+
+            println """
+                Android build configuration: ${androidBuildConfiguration}"
             """
 
             options << [projectRepo: PROJECT_REPO,
@@ -941,9 +985,10 @@ def call(String projectBranch = "",
                         tests:tests,
                         PRJ_NAME: "StreamingSDK",
                         splitTestsExecution: false,
-                        buildConfiguration: buildConfiguration,
+                        winBuildConfiguration: winBuildConfiguration,
                         winVisualStudioVersion: winVisualStudioVersion,
                         winTestingBuildName: winTestingBuildName,
+                        androidBuildConfiguration: androidBuildConfiguration,
                         gpusCount: gpusCount,
                         nodeRetry: nodeRetry,
                         platforms: platforms,
