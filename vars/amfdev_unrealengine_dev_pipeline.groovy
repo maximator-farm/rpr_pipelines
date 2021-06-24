@@ -5,7 +5,7 @@ def executeTestsWindows(String osName, String asicName, Map options)
 {
     try {
         cleanWS(osName)
-        unstash "UEWindowsTests"
+        makeUnstash(name: "UEWindowsTests", unzip: false)
         unzip zipFile: "WindowsTests.zip", dir: "UETests", quiet: true
     } catch(e) {
         println("[ERROR] Failed to prepare tests on ${env.NODE_NAME}")
@@ -311,7 +311,7 @@ def executeBuildWindows(Map options)
             if (fileExists("Deploy\\Tests")) {
                 zip archive: false, dir: "Deploy", glob: '', zipFile: "WindowsTests.zip"
 
-                stash includes: "WindowsTests.zip", name: "UEWindowsTests"
+                makeStash(includes: "WindowsTests.zip", name: "UEWindowsTests", preZip: false)
             } else {
                 println "[ERROR] Can't find folder with tests!"
                 currentBuild.result = "FAILURE"

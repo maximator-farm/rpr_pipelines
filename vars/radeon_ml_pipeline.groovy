@@ -1,87 +1,9 @@
-def deployRML(Map options, String buildType) {
-    try {
-        if (env.TAG_NAME) {
-            dir("rml-deploy") {
-                checkoutScm(branchName: "master", repositoryUrl: "${options.gitlabURLSSH}/servants/rml-deploy.git", credentialsId: "radeonprorender-gitlab")
-                switch (env.CIS_OS) {
-                    case "Windows":
-                        bat """
-                            if exist \"${CIS_OS}\\${buildType}\" RMDIR /S/Q \"${CIS_OS}\\${buildType}\"
-                            MD \"${CIS_OS}\\${buildType}\"
-                            xcopy \"..\\build-${buildType}\\${buildType}\\MIOpen.dll\" \"${CIS_OS}\\${buildType}"
-                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML.dll\" \"${CIS_OS}\\${buildType}"
-                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML-d.dll\" \"${CIS_OS}\\${buildType}"
-                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML.lib\" \"${CIS_OS}\\${buildType}"
-                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML-d.lib\" \"${CIS_OS}\\${buildType}"
-                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML_DirectML.dll\" \"${CIS_OS}\\${buildType}"
-                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML_DirectML-d.dll\" \"${CIS_OS}\\${buildType}"
-                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML_MIOpen.dll\" \"${CIS_OS}\\${buildType}"
-                            xcopy \"..\\build-${buildType}\\${buildType}\\RadeonML_MIOpen-d.dll\" \"${CIS_OS}\\${buildType}"
-                            git config --local user.name "${options.gitUser}"
-                            git config --local user.email "${options.gitEmail}"
-                            git add --all
-                            git commit -m "${CIS_OS} ${buildType} ${env.TAG_NAME}"
-                        """
-                        break
-                    case "OSX":
-                        sh """
-                            rm -rf \"${CIS_OS}/${buildType}\"
-                            mkdir -p \"${CIS_OS}/${buildType}\"
-                            cp -R ../build-${buildType}/${buildType}/libRadeonML.*dylib \"${CIS_OS}/${buildType}\"
-                            cp -R ../build-${buildType}/${buildType}/libRadeonML_MPS.*dylib \"${CIS_OS}/${buildType}\"
-                            git config --local user.name "${options.gitUser}"
-                            git config --local user.email "${options.gitEmail}"
-                            git add --all
-                            git commit -m "${CIS_OS} ${buildType} ${env.TAG_NAME}"
-                        """
-                        break
-                    default:
-                        sh """
-                            rm -rf \"${CIS_OS}/${buildType}\"
-                            mkdir -p \"${CIS_OS}/${buildType}\"
-                            cp -R ../build-${buildType}/${buildType}/libMIOpen.so* \"${CIS_OS}/${buildType}\"
-                            cp -R ../build-${buildType}/${buildType}/libRadeonML_MIOpen.so* \"${CIS_OS}/${buildType}\"
-                            cp -R ../build-${buildType}/${buildType}/libRadeonML.so* \"${CIS_OS}/${buildType}\"
-                            git config --local user.name "${options.gitUser}"
-                            git config --local user.email "${options.gitEmail}"
-                            git add --all
-                            git commit -m "${CIS_OS} ${buildType} ${env.TAG_NAME}"
-                        """
-                }
-                // try 3 times to push new commit
-                for (int i = 0; i < 3; i++) {
-                    try {
-                        switch (env.CIS_OS) {
-                            case "Windows":
-                                bat """
-                                    git fetch origin master
-                                    git rebase FETCH_HEAD
-                                    git push origin HEAD:master
-                                """
-                                break
-                            default:
-                                sh """
-                                    git fetch origin master
-                                    git rebase FETCH_HEAD
-                                    git push origin HEAD:master
-                                """
-                        }
-                        break
-                    } catch (e1) {
-                        println("[ERROR] Failed to deploy ${buildType} for ${CIS_OS} (try #${i})")
-                    }
-                }
-            }
-        }
-    } catch (e) {
-        println("[ERROR] Failed to deploy ${buildType} for ${CIS_OS} at all")
-        println(e.toString())
-        println(e.getMessage())
-    }
-}
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+import utils
 
-def executeUnitTestsCommand(String osName, Map options)
-{
+
+def executeUnitTestsCommand(String osName, Map options) {
+
     switch (osName) {
         case 'Windows':
             bat """
@@ -105,79 +27,84 @@ def executeUnitTestsCommand(String osName, Map options)
 }
 
 def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
+
     String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_ml_autotests_assets" : "/mnt/c/TestResources/rpr_ml_autotests_assets"
-    downloadFiles("/volume1/Assets/rpr_ml_assets/", assetsDir)
+    withNotifications(title: "${asicName}-${osName}-FT", options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
+        downloadFiles("/volume1/Assets/rpr_ml_assets/", assetsDir)
+    }
 
     ws("WS/${options.PRJ_NAME}-FT") {
-        checkoutScm(branchName: options.testsBranch, repositoryUrl: "${options.gitlabURL}/rml/ft_engine.git", credentialsId: "radeonprorender-gitlab")
+
+        withNotifications(title: "${asicName}-${osName}-FT", options: options, logUrl: BUILD_URL, configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            timeout(time: "5", unit: "MINUTES") {
+                cleanWS(osName)
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "${options.gitlabURL}/rml/ft_engine.git", credentialsId: "radeonprorender-gitlab")
+            }
+        }
+
         try {
             dir("rml_release") {
-                unstash "app${osName}"
+                makeUnstash(name: "app${osName}")
             }
-            outputEnvironmentInfo(osName, "${STAGE_NAME}.ft")
-            switch (osName) {
-                case 'Windows':
-                    assetsDir = "C:\\TestResources\\rpr_ml_autotests_assets"
+            withNotifications(title: "${asicName}-${osName}-FT", options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
+                switch (osName) {
+                    case 'Windows':
+                        assetsDir = "C:\\TestResources\\rpr_ml_autotests_assets"
 
-                    withEnv(["PATH=C:\\Python38;C:\\Python38\\Scripts;${PATH}"]) {
-                        bat """
-                        pip install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
-                        python -V >> ${STAGE_NAME}.ft.log 2>&1
-                        python run_tests.py -t ${assetsDir} -e rml_release/test_app.exe -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
-                        rename ft-executor.log ${STAGE_NAME}.engine.log
+                        withEnv(["PATH=C:\\Python38;C:\\Python38\\Scripts;${PATH}"]) {
+                            bat """
+                                pip install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
+                                python -V >> ${STAGE_NAME}.ft.log 2>&1
+                                python run_tests.py -t ${assetsDir} -e rml_release/test_app.exe -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                                rename ft-executor.log ${STAGE_NAME}.engine.log
+                            """
+                        }
+                        break
+                    default:
+                        sh """
+                            export LD_LIBRARY_PATH=${assetsDir}:\$LD_LIBRARY_PATH
+                            pip3.8 install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
+                            python3.8 -V >> ${STAGE_NAME}.ft.log 2>&1
+                            env >> ${STAGE_NAME}.ft.log 2>&1
+                            python3.8 run_tests.py -t ${assetsDir} -e rml_release/test_app -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
+                            mv ft-executor.log ${STAGE_NAME}.engine.log
                         """
-                    }
-                    break
-                default:
-                    sh """
-                        export LD_LIBRARY_PATH=${assetsDir}:\$LD_LIBRARY_PATH
-                        pip3.8 install --user -r requirements.txt >> ${STAGE_NAME}.ft.log 2>&1
-                        python3.8 -V >> ${STAGE_NAME}.ft.log 2>&1
-                        env >> ${STAGE_NAME}.ft.log 2>&1
-                        python3.8 run_tests.py -t ${assetsDir} -e rml_release/test_app -i ${assetsDir} -o results -c true >> ${STAGE_NAME}.ft.log 2>&1
-                        mv ft-executor.log ${STAGE_NAME}.engine.log
-                    """
+                }
             }
-        }
-        catch(e) {
+            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-FT", "success", options, NotificationConfiguration.TEST_PASSED, "${BUILD_URL}/artifact/${STAGE_NAME}.ft.log")
+        } catch(e) {
             println(e.toString())
+            currentBuild.result = "UNSTABLE"
+            GithubNotificator.updateStatus("Test", "${asicName}-${osName}-FT", "failure", options, NotificationConfiguration.TEST_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}.ft.log")
             throw e
-        }
-        finally {
+        } finally {
             archiveArtifacts "*.log"
-            utils.publishReport(this, "${BUILD_URL}", "results", "report.html", "FT ${osName}-${asicName}", "FT ${osName}-${asicName}")
+            utils.publishReport(this, BUILD_URL, "results", "report.html", "FT ${osName}-${asicName}", "FT ${osName}-${asicName}")
         }
     }
 }
 
-def executeTests(String osName, String asicName, Map options)
-{
+def executeTests(String osName, String asicName, Map options) {
+
     cleanWS(osName)
-    String error_message = ""
 
     try {
+        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-Unit", "in_progress", options, NotificationConfiguration.EXECUTE_UNIT_TESTS, BUILD_URL)
         outputEnvironmentInfo(osName, "${STAGE_NAME}.UnitTests")
-        unstash "app${osName}"
-
+        makeUnstash(name: "app${osName}")
         executeUnitTestsCommand(osName, options)
+        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-Unit", "success", options, NotificationConfiguration.UNIT_TESTS_PASSED, "${BUILD_URL}/artifact/${STAGE_NAME}.UnitTests")
+    } catch (FlowInterruptedException error) {
+        println("[INFO] Job was aborted during executing tests.")
+        throw error
     } catch (e) {
         println(e.toString())
         println(e.getMessage())
-        error_message = e.getMessage()
-        currentBuild.result = "FAILED"
-        throw e
+        currentBuild.result = "UNSTABLE"
+        GithubNotificator.updateStatus("Test", "${asicName}-${osName}-Unit", "failure", options, NotificationConfiguration.UNIT_TESTS_FAILED, "${BUILD_URL}/artifact/${STAGE_NAME}.UnitTests")
     } finally {
         archiveArtifacts "*.log"
         junit "*gtest.xml"
-
-        if (env.CHANGE_ID) {
-            String context = "[${options.PRJ_NAME}] [TEST] ${osName}-${asicName}"
-            String description = error_message ? "Testing finished on UT with error message: ${error_message}" : "UT Testing finished"
-            String status = error_message ? "failure" : "success"
-            String url = "${env.BUILD_URL}/artifact/${STAGE_NAME}.UnitTests.log"
-            pullRequest.createStatus(status, context, description, url)
-            options['commitContexts'].remove(context)
-        }
     }
 
     cleanWS(osName)
@@ -187,34 +114,19 @@ def executeTests(String osName, String asicName, Map options)
             outputEnvironmentInfo(osName, "${STAGE_NAME}.ft")
             executeFunctionalTestsCommand(osName, asicName, options)
         } catch (e) {
-            println(e.toString());
-            println(e.getMessage());
-            error_message = e.getMessage()
-            currentBuild.result = "FAILED"
-            throw e
+            println(e.toString())
+            println(e.getMessage())
+
         } finally {
             archiveArtifacts "*.log"
-
-            if (env.CHANGE_ID) {
-                String context = "[${options.PRJ_NAME}] [TEST] ${osName}-${asicName}"
-                String description = error_message ? "Testing finished on FT with error message: ${error_message}" : "UT and FT Testing finished"
-                String status = error_message ? "failure" : "success"
-                String url = "${env.BUILD_URL}/artifact/${STAGE_NAME}.ft.log"
-                pullRequest.createStatus(status, context, description, url)
-                options['commitContexts'].remove(context)
-            }
         }
     }
 }
 
 
-def executeWindowsBuildCommand(Map options, String buildType){
-
-    outputEnvironmentInfo("Windows", "${STAGE_NAME}_${buildType}")
+def executeWindowsBuildCommand(String osName, Map options, String buildType){
 
     bat """
-        :: SET DIRECTML_INCLUDE_PATH=".\\DirectML"
-        :: SET DIRECTML_LIBRARY_PATH=".\\DirectML"
         mkdir build-${buildType}
         cd build-${buildType}
         cmake ${options.cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
@@ -232,38 +144,50 @@ def executeWindowsBuildCommand(Map options, String buildType){
         xcopy ..\\rml\\include\\rml_internal\\*.h* ${buildType}\\rml_internal
     """
 
-    deployRML(options, buildType)
+    if (env.TAG_NAME) {
+        bat """
+            if exist ${osName}\\${buildType} RMDIR /S/Q ${osName}\\${buildType}
+            MD ${osName}\\${buildType}
+            xcopy /s/y/i build-${buildType}\\${buildType}\\MIOpen.dll ${osName}\\${buildType}
+            xcopy /s/y/i build-${buildType}\\${buildType}\\RadeonML*.dll ${osName}\\${buildType}
+            xcopy /s/y/i build-${buildType}\\${buildType}\\RadeonML*.lib ${osName}\\${buildType}
+            xcopy /s/y/i build-${buildType}\\${buildType}\\RadeonML_DirectML*.dll ${osName}\\${buildType}
+            xcopy /s/y/i build-${buildType}\\${buildType}\\RadeonML_MIOpen*.dll ${osName}\\${buildType}
+        """
+        dir("${osName}/${buildType}") {
+            makeStash(includes: "*", name: "deploy_${osName}_${buildType}")
+        }
+    }
 
-    zip dir: "build-${buildType}\\${buildType}", zipFile: "build-${buildType}\\${CIS_OS}_${buildType}.zip"
-    archiveArtifacts "build-${buildType}\\${CIS_OS}_${buildType}.zip"
+    zip archive: true, dir: "build-${buildType}\\${buildType}", zipFile: "${osName}_${buildType}.zip"
     
-    zip archive: true, dir: "build-${buildType}\\${buildType}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe", zipFile: "${CIS_OS}_${buildType}.zip"
+    zip archive: true, dir: "build-${buildType}\\${buildType}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe", zipFile: "build-${buildType}\\${osName}_${buildType}.zip"
 
 }
 
 
-def executeBuildWindows(Map options)
-{
+def executeBuildWindows(String osName, Map options) {
+
+    GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact")
+
     bat """
-        xcopy ..\\\\RML_thirdparty\\\\MIOpen third_party\\\\miopen /s/y/i
-        xcopy ..\\\\RML_thirdparty\\\\tensorflow third_party\\\\tensorflow /s/y/i
+        xcopy /s/y/i ..\\RML_thirdparty\\MIOpen third_party\\miopen
+        xcopy /s/y/i ..\\RML_thirdparty\\tensorflow third_party\\tensorflow
     """
 
     options.cmakeKeysWin ='-G "Visual Studio 15 2017 Win64" -DRML_DIRECTML=ON -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
 
-    executeWindowsBuildCommand(options, "Release")
-    executeWindowsBuildCommand(options, "Debug")
+    executeWindowsBuildCommand(osName, options, "Release")
+    executeWindowsBuildCommand(osName, options, "Debug")
+
+    GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, "${BUILD_URL}/artifact")
 
 }
 
 
-def executeOSXBuildCommand(Map options, String buildType){
+def executeOSXBuildCommand(String osName, Map options, String buildType) {
     
-    outputEnvironmentInfo("OSX", "${STAGE_NAME}_${buildType}")
-
     sh """
-        #export DIRECTML_INCLUDE_PATH="./DirectML"
-        #export DIRECTML_LIBRARY_PATH="./DirectML"
         mkdir build-${buildType}
         cd build-${buildType}
         cmake -DCMAKE_OSX_SYSROOT=$MACOS_SDK_10_15 -DCMAKE_buildType=${buildType} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
@@ -279,18 +203,31 @@ def executeOSXBuildCommand(Map options, String buildType){
         cp ../rml/include/rml/*.h* ./${buildType}/rml
         cp ../rml/include/rml_internal/*.h* ./${buildType}/rml_internal
 
-        tar cf ${CIS_OS}_${buildType}.tar ${buildType}
+        tar cf ${osName}_${buildType}.tar ${buildType}
     """
 
-    deployRML(options, buildType)
+    if (env.TAG_NAME) {
+        sh """
+            rm -rf ${osName}/${buildType}
+            mkdir -p ${osName}/${buildType}
+            cp -R build-${buildType}/${buildType}/libRadeonML.*dylib ${osName}/${buildType}
+            cp -R build-${buildType}/${buildType}/libRadeonML_MPS.*dylib ${osName}/${buildType}
 
-    archiveArtifacts "build-${buildType}/${CIS_OS}_${buildType}.tar"
-    zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.dylib, test*", zipFile: "${CIS_OS}_${buildType}.zip"
+        """
+        dir("${osName}/${buildType}") {
+            makeStash(includes: "*", name: "deploy_${osName}_${buildType}")
+        }
+    }
+
+    archiveArtifacts "build-${buildType}/${osName}_${buildType}.tar"
+    zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.dylib, test*", zipFile: "${osName}_${buildType}.zip"
 }
 
 
-def executeBuildOSX(Map options)
-{
+def executeBuildOSX(String osName, Map options) {
+
+    GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact")
+
     sh """
         cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
         cp -r ../RML_thirdparty/tensorflow/* ./third_party/tensorflow
@@ -298,22 +235,20 @@ def executeBuildOSX(Map options)
 
     options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
     
-    executeOSXBuildCommand(options, "Release")
-    executeOSXBuildCommand(options, "Debug")
+    executeOSXBuildCommand(osName, options, "Release")
+    executeOSXBuildCommand(osName, options, "Debug")
+
+    GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, "${BUILD_URL}/artifact")
 
 }
 
 
-def executeLinuxBuildCommand(Map options, String buildType){
+def executeLinuxBuildCommand(String osName, Map options, String buildType) {
     
-    outputEnvironmentInfo("Linux", "${STAGE_NAME}_${buildType}")
-
     sh """
-        #export DIRECTML_INCLUDE_PATH="./DirectML"
-        #export DIRECTML_LIBRARY_PATH="./DirectML"
         mkdir build-${buildType}
         cd build-${buildType}
-        cmake -DCMAKE_buildType=${buildType} ${options.cmakeKeysLinux[CIS_OS]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
+        cmake -DCMAKE_buildType=${buildType} ${options.cmakeKeysLinux[osName]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
         make -j 8 >> ../${STAGE_NAME}_${buildType}.log 2>&1
     """
     
@@ -328,18 +263,30 @@ def executeLinuxBuildCommand(Map options, String buildType){
         cp ../rml/include/rml/*.h* ./${buildType}/rml
         cp ../rml/include/rml_internal/*.h* ./${buildType}/rml_internal
 
-        tar cf ${CIS_OS}_${buildType}.tar ${buildType}
+        tar cf ${osName}_${buildType}.tar ${buildType}
     """
 
-    deployRML(options, buildType)
+    if (env.TAG_NAME) {
+        sh """
+            rm -rf ${osName}/${buildType}
+            mkdir -p ${osName}/${buildType}
+            cp -R build-${buildType}/${buildType}/libMIOpen.so* ${osName}/${buildType}
+            cp -R build-${buildType}/${buildType}/libRadeonML_MIOpen.so* ${osName}/${buildType}
+            cp -R build-${buildType}/${buildType}/libRadeonML.so* ${osName}/${buildType}
+        """
+        dir("${osName}/${buildType}") {
+            makeStash(includes: "*", name: "deploy_${osName}_${buildType}")
+        }
+    }
 
-    archiveArtifacts "build-${buildType}/${CIS_OS}_${buildType}.tar"
-    zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.so, libMIOpen*.so, libtensorflow*.so, test*", zipFile: "${CIS_OS}_${buildType}.zip"
+    archiveArtifacts "build-${buildType}/${osName}_${buildType}.tar"
+    zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.so, libMIOpen*.so, libtensorflow*.so, test*", zipFile: "${osName}_${buildType}.zip"
 }
 
 
-def executeBuildLinux(Map options)
-{
+def executeBuildLinux(String osName, Map options) {
+    GithubNotificator.updateStatus("Build", osName, "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact")
+
     sh """
         cp -r ../RML_thirdparty/MIOpen/* ./third_party/miopen
         cp -r ../RML_thirdparty/tensorflow/* ./third_party/tensorflow
@@ -350,22 +297,69 @@ def executeBuildLinux(Map options)
         'CentOS7': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
     ]
 
-    executeLinuxBuildCommand(options, "Release")
-    executeLinuxBuildCommand(options, "Debug")
+    executeLinuxBuildCommand(osName, options, "Release")
+    executeLinuxBuildCommand(osName, options, "Debug")
+
+    GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, "${BUILD_URL}/artifact")
 
 }
 
 
-def executePreBuild(Map options)
-{
-    checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+def executeBuild(String osName, Map options) {
+    try {
+
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+            checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+        }
+        
+        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
+        downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
+        //downloadFiles("/volume1/CIS/rpr-ml/DirectML/*", "./DirectML")
+
+        outputEnvironmentInfo(osName, "${STAGE_NAME}_Release")
+        outputEnvironmentInfo(osName, "${STAGE_NAME}_Debug")
+
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+            switch (osName) {
+                case 'Windows':
+                    executeBuildWindows(osName, options)
+                    break
+                case 'OSX':
+                    executeBuildOSX(osName, options)
+                    break
+                default:
+                    executeBuildLinux(osName, options)
+            }
+        }
+
+        if (!env.TAG_NAME) {
+            dir('build-Release/Release') {
+                makeStash(includes: '*', name: "app${osName}")
+            } 
+        }
+
+    } catch (e) {
+        throw e
+    } finally {
+        archiveArtifacts "*.log"
+    }
+}
+
+
+def executePreBuild(Map options) {
+
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+    }
 
     options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
     options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
     options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+    options.commitShortSHA = options.commitSHA[0..6]
     println "The last commit was written by ${options.commitAuthor}."
     println "Commit message: ${options.commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
+    println "Commit shortSHA: ${options.commitShortSHA}"
 
     if (options.projectBranch) {
         currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
@@ -377,129 +371,117 @@ def executePreBuild(Map options)
     currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
     currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
-    def commitContexts = []
-    // set pending status for all
-    if (env.CHANGE_ID) {
+    if (env.BRANCH_NAME) {
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+            GithubNotificator githubNotificator = new GithubNotificator(this, options)
+            githubNotificator.init(options)
+            options.githubNotificator = githubNotificator
+            githubNotificator.initPreBuild(BUILD_URL)
+        }
+    }
 
-        options['platforms'].split(';').each()
-                { platform ->
-                    List tokens = platform.tokenize(':')
-                    String osName = tokens.get(0)
-                    // Statuses for builds
-                    String context = "[${options.PRJ_NAME}] [BUILD] ${osName}"
-                    commitContexts << context
-                    pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
-                    if (tokens.size() > 1) {
-                        gpuNames = tokens.get(1)
-                        gpuNames.split(',').each()
-                                { gpuName ->
-                                    // Statuses for tests
-                                    context = "[${options.PRJ_NAME}] [TEST] ${osName}-${gpuName}"
-                                    commitContexts << context
-                                    pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
-                                }
-                    }
-                }
-        options['commitContexts'] = commitContexts
+    withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
+        if (options.executeFT) {
+            options.tests = ["Unit", "FT"]
+        } else {
+            options.tests = ["Unit"]
+        }
+    }
+
+    if (env.BRANCH_NAME && options.githubNotificator) {
+        options.githubNotificator.initChecks(options, BUILD_URL, true, true, false)
     }
 }
 
 
-def executeBuild(String osName, Map options)
-{
-    String error_message = ""
-    String context = "[${options.PRJ_NAME}] [BUILD] ${osName}"
+def executeDeploy(Map options, List platformList, List testResultList) {
 
     try {
-        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+        dir("rml-deploy") {
+           
+            checkoutScm(branchName: "master", repositoryUrl: "${options.gitlabURLSSH}/servants/rml-deploy.git", credentialsId: "radeonprorender-gitlab")
+             
+            bat """
+                git rm -r *
+            """ 
 
-        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
-        downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
-        //downloadFiles("/volume1/CIS/rpr-ml/DirectML/*", "./DirectML")
-
-        withEnv(["CIS_OS=${osName}"]) {
-            switch (osName) {
-                case 'Windows':
-                    executeBuildWindows(options)
-                    break
-                case 'OSX':
-                    executeBuildOSX(options)
-                    break
-                default:
-                    executeBuildLinux(options)
+            platformList.each() {
+                dir(it) {
+                    dir("Release"){
+                        makeUnstash(name: "deploy_${it}_Release")
+                    }
+                    dir("Debug"){
+                        makeUnstash(name: "deploy_${it}_Debug")
+                    }
+                }
             }
-        }
-
-        dir('build-Release/Release') {
-            stash includes: '*', name: "app${osName}"
+                
+            bat """
+                git add --all
+                git commit -m "buildmaster: SDK release ${env.TAG_NAME}"
+                git tag -a rml_sdk_${env.TAG_NAME} -m "rml_sdk_${env.TAG_NAME}"
+                git push --tag origin HEAD:master
+            """ 
         }
     } catch (e) {
+        println("[ERROR] Failed to deploy RML binaries")
+        println(e.toString())
         println(e.getMessage())
-        error_message = e.getMessage()
-        currentBuild.result = "FAILED"
-        throw e
-    } finally {
-        if (env.CHANGE_ID) {
-            String status = error_message ? "failure" : "success"
-            pullRequest.createStatus("${status}", context, "Build finished as '${status}'", "${env.BUILD_URL}/artifact/${STAGE_NAME}_Release.log")
-            options['commitContexts'].remove(context)
-        }
-        archiveArtifacts "*.log"
     }
 }
 
-def executeDeploy(Map options, List platformList, List testResultList)
-{
-    // set error statuses for PR, except if current build has been superseded by new execution
-    if (env.CHANGE_ID && !currentBuild.nextBuild) {
-        // if jobs was aborted or crushed remove pending status for unfinished stages
-        options['commitContexts'].each() {
-            pullRequest.createStatus("error", it, "Build has been terminated unexpectedly", "${env.BUILD_URL}")
-        }
-    }
-}
 
 def call(String projectBranch = "",
          String testsBranch = "master",
          String platforms = 'Windows:AMD_RadeonVII,NVIDIA_RTX2080TI;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA,AMD_RX5700XT;CentOS7',
          String projectRepo='git@github.com:Radeon-Pro/RadeonML.git',
          Boolean enableNotifications = true,
-         Boolean executeFT = true)
-{
-    String PRJ_ROOT='rpr-ml'
-    String PRJ_NAME='RadeonML'
+         Boolean executeFT = true) {
 
-    def gitlabURL, gitUser, gitEmail, gitlabURLSSH
-    withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL'), string(credentialsId: 'gitlabURLSSH', variable: 'GITLAB_URL_SSH'),
-        string(credentialsId: 'gitUser', variable: 'GIT_USER'), string(credentialsId: 'gitEmail', variable: 'GIT_EMAIL')]) 
-    {
+    ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
+
+    Map options = [:]
+    options["stage"] = "Init"
+    options["problemMessageManager"] = problemMessageManager
+
+    def gitlabURL
+    withCredentials([string(credentialsId: 'gitlabURL', variable: 'GITLAB_URL'), string(credentialsId: 'gitlabURLSSH', variable: 'GITLAB_URL_SSH')]) {
         gitlabURL = GITLAB_URL
         gitlabURLSSH = GITLAB_URL_SSH
-        gitUser = GIT_USER
-        gitEmail = GIT_EMAIL
     }
 
-    multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy,
-            [platforms:platforms,
-             projectBranch:projectBranch,
-             testsBranch:testsBranch,
-             enableNotifications:enableNotifications,
-             PRJ_NAME:PRJ_NAME,
-             PRJ_ROOT:PRJ_ROOT,
-             projectRepo:projectRepo,
-             BUILDER_TAG:'BuilderML',
-             TESTER_TAG:'ML',
-             BUILD_TIMEOUT:'45',
-             TEST_TIMEOUT:'40',
-             executeBuild:true,
-             executeTests:true,
-             executeFT:executeFT,
-             slackChannel:"${SLACK_ML_CHANNEL}",
-             slackBaseUrl:"${SLACK_BAIKAL_BASE_URL}",
-             slackTocken:"slack-ml-channel",
-             retriesForTestStage:1,
-             gitlabURL:gitlabURL,
-             gitlabURLSSH:gitlabURLSSH,
-             gitUser:gitUser,
-             gitEmail:gitEmail])
+    try {
+
+        def deployStage = env.TAG_NAME ? this.&executeDeploy : null
+        platforms = env.TAG_NAME ? "Windows;Ubuntu20;OSX;CentOS7" : platforms
+
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, deployStage,
+                [platforms:platforms,
+                 projectRepo:projectRepo,
+                 projectBranch:projectBranch,
+                 testsBranch:testsBranch,
+                 enableNotifications:enableNotifications,
+                 PRJ_NAME:'RadeonML',
+                 PRJ_ROOT:'rpr-ml',
+                 BUILDER_TAG:'BuilderML',
+                 TESTER_TAG:'ML',
+                 BUILD_TIMEOUT:45,
+                 TEST_TIMEOUT:45,
+                 DEPLOY_TIMEOUT:45,
+                 executeBuild:true,
+                 executeTests:true,
+                 executeFT:executeFT,
+                 retriesForTestStage:1,
+                 gitlabURL:gitlabURL,
+                 gitlabURLSSH:gitlabURLSSH
+                 ])
+
+    } catch (e) {
+        currentBuild.result = "FAILURE"
+        println(e.toString())
+        println(e.getMessage())
+        throw e
+    } finally {
+        problemMessageManager.publishMessages()
+    }
 }

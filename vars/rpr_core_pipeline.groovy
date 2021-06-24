@@ -52,7 +52,7 @@ def getCoreSDK(String osName, Map options) {
                     clearBinariesWin()
 
                     println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    unstash "WindowsSDK"
+                    makeUnstash(name: "WindowsSDK", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -110,7 +110,7 @@ def getCoreSDK(String osName, Map options) {
                     clearBinariesUnix()
 
                     println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    unstash "OSXSDK"
+                    makeUnstash(name: "OSXSDK", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -169,7 +169,7 @@ def getCoreSDK(String osName, Map options) {
                     clearBinariesUnix()
 
                     println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    unstash "${osName}SDK"
+                    makeUnstash(name: "${osName}SDK", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -347,7 +347,7 @@ def executeTests(String osName, String asicName, Map options)
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
             if (options.sendToUMS) {
-                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log")
+                options.universeManager.sendToMINIO(options, osName, "../${options.stageName}", "*.log", true, "${options.stageName}")
             }
             if (stashResults) {
                 dir('Work') {
@@ -369,8 +369,8 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         println "Stashing test results to : ${options.testResultsName}"
-                        stash includes: '**/*', excludes: '**/cache/**', name: "${options.testResultsName}", allowEmpty: true
-
+                        
+                        utils.stashTestData(this, options, options.storeOnNAS, "**/cache/**")
                         // reallocate node if there are still attempts
                         // if test group is fully errored or number of test cases is equal to zero
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
@@ -420,11 +420,21 @@ def executeBuildWindows(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binWin64") {
             zip archive: true, dir: ".", glob: "", zipFile: "binWin64.zip"
-            stash includes: "binWin64.zip", name: 'WindowsSDK'
+            makeStash(includes: "binWin64.zip", name: 'WindowsSDK', preZip: false, storeOnNAS: options.storeOnNAS)
             options.pluginWinSha = sha1 "binWin64.zip"
         }
         if (options.sendToUMS) {
             options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderSDK\\RadeonProRender\\binWin64", "binWin64.zip", false)
+        }
+    }
+
+    if (env.BRANCH_NAME == "master") {
+        withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.UPDATE_BINARIES) {
+
+            hybrid_vs_northstar_pipeline.updateBinaries(
+                newBinaryFile: "RadeonProRenderSDK\\RadeonProRender\\binWin64\\Northstar64.dll", 
+                targetFileName: "Northstar64.dll", osName: "Windows", compareChecksum: true
+            )
         }
     }
 }
@@ -434,7 +444,7 @@ def executeBuildOSX(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binMacOS.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binMacOS") {
             zip archive: true, dir: ".", glob: "", zipFile: "binMacOS.zip"
-            stash includes: "binMacOS.zip", name: "OSXSDK"
+            makeStash(includes: "binMacOS.zip", name: "OSXSDK", preZip: false, storeOnNAS: options.storeOnNAS)
             options.pluginOSXSha = sha1 "binMacOS.zip"
         }
         if (options.sendToUMS) {
@@ -449,7 +459,7 @@ def executeBuildLinux(String osName, Map options) {
         // no artifacts in repo for ubuntu20
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
             zip archive: true, dir: ".", glob: "", zipFile: "bin${osName}.zip"
-            stash includes: "bin${osName}.zip", name: "${osName}SDK"
+            makeStash(includes: "bin${osName}.zip", name: "${osName}SDK", preZip: false, storeOnNAS: options.storeOnNAS)
             options.pluginUbuntuSha = sha1 "bin${osName}.zip"
         }
         if (options.sendToUMS) {
@@ -604,7 +614,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 testResultList.each() {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            unstash "$it"
+                            makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                         } catch(e) {
                             echo "Can't unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))
@@ -707,8 +717,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     if (!options.testDataSaved) {
                         try {
                             // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report", "Summary Report, Performance Report, Compare Report")
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
                             options.testDataSaved = true 
                         } catch(e1) {
                             println("[WARNING] Failed to publish test data.")
@@ -767,8 +776,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary Report, Performance Report, Compare Report")
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
@@ -931,7 +939,8 @@ def call(String projectBranch = "",
                         customBuildLinkWindows: customBuildLinkWindows,
                         customBuildLinkUbuntu18: customBuildLinkUbuntu18,
                         customBuildLinkUbuntu20: customBuildLinkUbuntu20,
-                        customBuildLinkOSX: customBuildLinkOSX
+                        customBuildLinkOSX: customBuildLinkOSX,
+                        storeOnNAS: true
                         ]
 
             if (sendToUMS) {

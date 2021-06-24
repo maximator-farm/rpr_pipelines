@@ -86,14 +86,94 @@ class utils {
         }
     }
 
-    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "") {
-        Map params = [allowMissing: false,
-                      alwaysLinkToLastBuild: false,
-                      keepAll: true,
-                      reportDir: reportDir,
-                      reportFiles: reportFiles,
-                      // TODO: custom reportName (issues with escaping)
-                      reportName: reportName]
+    static def stashTestData(Object self, Map options, Boolean publishOnNAS = false, String excludes = "") {
+        if (publishOnNAS) {
+            String engine = ""
+            String stashName = ""
+            String reportName = ""
+            List testsResultsParts = options.testResultsName.split("-") as List
+            if (options.containsKey("engines") && options.containsKey("enginesNames")) {
+                engine = testsResultsParts[-1]
+                // Remove "testResult" prefix and engine from stash name
+                stashName = testsResultsParts.subList(1, testsResultsParts.size() - 1).join("-")
+            } else {
+                // Remove "testResult" prefix from stash name
+                stashName = testsResultsParts.subList(1, testsResultsParts.size()).join("-")
+            }
+
+            if (engine) {
+                String engineName = options.enginesNames[options.engines.indexOf(engine)]
+                reportName = "Test_Report_${engineName}"
+            } else {
+                reportName = "Test_Report"
+            }
+
+            String path = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/${stashName}/"
+            self.makeStash(includes: '**/*', excludes: excludes, name: stashName, allowEmpty: true, customLocation: path, preZip: true, postUnzip: true, storeOnNAS: true)
+            self.makeStash(includes: '*.json', excludes: '*/events/*.json', name: options.testResultsName, allowEmpty: true, storeOnNAS: true)
+        } else {
+            self.makeStash(includes: '**/*', excludes: excludes, name: options.testResultsName, allowEmpty: true)
+        }
+    }
+
+    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false) {
+        Map params
+
+        if (publishOnNAS) {
+            String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
+
+            self.dir(reportDir) {
+                // upload report to NAS in archive and unzip it
+                self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, preZip: true, postUnzip: true, storeOnNAS: true)
+            }
+
+            String reportLinkBase
+
+            self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
+                self.string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
+                reportLinkBase = self.REMOTE_URL
+            }
+
+            reportLinkBase = "${reportLinkBase}/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
+            
+            self.dir("redirect_links") {
+                self.withCredentials([self.usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
+                    String authReportLinkBase = reportLinkBase.replace("https://", "https://${self.NAS_USER}:${self.NAS_PASSWORD}@")
+
+                    reportFiles.split(",").each { reportFile ->
+                        if (self.isUnix()) {
+                            self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${authReportLinkBase}${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                        } else {
+                            self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${authReportLinkBase}${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
+                        }
+                    }
+                }
+            }
+            
+            def updateReportFiles = []
+            reportFiles.split(",").each() { reportFile ->
+                updateReportFiles << reportFile.trim().replace("/", "_")
+            }
+            
+            updateReportFiles = updateReportFiles.join(", ")
+
+            params = [allowMissing: false,
+                          alwaysLinkToLastBuild: false,
+                          keepAll: true,
+                          reportDir: "redirect_links",
+                          reportFiles: updateReportFiles,
+                          // TODO: custom reportName (issues with escaping)
+                          reportName: reportName]
+        } else {
+            params = [allowMissing: false,
+                          alwaysLinkToLastBuild: false,
+                          keepAll: true,
+                          reportDir: reportDir,
+                          reportFiles: reportFiles,
+                          // TODO: custom reportName (issues with escaping)
+                          reportName: reportName]
+        }
+
         if (reportTitles) {
             params['reportTitles'] = reportTitles
         }
@@ -218,6 +298,29 @@ class utils {
         }
     }
 
+    static def copyFile(Object self, String osName, String source, String destination) {
+        try {
+            switch(osName) {
+                case 'Windows':
+                    source = source.replace('/', '\\\\')
+                    destination = destination.replace('/', '\\\\')
+                    self.bat """
+                        echo F | xcopy /s/y/i \"${source}\" \"${destination}\"
+                    """
+                    break
+                // OSX & Ubuntu18
+                default:
+                    self.sh """
+                        cp ${source} ${destination}
+                    """
+            }
+        } catch(Exception e) {
+            self.println("[ERROR] Can't copy files")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    }
+
     static def removeFile(Object self, String osName, String fileName) {
         try {
             switch(osName) {
@@ -291,7 +394,7 @@ class utils {
     }
 
     static String escapeCharsByUnicode(String text) {
-        def unsafeCharsRegex = /['"\\&$ <>|:\n]/
+        def unsafeCharsRegex = /['"\\&$ <>|:\n\t]/
 
         return text.replaceAll(unsafeCharsRegex, {
             "\\u${Integer.toHexString(it.codePointAt(0)).padLeft(4, '0')}"
@@ -319,7 +422,7 @@ class utils {
      * @param maxLength - maximum lenght of string with name of each united suite (it's necessary for prevent issues with to log path lengts on Deploy stage)
      * @return Return List of String objects (each string contains united suites in one run). Return suites argument if some exception appears
      */
-    static List uniteSuites(Object self, String weightsFile, List suites, Integer maxWeight=3600, Integer maxLength=75) {
+    static List uniteSuites(Object self, String weightsFile, List suites, Integer maxWeight=3600, Integer maxLength=40) {
         List unitedSuites = []
 
         try {
@@ -370,4 +473,33 @@ class utils {
     static String getBatOutput(Object self, String command) {
         return self.bat(script: "@${command}", returnStdout: true).trim()
     }
+
+    /**
+     * Reboot current node
+     * @param osName - OS name of current node
+     */
+    static def reboot(Object self, String osName) {
+        try {
+            switch(osName) {
+                case "Windows":
+                    self.bat """
+                        shutdown /r /f /t 0
+                    """
+                    break
+                case "OSX":
+                    self.sh """
+                        sudo shutdown -r now
+                    """
+                // Ubuntu
+                default:
+                    self.sh """
+                        shutdown -h now
+                    """
+            }
+        } catch (e) {
+            self.println("[ERROR] Failed to reboot machine")
+            self.println(e.toString())
+            self.println(e.getMessage())
+        }
+    } 
 }

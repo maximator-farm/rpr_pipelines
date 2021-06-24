@@ -106,6 +106,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
 
                                 Map newOptions = options.clone()
                                 newOptions["stage"] = "Test"
+                                newOptions["asicName"] = asicName
                                 newOptions["osName"] = osName
                                 newOptions['testResultsName'] = testName ? "testResult-${asicName}-${osName}-${testName}" : "testResult-${asicName}-${osName}"
                                 newOptions['stageName'] = testName ? "${asicName}-${osName}-${testName}" : "${asicName}-${osName}"
@@ -308,7 +309,13 @@ def makeDeploy(Map options, String engine = "") {
     if (executeDeploy && executeDeployStage) {
         String stageName = engine ? "Deploy-${options.enginesNames[options.engines.indexOf(engine)]}" : "Deploy"
         stage(stageName) {
-            def reportBuilderLabels = "Windows && ReportBuilder"
+            def reportBuilderLabels = ""
+
+            if (options.PRJ_NAME == "RadeonProImageProcessor" || options.PRJ_NAME == "RadeonML") {
+                reportBuilderLabels = "Windows && ReportBuilder && !NoDeploy"
+            } else {
+                reportBuilderLabels = "Windows && Tester && !NoDeploy"
+            }
 
             options["stage"] = "Deploy"
             def retringFunction = { nodesList, currentTry ->
@@ -320,7 +327,7 @@ def makeDeploy(Map options, String engine = "") {
                 println("[INFO] Deploy stage finished without unexpected exception. Clean workspace")
                 cleanWS("Windows")
             }
-            run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options, [], 2)
+            run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options, [], 3)
         }
     }
 }
