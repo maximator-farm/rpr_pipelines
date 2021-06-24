@@ -512,7 +512,7 @@ def executeBuildAndroid(Map options) {
         String androidBuildName = "${androidBuildConf}"
         String logName = "${STAGE_NAME}.${androidBuildName}.log"
 
-        String androidBuildKeys = "asseble${androidBuildConf.substring(0, 1).toUpperCase() + androidBuildConf.substring(1).toLowerCase()}"
+        String androidBuildKeys = "assemble${androidBuildConf.substring(0, 1).toUpperCase() + androidBuildConf.substring(1).toLowerCase()}"
 
         dir("StreamingSDK/amf/protected/samples/CPPSamples/RemoteGameClientAndroid") {
             GithubNotificator.updateStatus("Build", "Android", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
@@ -547,9 +547,9 @@ def executeBuild(String osName, Map options) {
             }
         }
 
-        utils.removeFile(this, osName, "*.log")
+        utils.removeFile(this, osName != "Android" ?: "Windows", "*.log")
 
-        outputEnvironmentInfo(osName)
+        outputEnvironmentInfo(osName != "Android" ?: "Windows")
 
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
@@ -958,20 +958,22 @@ def call(String projectBranch = "",
                 }
             }
 
-            winBuildConfiguration = winBuildConfiguration.split(',')
-            winVisualStudioVersion = winVisualStudioVersion.split(',')
-
             println """
                 Platforms: ${platforms}
                 Tests: ${tests}
                 Tests package: ${testsPackage}
             """
 
+            winBuildConfiguration = winBuildConfiguration.split(',')
+            winVisualStudioVersion = winVisualStudioVersion.split(',')
+
             println """
                 Win build configuration: ${winBuildConfiguration}"
                 Win visual studio version: ${winVisualStudioVersion}"
                 Win testing build name: ${winTestingBuildName}
             """
+
+            androidBuildConfiguration = androidBuildConfiguration.split(',')
 
             println """
                 Android build configuration: ${androidBuildConfiguration}"
