@@ -547,9 +547,9 @@ def executeBuild(String osName, Map options) {
             }
         }
 
-        utils.removeFile(this, osName != "Android" ?: "Windows", "*.log")
+        utils.removeFile(this, osName != "Android" ? osName : "Windows", "*.log")
 
-        outputEnvironmentInfo(osName != "Android" ?: "Windows")
+        outputEnvironmentInfo(osName != "Android" ? osName : "Windows")
 
         withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
             switch(osName) {
