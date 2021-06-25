@@ -132,7 +132,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
                                             }
                                         }
 
-                                        printError(this, "Failed during tests on ${env.NODE_NAME} node")
+                                        utils.printError(this, "Failed during tests on ${env.NODE_NAME} node")
                                         println "Exception: ${e.toString()}"
                                         println "Exception message: ${e.getMessage()}"
                                         println "Exception cause: ${e.getCause()}"
@@ -239,7 +239,7 @@ def executeTestsNode(String osName, String gpuNames, def executeTests, Map optio
         }
         parallel testTasks
     } else {
-        printWarning(this, "No tests found for ${osName}")
+        utils.printWarning(this, "No tests found for ${osName}")
     }
 }
 
@@ -276,7 +276,7 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
             }
 
         } catch (e) {
-            printError(this, "executePlatform throw the exception")
+            utils.printError(this, "executePlatform throw the exception")
             println "Exception: ${e.toString()}"
             println "Exception message: ${e.getMessage()}"
             println "Exception cause: ${e.getCause()}"
@@ -324,7 +324,7 @@ def makeDeploy(Map options, String engine = "") {
                 } else {
                     executeDeploy(options, platformList, testResultList)
                 }
-                printInfo(this, "Deploy stage finished without unexpected exception. Clean workspace")
+                utils.printInfo(this, "Deploy stage finished without unexpected exception. Clean workspace")
                 cleanWS("Windows")
             }
             run_with_retries(reportBuilderLabels, options.DEPLOY_TIMEOUT, retringFunction, false, "Deploy", options, [], 3)
@@ -339,7 +339,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
         try {
             setupBuildStoragePolicy()
         } catch (e) {
-            printError(this, "Failed to setup build storage policty.")
+            utils.printError(this, "Failed to setup build storage policty.")
             println(e.toString())
         }
 
@@ -347,7 +347,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
             options.baseBuildName = currentBuild.displayName
             if (env.BuildPriority) {
                 currentBuild.displayName = "${currentBuild.displayName} (Priority: ${env.BuildPriority})"
-                printInfo(this, "Priority was set by BuildPriority parameter")
+                utils.printInfo(this, "Priority was set by BuildPriority parameter")
             } else {
                 def jenkins = Jenkins.getInstance();        
                 def views = Jenkins.getInstance().getViews()
@@ -367,10 +367,10 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                 } else {
                     currentBuild.displayName = "${currentBuild.displayName} (Priority: 40)"
                 }
-                printInfo(this, "Priority was set based on view of job")
+                utils.printInfo(this, "Priority was set based on view of job")
             }
         } catch (e) {
-            printError(this, "Failed to add priority into build name")
+            utils.printError(this, "Failed to add priority into build name")
             println(e.toString())
         }
 
@@ -422,7 +422,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
                                         }
                                     }
                                 } catch (e) {
-                                    printError(this, "Failed during prebuild stage on ${env.NODE_NAME}")
+                                    utils.printError(this, "Failed during prebuild stage on ${env.NODE_NAME}")
                                     println(e.toString())
                                     println(e.getMessage())
                                     String exceptionClassName = e.getClass().toString()
@@ -582,7 +582,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
         println("Send Slack message to debug channels")
         sendBuildStatusToDebugSlack(options)
 
-        printInfo(this, "BUILD RESULT: ${currentBuild.result}")
-        printInfo(this, "BUILD CURRENT RESULT: ${currentBuild.currentResult}")
+        utils.printInfo(this, "BUILD RESULT: ${currentBuild.result}")
+        utils.printInfo(this, "BUILD CURRENT RESULT: ${currentBuild.currentResult}")
     }
 }

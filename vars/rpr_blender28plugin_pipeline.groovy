@@ -19,15 +19,15 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             if (options['isPreBuilt']) {
 
-                printInfo(this, "[INFO] PluginWinSha: ${options['pluginWinSha']}")
+                utils.printInfo(this, "[INFO] PluginWinSha: ${options['pluginWinSha']}")
 
                 if (options['pluginWinSha']) {
                     if (fileExists("${CIS_TOOLS}\\..\\PluginsBinaries\\${options['pluginWinSha']}.zip")) {
-                        printInfo(this, "The plugin ${options['pluginWinSha']}.zip exists in the storage.")
+                        utils.printInfo(this, "The plugin ${options['pluginWinSha']}.zip exists in the storage.")
                     } else {
                         clearBinariesWin()
 
-                        printInfo(this, "The plugin does not exist in the storage. Downloading and copying...")
+                        utils.printInfo(this, "The plugin does not exist in the storage. Downloading and copying...")
                         downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                         bat """
@@ -38,7 +38,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                 } else {
                     clearBinariesWin()
 
-                    printInfo(this, "The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying...")
+                    utils.printInfo(this, "The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying...")
                     downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                     bat """
@@ -49,11 +49,11 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             } else {
                 if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
-                    printInfo(this, "The plugin ${options.commitSHA}_${osName}.zip exists in the storage.")
+                    utils.printInfo(this, "The plugin ${options.commitSHA}_${osName}.zip exists in the storage.")
                 } else {
                     clearBinariesWin()
 
-                    printInfo(this, "The plugin does not exist in the storage. Unstashing and copying...")
+                    utils.printInfo(this, "The plugin does not exist in the storage. Unstashing and copying...")
                     makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     bat """
@@ -69,15 +69,15 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             if (options['isPreBuilt']) {
 
-                printInfo(this, "PluginOSXSha: ${options['pluginOSXSha']}")
+                utils.printInfo(this, "PluginOSXSha: ${options['pluginOSXSha']}")
 
                 if (options['pluginOSXSha']) {
                     if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginOSXSha}.zip")) {
-                        printInfo(this, "The plugin ${options['pluginOSXSha']}.zip exists in the storage.")
+                        utils.printInfo(this, "The plugin ${options['pluginOSXSha']}.zip exists in the storage.")
                     } else {
                         clearBinariesUnix()
 
-                        printInfo(this, "The plugin does not exist in the storage. Downloading and copying...")
+                        utils.printInfo(this, "The plugin does not exist in the storage. Downloading and copying...")
                         downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                         sh """
@@ -88,7 +88,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                 } else {
                     clearBinariesUnix()
 
-                    printInfo(this, "The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying...")
+                    utils.printInfo(this, "The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying...")
                     downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                     sh """
@@ -99,11 +99,11 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             } else {
                 if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
-                    printInfo(this, "The plugin ${options.commitSHA}_${osName}.zip exists in the storage.")
+                    utils.printInfo(this, "The plugin ${options.commitSHA}_${osName}.zip exists in the storage.")
                 } else {
                     clearBinariesUnix()
 
-                    printInfo(this, "The plugin does not exist in the storage. Unstashing and copying...")
+                    utils.printInfo(this, "The plugin does not exist in the storage. Unstashing and copying...")
                     makeUnstash(name: "appOSX", unzip: false, storeOnNAS: options.storeOnNAS)
                    
                     sh """
@@ -119,15 +119,15 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             if (options['isPreBuilt']) {
 
-                printInfo(this, "PluginOSXSha: ${options['pluginUbuntuSha']}")
+                utils.printInfo(this, "PluginOSXSha: ${options['pluginUbuntuSha']}")
 
                 if (options['pluginUbuntuSha']) {
                     if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.pluginUbuntuSha}.zip")) {
-                        printInfo(this, "The plugin ${options['pluginUbuntuSha']}.zip exists in the storage.")
+                        utils.printInfo(this, "The plugin ${options['pluginUbuntuSha']}.zip exists in the storage.")
                     } else {
                         clearBinariesUnix()
 
-                        printInfo(this, "The plugin does not exist in the storage. Downloading and copying...")
+                        utils.printInfo(this, "The plugin does not exist in the storage. Downloading and copying...")
                         downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                         sh """
@@ -138,7 +138,7 @@ def getBlenderAddonInstaller(String osName, Map options)
                 } else {
                     clearBinariesUnix()
 
-                    printInfo(this, "The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying...")
+                    utils.printInfo(this, "The plugin does not exist in the storage. PluginSha is unknown. Downloading and copying...")
                     downloadPlugin(osName, "RadeonProRenderBlender", options)
 
                     sh """
@@ -149,11 +149,11 @@ def getBlenderAddonInstaller(String osName, Map options)
 
             } else {
                 if (fileExists("${CIS_TOOLS}/../PluginsBinaries/${options.commitSHA}_${osName}.zip")) {
-                    printInfo(this, "The plugin ${options.commitSHA}_${osName}.zip exists in the storage.")
+                    utils.printInfo(this, "The plugin ${options.commitSHA}_${osName}.zip exists in the storage.")
                 } else {
                     clearBinariesUnix()
 
-                    printInfo(this, "The plugin does not exist in the storage. Unstashing and copying...")
+                    utils.printInfo(this, "The plugin does not exist in the storage. Unstashing and copying...")
                     makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
                    
                     sh """
@@ -286,7 +286,7 @@ def executeTests(String osName, String asicName, Map options)
                 timeout(time: "12", unit: "MINUTES") {
                     getBlenderAddonInstaller(osName, options)
                     newPluginInstalled = installBlenderAddon(osName, 'rprblender', options.toolVersion, options)
-                    printInfo(this, "Install function on ${env.NODE_NAME} return ${newPluginInstalled}")
+                    utils.printInfo(this, "Install function on ${env.NODE_NAME} return ${newPluginInstalled}")
                 }
             }
         
@@ -305,7 +305,7 @@ def executeTests(String osName, String asicName, Map options)
             }  
         } catch(e) {
             println(e.toString())
-            printError(this, "Failed to install plugin on ${env.NODE_NAME}")
+            utils.printError(this, "Failed to install plugin on ${env.NODE_NAME}")
             // deinstalling broken addon
             installBlenderAddon(osName, 'rprblender', options.toolVersion, options, false, true)
             // remove installer of broken addon
@@ -353,7 +353,7 @@ def executeTests(String osName, String asicName, Map options)
             withNotifications(title: options["stageName"], printMessage: true, options: options, configuration: NotificationConfiguration.COPY_BASELINES) {
                 String baseline_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_blender_autotests_baselines" : "/mnt/c/TestResources/rpr_blender_autotests_baselines"
                 baseline_dir = enginePostfix ? "${baseline_dir}-${enginePostfix}" : baseline_dir
-                printInfo(this, "Downloading reference images for ${options.parsedTests}")
+                utils.printInfo(this, "Downloading reference images for ${options.parsedTests}")
                 options.parsedTests.split(" ").each() {
                     if (it.contains(".json")) {
                         downloadFiles("${REF_PATH_PROFILE}/", baseline_dir)
@@ -456,7 +456,7 @@ def executeTests(String osName, String asicName, Map options)
                     }
                 }
             } else {
-                printInfo(this, "Task ${options.tests} on ${options.nodeLabels} labels will be retried.")
+                utils.printInfo(this, "Task ${options.tests} on ${options.nodeLabels} labels will be retried.")
             }
         } catch (e) {
             // throw exception in finally block only if test stage was finished
@@ -657,29 +657,29 @@ def executePreBuild(Map options)
 
     // manual job with prebuilt plugin
     if (options['isPreBuilt']) {
-        printInfo(this, "Build was detected as prebuilt. Build stage will be skipped")
+        utils.printInfo(this, "Build was detected as prebuilt. Build stage will be skipped")
         currentBuild.description = "<b>Project branch:</b> Prebuilt plugin<br/>"
         options['executeBuild'] = false
         options['executeTests'] = true
     // manual job
     } else if (options.forceBuild) {
-        printInfo(this, "Manual job launch detected")
+        utils.printInfo(this, "Manual job launch detected")
         options['executeBuild'] = true
         options['executeTests'] = true
     // auto job
     } else {
         if (env.CHANGE_URL) {
-            printInfo(this, "Branch was detected as Pull Request")
+            utils.printInfo(this, "Branch was detected as Pull Request")
             options['executeBuild'] = true
             options['executeTests'] = true
             options['testsPackage'] = "regression.json"
         } else if (env.BRANCH_NAME == "master" || env.BRANCH_NAME == "develop") {
-           printInfo(this, "${env.BRANCH_NAME} branch was detected")
+           utils.printInfo(this, "${env.BRANCH_NAME} branch was detected")
            options['executeBuild'] = true
            options['executeTests'] = true
            options['testsPackage'] = "regression.json"
         } else {
-            printInfo(this, "${env.BRANCH_NAME} branch was detected")
+            utils.printInfo(this, "${env.BRANCH_NAME} branch was detected")
             options['testsPackage'] = "regression.json"
         }
     }
@@ -731,15 +731,15 @@ def executePreBuild(Map options)
                     if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
 
                         options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ')
-                        printInfo(this, "Incrementing version of change made by ${options.commitAuthor}.")
-                        printInfo(this, "Current build version: ${options.pluginVersion}")
+                        utils.printInfo(this, "Incrementing version of change made by ${options.commitAuthor}.")
+                        utils.printInfo(this, "Current build version: ${options.pluginVersion}")
 
                         def new_version = version_inc(options.pluginVersion, 3, ', ')
-                        printInfo(this, "New build version: ${new_version}")
+                        utils.printInfo(this, "New build version: ${new_version}")
                         version_write("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', new_version, ', ')
 
                         options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderBlenderAddon\\src\\rprblender\\__init__.py", '"version": (', ', ', "true").replace(', ', '.')
-                        printInfo(this, "Updated build version: ${options.pluginVersion}")
+                        utils.printInfo(this, "Updated build version: ${options.pluginVersion}")
 
                         bat """
                             git add src/rprblender/__init__.py
@@ -750,7 +750,7 @@ def executePreBuild(Map options)
                         //get commit's sha which have to be build
                         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
                         options.projectBranch = options.commitSHA
-                        printInfo(this, "Project branch hash: ${options.projectBranch}")
+                        utils.printInfo(this, "Project branch hash: ${options.projectBranch}")
                     } else {
                         if (options.commitMessage.contains("CIS:BUILD")) {
                             options['executeBuild'] = true
@@ -762,7 +762,7 @@ def executePreBuild(Map options)
                         }
                         // get a list of tests from commit message for auto builds
                         options.tests = utils.getTestsFromCommitMessage(options.commitMessage)
-                        printInfo(this, "Test groups mentioned in commit message: ${options.tests}")
+                        utils.printInfo(this, "Test groups mentioned in commit message: ${options.tests}")
                     }
                 }
                 currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
@@ -785,7 +785,7 @@ def executePreBuild(Map options)
             dir ('jobs_launcher') {
                 options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             }
-            printInfo(this, "Test branch hash: ${options['testsBranch']}")
+            utils.printInfo(this, "Test branch hash: ${options['testsBranch']}")
 
             def packageInfo
 
@@ -802,13 +802,13 @@ def executePreBuild(Map options)
                 def tempTests = []
 
                 if (options.isPackageSplitted) {
-                    printInfo(this, "Tests package '${options.testsPackage}' can be splitted")
+                    utils.printInfo(this, "Tests package '${options.testsPackage}' can be splitted")
                 } else {
                     // save tests which user wants to run with non-splitted tests package
                     if (options.tests) {
                         tempTests = options.tests.split(" ") as List
                     }
-                    printInfo(this, "Tests package '${options.testsPackage}' can't be splitted")
+                    utils.printInfo(this, "Tests package '${options.testsPackage}' can't be splitted")
                 }
 
                 // modify name of tests package if tests package is non-splitted (it will be use for run package few time with different engines)
@@ -950,7 +950,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                     """
                 }
             } catch (e) {
-                printError(this, "Can't generate number of lost tests")
+                utils.printError(this, "Can't generate number of lost tests")
             }
 
             String branchName = env.BRANCH_NAME ?: options.projectBranch
@@ -1008,7 +1008,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 String errorMessage = utils.getReportFailReason(e.getMessage())
                 options.problemMessageManager.saveSpecificFailReason(errorMessage, "Deploy")
                 GithubNotificator.updateStatus("Deploy", "Building test report for ${engineName} engine", "failure", options, errorMessage, "${BUILD_URL}")
-                printError(this, "Failed to build test report.")
+                utils.printError(this, "Failed to build test report.")
                 println(e.toString())
                 println(e.getMessage())
                 if (!options.testDataSaved) {
@@ -1017,7 +1017,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                         utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
                         options.testDataSaved = true 
                     } catch(e1) {
-                        printWarning(this, "Failed to publish test data.")
+                        utils.printWarning(this, "Failed to publish test data.")
                         println(e.toString())
                         println(e.getMessage())
                     }
@@ -1030,7 +1030,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                     bat "get_status.bat ..\\summaryTestResults"
                 }
             } catch(e) {
-                printError(this, "Failed to generate slack status.")
+                utils.printError(this, "Failed to generate slack status.")
                 println(e.toString())
                 println(e.getMessage())
             }
@@ -1040,7 +1040,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                     archiveArtifacts "launcher.engine.log"
                 }
             } catch(e) {
-                printError(this, "during archiving launcher.engine.log")
+                utils.printError(this, "during archiving launcher.engine.log")
                 println(e.toString())
                 println(e.getMessage())
             }
@@ -1052,12 +1052,12 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 summaryTestResults['failed'] = summaryReport.failed
                 summaryTestResults['error'] = summaryReport.error
                 if (summaryReport.error > 0) {
-                    printInfo(this, "Some tests marked as error. Build result = FAILURE.")
+                    utils.printInfo(this, "Some tests marked as error. Build result = FAILURE.")
                     currentBuild.result = "FAILURE"
 
                     options.problemMessageManager.saveGlobalFailReason(NotificationConfiguration.SOME_TESTS_ERRORED)
                 } else if (summaryReport.failed > 0) {
-                    printInfo(this, "Some tests marked as failed. Build result = UNSTABLE.")
+                    utils.printInfo(this, "Some tests marked as failed. Build result = UNSTABLE.")
                     currentBuild.result = "UNSTABLE"
 
                     options.problemMessageManager.saveUnstableReason(NotificationConfiguration.SOME_TESTS_FAILED)
@@ -1065,7 +1065,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             } catch(e) {
                 println(e.toString())
                 println(e.getMessage())
-                printError(this, "CAN'T GET TESTS STATUS")
+                utils.printError(this, "CAN'T GET TESTS STATUS")
                 options.problemMessageManager.saveUnstableReason(NotificationConfiguration.CAN_NOT_GET_TESTS_STATUS)
                 currentBuild.result = "UNSTABLE"
             }
