@@ -559,7 +559,7 @@ def executePreBuild(Map options) {
 
     println "Commit list message: ${options.commitMessage}"
 
-    if (!options.isLegacyBranch && env.BRANCH_NAME) {
+    if (!options.isLegacyBranch && env.CHANGE_URL) {
         // save name of new branch for hybrid_vs_northstar
         String comparisionBranch = "hybrid_auto_${env.BRANCH_NAME}"
 

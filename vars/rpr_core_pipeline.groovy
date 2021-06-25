@@ -52,7 +52,7 @@ def getCoreSDK(String osName, Map options) {
                     clearBinariesWin()
 
                     println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "WindowsSDK", unzip: false)
+                    makeUnstash(name: "WindowsSDK", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -110,7 +110,7 @@ def getCoreSDK(String osName, Map options) {
                     clearBinariesUnix()
 
                     println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "OSXSDK", unzip: false)
+                    makeUnstash(name: "OSXSDK", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -169,7 +169,7 @@ def getCoreSDK(String osName, Map options) {
                     clearBinariesUnix()
 
                     println "[INFO] The Core SDK does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "${osName}SDK", unzip: false)
+                    makeUnstash(name: "${osName}SDK", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -369,8 +369,8 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         println "Stashing test results to : ${options.testResultsName}"
-                        makeStash(includes: '**/*', excludes: '**/cache/**', name: "${options.testResultsName}", allowEmpty: true)
-
+                        
+                        utils.stashTestData(this, options, options.storeOnNAS, "**/cache/**")
                         // reallocate node if there are still attempts
                         // if test group is fully errored or number of test cases is equal to zero
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
@@ -420,7 +420,7 @@ def executeBuildWindows(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binWin64") {
             zip archive: true, dir: ".", glob: "", zipFile: "binWin64.zip"
-            makeStash(includes: "binWin64.zip", name: 'WindowsSDK', preZip: false)
+            makeStash(includes: "binWin64.zip", name: 'WindowsSDK', preZip: false, storeOnNAS: options.storeOnNAS)
             options.pluginWinSha = sha1 "binWin64.zip"
         }
         if (options.sendToUMS) {
@@ -444,7 +444,7 @@ def executeBuildOSX(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binMacOS.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binMacOS") {
             zip archive: true, dir: ".", glob: "", zipFile: "binMacOS.zip"
-            makeStash(includes: "binMacOS.zip", name: "OSXSDK", preZip: false)
+            makeStash(includes: "binMacOS.zip", name: "OSXSDK", preZip: false, storeOnNAS: options.storeOnNAS)
             options.pluginOSXSha = sha1 "binMacOS.zip"
         }
         if (options.sendToUMS) {
@@ -459,7 +459,7 @@ def executeBuildLinux(String osName, Map options) {
         // no artifacts in repo for ubuntu20
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
             zip archive: true, dir: ".", glob: "", zipFile: "bin${osName}.zip"
-            makeStash(includes: "bin${osName}.zip", name: "${osName}SDK", preZip: false)
+            makeStash(includes: "bin${osName}.zip", name: "${osName}SDK", preZip: false, storeOnNAS: options.storeOnNAS)
             options.pluginUbuntuSha = sha1 "bin${osName}.zip"
         }
         if (options.sendToUMS) {
@@ -614,7 +614,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 testResultList.each() {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            makeUnstash(name: "$it")
+                            makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                         } catch(e) {
                             echo "Can't unstash ${it}"
                             lostStashes.add("'$it'".replace("testResult-", ""))
@@ -717,8 +717,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     if (!options.testDataSaved) {
                         try {
                             // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report", "Summary Report, Performance Report, Compare Report")
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
                             options.testDataSaved = true 
                         } catch(e1) {
                             println("[WARNING] Failed to publish test data.")
@@ -777,8 +776,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary Report, Performance Report, Compare Report")
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
@@ -921,7 +919,7 @@ def call(String projectBranch = "",
                         executeTests:true,
                         reportName:'Test_20Report',
                         TEST_TIMEOUT:180,
-                        DEPLOY_TIMEOUT:45,
+                        DEPLOY_TIMEOUT:30,
                         width:width,
                         gpusCount:gpusCount,
                         height:height,
@@ -941,7 +939,8 @@ def call(String projectBranch = "",
                         customBuildLinkWindows: customBuildLinkWindows,
                         customBuildLinkUbuntu18: customBuildLinkUbuntu18,
                         customBuildLinkUbuntu20: customBuildLinkUbuntu20,
-                        customBuildLinkOSX: customBuildLinkOSX
+                        customBuildLinkOSX: customBuildLinkOSX,
+                        storeOnNAS: true
                         ]
 
             if (sendToUMS) {

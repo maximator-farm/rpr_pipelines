@@ -184,16 +184,16 @@ def executeGenTestRefCommand(String osName, Map options, Boolean delete)
     }
 }
 
-def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry)
+def buildRenderCache(String osName, String toolVersion, String log_name, Integer currentTry, String engine)
 {
     try {
         dir("scripts") {
             switch(osName) {
                 case 'Windows':
-                    bat "build_rpr_cache.bat ${toolVersion} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
+                    bat "build_rpr_cache.bat ${toolVersion} ${engine} >> \"..\\${log_name}_${currentTry}.cb.log\"  2>&1"
                     break
                 default:
-                    sh "./build_rpr_cache.sh ${toolVersion} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"        
+                    sh "./build_rpr_cache.sh ${toolVersion} ${engine} >> \"../${log_name}_${currentTry}.cb.log\" 2>&1"        
             }
         }
     } catch (e) {
@@ -258,6 +258,16 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
+        // FIXME: remove this ducktape when CPUs on that machines will be changes
+        if (env.NODE_NAME == "PC-TESTER-ARAK-WIN10" || env.NODE_NAME == "PC-TESTER-KERMAN-WIN10") {
+            if (options.parsedTests.contains("CPU_Mode") || options.parsedTests.contains("Dual_Mode") || options.parsedTests.contains("regression.0")) {
+                throw new ExpectedExceptionWrapper(
+                    "System doesn't support CPU_Mode and Dual_Mode groups", 
+                    new Exception("System doesn't support CPU_Mode and Dual_Mode groups")
+                )
+            }
+        }
+
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
@@ -283,7 +293,7 @@ def executeTests(String osName, String asicName, Map options)
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE) {
                 if (newPluginInstalled) {                         
                     timeout(time: "12", unit: "MINUTES") {
-                        buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry)
+                        buildRenderCache(osName, options.toolVersion, options.stageName, options.currentTry, options.engine)
                         String cacheImgPath = "./Work/Results/Blender28/cache_building.jpg"
                         if(!fileExists(cacheImgPath)){
                             throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
@@ -1121,9 +1131,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
     String customBuildLinkUbuntu18 = "",
     String customBuildLinkUbuntu20 = "",
     String customBuildLinkOSX = "",
-    String enginesNames = "Northstar,Tahoe",
+    String enginesNames = "Northstar",
     String tester_tag = "Blender2.8",
-    String toolVersion = "2.92",
+    String toolVersion = "2.93",
     String mergeablePR = "",
     String parallelExecutionTypeString = "TakeAllNodes",
     Integer testCaseRetries = 3)

@@ -161,4 +161,25 @@ class GithubApiProvider {
         return parseResponse(response.content)
     }
 
+    /**
+     * Function to create a comment inside a pull request (see https://docs.github.com/en/rest/reference/issues#create-an-issue-comment)
+     *
+     * @param pullUrl url to target pull request
+     * @param message
+     */
+    def createPullRequestComment(String pullUrl, String message) {
+        context.withCredentials([context.string(credentialsId: "github", variable: "GITHUB_TOKEN")]) {
+            def response = context.httpRequest(
+                url: "${pullUrl.replace('https://github.com', 'https://api.github.com/repos').replace('/pull/', '/issues/')}/comments",
+                httpMode: "POST",
+                contentType: "APPLICATION_JSON",
+                customHeaders: [
+                    [name: "Authorization", value: "Bearer ${context.GITHUB_TOKEN}"]
+                ],
+                requestBody: "{\"body\" : \"${message}\"}"
+            )
+
+            return parseResponse(response.content)
+        }
+    }
 }

@@ -67,10 +67,13 @@ def createHybridBranch(Map options) {
         if (options.comparisionBranch) {
             dir("HybridVsNorthstar") {
                checkoutScm(branchName: "main", repositoryUrl: PROJECT_REPO)
-
+               String message = "Triggered by Build #${env.BUILD_NUMBER}"
+               if (env.CHANGE_URL) {
+                   message += ". PR URL - ${env.CHANGE_URL}"
+               }
                bat """
                    git checkout -b ${options.comparisionBranch}
-                   git commit --allow-empty -m "Triggered by Build #${env.BUILD_NUMBER}"
+                   git commit --allow-empty -m "${message}"
                    git push origin ${options.comparisionBranch} --force
                """
             }
@@ -347,8 +350,13 @@ def executePreBuild(Map options)
             stash includes: "Northstar64.dll", name: "Northstar64Dll", allowEmpty: false
 
             if (env.BRANCH_NAME && env.BRANCH_NAME.startsWith("hybrid_auto_")) {
-
-                options.hybridBuildNumber = options.commitMessage.replace("Triggered by Build #", "") as Integer
+                if (options.commitMessage.contains("PR URL")) {
+                    def parts = options.commitMessage.replace("Triggered by Build #", "").replace("PR URL - ", "").split(". ")
+                    options.hybridBuildNumber = parts[0] as Integer
+                    options.hybridPullUrl = parts[1]
+                } else {
+                    options.hybridBuildNumber = options.commitMessage.replace("Triggered by Build #", "") as Integer
+                }
 
                 String branchName = env.BRANCH_NAME.split("_", 3)[2]
 
@@ -523,6 +531,12 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 } else {
                     GithubNotificator.updateStatus("Deploy", "Building test report", "success", options, NotificationConfiguration.REPORT_PUBLISHED, "${BUILD_URL}/Test_20Report")
                 }
+            }
+            if (options.hybridPullUrl) {
+                GithubNotificator githubNotificator = new GithubNotificator(this, options)
+                githubNotificator.init(options)
+                options["githubNotificator"] = githubNotificator
+                GithubNotificator.sendPullRequestComment(options.hybridPullUrl, "Hybrid vs Northstar comparison report (MaterialX) - ${BUILD_URL}Test_20Report", options)
             }
         }
     } catch (e) {

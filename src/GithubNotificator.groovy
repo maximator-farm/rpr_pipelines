@@ -465,4 +465,22 @@ public class GithubNotificator {
         }
     }
 
+    static def sendPullRequestComment(String url, String message, Map options) {
+        if (options.githubNotificator) {
+            options.githubNotificator.sendPullRequestCommentPr(url, message)
+        }
+    }
+
+    private def sendPullRequestCommentPr(String url, String message) {
+        try {
+            githubApiProvider.createPullRequestComment(url, message)
+        } catch (e) {
+            context.println("[ERROR] Failed to send comment")
+            context.println(e.toString())
+            context.println(e.getMessage())
+        }
+    }
+
+    
+
 }
