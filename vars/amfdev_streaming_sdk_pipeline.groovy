@@ -129,6 +129,11 @@ def closeGames(String osName, Map options) {
                         taskkill /f /im \"LeagueClient.exe\"
                         taskkill /f /im \"League of Legends.exe\"
                     """
+                } else if (options.engine == "Heaven") {
+                    bat """
+                        taskkill /f /im \"browser_x86.exe\"
+                        taskkill /f /im \"Heaven.exe\"
+                    """
                 }
 
                 break
