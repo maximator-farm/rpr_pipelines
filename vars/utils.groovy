@@ -45,7 +45,7 @@ class utils {
         }
     }
 
-    static void utils.printError(Object self, String content){
+    static void printError(Object self, String content){
         printColor(self, "[ERROR] " + content, "RED", "DEFAULTB")
     }
 
@@ -53,11 +53,11 @@ class utils {
         printColor(self, "[DEBUG CRITICAL] " + content, "RED", "DEFAULTB")
     }
 
-    static void utils.printInfo(Object self, String content){
+    static void printInfo(Object self, String content){
         printColor(self, "[INFO] " + content, "BLUE", "DEFAULTB")
     }
 
-    static void utils.printWarning(Object self, String content){
+    static void printWarning(Object self, String content){
         printColor(self, "[WARNING] " + content, "ORANGE", "DEFAULTB")
     }
 
