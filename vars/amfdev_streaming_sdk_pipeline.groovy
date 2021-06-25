@@ -787,14 +787,18 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
             dir("serverTestResults") {
                 testResultList.each {
-                    dir("${it}".replace("testResult-", "")) {
-                        try {
-                            makeUnstash(name: "${it}_server")
-                        } catch (e) {
-                            println """
-                                [ERROR] Failed to unstash ${it}_server
-                                ${e.toString()}
-                            """
+                    if (it.endsWith(game)) {
+                        List testNameParts = it.split("-") as List
+                        String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
+                        dir(testName.replace("testResult-", "")) {
+                            try {
+                                makeUnstash(name: "${it}_server")
+                            } catch (e) {
+                                println """
+                                    [ERROR] Failed to unstash ${it}_server
+                                    ${e.toString()}
+                                """
+                            }
                         }
                     }
                 }
