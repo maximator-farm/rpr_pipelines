@@ -2,7 +2,7 @@ import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 import hudson.model.Result
 import groovy.json.JsonOutput
 
-Color{
+enum Color{
     //text colors
     RED("\033[91m"), 
     BLACK("\033[30m"),
