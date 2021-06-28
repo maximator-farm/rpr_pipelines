@@ -258,6 +258,16 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
+        // FIXME: remove this ducktape when CPUs on that machines will be changes
+        if (env.NODE_NAME == "PC-TESTER-ARAK-WIN10" || env.NODE_NAME == "PC-TESTER-KERMAN-WIN10") {
+            if (options.parsedTests.contains("CPU_Mode") || options.parsedTests.contains("Dual_Mode") || options.parsedTests.contains("regression.0")) {
+                throw new ExpectedExceptionWrapper(
+                    "System doesn't support CPU_Mode and Dual_Mode groups", 
+                    new Exception("System doesn't support CPU_Mode and Dual_Mode groups")
+                )
+            }
+        }
+
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
@@ -1102,7 +1112,7 @@ def appendPlatform(String filteredPlatforms, String platform) {
 def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonProRenderBlenderAddon.git",
     String projectBranch = "",
     String testsBranch = "master",
-    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,NVIDIA_GF1080TI,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA',
+    String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_RadeonVII,AMD_RX5700XT,AMD_RX6800;Ubuntu20:AMD_RadeonVII;OSX:AMD_RXVEGA',
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
