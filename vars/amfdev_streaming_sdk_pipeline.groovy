@@ -108,31 +108,54 @@ def getCommunicationPort(String osName, Map options) {
 }
 
 
-def closeGames(String osName, Map options) {
+def closeGames(String osName, Map options, String gameName) {
     try {
         switch(osName) {
             case "Windows":
-                if (options.engine == "Borderlands3") {
+                if (gameName == "All") {
+                    bat """
+                        taskkill /f /im \"borderlands3.exe\"
+                        taskkill /f /im \"VALORANT-Win64-Shipping.exe\"
+                        taskkill /f /im \"r5apex.exe\"
+                        taskkill /f /im \"LeagueClient.exe\"
+                        taskkill /f /im \"League of Legends.exe\"
+                        taskkill /f /im \"browser_x86.exe\"
+                        taskkill /f /im \"Heaven.exe\"
+                        taskkill /f /im \"Valley.exe\"
+                        taskkill /f /im \"launcher.exe\"
+                        taskkill /f /im \"superposition.exe\"
+                    """
+                } else if (gameName == "Borderlands3") {
                     bat """
                         taskkill /f /im \"borderlands3.exe\"
                     """
-                } else if (options.engine == "Valorant") {
+                } else if (gameName == "Valorant") {
                     bat """
                         taskkill /f /im \"VALORANT-Win64-Shipping.exe\"
                     """
-                } else if (options.engine == "ApexLegends") {
+                } else if (gameName == "ApexLegends") {
                     bat """
                         taskkill /f /im \"r5apex.exe\"
                     """
-                } else if (options.engine == "LoL") {
+                } else if (gameName == "LoL") {
                     bat """
                         taskkill /f /im \"LeagueClient.exe\"
                         taskkill /f /im \"League of Legends.exe\"
                     """
-                } else if (options.engine == "Heaven") {
+                } else if (gameName == "Heaven") {
                     bat """
                         taskkill /f /im \"browser_x86.exe\"
                         taskkill /f /im \"Heaven.exe\"
+                    """
+                } else if (gameName == "Valley") {
+                    bat """
+                        taskkill /f /im \"browser_x86.exe\"
+                        taskkill /f /im \"Valley.exe\"
+                    """
+                } else if (gameName == "Superposition") {
+                    bat """
+                        taskkill /f /im \"launcher.exe\"
+                        taskkill /f /im \"superposition.exe\"
                     """
                 }
 
@@ -322,6 +345,8 @@ def executeTestsServer(String osName, String asicName, Map options) {
 
     try {
 
+        closeGames(osName, options, "All")
+
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
@@ -401,7 +426,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
 
         saveResults(osName, options, "server", stashResults, options["serverInfo"]["executeTestsFinished"])
 
-        closeGames(osName, options)
+        closeGames(osName, options, options.engine)
     }
 }
 
