@@ -63,25 +63,33 @@ class utils {
         }
     }
 
-    static def sendExceptionToSlack(Object self, String jobName, String buildNumber, String buildUrl, String webhook, String channel, String message) {
+    static def sendMessageToSlack(Object self, String channel, ArrayList attachments) {
         try {
+            // Default author fields values to easily identify the message source
+            for (attachment in attachments) {
+                if (!attachment.author_name) {
+                    attachment["author_name"] = "Jenkins"
+                    if (!attachment.author_icon) {
+                        attachment["author_icon"] = "https://cdn.icon-icons.com/icons2/2107/PNG/64/file_type_jenkins_icon_130515.png"
+                    }
+                }
+            }
+
             def slackMessage = [
-                attachments: [[
-                    "title": "${jobName} [${buildNumber}]",
-                    "title_link": "${buildUrl}",
-                    "color": "#720000",
-                    "text": message
-                ]],
+                attachments: attachments,
                 channel: channel
             ]
-            self.httpRequest(
-                url: webhook,
-                httpMode: 'POST',
-                requestBody: JsonOutput.toJson(slackMessage)
-            )
-            self.println("[INFO] Exception was sent to Slack")
+            
+            self.withCredentials([self.string(credentialsId: 'cisAppSlackWebhook', variable: 'WEBHOOK_URL')]) {
+                self.httpRequest(
+                    url: WEBHOOK_URL,
+                    httpMode: 'POST',
+                    requestBody: JsonOutput.toJson(slackMessage)
+                )
+            }
+            self.println("[INFO] Message was sent to Slack channel #${channel}")
         } catch (e) {
-            self.println("[ERROR] Failed to send exception to Slack")
+            self.println("[ERROR] Failed to send message to Slack channel #${channel}")
             self.println(e)
         }
     }
