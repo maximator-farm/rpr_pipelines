@@ -258,6 +258,13 @@ def executeTests(String osName, String asicName, Map options)
     Boolean stashResults = true
 
     try {
+        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
+            timeout(time: "5", unit: "MINUTES") {
+                cleanWS(osName)
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_blender.git")
+            }
+        }
+
         // FIXME: remove this ducktape when CPUs on that machines will be changes
         if (env.NODE_NAME == "PC-TESTER-ARAK-WIN10" || env.NODE_NAME == "PC-TESTER-KERMAN-WIN10") {
             if (options.parsedTests.contains("CPU_Mode") || options.parsedTests.contains("Dual_Mode") || options.parsedTests.contains("regression.0")) {
@@ -265,13 +272,6 @@ def executeTests(String osName, String asicName, Map options)
                     "System doesn't support CPU_Mode and Dual_Mode groups", 
                     new Exception("System doesn't support CPU_Mode and Dual_Mode groups")
                 )
-            }
-        }
-
-        withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-            timeout(time: "5", unit: "MINUTES") {
-                cleanWS(osName)
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_blender.git")
             }
         }
 
