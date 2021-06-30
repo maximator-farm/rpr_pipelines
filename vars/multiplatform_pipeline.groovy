@@ -312,9 +312,9 @@ def makeDeploy(Map options, String engine = "") {
             def reportBuilderLabels = ""
 
             if (options.PRJ_NAME == "RadeonProImageProcessor" || options.PRJ_NAME == "RadeonML") {
-                reportBuilderLabels = "Windows && ReportBuilder && !NoDeploy"
+                reportBuilderLabels = "PC-TESTER-PEKING-WIN10"
             } else {
-                reportBuilderLabels = "Windows && Tester && !NoDeploy"
+                reportBuilderLabels = "PC-TESTER-PEKING-WIN10"
             }
 
             options["stage"] = "Deploy"
