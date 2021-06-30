@@ -116,7 +116,7 @@ class utils {
         }
     }
 
-    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false, Map nasReportInfo = []) {
+    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false, Map nasReportInfo = [:]) {
         Map params
 
         String redirectReportName = "redirect_report.html"
@@ -125,7 +125,15 @@ class utils {
         if (publishOnNAS) {
             String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
 
+            String reportLinkBase
             String authReportLinkBase
+
+            self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
+                self.string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
+                reportLinkBase = self.REMOTE_URL
+            }
+
+            reportLinkBase = "${reportLinkBase}/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
 
             self.withCredentials([self.usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
                 authReportLinkBase = reportLinkBase.replace("https://", "https://${self.NAS_USER}:${self.NAS_PASSWORD}@")
@@ -157,25 +165,18 @@ class utils {
                 jenkinsBuildName = nasReportInfo["jenkinsBuildName"]
             }
 
-            if (self.isUnix()) {
-                self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${jenkinsBuildUrl}\" \"${jenkinsBuildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
-            } else {
-                self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${jenkinsBuildUrl}\" \"${jenkinsBuildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
+            self.dir(reportDir) {
+                if (self.isUnix()) {
+                    self.sh(script: '$CIS_TOOLS/make_wrapper_page.sh ' + " \"${jenkinsBuildUrl}\" \"${jenkinsBuildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
+                } else {
+                    self.bat(script: '%CIS_TOOLS%\\make_wrapper_page.bat ' + " \"${jenkinsBuildUrl}\" \"${jenkinsBuildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
+                }
             }
 
             self.dir(reportDir) {
                 // upload report to NAS in archive and unzip it
                 self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, preZip: true, postUnzip: true, storeOnNAS: true)
             }
-
-            String reportLinkBase
-
-            self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
-                self.string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
-                reportLinkBase = self.REMOTE_URL
-            }
-
-            reportLinkBase = "${reportLinkBase}/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
             
             self.dir("redirect_links") {
                 if (self.isUnix()) {
@@ -198,8 +199,7 @@ class utils {
                           reportDir: "redirect_links",
                           reportFiles: redirectReportName,
                           // TODO: custom reportName (issues with escaping)
-                          reportName: reportName,
-                          reportTitles: "Redirecting to report..."]
+                          reportName: reportName]
         } else {
             params = [allowMissing: false,
                           alwaysLinkToLastBuild: false,
