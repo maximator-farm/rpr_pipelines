@@ -9,20 +9,21 @@ def call(Map options) {
             text = "Failed in:  ${options.FAILED_STAGES.join('\n')}"
         } 
 
-        String debagSlackMessage = """[{
+        def debugSlackMessage = [[
             "title": "${env.JOB_NAME} [${env.BUILD_NUMBER}]",
             "title_link": "${env.BUILD_URL}",
             "color": "#fc0356",
             "pretext": "${currentBuild.result}",
-            "text": "${text.replace('\n', '\\n')}"
-            }]
-        """
+            "text": text
+        ]]
 
         try {
             if ((env.BRANCH_NAME && env.BRANCH_NAME == "master") || env.CHANGE_BRANCH || env.JOB_NAME.contains("Weekly")) {
-                slackSend(attachments: debagSlackMessage, channel: 'cis_failed_master', baseUrl: env.debagUrl, tokenCredentialId: 'debug-channel-master')
+                // FIXME: channel = "cis_failed_master"
+                utils.sendMessageToSlack(this, "test_jenkins_messages", debugSlackMessage)
             } else {
-                slackSend (attachments: debagSlackMessage, channel: env.debagChannel, baseUrl: env.debagUrl, tokenCredentialId: 'debug-channel')
+                // FIXME: channel = env.debagChannel
+                utils.sendMessageToSlack(this, "test_jenkins_messages", debugSlackMessage)
             }
         } catch (e) {
             println("Error during slack notification to debug channel")
