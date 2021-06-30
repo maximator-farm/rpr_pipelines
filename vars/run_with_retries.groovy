@@ -13,7 +13,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
         if (!options.nodeNotFoundMessageSent) {
             node ("master") {
                 withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
-                    utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "Failed to find any node with labels '${labels}'")
+                    utils.sendMessageToSlack(this, "zabbix_critical", [[ "title": "${env.JOB_NAME} [${env.BUILD_NUMBER}]", "title_link": "${env.BUILD_URL}", "color": "#720000", "text": "Failed to find any node with labels '${labels}'" ]])
                     options.nodeNotFoundMessageSent = true
                 }
             }
@@ -131,15 +131,15 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                     // take master node for send exception in Slack channel
                     node ("master") {
                         withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
-                            utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "${nodeName}: RemotingSystemException appeared. Node is going to be marked as offline")
+                            utils.sendMessageToSlack(this, "zabbix_critical", [[ "title": "${env.JOB_NAME} [${env.BUILD_NUMBER}]", "title_link": "${env.BUILD_URL}", "color": "#720000", "text": "${nodeName}: RemotingSystemException appeared. Node is going to be marked as offline" ]])
                             utils.markNodeOffline(this, nodeName, "RemotingSystemException appeared. This node was marked as offline")
-                            utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "${nodeName}: Node was marked as offline")
+                            utils.sendMessageToSlack(this, "zabbix_critical", [[ "title": "${env.JOB_NAME} [${env.BUILD_NUMBER}]", "title_link": "${env.BUILD_URL}", "color": "#720000", "text": "${nodeName}: Node was marked as offline" ]])
                         }
                     }
                 } catch (e2) {
                     node ("master") {
                         withCredentials([string(credentialsId: 'zabbix-notifier-webhook', variable: 'WEBHOOK_URL')]) {
-                            utils.sendExceptionToSlack(this, env.JOB_NAME, env.BUILD_NUMBER, env.BUILD_URL, WEBHOOK_URL, "zabbix_critical", "Failed to mark node '${nodeName}' as offline")
+                            utils.sendMessageToSlack(this, "zabbix_critical", [[ "title": "${env.JOB_NAME} [${env.BUILD_NUMBER}]", "title_link": "${env.BUILD_URL}", "color": "#720000", "text": "Failed to mark node '${nodeName}' as offline" ]])
                         }
                     }
                 }
