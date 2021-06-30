@@ -146,21 +146,21 @@ class utils {
                 linksTitles = reportFiles
             }
 
+            String jenkinsBuildUrl = ""
+            String jenkinsBuildName = "Test report"
+
+            if (nasReportInfo.containsKey("jenkinsBuildUrl")) {
+                jenkinsBuildUrl = nasReportInfo["jenkinsBuildUrl"]
+            }
+
+            if (nasReportInfo.containsKey("jenkinsBuildName")) {
+                jenkinsBuildName = nasReportInfo["jenkinsBuildName"]
+            }
+
             if (self.isUnix()) {
-                String buildUrl = ""
-                String buildName = "Test report"
-
-                if (nasReportInfo.containsKey("buildUrl")) {
-                    buildUrl = nasReportInfo["buildUrl"]
-                }
-
-                if (nasReportInfo.containsKey("buildName")) {
-                    buildName = nasReportInfo["buildName"]
-                }
-
-                self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${buildUrl}\" \"${buildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
+                self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${jenkinsBuildUrl}\" \"${jenkinsBuildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
             } else {
-                self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${buildUrl}\" \"${buildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
+                self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${jenkinsBuildUrl}\" \"${jenkinsBuildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
             }
 
             self.dir(reportDir) {
