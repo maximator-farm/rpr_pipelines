@@ -124,7 +124,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
     }
     
     try {
-        makeUnstash(name: "app${osName}")
+        makeUnstash(name: "app${osName}", storeOnNAS: options.storeOnNAS)
         switch(osName) {
             case 'Windows':
                 unzip dir: '.', glob: '', zipFile: 'BaikalNext_Build-Windows.zip'
@@ -156,9 +156,9 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
                     python3("hybrid_report.py --xml_path ../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-${options.RENDER_QUALITY}_failures")
                 }
 
-                makeStash(includes: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures/**/*", name: "testResult-${asicName}-${osName}-${options.RENDER_QUALITY}", allowEmpty: true)
+                makeStash(includes: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures/**/*", name: "testResult-${asicName}-${osName}-${options.RENDER_QUALITY}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
 
-                utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-${options.RENDER_QUALITY}_failures", "report.html", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures")
+                utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-${options.RENDER_QUALITY}_failures", "report.html", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
             } catch (err) {
                 println("Error during HTML report publish")
@@ -173,9 +173,9 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
                     python3("hybrid_report.py --xml_path ../${STAGE_NAME}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-Failures")
                 }
 
-                makeStash(includes: "${asicName}-${osName}-Failures/**/*", name: "testResult-${asicName}-${osName}", allowEmpty: true)
+                makeStash(includes: "${asicName}-${osName}-Failures/**/*", name: "testResult-${asicName}-${osName}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
 
-                utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-Failures", "report.html", "${STAGE_NAME}_Failures", "${STAGE_NAME}_Failures")
+                utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-Failures", "report.html", "${STAGE_NAME}_Failures", "${STAGE_NAME}_Failures", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
             } catch (err) {
                 println("[ERROR] Failed to publish HTML report.")
@@ -288,9 +288,9 @@ def executePerfTests(String osName, String asicName, Map options) {
 
         dir("BaikalNext") {
             dir("bin") {
-                makeUnstash(name: "perf${osName}", unzip: false)
+                makeUnstash(name: "perf${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
             }
-            makeUnstash(name: "perfTestsConf")
+            makeUnstash(name: "perfTestsConf", storeOnNAS: options.storeOnNAS)
             dir("RprPerfTest/Scenarios") {
                 if (options.scenarios == "all") {
                     List scenariosList = []
@@ -331,7 +331,7 @@ def executePerfTests(String osName, String asicName, Map options) {
         archiveArtifacts "*.log"
 
         dir("BaikalNext/RprPerfTest/Reports") {
-            makeStash(includes: "*.json", name: "testPerfResult-${asicName}-${osName}", allowEmpty: true)
+            makeStash(includes: "*.json", name: "testPerfResult-${asicName}-${osName}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
 
             // check results
             if (!options.updateRefsPerf) {
@@ -435,7 +435,7 @@ def executeBuildWindows(Map options) {
         rename BaikalNext.zip BaikalNext_${STAGE_NAME}.zip
     """
     dir("Build/bin/${build_type}") {
-        makeStash(includes: "RprPerfTest.exe", name: "perfWindows", allowEmpty: true, preZip: false)
+        makeStash(includes: "RprPerfTest.exe", name: "perfWindows", allowEmpty: true, preZip: false, storeOnNAS: options.storeOnNAS)
     }
 
     // FIXME: delete comment when Hybrid from current master will work with MaterialX
@@ -464,7 +464,7 @@ def executeBuildOSX(Map options) {
         mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
     """
     dir("Build/bin") {
-        makeStash(includes: "RprPerfTest", name: "perfOSX", allowEmpty: true, preZip: false)
+        makeStash(includes: "RprPerfTest", name: "perfOSX", allowEmpty: true, preZip: false, storeOnNAS: options.storeOnNAS)
     }
 }
 
@@ -479,7 +479,7 @@ def executeBuildLinux(Map options) {
         mv BaikalNext.tar.xz BaikalNext_${STAGE_NAME}.tar.xz
     """
     dir("Build/bin") {
-        makeStash(includes: "RprPerfTest", name: "perfUbuntu18", allowEmpty: true, preZip: false)
+        makeStash(includes: "RprPerfTest", name: "perfUbuntu18", allowEmpty: true, preZip: false, storeOnNAS: options.storeOnNAS)
     }
 }
 
@@ -507,7 +507,7 @@ def executeBuild(String osName, Map options) {
         }
 
         dir('Build') {
-            makeStash(includes: "BaikalNext_${STAGE_NAME}*", name: "app${osName}")
+            makeStash(includes: "BaikalNext_${STAGE_NAME}*", name: "app${osName}", storeOnNAS: options.storeOnNAS)
         }
     } catch (e) {
         println(e.getMessage())
@@ -550,7 +550,7 @@ def executePreBuild(Map options) {
         println("Build was detected as Pull Request")
     }
 
-    makeStash(includes: "RprPerfTest/", name: "perfTestsConf", allowEmpty: true)
+    makeStash(includes: "RprPerfTest/", name: "perfTestsConf", allowEmpty: true, storeOnNAS: options.storeOnNAS)
 
     options.commitMessage = []
     commitMessage = commitMessage.split('\r\n')
@@ -626,8 +626,8 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     options['testsQuality'].split(",").each() { quality ->
                         testResultList.each() {
                             try {
-                                makeUnstash(name: "${it}-${quality}")
-                                reportFiles += ", ${it}-${quality}_failures/report.html".replace("testResult-", "")
+                                makeUnstash(name: "${it}-${quality}", storeOnNAS: options.storeOnNAS)
+                                reportFiles += ",../${it}-${quality}_failures/report.html".replace("testResult-", "")
                             }
                             catch(e) {
                                 echo "Can't unstash ${it} ${quality}"
@@ -637,12 +637,8 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         }
                     }
                 }
-                publishHTML([allowMissing: true,
-                             alwaysLinkToLastBuild: false,
-                             keepAll: true,
-                             reportDir: "SummaryReport",
-                             reportFiles: "${reportFiles.replaceAll('^, ', '')}",
-                             reportName: "HTML Failures"])
+
+                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^,', '')}", "HTML Failures", "", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
             } catch(e) {
                 println(e.toString())
             }
@@ -652,8 +648,8 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 dir("SummaryReport") {
                     testResultList.each() {
                         try {
-                            makeUnstash(name: "${it}")
-                            reportFiles += ", ${it}-Failures/report.html".replace("testResult-", "")
+                            makeUnstash(name: "${it}", storeOnNAS: options.storeOnNAS)
+                            reportFiles += ",../${it}-Failures/report.html".replace("testResult-", "")
                         }
                         catch(e) {
                             println("[ERROR] Can't unstash ${it}")
@@ -662,12 +658,8 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         }
                     }
                 }
-                publishHTML([allowMissing: true,
-                             alwaysLinkToLastBuild: false,
-                             keepAll: true,
-                             reportDir: "SummaryReport",
-                             reportFiles: "${reportFiles.replaceAll('^, ', '')}",
-                             reportName: "HTML Failures"])
+
+                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^,', '')}", "HTML Failures", "", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
             } catch(e) {
                 println(e.toString())
             }
@@ -679,7 +671,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     testResultList.each() {
                         try {
                             dir("${it}".replace("testResult-", "")) {
-                                makeUnstash(name: "${it.replace('testResult-', 'testPerfResult-')}")
+                                makeUnstash(name: "${it.replace('testResult-', 'testPerfResult-')}", storeOnNAS: options.storeOnNAS)
                             }
                         }
                         catch(e) {
@@ -693,7 +685,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 python3("-m pip install --user -r requirements.txt")
                 python3("hybrid_perf_report.py --json_files_path \"performanceReports\"")
 
-                utils.publishReport(this, "${BUILD_URL}", "PerformanceReport", "performace_report.html", "Performance Tests Report", "Performance Tests Report")
+                utils.publishReport(this, "${BUILD_URL}", "PerformanceReport", "performace_report.html", "Performance Tests Report", "Performance Tests Report", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
             }
         }
     }
@@ -769,5 +761,6 @@ def call(String projectBranch = "",
                             cmakeKeys:cmakeKeys,
                             retriesForTestStage:1,
                             successfulTests:successfulTests,
-                            isLegacyBranch:isLegacyBranch])
+                            isLegacyBranch:isLegacyBranch,
+                            storeOnNAS: true])
 }
