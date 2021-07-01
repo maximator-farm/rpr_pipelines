@@ -67,7 +67,7 @@ def call(String logType, String content){
         case 'DE':
             printDebug(this, content)
             break
-        case default:
+        default:
             println(this, content)
             break
     }
