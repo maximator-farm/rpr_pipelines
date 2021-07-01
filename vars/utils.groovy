@@ -82,7 +82,7 @@ class utils {
             
             self.withCredentials([self.string(credentialsId: 'cisAppSlackWebhook', variable: 'WEBHOOK_URL')]) {
                 self.httpRequest(
-                    url: WEBHOOK_URL,
+                    url: self.WEBHOOK_URL,
                     httpMode: 'POST',
                     requestBody: JsonOutput.toJson(slackMessage)
                 )
