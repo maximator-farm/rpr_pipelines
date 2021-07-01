@@ -156,9 +156,11 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
                     python3("hybrid_report.py --xml_path ../${STAGE_NAME}.${options.RENDER_QUALITY}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-${options.RENDER_QUALITY}_failures")
                 }
 
-                makeStash(includes: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures/**/*", name: "testResult-${asicName}-${osName}-${options.RENDER_QUALITY}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                if (!options.storeOnNAS) {
+                    makeStash(includes: "${asicName}-${osName}-${options.RENDER_QUALITY}_failures/**/*", name: "testResult-${asicName}-${osName}-${options.RENDER_QUALITY}", allowEmpty: true)
+                }
 
-                utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-${options.RENDER_QUALITY}_failures", "report.html", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+                utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-${options.RENDER_QUALITY}_failures", "report.html", "${STAGE_NAME}_${options.RENDER_QUALITY}_Failures", "${STAGE_NAME}_${options.RENDER_QUALITY}_failures", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
             } catch (err) {
                 println("Error during HTML report publish")
@@ -173,7 +175,9 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
                     python3("hybrid_report.py --xml_path ../${STAGE_NAME}.gtest.xml --images_basedir ../BaikalNext/RprTest --report_path ../${asicName}-${osName}-Failures")
                 }
 
-                makeStash(includes: "${asicName}-${osName}-Failures/**/*", name: "testResult-${asicName}-${osName}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                if (!options.storeOnNAS) {
+                    makeStash(includes: "${asicName}-${osName}-Failures/**/*", name: "testResult-${asicName}-${osName}", allowEmpty: true)
+                }
 
                 utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-Failures", "report.html", "${STAGE_NAME}_Failures", "${STAGE_NAME}_Failures", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
@@ -626,8 +630,12 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     options['testsQuality'].split(",").each() { quality ->
                         testResultList.each() {
                             try {
-                                makeUnstash(name: "${it}-${quality}", storeOnNAS: options.storeOnNAS)
-                                reportFiles += ",../${it}-${quality}_failures/report.html".replace("testResult-", "")
+                                if (!options.storeOnNAS) {
+                                    makeUnstash(name: "${it}-${quality}", storeOnNAS: options.storeOnNAS)
+                                    reportFiles += ", ${it}-${quality}_failures/report.html".replace("testResult-", "")
+                                } else {
+                                    reportFiles += ",../${it}-${quality}_Failures/report.html".replace("testResult-", "Test-")
+                                }
                             }
                             catch(e) {
                                 echo "Can't unstash ${it} ${quality}"
@@ -638,7 +646,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     }
                 }
 
-                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^,', '')}", "HTML Failures", "", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^,', '')}", "HTML Failures", reportFiles.replaceAll("../", ""), options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
             } catch(e) {
                 println(e.toString())
             }
@@ -648,8 +656,12 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 dir("SummaryReport") {
                     testResultList.each() {
                         try {
-                            makeUnstash(name: "${it}", storeOnNAS: options.storeOnNAS)
-                            reportFiles += ",../${it}-Failures/report.html".replace("testResult-", "")
+                            if (!options.storeOnNAS) {
+                                makeUnstash(name: "${it}", storeOnNAS: options.storeOnNAS)
+                                reportFiles += ", ${it}-Failures/report.html".replace("testResult-", "")
+                            } else {
+                                reportFiles += ",../${it}_Failures/report.html".replace("testResult-", "Test-")
+                            }
                         }
                         catch(e) {
                             println("[ERROR] Can't unstash ${it}")
@@ -659,7 +671,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     }
                 }
 
-                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^,', '')}", "HTML Failures", "", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^,', '')}", "HTML Failures", reportFiles.replaceAll('^,', '').replaceAll("\\.\\./", ""), options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
             } catch(e) {
                 println(e.toString())
             }
