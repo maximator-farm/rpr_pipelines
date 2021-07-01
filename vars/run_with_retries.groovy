@@ -7,8 +7,6 @@ def shoudBreakRetries(labels) {
 def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLastNode, def stageName, def options, List allowedExceptions = [], Integer maxNumberOfRetries = -1, String osName = "", Boolean setBuildStatus = false) {
     List nodesList = nodesByLabel label: labels, offline: true
     println "[INFO] Found ${nodesList.size()} suitable nodes"
-    // FIXME: remove test code
-    utils.sendMessageToSlack(this, "test_github", [[ "title": "${env.JOB_NAME} [${env.BUILD_NUMBER}]", "title_link": "${env.BUILD_URL}", "color": "#007200", "text": "Run with retries started" ]])
     // if 0 suitable nodes are found - wait some node in loop
     while (nodesList.size() == 0) {
         println "[INFO] Couldn't find suitable nodes. Search will be retried after pause"
