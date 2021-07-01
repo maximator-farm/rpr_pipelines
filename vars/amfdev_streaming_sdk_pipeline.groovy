@@ -142,12 +142,12 @@ def closeGames(String osName, Map options, String gameName) {
                         taskkill /f /im \"LeagueClient.exe\"
                         taskkill /f /im \"League of Legends.exe\"
                     """
-                } else if (gameName == "Heaven") {
+                } else if (gameName == "HeavenDX9" || gameName == "HeavenDX11") {
                     bat """
                         taskkill /f /im \"browser_x86.exe\"
                         taskkill /f /im \"Heaven.exe\"
                     """
-                } else if (gameName == "Valley") {
+                } else if (gameName == "ValleyDX9" || gameName == "ValleyDX11") {
                     bat """
                         taskkill /f /im \"browser_x86.exe\"
                         taskkill /f /im \"Valley.exe\"
