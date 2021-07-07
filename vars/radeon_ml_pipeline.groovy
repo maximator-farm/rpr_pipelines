@@ -312,7 +312,7 @@ def executeBuild(String osName, Map options) {
             checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         }
         
-        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
+        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/release/*", "../RML_thirdparty/MIOpen")
         downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
         //downloadFiles("/volume1/CIS/rpr-ml/DirectML/*", "./DirectML")
 
