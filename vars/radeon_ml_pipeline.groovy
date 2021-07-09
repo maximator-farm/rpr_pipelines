@@ -455,26 +455,27 @@ def call(String projectBranch = "",
         def deployStage = env.TAG_NAME ? this.&executeDeploy : null
         platforms = env.TAG_NAME ? "Windows;Ubuntu20;OSX;CentOS7" : platforms
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, deployStage,
-                [platforms:platforms,
-                 projectRepo:projectRepo,
-                 projectBranch:projectBranch,
-                 testsBranch:testsBranch,
-                 enableNotifications:enableNotifications,
-                 PRJ_NAME:'RadeonML',
-                 PRJ_ROOT:'rpr-ml',
-                 BUILDER_TAG:'BuilderML',
-                 TESTER_TAG:'ML',
-                 BUILD_TIMEOUT:45,
-                 TEST_TIMEOUT:45,
-                 DEPLOY_TIMEOUT:45,
-                 executeBuild:true,
-                 executeTests:true,
-                 executeFT:executeFT,
-                 retriesForTestStage:1,
-                 gitlabURL:gitlabURL,
-                 gitlabURLSSH:gitlabURLSSH
-                 ])
+        options << [platforms:platforms,
+                    projectRepo:projectRepo,
+                    projectBranch:projectBranch,
+                    testsBranch:testsBranch,
+                    enableNotifications:enableNotifications,
+                    PRJ_NAME:'RadeonML',
+                    PRJ_ROOT:'rpr-ml',
+                    BUILDER_TAG:'BuilderML',
+                    TESTER_TAG:'ML',
+                    BUILD_TIMEOUT:45,
+                    TEST_TIMEOUT:45,
+                    DEPLOY_TIMEOUT:45,
+                    executeBuild:true,
+                    executeTests:true,
+                    executeFT:executeFT,
+                    retriesForTestStage:1,
+                    gitlabURL:gitlabURL,
+                    gitlabURLSSH:gitlabURLSSH
+                    ]
+
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, deployStage, options)
 
     } catch (e) {
         currentBuild.result = "FAILURE"
