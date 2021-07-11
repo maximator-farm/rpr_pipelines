@@ -44,10 +44,27 @@ def prepareTool(String osName, Map options) {
 }
 
 
-def getServerIpAddress(String osName, Map options) {
+def getServerIpAddress(String osName, Map options, Boolean isLocalMachine) {
     switch(osName) {
         case "Windows":
-            return bat(script: "echo %IP_ADDRESS%",returnStdout: true).split('\r\n')[2].trim()
+            if (isLocalMachine) {
+                return bat(script: "ipconfig", returnStdout: true).split("IPv4 Address")[1].split(":")[1].split("\n")[0].trim()
+            } else {
+                return bat(script: "echo %IP_ADDRESS%", returnStdout: true).split('\r\n')[2].trim()
+            }
+        case "OSX":
+            println("Unsupported OS")
+            break
+        default:
+            println("Unsupported OS")
+    }
+}
+
+
+def getNetworkName(String osName, Map options) {
+    switch(osName) {
+        case "Windows":
+            return bat(script: "echo %NETWORK_NAME%",returnStdout: true).split('\r\n')[2].trim()
         case "OSX":
             println("Unsupported OS")
             break
@@ -299,6 +316,9 @@ def executeTestsClient(String osName, String asicName, Map options) {
             }
         }
 
+        options["clientInfo"]["networkName"] = getNetworkName(osName, options)
+        println("[INFO] Network name (client): ${options.clientInfo.networkName}")       
+
         options["clientInfo"]["ready"] = true
         println("[INFO] Client is ready to run tests")
 
@@ -374,7 +394,16 @@ def executeTestsServer(String osName, String asicName, Map options) {
             }
         }
 
-        options["serverInfo"]["ipAddress"] = getServerIpAddress(osName, options)
+        options["serverInfo"]["networkName"] = getNetworkName(osName, options)
+        println("[INFO] Network name (server): ${options.serverInfo.networkName}")
+
+        while (!options["clientInfo"].contains("networkName")) {
+            println("[INFO] Wait client network name")  
+        }
+
+        Boolean isLocalMachine = (options["clientInfo"]["networkName"] == options["serverInfo"]["networkName"])
+        options["serverInfo"]["ipAddress"] = getServerIpAddress(osName, options, isLocalMachine)
+
         println("[INFO] IPv4 address of server: ${options.serverInfo.ipAddress}")
 
         options["serverInfo"]["gpuName"] = getGPUName()
