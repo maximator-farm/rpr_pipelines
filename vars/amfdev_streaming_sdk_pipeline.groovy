@@ -979,7 +979,8 @@ def call(String projectBranch = "",
     Boolean clientCollectTraces = false,
     Boolean serverCollectTraces = false,
     String games = "Valorant",
-    String androidBuildConfiguration = "debug"
+    String androidBuildConfiguration = "debug",
+    String storeOnNAS = storeOnNAS
     )
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
