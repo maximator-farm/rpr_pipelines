@@ -1,4 +1,4 @@
-import groovy.transform.Field
+simport groovy.transform.Field
 import java.util.concurrent.ConcurrentHashMap
 import groovy.json.JsonOutput
 import net.sf.json.JSON
@@ -980,7 +980,7 @@ def call(String projectBranch = "",
     Boolean serverCollectTraces = false,
     String games = "Valorant",
     String androidBuildConfiguration = "debug",
-    String storeOnNAS = storeOnNAS
+    String storeOnNAS = false
     )
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
