@@ -1,4 +1,4 @@
-simport groovy.transform.Field
+import groovy.transform.Field
 import java.util.concurrent.ConcurrentHashMap
 import groovy.json.JsonOutput
 import net.sf.json.JSON
