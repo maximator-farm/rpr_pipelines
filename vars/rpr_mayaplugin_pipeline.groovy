@@ -221,6 +221,18 @@ def executeTests(String osName, String asicName, Map options)
     try {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
+                try {
+                    if (osName == "OSX" && asicName == "AppleM1") {
+                        sh """
+                            pkill -f /Applications/Autodesk/maya2022/Maya.app/Contents/MacOS/Maya; sleep 1; pkill -f /Applications/Autodesk/maya2022/Maya.app/Contents/MacOS/Maya
+                            pkill -f /Applications/Autodesk/maya2020/Maya.app/Contents/MacOS/Maya; sleep 1; pkill -f /Applications/Autodesk/maya2020/Maya.app/Contents/MacOS/Maya
+                            pkill -f /Applications/Autodesk/maya2019/Maya.app/Contents/MacOS/Maya; sleep 1; pkill -f /Applications/Autodesk/maya2019/Maya.app/Contents/MacOS/Maya
+                        """
+                    }
+                } catch (e) {
+                    // just try to close Maya if it's opened
+                }
+                
                 cleanWS(osName)
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_maya.git")
             }
