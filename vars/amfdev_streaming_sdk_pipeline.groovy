@@ -32,7 +32,7 @@ Boolean isIdleClient(Map options) {
 def prepareTool(String osName, Map options) {
     switch(osName) {
         case "Windows":
-            unstash("ToolWindows")
+            makeUnstash(name: "ToolWindows", unzip: false, storeOnNAS: options.storeOnNAS)
             unzip(zipFile: "${options.winTestingBuildName}.zip")
             break
         case "OSX":
@@ -526,7 +526,7 @@ def executeBuildWindows(Map options) {
 
                 if (options.winTestingBuildName == winBuildName) {
                     utils.moveFiles(this, "Windows", BUILD_NAME, "${options.winTestingBuildName}.zip")
-                    makeStash(includes: "${options.winTestingBuildName}.zip", name: "ToolWindows", storeOnNAS: options.storeOnNAS)
+                    makeStash(includes: "${options.winTestingBuildName}.zip", name: "ToolWindows", preZip: false, storeOnNAS: options.storeOnNAS)
                 }
 
                 archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
@@ -877,8 +877,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                     if (!options.testDataSaved) {
                         try {
                             // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report ${game}", "Summary Report, Performance Report, Compare Report", options.storeOnNAS)
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${game}", "Summary Report", options.storeOnNAS)
                             options.testDataSaved = true 
                         } catch (e1) {
                             println """
@@ -948,8 +947,8 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report ${game}", "Summary Report, Performance Report, Compare Report", options.storeOnNAS)
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${game}", "Summary Report", options.storeOnNAS)
+
                 if (summaryTestResults) {
                     GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
                             "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
@@ -981,7 +980,7 @@ def call(String projectBranch = "",
     Boolean serverCollectTraces = false,
     String games = "Valorant",
     String androidBuildConfiguration = "debug",
-    String storeOnNAS = false
+    Boolean storeOnNAS = false
     )
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
