@@ -11,7 +11,6 @@ import groovy.transform.Synchronized
 import java.util.Iterator
 import TestsExecutionType
 import groovy.transform.Field
-import prints.*
 
 
 @Field List platformList = []
@@ -348,7 +347,7 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
             options.baseBuildName = currentBuild.displayName
             if (env.BuildPriority) {
                 currentBuild.displayName = "${currentBuild.displayName} (Priority: ${env.BuildPriority})"
-                info("Priority was set by BuildPriority parameter")
+                utils.printInfo(this, "Priority was set by BuildPriority parameter")
             } else {
                 def jenkins = Jenkins.getInstance();        
                 def views = Jenkins.getInstance().getViews()
