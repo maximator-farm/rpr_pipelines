@@ -11,7 +11,7 @@ import groovy.transform.Synchronized
 import java.util.Iterator
 import TestsExecutionType
 import groovy.transform.Field
-import prints.*
+import prints
 
 
 @Field List platformList = []
