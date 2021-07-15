@@ -1,4 +1,4 @@
-class prints(){
+class prints{
     static enum Color{
         //text colors
         RED("\033[91m"), 
