@@ -239,7 +239,8 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                         }
 
                         println "Stashing all test results to : ${options.testResultsName}_client"
-                        makeStash(includes: '**/*', name: "${options.testResultsName}_client", allowEmpty: true)
+                        makeStash(includes: '**/*', name: "${options.testResultsName}_client", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+
                         // reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
                             if (sessionReport.summary.total != sessionReport.summary.skipped) {
@@ -250,9 +251,9 @@ def saveResults(String osName, Map options, String executionType, Boolean stashR
                         }
                     } else {
                         println "Stashing logs to : ${options.testResultsName}_server"
-                        makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_server_logs", allowEmpty: true)
-                        makeStash(includes: '**/*.json', name: "${options.testResultsName}_server", allowEmpty: true)
-                        makeStash(includes: '**/*_server.zip', name: "${options.testResultsName}_server_traces", allowEmpty: true)
+                        makeStash(includes: '**/*_server.log', name: "${options.testResultsName}_server_logs", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*.json', name: "${options.testResultsName}_server", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+                        makeStash(includes: '**/*_server.zip', name: "${options.testResultsName}_server_traces", allowEmpty: true, storeOnNAS: options.storeOnNAS)
                     }
                 }
             }
@@ -525,7 +526,7 @@ def executeBuildWindows(Map options) {
 
                 if (options.winTestingBuildName == winBuildName) {
                     utils.moveFiles(this, "Windows", BUILD_NAME, "${options.winTestingBuildName}.zip")
-                    makeStash(includes: "${options.winTestingBuildName}.zip", name: "ToolWindows")
+                    makeStash(includes: "${options.winTestingBuildName}.zip", name: "ToolWindows", storeOnNAS: options.storeOnNAS)
                 }
 
                 archiveUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
@@ -772,7 +773,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
-                                makeUnstash(name: "${it}_server_logs")
+                                makeUnstash(name: "${it}_server_logs", storeOnNAS: options.storeOnNAS)
                             } catch (e) {
                                 println """
                                     [ERROR] Failed to unstash ${it}_server_logs
@@ -783,7 +784,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                             }
 
                             try {
-                                makeUnstash(name: "${it}_client")
+                                makeUnstash(name: "${it}_client", storeOnNAS: options.storeOnNAS)
                             } catch (e) {
                                 println """
                                     [ERROR] Failed to unstash ${it}_client
@@ -794,7 +795,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                             }
 
                             try {
-                                makeUnstash(name: "${it}_server_traces")
+                                makeUnstash(name: "${it}_server_traces", storeOnNAS: options.storeOnNAS)
                             } catch (e) {
                                 println """
                                     [ERROR] Failed to unstash ${it}_server_traces
@@ -817,7 +818,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
-                                makeUnstash(name: "${it}_server")
+                                makeUnstash(name: "${it}_server", storeOnNAS: options.storeOnNAS)
                             } catch (e) {
                                 println """
                                     [ERROR] Failed to unstash ${it}_server
@@ -877,7 +878,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                         try {
                             // Save test data for access it manually anyway
                             utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report ${game}", "Summary Report, Performance Report, Compare Report")
+                                "Test Report ${game}", "Summary Report, Performance Report, Compare Report", options.storeOnNAS)
                             options.testDataSaved = true 
                         } catch (e1) {
                             println """
@@ -948,7 +949,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report ${game}", "Summary Report, Performance Report, Compare Report")
+                    "Test Report ${game}", "Summary Report, Performance Report, Compare Report", options.storeOnNAS)
                 if (summaryTestResults) {
                     GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
                             "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
@@ -1053,7 +1054,8 @@ def call(String projectBranch = "",
                         engines: games.split(",") as List,
                         games: games,
                         clientCollectTraces:clientCollectTraces,
-                        serverCollectTraces:serverCollectTraces
+                        serverCollectTraces:serverCollectTraces,
+                        storeOnNAS: storeOnNAS
                         ]
         }
 
