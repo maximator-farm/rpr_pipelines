@@ -108,6 +108,46 @@ def getCommunicationPort(String osName, Map options) {
 }
 
 
+def getClientScreenWidth(String osName, Map options) {
+    try {
+        switch(osName) {
+            case "Windows":
+                return powershell(script: "wmic path Win32_VideoController get CurrentHorizontalResolution", returnStdout: true).split()[-1].trim()
+            case "OSX":
+                println("Unsupported OS")
+                break
+            default:
+                println("Unsupported OS")
+        }
+    } catch (e) {
+        println("[ERROR] Failed to get client screen width")
+        println(e)
+
+        return 1920
+    }
+}
+
+
+def getClientScreenHeight(String osName, Map options) {
+    try {
+        switch(osName) {
+            case "Windows":
+                return powershell(script: "wmic path Win32_VideoController get CurrentVerticalResolution", returnStdout: true).split()[-1].trim()
+            case "OSX":
+                println("Unsupported OS")
+                break
+            default:
+                println("Unsupported OS")
+        }
+    } catch (e) {
+        println("[ERROR] Failed to get client screen height")
+        println(e)
+
+        return 1080
+    }
+}
+
+
 def closeGames(String osName, Map options, String gameName) {
     try {
         switch(osName) {
@@ -193,11 +233,13 @@ def executeTestCommand(String osName, String asicName, Map options, String execu
         collectTraces = "True"
     }
 
+    def screenResolution = "${options.clientInfo.screenWidth}x${options.clientInfo.screenHeight}"
+
     dir("scripts") {
         switch (osName) {
             case "Windows":
                 bat """
-                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
+                    run.bat \"${testsPackageName}\" \"${testsNames}\" \"${executionType}\" \"${options.serverInfo.ipAddress}\" \"${options.serverInfo.communicationPort}\" ${options.testCaseRetries} \"${options.serverInfo.gpuName}\" \"${options.serverInfo.osName}\" \"${options.engine}\" ${collectTraces} ${screenResolution} 1>> \"../${options.stageName}_${options.currentTry}_${executionType}.log\"  2>&1
                 """
 
                 break
@@ -299,6 +341,12 @@ def executeTestsClient(String osName, String asicName, Map options) {
                 prepareTool(osName, options)
             }
         }
+
+        options["clientInfo"]["screenWidth"] = getClientScreenWidth(osName, options)
+        println("[INFO] Screen width on client machine: ${options.clientInfo.screenWidth}")
+
+        options["clientInfo"]["screenHeight"] = getClientScreenHeight(osName, options)
+        println("[INFO] Screen height on client machine: ${options.clientInfo.screenHeight}")
 
         options["clientInfo"]["ready"] = true
         println("[INFO] Client is ready to run tests")
