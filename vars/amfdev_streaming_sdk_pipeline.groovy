@@ -319,6 +319,8 @@ def executeTestsClient(String osName, String asicName, Map options) {
 
     try {
 
+        utils.reboot(this, osName)
+
         timeout(time: "10", unit: "MINUTES") {
             cleanWS(osName)
             checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
@@ -394,7 +396,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
 
     try {
 
-        closeGames(osName, options, "All")
+        utils.reboot(this, osName)
 
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
