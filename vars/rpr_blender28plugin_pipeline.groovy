@@ -265,6 +265,16 @@ def executeTests(String osName, String asicName, Map options)
             }
         }
 
+        // FIXME: remove this ducktape when CPUs on that machines will be changes
+        if (env.NODE_NAME == "PC-TESTER-ARAK-WIN10" || env.NODE_NAME == "PC-TESTER-KERMAN-WIN10") {
+            if (options.parsedTests.contains("CPU_Mode") || options.parsedTests.contains("Dual_Mode") || options.parsedTests.contains("regression.0")) {
+                throw new ExpectedExceptionWrapper(
+                    "System doesn't support CPU_Mode and Dual_Mode groups", 
+                    new Exception("System doesn't support CPU_Mode and Dual_Mode groups")
+                )
+            }
+        }
+
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_SCENES) {
             String assets_dir = isUnix() ? "${CIS_TOOLS}/../TestResources/rpr_blender_autotests_assets" : "/mnt/c/TestResources/rpr_blender_autotests_assets"
             downloadFiles("/volume1/Assets/rpr_blender_autotests/", assets_dir)

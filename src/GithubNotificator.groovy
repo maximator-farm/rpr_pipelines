@@ -89,11 +89,20 @@ public class GithubNotificator {
             context.println("[INFO] Started initialization of PR notifications")
             this.hasDeployStage = hasDeployStage
 
+            // uses to specify custom build stages (e.g. release/debug)
+            if (options.customBuildStages) {
+                buildCases.addAll(options.customBuildStages)
+            }
+
             options.platforms.split(';').each() {
                 if (it) {
                     List tokens = it.tokenize(':')
                     String osName = tokens.get(0)
-                    buildCases << osName
+
+                    if (!options.customBuildStages) {
+                        buildCases << osName
+                    }
+                    
 
                     String gpuNames = ""
                     if (tokens.size() > 1) {
