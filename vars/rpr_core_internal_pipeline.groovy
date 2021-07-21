@@ -321,7 +321,8 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         println("Stashing test results to : ${options.testResultsName}")
-                        makeStash(includes: '**/*', excludes: '**/cache/**', name: "${options.testResultsName}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+
+                        utils.stashTestData(this, options, options.storeOnNAS, "**/cache/**")
 
                         // reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
