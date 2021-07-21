@@ -143,7 +143,7 @@ class utils {
             def linksTitles
 
             reportFiles.split(",").each { reportFile ->
-                links << "${authReportLinkBase}${reportFile}"
+                links << "${authReportLinkBase}${reportFile.trim()}"
             }
 
             links = links.join(",")
