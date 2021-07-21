@@ -164,6 +164,8 @@ def executeUnitTests(String osName, String asicName, Map options)
         }
 
         utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}_failures", "report.html", "${STAGE_NAME}_failures", "${STAGE_NAME}_failures", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+
+        options["failedConfigurations"].add("unitTestFailures-${asicName}-${osName}")
     } finally {
         archiveArtifacts "*.log, *.gtest.xml"
         junit "*.gtest.xml"
@@ -546,7 +548,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             if (!options.storeOnNAS) {
                                 makeUnstash(name: "${stashName}", storeOnNAS: options.storeOnNAS)
                                 reportFiles += ", ${stashName}_failures/report.html".replace("unitTestFailures-", "")
-                            } else {
+                            } else if (options["failedConfigurations"].contains(stashName)) {
                                 reportFiles += ",../${it}-${quality}_Failures/report.html".replace("testResult-", "Test-")
                             }
                         } catch(e) {
@@ -557,7 +559,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     }
                 }
 
-                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^,', '')}", "Failures Report", reportFiles.replaceAll("../", ""), options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+                if (options.failedConfigurations.size() != 0) {
+                    utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^,', '')}", "Failures Report", reportFiles.replaceAll("../", ""), options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+                }
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
@@ -860,6 +864,7 @@ def call(String projectBranch = "",
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
                         collectTrackedMetrics:collectTrackedMetrics,
+                        failedConfigurations: [],
                         storeOnNAS: true
                         ]
 
