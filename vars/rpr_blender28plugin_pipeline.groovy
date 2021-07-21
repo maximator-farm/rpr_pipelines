@@ -259,7 +259,6 @@ def executeTests(String osName, String asicName, Map options)
 
     try {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-            throw new Exception("Test")
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
                 checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_blender.git")
