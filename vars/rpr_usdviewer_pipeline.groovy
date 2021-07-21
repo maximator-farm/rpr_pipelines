@@ -852,7 +852,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         try {
                             // Save test data for access it manually anyway
                             utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS \
+                                "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
                                 ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
                             options.testDataSaved = true 
                         } catch (e1) {
@@ -924,7 +924,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS \
+                    "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
                     ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
                 if (summaryTestResults) {
