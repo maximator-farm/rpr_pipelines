@@ -120,7 +120,7 @@ class utils {
         Map params
 
         String redirectReportName = "redirect_report.html"
-        String wrapperReportName = "wrapper_report.html"
+        String wrapperReportName = "test_report.html"
 
         if (publishOnNAS) {
             String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
