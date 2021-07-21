@@ -605,7 +605,7 @@ def executePreBuild(Map options)
                         githubNotificator.initPreBuild("${BUILD_URL}")
                     }
                     
-                    if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
+                    if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
 
                         options.pluginVersion = version_read("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', ', ')
                         println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
@@ -621,7 +621,7 @@ def executePreBuild(Map options)
                         bat """
                             git add src/hdusd/__init__.py
                             git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                            git push origin HEAD:develop
+                            git push origin HEAD:master
                         """
 
                         //get commit's sha which have to be build
