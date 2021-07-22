@@ -490,12 +490,12 @@ class utils {
                     break
                 case "OSX":
                     self.sh """
-                        sudo shutdown -r now
+                        (sleep 2; sudo reboot) &
                     """
                 // Ubuntu
                 default:
                     self.sh """
-                        shutdown -h now
+                        (sleep 2; sudo reboot) &
                     """
             }
 
