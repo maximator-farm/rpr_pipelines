@@ -214,17 +214,19 @@ class utils {
             }
         }
 
-        self.publishHTML(params)
-        try {
-            self.httpRequest(
-                url: "${buildUrl}/${reportName.replace('_', '_5f').replace(' ', '_20')}/",
-                authentication: 'jenkinsCredentials',
-                httpMode: 'GET'
-            )
-            self.println("[INFO] Report exists.")
-        } catch(e) {
-            self.println("[ERROR] Can't access report")
-            throw new Exception("Can't access report", e)
+        if (!nasReportInfo.containsKey("updatable") || !nasReportInfo["updatable"]) {
+            self.publishHTML(params)
+            try {
+                self.httpRequest(
+                    url: "${buildUrl}/${reportName.replace('_', '_5f').replace(' ', '_20')}/",
+                    authentication: 'jenkinsCredentials',
+                    httpMode: 'GET'
+                )
+                self.println("[INFO] Report exists.")
+            } catch(e) {
+                self.println("[ERROR] Can't access report")
+                throw new Exception("Can't access report", e)
+            }
         }
     }
 
