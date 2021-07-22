@@ -10,7 +10,7 @@ public class ReportUpdater {
     def options
 
     // locks for each report (to prevent updating of report by two parallel branches of build)
-    def locks
+    Map locks = [:]
 
     /**
      * Main constructor
@@ -19,7 +19,7 @@ public class ReportUpdater {
      * @param env env variable of the current pipeline
      * @param options map with options
      */
-    ProblemMessageManager(context, env, options) {
+    ReportUpdater(context, env, options) {
         this.context = context
         this.env = env
         this.options = options
@@ -30,11 +30,11 @@ public class ReportUpdater {
      * 
      * @param buildArgsFunc fuction to get string with arguments for build script
      */
-    def init(String buildArgsFunc) {
+    def init(def buildArgsFunc) {
         String remotePath = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/".replace(" ", "_")
 
         context.withCredentials([context.string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
-            context.bat('%CIS_TOOLS%\\clone_test_repo.bat' + ' %REMOTE_HOST%' + " ${remotePath} ${options.testRepo}")
+            context.bat('%CIS_TOOLS%\\clone_test_repo.bat' + ' %REMOTE_HOST%' + " ${remotePath} ${options.testRepo} ${options.testsBranch}")
         }
 
         if (options.engines) {
@@ -42,9 +42,9 @@ public class ReportUpdater {
                 String engineName = options.enginesNames[options.engines.indexOf(engine)]
                 String reportName = "Test Report ${engineName}"
 
-                context.utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                context.utils.publishReport(context, "${context.BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                     reportName, "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
-                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+                    ["jenkinsBuildUrl": context.BUILD_URL, "jenkinsBuildName": context.currentBuild.displayName])
 
                 String rebuiltScript = context.readFile("..\\..\\cis_tools\\update_report_template.sh")
 
@@ -59,13 +59,15 @@ public class ReportUpdater {
                 context.uploadFiles("update_report_${engine}.sh", "${remotePath}/jobs_test_repo/jobs_launcher")
 
                 locks[engine] = new AtomicBoolean(false)
+
+                updateReport(engine)
             }
         } else {
             String reportName = "Test Report"
 
-            context.utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+            context.utils.publishReport(context, "${context.BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                 reportName, "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
-                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+                ["jenkinsBuildUrl": context.BUILD_URL, "jenkinsBuildName": context.currentBuild.displayName])
 
             String rebuiltScript = context.readFile("..\\..\\cis_tools\\update_report_template.sh")
 
@@ -80,6 +82,8 @@ public class ReportUpdater {
             context.uploadFiles("update_report.sh", "${remotePath}/jobs_test_repo/jobs_launcher")
 
             locs["default"] = new AtomicBoolean(false)
+
+            updateReport()
         }
     }
 
@@ -93,7 +97,7 @@ public class ReportUpdater {
 
         try {
             if (locks[lockKey].compareAndSet(false, true)) {
-                String remotePath = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/".replace(" ", "_")
+                String remotePath = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/jobs_test_repo/jobs_launcher".replace(" ", "_")
                 String scriptName = engine ? "update_report_${engine}.sh" : "update_report.sh"
 
                 context.withCredentials([context.string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {

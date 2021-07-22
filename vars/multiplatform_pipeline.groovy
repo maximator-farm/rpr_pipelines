@@ -308,17 +308,23 @@ def executePlatform(String osName, String gpuNames, def executeBuild, def execut
     return retNode
 }
 
-def makeDeploy(Map options, String engine = "") {
-    Boolean executeDeployStage = true
+def shouldExecuteDelpoyStage(Map options) {
     if (options['executeTests']) {
         if (options.containsKey('tests') && options.containsKey('testsPackage')){
             if (options['testsPackage'] == 'none' && options['tests'].size() == 1 && options['tests'].get(0).length() == 0){
-                executeDeployStage = false
+                return false
             }
         }
     } else {
-        executeDeployStage = false
+        return false
     }
+
+    return true
+}
+
+def makeDeploy(Map options, String engine = "") {
+    Boolean executeDeployStage = shouldExecuteDelpoyStage(options)
+
     if (executeDeploy && executeDeployStage) {
         String stageName
 

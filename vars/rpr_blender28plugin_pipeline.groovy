@@ -922,9 +922,9 @@ def executePreBuild(Map options)
         }
     }
 
-    if (options.storeOnNAS) {
+    if (options.storeOnNAS && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
         options.reportUpdater = new ReportUpdater(this, env, options)
-        options.reportUpdater.init(getReportBuildArgs)
+        options.reportUpdater.init(this.&getReportBuildArgs)
     }
 }
 
@@ -1090,11 +1090,9 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                if (!options.storeOnNAS) {
-                    utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                        "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
-                        ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
-                }
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                    "Test Report ${engineName}", "Summary Report, Performance Report, Compare Report" , options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
