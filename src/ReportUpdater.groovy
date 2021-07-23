@@ -102,7 +102,7 @@ public class ReportUpdater {
 
                 context.withCredentials([context.string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                     if (context.isUnix()) {
-                        context.sh(script: '$CIS_TOOLS/update_report.sh' + ' %REMOTE_HOST%' + " ${remotePath} ${scriptName}")
+                        context.sh(script: '$CIS_TOOLS/update_report.sh' + ' $REMOTE_HOST' + " ${remotePath} ${scriptName}")
                     } else {
                         context.bat(script: '%CIS_TOOLS%\\update_report.bat' + ' %REMOTE_HOST%' + " ${remotePath} ${scriptName}")
                     }
