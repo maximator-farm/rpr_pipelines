@@ -232,7 +232,7 @@ def executeTests(String osName, String asicName, Map options)
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_core.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
         }
 
@@ -349,6 +349,10 @@ def executeTests(String osName, String asicName, Map options)
                                 throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
                             }
                         }
+
+                        if (options.reportUpdater) {
+                            options.reportUpdater.updateReport(options.engine)
+                        }
                     }
                 }
             }
@@ -447,6 +451,10 @@ def executeBuild(String osName, Map options)
     }
 }
 
+def getReportBuildArgs(Map options) {
+    return """Core ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\""""
+}
+
 def executePreBuild(Map options)
 {
     if (env.CHANGE_URL) {
@@ -462,10 +470,20 @@ def executePreBuild(Map options)
         options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
         options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
+        if (options.projectBranch != "") {
+            options.branchName = options.projectBranch
+        } else {
+            options.branchName = env.BRANCH_NAME
+        }
+        if (options.incrementVersion) {
+            options.branchName = "master"
+        }
+
         println "The last commit was written by ${options.commitAuthor}."
         println "Commit message: ${options.commitMessage}"
         println "Commit SHA: ${options.commitSHA}"
         println "Commit shortSHA: ${options.commitShortSHA}"
+        println "Branch name: ${options.branchName}"
 
         if (options.projectBranch){
             currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
@@ -493,7 +511,7 @@ def executePreBuild(Map options)
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_core') {
-            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_core.git")
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             dir ('jobs_launcher') {
                 options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             }
@@ -530,6 +548,11 @@ def executePreBuild(Map options)
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
     }
+
+    if (options.storeOnNAS && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+        options.reportUpdater = new ReportUpdater(this, env, options)
+        options.reportUpdater.init(this.&getReportBuildArgs)
+    }
 }
 
 
@@ -565,7 +588,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_core.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
 
             List lostStashes = []
@@ -626,15 +649,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
-                        if (options.projectBranch != "") {
-                            options.branchName = options.projectBranch
-                        } else {
-                            options.branchName = env.BRANCH_NAME
-                        }
-                        if (options.incrementVersion) {
-                            options.branchName = "master"
-                        }
-
                         options.commitMessage = options.commitMessage.replace("'", "")
                         options.commitMessage = options.commitMessage.replace('"', '')
 
@@ -647,9 +661,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }               
 
-                        bat """
-                            build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
-                        """
+                        bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(options)}"
 
                         bat "get_status.bat ..\\summaryTestResults"
                     }
@@ -673,12 +685,13 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[ERROR] Failed to build test report.")
                     println(e.toString())
                     println(e.getMessage())
-                    if (!options.testDataSaved) {
+                    if (!options.testDataSaved && !options.storeOnNAS) {
                         try {
                             // Save test data for access it manually anyway
                             utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                                 "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
-                                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+                                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                             options.testDataSaved = true 
                         } catch(e1) {
                             println("[WARNING] Failed to publish test data.")
@@ -740,7 +753,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
                     "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
-                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
@@ -835,6 +848,7 @@ def call(String projectBranch = "",
             }
 
             options << [projectBranch:projectBranch,
+                        testRepo:"git@github.com:luxteam/jobs_test_core.git",
                         testsBranch:testsBranch,
                         unitTestsBranch:unitTestsBranch,
                         updateRefs:updateRefs,
