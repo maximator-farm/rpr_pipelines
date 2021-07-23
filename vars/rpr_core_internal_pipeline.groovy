@@ -452,6 +452,8 @@ def executeBuild(String osName, Map options)
 }
 
 def getReportBuildArgs(Map options) {
+    String buildNumber = options.collectTrackedMetrics ? env.BUILD_NUMBER : ""
+
     return """Core ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\""""
 }
 
@@ -634,9 +636,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/${env.JOB_NAME}"
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                def buildNumber = ""
+
                 if (options.collectTrackedMetrics) {
-                    buildNumber = env.BUILD_NUMBER
                     try {
                         dir("summaryTestResults/tracked_metrics") {
                             downloadFiles("${metricsRemoteDir}/", ".")
