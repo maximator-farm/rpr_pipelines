@@ -98,17 +98,28 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                 }
             }
         } catch(Exception e) {
+            Boolean isExceptionAllowed = false
+
             if (e instanceof ExpectedExceptionWrapper) {
                 if (e.abortCurrentOS) {
                     println("[ERROR] Detected abortCurrentOS flag in catched exception. Abort next tests on ${osName} OS")
                     i = tries + 1
+                } else if (e.retry) {
+                    println("[INFO] Retry detected. Exception is allowed")
+                    isExceptionAllowed = true
                 }
+
                 e = e.getCause()
+
                 if (e instanceof ExpectedExceptionWrapper) {
                     if (e.abortCurrentOS) {
                         println("[ERROR] Detected abortCurrentOS flag in catched exception. Abort next tests on ${osName} OS")
                         i = tries + 1
+                    } else if (e.retry) {
+                        println("[INFO] Retry detected. Exception is allowed")
+                        isExceptionAllowed = true
                     }
+
                     e = e.getCause()
                 }
             }
@@ -182,8 +193,6 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             }
 
             if (allowedExceptions.size() != 0) {
-                Boolean isExceptionAllowed = false
-
                 for (allowedException in allowedExceptions) {
                     if (exceptionClassName.contains(allowedException)) {
                         isExceptionAllowed = true

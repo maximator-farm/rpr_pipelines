@@ -191,21 +191,19 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
             options['processedQualities'] << options['RENDER_QUALITY']
         }
 
-        if (options.testsQuality && env.CHANGE_ID) {
-            String context = "[TEST] ${osName}-${asicName}-${options.RENDER_QUALITY}"
+        if (options.testsQuality) {
+            String title = "${asicName}-${osName}-${options.RENDER_QUALITY}"
             String description = error_message ? "Testing finished with error message: ${error_message}" : "Testing finished"
             String status = error_message ? "failure" : "success"
             String url = error_message ? "${env.BUILD_URL}/${STAGE_NAME}_${options.RENDER_QUALITY}_failures" : "${env.BUILD_URL}/artifact/${STAGE_NAME}.${options.RENDER_QUALITY}.log"
-            pullRequest.createStatus(status, context, description, url)
-            options['commitContexts'].remove(context)
+            GithubNotificator.updateStatus('Test', title, status, options, description, url)
 
-        } else if (env.CHANGE_ID) {
-            String context = "[TEST] ${osName}-${asicName}"
+        } else {
+            String title = "${asicName}-${osName}"
             String description = error_message ? "Testing finished with error message: ${error_message}" : "Testing finished"
             String status = error_message ? "failure" : "success"
             String url = error_message ? "${env.BUILD_URL}/${STAGE_NAME}_Failures" : "${env.BUILD_URL}/artifact/${STAGE_NAME}.log"
-            pullRequest.createStatus(status, context, description, url)
-            options['commitContexts'].remove(context)
+            GithubNotificator.updateStatus('Test', title, status, options, description, url)
         }
 
     }
@@ -367,12 +365,11 @@ def executePerfTests(String osName, String asicName, Map options) {
         }
 
         if (env.BRANCH_NAME) {
-            String context = "[TEST-PERF] ${osName}-${asicName}"
+            String title = "${asicName}-${osName}"
             String description = error_message ? "Testing finished with error message: ${error_message}" : "Testing finished"
             String status = error_message ? "failure" : "success"
             String url = "${env.BUILD_URL}/artifact/${STAGE_NAME}.perf.log"
-            pullRequest.createStatus(status, context, description, url)
-            options['commitContexts'].remove(context)
+            GithubNotificator.updateStatus('Test-Perf', title, status, options, description, url)
         }
     }
 }
@@ -411,7 +408,7 @@ def executeTests(String osName, String asicName, Map options) {
             try {
                 executePerfTests(osName, asicName, options)
             } catch (e) {
-                somStageFail = true
+                someStageFail = true
                 println(e.toString())
                 println(e.getMessage())
             }
@@ -487,21 +484,21 @@ def executeBuild(String osName, Map options) {
     String context = "[BUILD] ${osName}"
     try {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+
         outputEnvironmentInfo(osName)
-
-        if (env.CHANGE_ID) {
-            pullRequest.createStatus("pending", context, "Checkout has been finished. Trying to build...", "${env.JOB_URL}")
-        }
-
-        switch(osName) {
-            case 'Windows':
-                executeBuildWindows(options)
-                break
-            case 'OSX':
-                executeBuildOSX(options)
-                break
-            default:
-                executeBuildLinux(options)
+        
+        withNotifications(title: osName, options: options, configuration: NotificationConfiguration.BUILD_SOURCE_CODE) {
+            GithubNotificator.updateStatus("Build", osName, "in_progress", options, "Checkout has been finished. Trying to build...")
+            switch(osName) {
+                case 'Windows':
+                    executeBuildWindows(options)
+                    break
+                case 'OSX':
+                    executeBuildOSX(options)
+                    break
+                default:
+                    executeBuildLinux(options)
+            }
         }
 
         dir('Build') {
@@ -515,11 +512,8 @@ def executeBuild(String osName, Map options) {
     } finally {
         archiveArtifacts "*.log"
         archiveArtifacts "Build/BaikalNext_${STAGE_NAME}*"
-        if (env.CHANGE_ID) {
-            String status = error_message ? "failure" : "success"
-            pullRequest.createStatus("${status}", context, "Build finished as '${status}'", "${env.BUILD_URL}/artifact/${STAGE_NAME}.log")
-            options['commitContexts'].remove(context)
-        }
+        String status = error_message ? "failure" : "success"
+        GithubNotificator.updateStatus("Build", osName, status, options, "Build finished as '${status}'", "${env.BUILD_URL}/artifact/${STAGE_NAME}.log")
     }
 }
 
@@ -577,40 +571,35 @@ def executePreBuild(Map options) {
     
     // set pending status for all
     if (env.CHANGE_ID) {
-        def commitContexts = []
+        withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
+            GithubNotificator githubNotificator = new GithubNotificator(this, options)
+            githubNotificator.init(options)
+            options["githubNotificator"] = githubNotificator
+        }
         options['platforms'].split(';').each() { platform ->
             List tokens = platform.tokenize(':')
             String osName = tokens.get(0)
             // Statuses for builds
-            String context = "[BUILD] ${osName}"
-            commitContexts << context
-            pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
+            GithubNotificator.createStatus('Build', osName, 'queued', options, 'Scheduled', "${env.JOB_URL}")
             if (tokens.size() > 1) {
                 gpuNames = tokens.get(1)
                 gpuNames.split(',').each() { gpuName ->
                     if (options.testsQuality) {
                         options.testsQuality.split(",").each() { testQuality ->
                             // Statuses for tests
-                            context = "[TEST] ${osName}-${gpuName}-${testQuality}"
-                            commitContexts << context
-                            pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
+                            GithubNotificator.createStatus('Test', "${gpuName}-${osName}-${testQuality}", 'queued', options, 'Scheduled', "${env.JOB_URL}")
                         }
                     } else {
                         // Statuses for tests
-                        context = "[TEST] ${osName}-${gpuName}"
-                        commitContexts << context
-                        pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
+                        GithubNotificator.createStatus('Test', "${gpuName}-${osName}", 'queued', options, 'Scheduled', "${env.JOB_URL}")
                     }
                     if (options.scenarios) {
                         // Statuses for performance tests
-                        context = "[TEST-PERF] ${osName}-${gpuName}"
-                        commitContexts << context
-                        pullRequest.createStatus("pending", context, "Scheduled", "${env.JOB_URL}")
+                        GithubNotificator.createStatus('Test-Perf', "${gpuName}-${osName}", 'queued', options, 'Scheduled', "${env.JOB_URL}")
                     }
                 }
             }
         }
-        options['commitContexts'] = commitContexts
     }
 }
 
@@ -699,23 +688,20 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     // set error statuses for PR, except if current build has been superseded by new execution
     if (env.CHANGE_ID && !currentBuild.nextBuild) {
         // if jobs was aborted or crushed remove pending status for unfinished stages
-        options['commitContexts'].each() {
-            pullRequest.createStatus("error", it, "Build has been terminated unexpectedly", "${env.BUILD_URL}")
-        }
+        GithubNotificator.closeUnfinishedSteps(options, "Build has been terminated unexpectedly")
         String status = currentBuild.result ?: "success"
         status = status.toLowerCase()
         String commentMessage = ""
         if (!options.successfulTests["unit"]) {
-            commentMessage = "\n Unit tests failures - ${env.BUILD_URL}/HTML_20Failures/"
+            commentMessage = "\\n Unit tests failures - ${env.BUILD_URL}/HTML_20Failures/"
         }
         if (options.successfulTests["perf"]) {
-            commentMessage += "\n Perf tests report (success) - ${env.BUILD_URL}/Performance_20Tests_20Report/"
+            commentMessage += "\\n Perf tests report (success) - ${env.BUILD_URL}/Performance_20Tests_20Report/"
         } else {
-            commentMessage += "\n Perf tests report (problems detected) - ${env.BUILD_URL}/Performance_20Tests_20Report/"
+            commentMessage += "\\n Perf tests report (problems detected) - ${env.BUILD_URL}/Performance_20Tests_20Report/"
         }
-        
-        
-        def comment = pullRequest.comment("Jenkins build for ${pullRequest.head} finished as ${status} ${commentMessage}")
+        String commitUrl = "${options.githubNotificator.repositoryUrl}/commit/${options.githubNotificator.commitSHA}"
+        GithubNotificator.sendPullRequestComment("Jenkins build for ${commitUrl} finished as ${status} ${commentMessage}", options)
     }
 }
 

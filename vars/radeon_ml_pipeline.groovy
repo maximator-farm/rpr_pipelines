@@ -245,12 +245,30 @@ def executeBuildOSX(String osName, Map options) {
 
 def executeLinuxBuildCommand(String osName, Map options, String buildType) {
     
-    sh """
-        mkdir build-${buildType}
-        cd build-${buildType}
-        cmake -DCMAKE_buildType=${buildType} ${options.cmakeKeysLinux[osName]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
-        make -j 8 >> ../${STAGE_NAME}_${buildType}.log 2>&1
-    """
+    try {
+        sh """
+            mkdir build-${buildType}
+            cd build-${buildType}
+            cmake -DCMAKE_buildType=${buildType} ${options.cmakeKeysLinux[osName]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
+            make -j 8 >> ../${STAGE_NAME}_${buildType}.log 2>&1
+        """
+    } catch (e) {
+        def exception = e
+
+        try {
+            String buildLogContent = readFile("${STAGE_NAME}_${buildType}.log")
+            if (buildLogContent.contains("Segmentation fault")) {
+                exception = new ExpectedExceptionWrapper(NotificationConfiguration.SEGMENTATION_FAULT, e)
+                exception.retry = true
+
+                utils.reboot(this, osName)
+            }
+        } catch (e1) {
+            println("[WARNING] Could not analyze build log")
+        }
+
+        throw exception
+    }
     
     sh """
         cd build-${buildType}

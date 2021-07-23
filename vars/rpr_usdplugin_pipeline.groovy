@@ -545,7 +545,21 @@ def executeBuild(String osName, Map options) {
             }
         }
     } catch (e) {
-        throw e
+        def exception = e
+
+        try {
+            String buildLogContent = readFile("Build-${osName}.log")
+            if (buildLogContent.contains("Segmentation fault")) {
+                exception = new ExpectedExceptionWrapper(NotificationConfiguration.SEGMENTATION_FAULT, e)
+                exception.retry = true
+
+                utils.reboot(this, osName)
+            }
+        } catch (e1) {
+            println("[WARNING] Could not analyze build log")
+        }
+
+        throw exception
     } finally {
         archiveArtifacts "*.log"
         if (options.rebuildUSD) {
