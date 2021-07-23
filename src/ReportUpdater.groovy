@@ -81,7 +81,7 @@ public class ReportUpdater {
 
             context.uploadFiles("update_report.sh", "${remotePath}/jobs_test_repo/jobs_launcher")
 
-            locs["default"] = new AtomicBoolean(false)
+            locks["default"] = new AtomicBoolean(false)
 
             updateReport()
         }
