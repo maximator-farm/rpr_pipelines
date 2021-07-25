@@ -234,7 +234,29 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
         tar cf ${options.packageName}-${osName}-static-runtime.tar ${options.packageName}-${osName}-static-runtime
     """
 
-    archiveArtifacts "${options.packageName}-${osName}*.tar"
+    if (!options.storeOnNAS) {
+        archiveArtifacts "${options.packageName}-${osName}*.tar"
+        rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}artifact/${options.packageName}-${osName}-dynamic.tar">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.tar">static-runtime</a> </h4>"""
+    } else {
+        String path = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/Artifacts/"
+        makeStash(includes: "${options.packageName}-${osName}-dynamic.tar", name: "${options.packageName}-${osName}-dynamic.tar", allowEmpty: true, customLocation: path, preZip: false, postUnzip: false, storeOnNAS: true)
+        makeStash(includes: "${options.packageName}-${osName}-static-runtime.tar", name: "${options.packageName}-${osName}-static-runtime.tar", allowEmpty: true, customLocation: path, preZip: false, postUnzip: false, storeOnNAS: true)
+
+        String artifactURL
+
+        withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
+            string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
+            artifactURL = "${REMOTE_URL}/${env.JOB_NAME}/${env.BUILD_NUMBER}/Artifacts/${options.packageName}-${osName}-dynamic.tar"
+        }
+
+        String authArtifactURL
+
+        withCredentials([usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
+            authArtifactURL = artifactURL.replace("https://", "https://${NAS_USER}:${NAS_PASSWORD}@")
+
+            rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${authArtifactURL}">dynamic</a> / <a href="${authArtifactURL.replace('dynamic', 'static-runtime')}">static-runtime</a> </h4>"""
+        }
+    }
 
     dir("${options.packageName}-${osName}-dynamic/bin/") {
         makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}", storeOnNAS: options.storeOnNAS)
@@ -243,8 +265,6 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
     dir("${options.packageName}-${osName}-static-runtime/bin/") {
         makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}", storeOnNAS: options.storeOnNAS)
     }
-
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}artifact/${options.packageName}-${osName}-dynamic.tar">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.tar">static-runtime</a> </h4>"""
 }
 
 
@@ -394,5 +414,6 @@ def call(String projectBranch = "",
                             cmakeKeys:cmakeKeys,
                             testPerformance:testPerformance,
                             nodeRetry: nodeRetry,
-                            retriesForTestStage:1])
+                            retriesForTestStage:1,
+                            storeOnNAS:true])
 }

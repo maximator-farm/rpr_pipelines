@@ -483,10 +483,19 @@ def executeBuildUnix(String osName, Map options) {
                 }
             }
             if (osName == "Ubuntu18") options.unix_build_name = options.ubuntu_build_name else options.unix_build_name = options.centos_build_name
-            archiveArtifacts "hdRpr*.tar.gz"
+            
             String buildName = "${options.unix_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
+
+            String artifactURL
+
+            if (!options.storeOnNAS) {
+                artifactURL = "${BUILD_URL}artifact/${buildName}"
+                rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${artifactURL}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                archiveArtifacts("hdRpr*.tar.gz")
+            } else {
+                artifactURL = makeArchiveArtifacts(buildName)
+            }
+
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
                 dir("../..") {
@@ -495,7 +504,7 @@ def executeBuildUnix(String osName, Map options) {
             }
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
             makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -904,6 +913,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionType: parallelExecutionType,
                         sendToUMS: sendToUMS,
                         universePlatforms: convertPlatforms(platforms),
+                        storeOnNAS: true
                         ]
             if (sendToUMS) {
                 UniverseManager manager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)

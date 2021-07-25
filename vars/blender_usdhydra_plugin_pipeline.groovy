@@ -473,10 +473,18 @@ def executeBuildLinux(String osName, Map options) {
                 """
             }
 
-            archiveArtifacts "BlenderUSDHydraAddon*.zip"
+            
             String BUILD_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
-            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
+            String artifactURL
+
+            if (!options.storeOnNAS) {
+                artifactURL = "${BUILD_URL}artifact/${BUILD_NAME}"
+                rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${artifactURL}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                archiveArtifacts("BlenderUSDHydraAddon*.zip")
+            } else {
+                artifactURL = makeArchiveArtifacts(BUILD_NAME)
+            }
 
             if (options.sendToUMS) {
                 dir("../../../jobs_launcher") {
@@ -490,7 +498,7 @@ def executeBuildLinux(String osName, Map options) {
 
             makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
 
-            GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -1105,7 +1113,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
-                        testCaseRetries:testCaseRetries
+                        testCaseRetries:testCaseRetries,
+                        storeOnNAS:true
                         ]
         }
 
