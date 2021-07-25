@@ -45,7 +45,7 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
     try {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         outputEnvironmentInfo(osName, "${STAGE_NAME}.${libType}")
-        makeUnstash(name: "app_${libType}_${osName}")
+        makeUnstash(name: "app_${libType}_${osName}", storeOnNAS: options.storeOnNAS)
         executeTestCommand(osName, libType, options.testPerformance)
     } catch (e) {
         println(e.toString())
@@ -72,7 +72,7 @@ def executeTestsForCustomLib(String osName, String libType, Map options)
                     """
                     break
             }
-            makeStash(includes: "${STAGE_NAME}.${libType}.gtest.xml, ${STAGE_NAME}.${libType}.csv", name: "${options.testResultsName}.${libType}", allowEmpty: true)
+            makeStash(includes: "${STAGE_NAME}.${libType}.gtest.xml, ${STAGE_NAME}.${libType}.csv", name: "${options.testResultsName}.${libType}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
         }
         junit "*.gtest.xml"
     }
@@ -120,7 +120,7 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
 
     // Stash for testing only
     dir("${options.packageName}-${osName}-dynamic") {
-        makeStash(includes: "bin/*", name: "app_dynamic_${osName}")
+        makeStash(includes: "bin/*", name: "app_dynamic_${osName}", storeOnNAS: options.storeOnNAS)
     }
 
     bat """
@@ -138,19 +138,19 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
 
     // Stash for github repo
     dir("${options.packageName}-${osName}-dynamic/bin") {
-        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}")
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}", storeOnNAS: options.storeOnNAS)
     }
 
     dir("${options.packageName}-${osName}-static-runtime/bin") {
-        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}")
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}", storeOnNAS: options.storeOnNAS)
     }
 
-    makeStash(includes: "models/**/*", name: "models")
-    makeStash(includes: "samples/**/*", name: "samples")
-    makeStash(includes: "include/**/*", name: "include")
+    makeStash(includes: "models/**/*", name: "models", storeOnNAS: options.storeOnNAS)
+    makeStash(includes: "samples/**/*", name: "samples", storeOnNAS: options.storeOnNAS)
+    makeStash(includes: "include/**/*", name: "include", storeOnNAS: options.storeOnNAS)
 
     dir ('src') {
-        makeStash(includes: "License.txt", name: "txtFiles")
+        makeStash(includes: "License.txt", name: "txtFiles", storeOnNAS: options.storeOnNAS)
     }
 
     bat """
@@ -212,7 +212,7 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
 
     // Stash for testing
     dir("${options.packageName}-${osName}-dynamic") {
-        makeStash(includes: "bin/*", name: "app_dynamic_${osName}")
+        makeStash(includes: "bin/*", name: "app_dynamic_${osName}", storeOnNAS: options.storeOnNAS)
     }
 
     sh """
@@ -237,11 +237,11 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
     archiveArtifacts "${options.packageName}-${osName}*.tar"
 
     dir("${options.packageName}-${osName}-dynamic/bin/") {
-        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}")
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}", storeOnNAS: options.storeOnNAS)
     }
 
     dir("${options.packageName}-${osName}-static-runtime/bin/") {
-        stash includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}"
+        makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-static-runtime-${osName}", storeOnNAS: options.storeOnNAS)
     }
 
     rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}artifact/${options.packageName}-${osName}-dynamic.tar">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.tar">static-runtime</a> </h4>"""
@@ -311,7 +311,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
         dir("testResults") {
             testResultList.each() {
                 try {
-                    makeUnstash(name: "${it}.dynamic")
+                    makeUnstash(name: "${it}.dynamic", storeOnNAS: options.storeOnNAS)
                 } catch(e) {
                     echo "[ERROR] Failed to unstash ${it}"
                     println(e.toString());
@@ -343,18 +343,18 @@ def executeDeploy(Map options, List platformList, List testResultList)
         platformList.each() {
             dir(it) {
                 dir("Dynamic"){
-                    makeUnstash(name: "deploy-dynamic-${it}")
+                    makeUnstash(name: "deploy-dynamic-${it}", storeOnNAS: options.storeOnNAS)
                 }
                 dir("Static-Runtime"){
-                    makeUnstash(name: "deploy-static-runtime-${it}")
+                    makeUnstash(name: "deploy-static-runtime-${it}", storeOnNAS: options.storeOnNAS)
                 }
             }
         }
 
-        makeUnstash(name: "models")
-        makeUnstash(name: "samples")
-        makeUnstash(name: "txtFiles")
-        makeUnstash(name: "include")
+        makeUnstash(name: "models", storeOnNAS: options.storeOnNAS)
+        makeUnstash(name: "samples", storeOnNAS: options.storeOnNAS)
+        makeUnstash(name: "txtFiles", storeOnNAS: options.storeOnNAS)
+        makeUnstash(name: "include", storeOnNAS: options.storeOnNAS)
 
         bat """
             git add --all
