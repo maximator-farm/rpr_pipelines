@@ -582,10 +582,15 @@ def executeBuildLinux(String osName, Map options)
                 """
             }
 
-            archiveArtifacts "RadeonProRender*.zip"
             String BUILD_NAME = options.branch_postfix ? "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "RadeonProRenderForBlender_${options.pluginVersion}_${osName}.zip"
-            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
+            if (options.storeOnNAS) {
+                String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
+                rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                archiveArtifacts("RadeonProRender*.zip")
+            } else {
+                makeArchiveArtifacts(BUILD_NAME)
+            }
 
             if (options.sendToUMS) {
                 dir("../../..") {
