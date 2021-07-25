@@ -486,11 +486,13 @@ def executeBuildUnix(String osName, Map options) {
             
             String buildName = "${options.unix_build_name}.tar.gz"
 
+            sh "mv hdRpr*.tar.gz ${buildName}"
+
             String artifactURL
 
             if (!options.storeOnNAS) {
                 artifactURL = "${BUILD_URL}artifact/${buildName}"
-                rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${artifactURL}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${artifactURL}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
                 archiveArtifacts("hdRpr*.tar.gz")
             } else {
                 artifactURL = makeArchiveArtifacts(buildName)
