@@ -5,7 +5,7 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
  *
  * @param artifactName name of artifact
  */
-def call(String artifactName) {
+def call(String artifactName, Boolean createLink = true) {
     try {
         String path = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/Artifacts/"
         makeStash(includes: artifactName, name: artifactName, allowEmpty: true, customLocation: path, preZip: false, postUnzip: false, storeOnNAS: true)
@@ -22,7 +22,9 @@ def call(String artifactName) {
         withCredentials([usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
             authArtifactURL = artifactURL.replace("https://", "https://${NAS_USER}:${NAS_PASSWORD}@")
 
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${authArtifactURL}">[BUILD: ${BUILD_ID}] ${artifactName}</a></h3>"""
+            if (createLink) {
+                rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${authArtifactURL}">[BUILD: ${BUILD_ID}] ${artifactName}</a></h3>"""
+            }
         }
 
         return authArtifactURL
