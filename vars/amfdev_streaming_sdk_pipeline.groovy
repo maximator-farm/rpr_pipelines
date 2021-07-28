@@ -528,6 +528,8 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(Map options) {
+    utils.reboot(this, "Windows")
+
     options.winBuildConfiguration.each() { winBuildConf ->
         options.winVisualStudioVersion.each() { winVSVersion ->
 
@@ -591,6 +593,8 @@ def executeBuildWindows(Map options) {
 
 
 def executeBuildAndroid(Map options) {
+    utils.reboot(this, "Windows")
+
     options.androidBuildConfiguration.each() { androidBuildConf ->
 
         println "Current build configuration: ${androidBuildConf}."
