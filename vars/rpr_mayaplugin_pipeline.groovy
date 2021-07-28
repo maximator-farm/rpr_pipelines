@@ -1153,7 +1153,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         forceBuild:forceBuild,
                         reportName:'Test_20Report',
                         splitTestsExecution:splitTestsExecution,
-                        sendToUMS:false,
+                        sendToUMS:sendToUMS,
                         gpusCount:gpusCount,
                         TEST_TIMEOUT:90,
                         ADDITIONAL_XML_TIMEOUT:15,

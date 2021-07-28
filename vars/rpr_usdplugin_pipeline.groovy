@@ -913,7 +913,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         problemMessageManager: problemMessageManager,
                         platforms: platforms,
                         parallelExecutionType: parallelExecutionType,
-                        sendToUMS: false,
+                        sendToUMS: sendToUMS,
                         universePlatforms: convertPlatforms(platforms),
                         storeOnNAS: true
                         ]
