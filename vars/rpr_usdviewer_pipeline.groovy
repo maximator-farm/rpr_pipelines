@@ -999,7 +999,7 @@ def call(String projectBranch = "",
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries: testCaseRetries,
                         universePlatforms: convertPlatforms(platforms),
-                        sendToUMS: false,
+                        sendToUMS: sendToUMS,
                         baselinePluginPath: baselinePluginPath,
                         storeOnNAS: true
                         ]
