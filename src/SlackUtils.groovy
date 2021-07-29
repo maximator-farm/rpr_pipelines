@@ -63,7 +63,7 @@ class SlackUtils {
         try {
             sendAttachments(context, attachments, workspace, channel)
         } catch (e) {
-            println("[WARNING] Could not send message to slack")
+            context.println("[WARNING] Could not send message to slack")
         }
     }
 
@@ -86,14 +86,14 @@ class SlackUtils {
                     sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, "test_jenkins_messages")
                 }
             } catch (e) {
-                println("[WARNING] Error during slack notification to debug channel")
-                println(e.toString())
+                context.println("[WARNING] Error during slack notification to debug channel")
+                context.println(e.toString())
             }
         }
     }
 
     static def sendBuildStatusNotification(def context, String buildStatus = 'STARTED', SlackWorkspace workspace, String channel, Map options) {
-        println("Sending information about build status: ${buildStatus}")
+        context.println("Sending information about build status: ${buildStatus}")
 
         // build status of null means successful
         buildStatus =  buildStatus ?: 'SUCCESSFUL'
@@ -173,8 +173,8 @@ class SlackUtils {
         try {
             sendAttachments(context, attachments, workspace, channel)
         } catch (e) {
-            println("[WARNING] Error during slack notification to project channel")
-            println(e.toString())
+            context.println("[WARNING] Error during slack notification to project channel")
+            context.println(e.toString())
         }
     }
 }
