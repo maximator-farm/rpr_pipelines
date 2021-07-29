@@ -160,7 +160,7 @@ class SlackUtils {
                 "mrkdwn_in": ["text"],
                 "title": "Brief info",
                 "pretext": "AutoTests Results ${pretext}",
-                "text": "${text}",
+                "text": text,
                 "footer": "LUX CIS",
                 "actions": [[
                     "text": "Report",
