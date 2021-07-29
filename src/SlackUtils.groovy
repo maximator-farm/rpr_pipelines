@@ -68,7 +68,7 @@ class SlackUtils {
     }
 
     static def sendBuildStatusToDebugChannel(def context, Map options) {
-        if (context.currentBuild.result == "FAILURE") {
+        if (context.currentBuild.result == "FAILURE" || true) {
 
             String text 
             if (options["problemMessageManager"]) {
@@ -79,9 +79,11 @@ class SlackUtils {
 
             try {
                 if ((context.env.BRANCH_NAME && context.env.BRANCH_NAME == "master") || context.env.CHANGE_BRANCH || context.env.JOB_NAME.contains("Weekly")) {
-                    sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, "cis_failed_master")
+                    // sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, "cis_failed_master")
+                    sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, "test_jenkins_messages")
                 } else {
-                    sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, context.env.debagChannel)
+                    // sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, context.env.debagChannel)
+                    sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, "test_jenkins_messages")
                 }
             } catch (e) {
                 println("[WARNING] Error during slack notification to debug channel")
