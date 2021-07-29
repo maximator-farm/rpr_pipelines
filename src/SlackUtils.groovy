@@ -68,7 +68,7 @@ class SlackUtils {
     }
 
     static def sendBuildStatusToDebugChannel(def context, Map options) {
-        if (context.currentBuild.result == "FAILURE" || true) {
+        if (context.currentBuild.result == "FAILURE") {
 
             String text 
             if (options["problemMessageManager"]) {
@@ -98,13 +98,13 @@ class SlackUtils {
         // build status of null means successful
         buildStatus =  buildStatus ?: 'SUCCESSFUL'
         buildStatus = options.CBR ?: buildStatus
-        options.commitMessage = options.commitMessage ?: 'undefiend'
+        options.commitMessage = options.commitMessage ?: 'undefined'
         String BRANCH_NAME = context.env.BRANCH_NAME ?: options.projectBranch
 
         Color color
 
         switch(buildStatus) {
-            case 'SUCCESSFULL':
+            case 'SUCCESSFUL':
                 color = Color.GREEN
                 break
             case 'ABORTED':
@@ -160,7 +160,7 @@ class SlackUtils {
                 "mrkdwn_in": ["text"],
                 "title": "Brief info",
                 "pretext": "AutoTests Results ${pretext}",
-                "text": text,
+                "text": text.replace('"', '').replace('\\n', '\n'),
                 "footer": "LUX CIS",
                 "actions": [[
                     "text": "Report",
