@@ -607,17 +607,15 @@ def call(String platforms, def executePreBuild, def executeBuild, def executeTes
     } finally {
         println("enableNotifications = ${options.enableNotifications}")
         if ("${options.enableNotifications}" == "true") {
-            // FIXME: Remove test code
             SlackUtils.sendBuildStatusNotification(this,
                                         currentBuild.result,
-                                        SlackUtils.SlackWorkspace.LUXCIS,
-                                        'test_jenkins_messages',
+                                        options.get('slackWorkspace', SlackUtils.SlackWorkspace.DEFAULT),
+                                        options.get('slackChannel', 'cis_stream'),
                                         options)
         }
 
         println("Send Slack message to debug channels")
         SlackUtils.sendBuildStatusToDebugChannel(this, options)
-        SlackUtils.sendMessageToWorkspaceChannel(this, '', "Test message as in run_with_retries", SlackUtils.Color.RED, SlackUtils.SlackWorkspace.LUXCIS, 'test_jenkins_messages')
 
         println("[INFO] BUILD RESULT: ${currentBuild.result}")
         println("[INFO] BUILD CURRENT RESULT: ${currentBuild.currentResult}")
