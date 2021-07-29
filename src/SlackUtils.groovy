@@ -142,7 +142,7 @@ class SlackUtils {
             "title": "${buildStatus}\nCIS: ${context.env.JOB_NAME} [${context.env.BUILD_NUMBER}]",
             "title_link": "${context.env.BUILD_URL}",
             "color": "${color.getCode()}",
-            "text": ">>> Branch: *${BRANCH_NAME}*${INIT_BRANCH}\nAuthor: *${options.AUTHOR_NAME}*\nCommit message:\n```${utils.escapeCharsByUnicode(options.commitMessage)}```",
+            "text": ">>> Branch: *${BRANCH_NAME}*${INIT_BRANCH}\nAuthor: *${options.AUTHOR_NAME}*\nCommit message:\n```${context.utils.escapeCharsByUnicode(options.commitMessage)}```",
             "mrkdwn_in": ["text", "title"],
             "attachment_type": "default",
             "actions": [[
