@@ -372,6 +372,19 @@ def executeTests(String osName, String asicName, Map options)
             dir("${options.stageName}") {
                 utils.moveFiles(this, osName, "../*.log", ".")
                 utils.moveFiles(this, osName, "../scripts/*.log", ".")
+
+                // if some json files are broken - rerun (e.g. Maya crash can cause that)
+                try {
+                    String engineLogContent = readFile("${options.stageName}_${options.currentTry}.log")
+                    if (engineLogContent.contains("json.decoder.JSONDecodeError")) {
+                        throw new ExpectedExceptionWrapper(NotificationConfiguration.FILES_CRASHED, e)
+                    }
+                } catch (ExpectedExceptionWrapper e1) {
+                    throw e1
+                } catch (e1) {
+                    println("[WARNING] Could not analyze build log")
+                }
+
                 utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
             }
             archiveArtifacts artifacts: "${options.stageName}/*.log", allowEmptyArchive: true
