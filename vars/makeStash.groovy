@@ -74,7 +74,7 @@ def call(Map params) {
 
             if (preZip) {
                 if (isUnix()) {
-                    stdout = sh(returnStdout: true, script: "zip -r \"${zipName}\" . ${includeParams} ${excludeParams} -x '*@tmp*'")
+                    stdout = sh(returnStdout: true, script: "zip -r \"${zipName.replace('(', '\\(').replace(')', '\\)')}\" . ${includeParams} ${excludeParams} -x '*@tmp*'")
                 } else {
                     stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"stash_${stashName}.zip\" ${includeParams ?: '.'} ${excludeParams} -xr!*@tmp*")
                 }
@@ -101,9 +101,9 @@ def call(Map params) {
                         // Read more about it here: https://rsync.samba.org/FAQ.html#9
                         if (isUnix()) {
                             if (preZip) {
-                                status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " \"${zipName}\" \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
+                                status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " \"${zipName.replace('(', '\\(').replace(')', '\\)')}\" \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
                             } else {
-                                status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " ${includes} \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
+                                status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " ${includes.replace('(', '\\(').replace(')', '\\)')} \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
                             }
                         } else {
                             if (preZip) {
