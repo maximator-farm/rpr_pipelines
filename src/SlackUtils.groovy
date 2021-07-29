@@ -104,7 +104,7 @@ class SlackUtils {
         Color color
 
         switch(buildStatus) {
-            case 'SUCCESSFULL':
+            case 'SUCCESSFUL':
                 color = Color.GREEN
                 break
             case 'ABORTED':
@@ -162,7 +162,7 @@ class SlackUtils {
                 "mrkdwn_in": ["text"],
                 "title": "Brief info",
                 "pretext": "AutoTests Results ${pretext}",
-                "text": text,
+                "text": text.replace('"', ''),
                 "footer": "LUX CIS",
                 "actions": [[
                     "text": "Report",
