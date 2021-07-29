@@ -156,6 +156,8 @@ class SlackUtils {
             String pretext = report ? options.enginesNames[options.engines.indexOf(report)] : ""
             String text = report ? options['testsStatus-' + report] : options['testsStatus']
 
+            context.println("[DEBUG] testsStatus text: ${text}")
+
             attachments << [
                 "mrkdwn_in": ["text"],
                 "title": "Brief info",
