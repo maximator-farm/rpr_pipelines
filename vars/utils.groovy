@@ -457,26 +457,51 @@ class utils {
      */
     static def reboot(Object self, String osName) {
         try {
+            String nodeName = self.env.NODE_NAME
+
             switch(osName) {
                 case "Windows":
                     self.bat """
-                        shutdown /r /f /t 0
+                        shutdown /r /f /t 2
                     """
                     break
                 case "OSX":
                     self.sh """
-                        sudo shutdown -r now
+                        (sleep 2; sudo reboot) &
                     """
                 // Ubuntu
                 default:
                     self.sh """
-                        shutdown -h now
+                        (sleep 2; sudo reboot) &
                     """
+            }
+
+            while (true) {
+                // some nodes can fail any action after reboot
+                try {
+                    self.sleep(15)
+                    List nodesList = self.nodesByLabel(label: nodeName, offline: false)
+                    while (nodesList.size() == 0) {
+                        self.sleep(15)
+                        nodesList = self.nodesByLabel(label: nodeName, offline: false)
+                    }
+
+                    self.println("[INFO] Node is available")
+
+                    break
+                } catch (e1) {
+                    //do nothing
+                }
             }
         } catch (e) {
             self.println("[ERROR] Failed to reboot machine")
             self.println(e.toString())
             self.println(e.getMessage())
         }
-    } 
+    }
+
+    @NonCPS
+    static Boolean isNodeIdle(String nodeName) {
+        return jenkins.model.Jenkins.instance.getNode(nodeName).getComputer().countIdle() > 0
+    }
 }

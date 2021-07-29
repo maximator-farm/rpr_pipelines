@@ -44,7 +44,7 @@ def executeFunctionalTestsCommand(String osName, String asicName, Map options) {
 
         try {
             dir("rml_release") {
-                makeUnstash(name: "app${osName}")
+                makeUnstash(name: "app${osName}", storeOnNAS: options.storeOnNAS)
             }
             withNotifications(title: "${asicName}-${osName}-FT", options: options, configuration: NotificationConfiguration.EXECUTE_TESTS) {
                 switch (osName) {
@@ -91,7 +91,7 @@ def executeTests(String osName, String asicName, Map options) {
     try {
         GithubNotificator.updateStatus("Test", "${asicName}-${osName}-Unit", "in_progress", options, NotificationConfiguration.EXECUTE_UNIT_TESTS, BUILD_URL)
         outputEnvironmentInfo(osName, "${STAGE_NAME}.UnitTests")
-        makeUnstash(name: "app${osName}")
+        makeUnstash(name: "app${osName}", storeOnNAS: options.storeOnNAS)
         executeUnitTestsCommand(osName, options)
         GithubNotificator.updateStatus("Test", "${asicName}-${osName}-Unit", "success", options, NotificationConfiguration.UNIT_TESTS_PASSED, "${BUILD_URL}/artifact/${STAGE_NAME}.UnitTests")
     } catch (FlowInterruptedException error) {
@@ -180,6 +180,11 @@ def executeBuildWindows(String osName, Map options) {
     executeWindowsBuildCommand(osName, options, "Release")
     executeWindowsBuildCommand(osName, options, "Debug")
 
+    String releaseLink = "${BUILD_URL}artifact/Windows_Release.zip"
+    String debugLink = "${BUILD_URL}artifact/Windows_Debug.zip"
+
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${releaseLink}">Release</a> / <a href="${debugLink}">Debug</a> </h4>"""
+
     GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, "${BUILD_URL}/artifact")
 
 }
@@ -215,12 +220,22 @@ def executeOSXBuildCommand(String osName, Map options, String buildType) {
 
         """
         dir("${osName}/${buildType}") {
-            makeStash(includes: "*", name: "deploy_${osName}_${buildType}")
+            makeStash(includes: "*", name: "deploy_${osName}_${buildType}", storeOnNAS: options.storeOnNAS)
         }
     }
 
-    archiveArtifacts "build-${buildType}/${osName}_${buildType}.tar"
+    String artifactLink = ""
+
+    if (!options.storeOnNAS) {
+        archiveArtifacts "build-${buildType}/${osName}_${buildType}.tar"
+    } else {
+        dir("build-${buildType}") {
+            artifactLink = makeArchiveArtifacts("${osName}_${buildType}.tar", false)
+        }
+    }
     zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.dylib, test*", zipFile: "${osName}_${buildType}.zip"
+
+    return artifactLink
 }
 
 
@@ -235,8 +250,10 @@ def executeBuildOSX(String osName, Map options) {
 
     options.cmakeKeysOSX = "-DRML_DIRECTML=OFF -DRML_MIOPEN=OFF -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=ON -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen"
     
-    executeOSXBuildCommand(osName, options, "Release")
-    executeOSXBuildCommand(osName, options, "Debug")
+    String releaseLink = executeOSXBuildCommand(osName, options, "Release")
+    String debugLink = executeOSXBuildCommand(osName, options, "Debug")
+
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${releaseLink}">Release</a> / <a href="${debugLink}">Debug</a> </h4>"""
 
     GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, "${BUILD_URL}/artifact")
 
@@ -245,12 +262,30 @@ def executeBuildOSX(String osName, Map options) {
 
 def executeLinuxBuildCommand(String osName, Map options, String buildType) {
     
-    sh """
-        mkdir build-${buildType}
-        cd build-${buildType}
-        cmake -DCMAKE_buildType=${buildType} ${options.cmakeKeysLinux[osName]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
-        make -j 8 >> ../${STAGE_NAME}_${buildType}.log 2>&1
-    """
+    try {
+        sh """
+            mkdir build-${buildType}
+            cd build-${buildType}
+            cmake -DCMAKE_buildType=${buildType} ${options.cmakeKeysLinux[osName]} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
+            make -j 8 >> ../${STAGE_NAME}_${buildType}.log 2>&1
+        """
+    } catch (e) {
+        def exception = e
+
+        try {
+            String buildLogContent = readFile("${STAGE_NAME}_${buildType}.log")
+            if (buildLogContent.contains("Segmentation fault")) {
+                exception = new ExpectedExceptionWrapper(NotificationConfiguration.SEGMENTATION_FAULT, e)
+                exception.retry = true
+
+                utils.reboot(this, osName)
+            }
+        } catch (e1) {
+            println("[WARNING] Could not analyze build log")
+        }
+
+        throw exception
+    }
     
     sh """
         cd build-${buildType}
@@ -275,12 +310,22 @@ def executeLinuxBuildCommand(String osName, Map options, String buildType) {
             cp -R build-${buildType}/${buildType}/libRadeonML.so* ${osName}/${buildType}
         """
         dir("${osName}/${buildType}") {
-            makeStash(includes: "*", name: "deploy_${osName}_${buildType}")
+            makeStash(includes: "*", name: "deploy_${osName}_${buildType}", storeOnNAS: options.storeOnNAS)
         }
     }
 
-    archiveArtifacts "build-${buildType}/${osName}_${buildType}.tar"
+    String artifactLink = ""
+
+    if (!options.storeOnNAS) {
+        archiveArtifacts "build-${buildType}/${osName}_${buildType}.tar"
+    } else {
+        dir("build-${buildType}") {
+            artifactLink = makeArchiveArtifacts("${osName}_${buildType}.tar", false)
+        }
+    }
     zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.so, libMIOpen*.so, libtensorflow*.so, test*", zipFile: "${osName}_${buildType}.zip"
+
+    return artifactLink
 }
 
 
@@ -297,8 +342,10 @@ def executeBuildLinux(String osName, Map options) {
         'CentOS7': '-DRML_DIRECTML=OFF -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
     ]
 
-    executeLinuxBuildCommand(osName, options, "Release")
-    executeLinuxBuildCommand(osName, options, "Debug")
+    String releaseLink = executeLinuxBuildCommand(osName, options, "Release")
+    String debugLink = executeLinuxBuildCommand(osName, options, "Debug")
+
+    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${releaseLink}">Release</a> / <a href="${debugLink}">Debug</a> </h4>"""
 
     GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, "${BUILD_URL}/artifact")
 
@@ -312,7 +359,7 @@ def executeBuild(String osName, Map options) {
             checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
         }
         
-        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/*", "../RML_thirdparty/MIOpen")
+        downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/release/*", "../RML_thirdparty/MIOpen")
         downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
         //downloadFiles("/volume1/CIS/rpr-ml/DirectML/*", "./DirectML")
 
@@ -334,7 +381,7 @@ def executeBuild(String osName, Map options) {
 
         if (!env.TAG_NAME) {
             dir('build-Release/Release') {
-                makeStash(includes: '*', name: "app${osName}")
+                makeStash(includes: '*', name: "app${osName}", storeOnNAS: options.storeOnNAS)
             } 
         }
 
@@ -408,10 +455,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             platformList.each() {
                 dir(it) {
                     dir("Release"){
-                        makeUnstash(name: "deploy_${it}_Release")
+                        makeUnstash(name: "deploy_${it}_Release", storeOnNAS: options.storeOnNAS)
                     }
                     dir("Debug"){
-                        makeUnstash(name: "deploy_${it}_Debug")
+                        makeUnstash(name: "deploy_${it}_Debug", storeOnNAS: options.storeOnNAS)
                     }
                 }
             }
@@ -455,26 +502,28 @@ def call(String projectBranch = "",
         def deployStage = env.TAG_NAME ? this.&executeDeploy : null
         platforms = env.TAG_NAME ? "Windows;Ubuntu20;OSX;CentOS7" : platforms
 
-        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, deployStage,
-                [platforms:platforms,
-                 projectRepo:projectRepo,
-                 projectBranch:projectBranch,
-                 testsBranch:testsBranch,
-                 enableNotifications:enableNotifications,
-                 PRJ_NAME:'RadeonML',
-                 PRJ_ROOT:'rpr-ml',
-                 BUILDER_TAG:'BuilderML',
-                 TESTER_TAG:'ML',
-                 BUILD_TIMEOUT:45,
-                 TEST_TIMEOUT:45,
-                 DEPLOY_TIMEOUT:45,
-                 executeBuild:true,
-                 executeTests:true,
-                 executeFT:executeFT,
-                 retriesForTestStage:1,
-                 gitlabURL:gitlabURL,
-                 gitlabURLSSH:gitlabURLSSH
-                 ])
+        options << [platforms:platforms,
+                    projectRepo:projectRepo,
+                    projectBranch:projectBranch,
+                    testsBranch:testsBranch,
+                    enableNotifications:enableNotifications,
+                    PRJ_NAME:'RadeonML',
+                    PRJ_ROOT:'rpr-ml',
+                    BUILDER_TAG:'BuilderML',
+                    TESTER_TAG:'ML',
+                    BUILD_TIMEOUT:45,
+                    TEST_TIMEOUT:45,
+                    DEPLOY_TIMEOUT:45,
+                    executeBuild:true,
+                    executeTests:true,
+                    executeFT:executeFT,
+                    retriesForTestStage:1,
+                    gitlabURL:gitlabURL,
+                    gitlabURLSSH:gitlabURLSSH,
+                    storeOnNAS:true
+                    ]
+
+        multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, deployStage, options)
 
     } catch (e) {
         currentBuild.result = "FAILURE"

@@ -69,6 +69,14 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                     continue
                 }
             }
+
+            // check that there is some condition which should be true before take node
+            if (stageName == "Test" && options.containsKey("testsPreCondition")) {
+                while (!options["testsPreCondition"](options)) {
+                    sleep(60)
+                }
+            }
+
             node(labels) {
                 timeout(time: "${stageTimeout}", unit: 'MINUTES') {
                     ws("WS/${options.PRJ_NAME}_${stageName}") {
@@ -83,17 +91,28 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                 }
             }
         } catch(Exception e) {
+            Boolean isExceptionAllowed = false
+
             if (e instanceof ExpectedExceptionWrapper) {
                 if (e.abortCurrentOS) {
                     println("[ERROR] Detected abortCurrentOS flag in catched exception. Abort next tests on ${osName} OS")
                     i = tries + 1
+                } else if (e.retry) {
+                    println("[INFO] Retry detected. Exception is allowed")
+                    isExceptionAllowed = true
                 }
+
                 e = e.getCause()
+
                 if (e instanceof ExpectedExceptionWrapper) {
                     if (e.abortCurrentOS) {
                         println("[ERROR] Detected abortCurrentOS flag in catched exception. Abort next tests on ${osName} OS")
                         i = tries + 1
+                    } else if (e.retry) {
+                        println("[INFO] Retry detected. Exception is allowed")
+                        isExceptionAllowed = true
                     }
+
                     e = e.getCause()
                 }
             }
@@ -137,6 +156,7 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
                         SlackUtils.sendMessageToWorkspaceChannel(this, '', "Failed to mark node '${nodeName}' as offline", SlackUtils.Color.RED, SlackUtils.SlackWorkspace.LUXCIS, 'zabbix_critical')
                     }
                 }
+
             } else if (exceptionClassName.contains("ClosedChannelException")) {
                 GithubNotificator.updateStatus(stageName, title, "failure", options, NotificationConfiguration.LOST_CONNECTION_WITH_MACHINE)
             }
@@ -158,8 +178,6 @@ def call(String labels, def stageTimeout, def retringFunction, Boolean reuseLast
             }
 
             if (allowedExceptions.size() != 0) {
-                Boolean isExceptionAllowed = false
-
                 for (allowedException in allowedExceptions) {
                     if (exceptionClassName.contains(allowedException)) {
                         isExceptionAllowed = true

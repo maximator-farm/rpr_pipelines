@@ -149,23 +149,26 @@ def executeTestCommand(String osName, String asicName, Map options) {
     }
 
     println "Set timeout to ${testTimeout}"
-    timeout(time: testTimeout, unit: 'MINUTES') {
-        UniverseManager.executeTests(osName, asicName, options) {
-            switch (osName) {
-                case "Windows":
-                    dir('scripts') {
-                        bat """
-                            run.bat \"${testsPackageName}\" \"${testsNames}\" 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
-                        """
-                    }
-                    break
 
-                case "OSX":
-                    println "OSX isn't supported"
-                    break
+    withEnv(["RPRVIEWER_RENDER_TIMINGS_LOG_FILE_NAME=$WORKSPACE\\render.log"]) {
+        timeout(time: testTimeout, unit: 'MINUTES') {
+            UniverseManager.executeTests(osName, asicName, options) {
+                switch (osName) {
+                    case "Windows":
+                        dir('scripts') {
+                            bat """
+                                run.bat \"${testsPackageName}\" \"${testsNames}\" 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                            """
+                        }
+                        break
 
-                default:
-                    println "Linux isn't supported"
+                    case "OSX":
+                        println "OSX isn't supported"
+                        break
+
+                    default:
+                        println "Linux isn't supported"
+                }
             }
         }
     }

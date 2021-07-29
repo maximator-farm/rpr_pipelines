@@ -13,6 +13,8 @@ public class GithubNotificator {
     List buildCases = []
     List testCases = []
     List deployCases = []
+    // contains stage name as well ("[CUSTOM-STAGE] case_name")
+    List otherCases = []
     Boolean showTests
     Boolean hasBuildStage
     Boolean hasDeployStage
@@ -89,11 +91,20 @@ public class GithubNotificator {
             context.println("[INFO] Started initialization of PR notifications")
             this.hasDeployStage = hasDeployStage
 
+            // uses to specify custom build stages (e.g. release/debug)
+            if (options.customBuildStages) {
+                buildCases.addAll(options.customBuildStages)
+            }
+
             options.platforms.split(';').each() {
                 if (it) {
                     List tokens = it.tokenize(':')
                     String osName = tokens.get(0)
-                    buildCases << osName
+
+                    if (!options.customBuildStages) {
+                        buildCases << osName
+                    }
+                    
 
                     String gpuNames = ""
                     if (tokens.size() > 1) {
@@ -341,6 +352,7 @@ public class GithubNotificator {
                 stagesList << "[PREBUILD] Jenkins build configuration"
                 buildCases.each { stagesList << "[BUILD] " + it }
                 testCases.each { stagesList << "[TEST] " + it }
+                otherCases.each { stagesList << it }
                 if (hasDeployStage) {
                     deployCases.each { stagesList << "[DEPLOY] " + it }
                 }
@@ -465,10 +477,62 @@ public class GithubNotificator {
         }
     }
 
+    static def createStatus(String stageName, String title, String status, Map options, String message = "", String url = "") {
+        if (options.githubNotificator) {
+            options.githubNotificator.createStatusPr(stageName, title, status, message, url)
+        }
+    }
+
+    private def createStatusPr(String stageName, String title, String status, String message = "", String url = "") {
+        String statusTitle = "[${stageName.toUpperCase()}] ${title}"
+
+        switch (stageName.toUpperCase()) {
+            case 'BUILD':
+                buildCases << title
+                break
+            case 'TEST':
+                testCases << title
+                break
+            case 'DEPLOY':
+                deployCases << title
+                break
+            default:
+                otherCases << statusTitle
+        }
+        
+        try {
+            githubApiProvider.createOrUpdateStatusCheck(
+                repositoryUrl: repositoryUrl,
+                status: status,
+                name: statusTitle,
+                head_sha: commitSHA,
+                details_url: url,
+                output: [
+                    title: message,
+                    summary: "Use link below to check build details"
+                ]
+            )
+        } catch (e) {
+            context.println("[ERROR] Failed to create status for ${statusTitle}")
+            context.println(e.toString())
+            context.println(e.getMessage())
+        }
+    }
+
+    static def sendPullRequestComment(String message, Map options) {
+        if (options.githubNotificator) {
+            options.githubNotificator.sendPullRequestCommentPr(message)
+        }
+    }
+
     static def sendPullRequestComment(String url, String message, Map options) {
         if (options.githubNotificator) {
             options.githubNotificator.sendPullRequestCommentPr(url, message)
         }
+    }
+
+    private def sendPullRequestCommentPr(String message) {
+        sendPullRequestCommentPr(context.env.CHANGE_URL, message)
     }
 
     private def sendPullRequestCommentPr(String url, String message) {

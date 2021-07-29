@@ -14,7 +14,7 @@ import universe.*
 def installHoudiniPlugin(String osName, Map options) {
     switch(osName) {
         case 'Windows':
-            makeUnstash(name: "appWindows", unzip: false)
+            makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
             bat """
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa e hdRpr_${osName}.tar.gz
                 %CIS_TOOLS%\\7-Zip\\7z.exe -aoa x tmpPackage.tar 
@@ -24,7 +24,7 @@ def installHoudiniPlugin(String osName, Map options) {
             break
 
         case "OSX":
-            makeUnstash(name: "appOSX", unzip: false)
+            makeUnstash(name: "appOSX", unzip: false, storeOnNAS: options.storeOnNAS)
             sh """
                 tar -xzf hdRpr_${osName}.tar.gz 
                 cd hdRpr*
@@ -34,7 +34,7 @@ def installHoudiniPlugin(String osName, Map options) {
             break
 
         default:
-            makeUnstash(name: "app${osName}", unzip: false)
+            makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
             sh """
                 tar -xzf hdRpr_${osName}.tar.gz
                 cd hdRpr*
@@ -260,7 +260,7 @@ def executeTests(String osName, String asicName, Map options) {
                         }
 
                         println "Stashing test results to : ${options.testResultsName}"
-                        makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
+                        utils.stashTestData(this, options, options.storeOnNAS)
 
                         println "Total: ${sessionReport.summary.total}"
                         println "Error: ${sessionReport.summary.error}"
@@ -351,7 +351,7 @@ def executeBuildWindows(String osName, Map options) {
                 }
             }
             bat "rename hdRpr* hdRpr_${osName}.tar.gz"
-            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false)
+            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
@@ -415,7 +415,7 @@ def executeBuildOSX(String osName, Map options) {
                 }
             }
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
-            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false)
+            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
     }
@@ -483,10 +483,21 @@ def executeBuildUnix(String osName, Map options) {
                 }
             }
             if (osName == "Ubuntu18") options.unix_build_name = options.ubuntu_build_name else options.unix_build_name = options.centos_build_name
-            archiveArtifacts "hdRpr*.tar.gz"
+            
             String buildName = "${options.unix_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
+
+            sh "mv hdRpr*.tar.gz ${buildName}"
+
+            String artifactURL
+
+            if (!options.storeOnNAS) {
+                artifactURL = "${BUILD_URL}artifact/${buildName}"
+                rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${artifactURL}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
+                archiveArtifacts("hdRpr*.tar.gz")
+            } else {
+                artifactURL = makeArchiveArtifacts(buildName)
+            }
+
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
                 dir("../..") {
@@ -494,8 +505,8 @@ def executeBuildUnix(String osName, Map options) {
                 }
             }
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
-            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false)
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -545,7 +556,21 @@ def executeBuild(String osName, Map options) {
             }
         }
     } catch (e) {
-        throw e
+        def exception = e
+
+        try {
+            String buildLogContent = readFile("Build-${osName}.log")
+            if (buildLogContent.contains("Segmentation fault")) {
+                exception = new ExpectedExceptionWrapper(NotificationConfiguration.SEGMENTATION_FAULT, e)
+                exception.retry = true
+
+                utils.reboot(this, osName)
+            }
+        } catch (e1) {
+            println("[WARNING] Could not analyze build log")
+        }
+
+        throw exception
     } finally {
         archiveArtifacts "*.log"
         if (options.rebuildUSD) {
@@ -686,7 +711,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 testResultList.each {
                     dir(it.replace("testResult-", "")) {
                         try {
-                            makeUnstash(name: it)
+                            makeUnstash(name: it, storeOnNAS: options.storeOnNAS)
                         } catch (e) {
                             println "Can't unstash ${it}"
                             lostStashes << "'$it'".replace("testResult-", "")
@@ -748,7 +773,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                     if (!options.testDataSaved) {
                         try {
                             // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", "Test Report", "Summary Report, Performance Report, Compare Report")
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
                             options.testDataSaved = true
                         } catch(e1) {
                             println """
@@ -807,8 +832,8 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary  Report, Performance Rep ort, Compare Report")
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", \
+                    "Test Report", "Summary  Report", options.storeOnNAS)
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
                     // Example: Report was published successfully (passed: 69, failed: 11, error: 0)
@@ -829,7 +854,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
         String projectBranch = "",
         String usdBranch = "master",
         String testsBranch = "master",
-        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800;OSX:AMD_RXVEGA,AMD_RX5700XT;Ubuntu20:AMD_RadeonVII;Ubuntu18:NVIDIA_RTX2070;CentOS7',
+        String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_WX7100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800;OSX:AMD_RXVEGA,AMD_RX5700XT;Ubuntu20:AMD_RadeonVII;CentOS7',
         String buildType = "Houdini",
         Boolean rebuildUSD = false,
         String houdiniVersion = "18.5.462",
@@ -890,6 +915,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionType: parallelExecutionType,
                         sendToUMS: sendToUMS,
                         universePlatforms: convertPlatforms(platforms),
+                        storeOnNAS: true
                         ]
             if (sendToUMS) {
                 UniverseManager manager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)

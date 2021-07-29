@@ -49,7 +49,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "appWindows", unzip: false)
+                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -99,7 +99,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "app${osName}"
+                    makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -342,7 +342,7 @@ def executeTests(String osName, String asicName, Map options) {
                         }
 
                         println "Stashing test results to : ${options.testResultsName}"
-                        makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
+                        utils.stashTestData(this, options, options.storeOnNAS)
 
                         // deinstalling broken addon
                         // if test group is fully errored or number of test cases is equal to zero
@@ -429,7 +429,7 @@ def executeBuildWindows(String osName, Map options) {
                 rename BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_Windows.zip
             """
 
-            makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: "appWindows", preZip: false)
+            makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: "appWindows", preZip: false, storeOnNAS: options.storeOnNAS)
 
             GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
         }
@@ -473,10 +473,18 @@ def executeBuildLinux(String osName, Map options) {
                 """
             }
 
-            archiveArtifacts "BlenderUSDHydraAddon*.zip"
+            
             String BUILD_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
-            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+
+            String artifactURL
+
+            if (!options.storeOnNAS) {
+                artifactURL = "${BUILD_URL}artifact/${BUILD_NAME}"
+                rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${artifactURL}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                archiveArtifacts("BlenderUSDHydraAddon*.zip")
+            } else {
+                artifactURL = makeArchiveArtifacts(BUILD_NAME)
+            }
 
             if (options.sendToUMS) {
                 dir("../../../jobs_launcher") {
@@ -488,9 +496,9 @@ def executeBuildLinux(String osName, Map options) {
                 mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
             """
 
-            makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: "app${osName}", preZip: false)
+            makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
 
-            GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -605,7 +613,7 @@ def executePreBuild(Map options)
                         githubNotificator.initPreBuild("${BUILD_URL}")
                     }
                     
-                    if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
+                    if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
 
                         options.pluginVersion = version_read("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', ', ')
                         println "[INFO] Incrementing version of change made by ${options.commitAuthor}."
@@ -621,7 +629,7 @@ def executePreBuild(Map options)
                         bat """
                             git add src/hdusd/__init__.py
                             git commit -m "buildmaster: version update to ${options.pluginVersion}"
-                            git push origin HEAD:develop
+                            git push origin HEAD:master
                         """
 
                         //get commit's sha which have to be build
@@ -780,7 +788,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
-                                makeUnstash(name: "$it")
+                                makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                             } catch(e) {
                                 println("[ERROR] Failed to unstash ${it}")
                                 lostStashes.add("'${testName}'".replace("testResult-", ""))
@@ -864,7 +872,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 if (!options.testDataSaved) {
                     try {
                         // Save test data for access it manually anyway
-                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
+                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
                         options.testDataSaved = true 
                     } catch(e1) {
                         println("[WARNING] Failed to publish test data.")
@@ -930,7 +938,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
@@ -1105,7 +1113,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
-                        testCaseRetries:testCaseRetries
+                        testCaseRetries:testCaseRetries,
+                        storeOnNAS:true
                         ]
         }
 
