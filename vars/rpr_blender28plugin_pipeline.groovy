@@ -1278,7 +1278,9 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
                         testCaseRetries:testCaseRetries,
-                        storeOnNAS: true
+                        storeOnNAS: true,
+                        slackChannel: 'test_jenkins_messages',
+                        slackWorkspace: SlackUtils.SlackWorkspace.LUXCIS
                         ]
 
             if (sendToUMS) {
