@@ -59,8 +59,12 @@ class SlackUtils {
                 "color": color.getCode(),
                 "text": "${pretext}\n${messageTitle}\n${text}"
             ]]
-        
-        sendAttachments(context, attachments, workspace, channel)
+
+        try {
+            sendAttachments(context, attachments, workspace, channel)
+        } catch (e) {
+            println("[WARNING] Could not send message to slack")
+        }
     }
 
     static def sendBuildStatusToDebugChannel(def context, Map options) {
@@ -80,7 +84,7 @@ class SlackUtils {
                     sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, context.env.debagChannel)
                 }
             } catch (e) {
-                println("Error during slack notification to debug channel")
+                println("[WARNING] Error during slack notification to debug channel")
                 println(e.toString())
             }
         }
@@ -167,7 +171,7 @@ class SlackUtils {
         try {
             sendAttachments(context, attachments, workspace, channel)
         } catch (e) {
-            println("Error during slack notification to project channel")
+            println("[WARNING] Error during slack notification to project channel")
             println(e.toString())
         }
     }
