@@ -514,4 +514,6 @@ public class NotificationConfiguration {
 
     def static SEGMENTATION_FAULT = "Segmentation fault detected."
 
+    def static FILES_CRASHED = "Corrupted autotest JSON files detected."
+
 }
