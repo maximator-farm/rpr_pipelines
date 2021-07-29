@@ -63,37 +63,6 @@ class utils {
         }
     }
 
-    static def sendMessageToSlack(Object self, String channel, ArrayList attachments) {
-        try {
-            // Default author fields values to easily identify the message source
-            for (attachment in attachments) {
-                if (!attachment.author_name) {
-                    attachment["author_name"] = "Jenkins"
-                    if (!attachment.author_icon) {
-                        attachment["author_icon"] = "https://cdn.icon-icons.com/icons2/2107/PNG/64/file_type_jenkins_icon_130515.png"
-                    }
-                }
-            }
-
-            def slackMessage = [
-                attachments: attachments,
-                channel: channel
-            ]
-            
-            self.withCredentials([self.string(credentialsId: 'cisAppSlackWebhook', variable: 'WEBHOOK_URL')]) {
-                self.httpRequest(
-                    url: self.WEBHOOK_URL,
-                    httpMode: 'POST',
-                    requestBody: JsonOutput.toJson(slackMessage)
-                )
-            }
-            self.println("[INFO] Message was sent to Slack channel #${channel}")
-        } catch (e) {
-            self.println("[ERROR] Failed to send message to Slack channel #${channel}")
-            self.println(e)
-        }
-    }
-
     static def stashTestData(Object self, Map options, Boolean publishOnNAS = false, String excludes = "") {
         if (publishOnNAS) {
             String engine = ""
