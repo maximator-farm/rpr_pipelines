@@ -382,7 +382,7 @@ def executeTests(String osName, String asicName, Map options)
                 } catch (ExpectedExceptionWrapper e1) {
                     throw e1
                 } catch (e1) {
-                    println("[WARNING] Could not analyze build log")
+                    println("[WARNING] Could not analyze autotests log")
                 }
 
                 utils.renameFile(this, osName, "launcher.engine.log", "${options.stageName}_engine_${options.currentTry}.log")
