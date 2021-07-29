@@ -53,7 +53,7 @@ class SlackUtils {
     static def sendMessageToWorkspaceChannel(def context, String pretext, String text, Color color, SlackWorkspace workspace, String channel) {
         String messageTitle = "<${context.env.BUILD_URL}|${context.env.JOB_NAME} [${context.env.BUILD_NUMBER}]>"
 
-        def attachments: [[
+        def attachments = [[
                 "author_name": AUTHOR_NAME,
                 "author_icon": AUTHOR_ICON,
                 "color": color.getCode(),
