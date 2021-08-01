@@ -168,7 +168,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
         case 'Windows':
             dir('scripts') {
                 bat """
-                    run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.engine} ${options.toolVersion} ${options.testCaseRetries} ${options.updateRefs} 1>> \"..\\${options.stageName}_${options.currentTry}.log\"  2>&1
+                    run.bat \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.iter} ${options.threshold} ${options.engine} ${options.toolVersion} ${options.testCaseRetries} ${options.updateRefs} 1>> \"..\\${options.stageName}_${options.currentTry}.log\"  2>&1
                 """
             }
             break
@@ -176,7 +176,7 @@ def executeTestCommand(String osName, String asicName, Map options) {
         default:
             dir("scripts") {
                 sh """
-                    ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.engine} ${options.toolVersion} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\" 2>&1
+                    ./run.sh \"${testsPackageName}\" \"${testsNames}\" ${options.resX} ${options.resY} ${options.iter} ${options.threshold} ${options.engine} ${options.toolVersion} ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\" 2>&1
                 """
             }
         }
@@ -984,6 +984,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
     Boolean splitTestsExecution = true,
     String resX = '0',
     String resY = '0',
+    String iter = '50',
+    String threshold = '0.05',
     String customBuildLinkWindows = "",
     String customBuildLinkLinux = "",
     String customBuildLinkOSX = "",
@@ -1002,6 +1004,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
 
     resX = (resX == 'Default') ? '0' : resX
     resY = (resY == 'Default') ? '0' : resY
+    iter = (iter == 'Default') ? '50' : iter
+    threshold = (threshold == 'Default') ? '0.05' : threshold
     def nodeRetry = []
     Map errorsInSuccession = [:]
 
@@ -1101,6 +1105,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         TESTER_TAG:tester_tag,
                         resX: resX,
                         resY: resY,
+                        iter: iter,
+                        threshold: threshold,
                         customBuildLinkWindows: customBuildLinkWindows,
                         customBuildLinkLinux: customBuildLinkLinux,
                         customBuildLinkOSX: customBuildLinkOSX,
