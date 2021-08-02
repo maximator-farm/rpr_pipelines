@@ -183,6 +183,15 @@ def executeTests(String osName, String asicName, Map options) {
     }
 
     try {
+        if (env.NODE_NAME == "PC-TESTER-MILAN-WIN10") {
+            if (options.parsedTests.contains("CPU") || options.parsedTests.contains("weekly.2") || options.parsedTests.contains("regression.2")) {
+                throw new ExpectedExceptionWrapper(
+                    "System shouldn't execute CPU group (render is too slow)", 
+                    new Exception("System shouldn't execute CPU group (render is too slow)")
+                )
+            }
+        }
+
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
