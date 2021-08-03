@@ -165,7 +165,7 @@ def executeUnitTests(String osName, String asicName, Map options)
 
         utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}_failures", "report.html", "${STAGE_NAME}_failures", "${STAGE_NAME}_failures", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
-        options["failedConfigurations"].add("unitTestFailures-${asicName}-${osName}")
+        options["failedConfigurations"].add("unitTestFailures-" + asicName + "-" + osName)
     } finally {
         archiveArtifacts "*.log, *.gtest.xml"
         junit "*.gtest.xml"
@@ -454,7 +454,7 @@ def executeBuild(String osName, Map options)
 def getReportBuildArgs(Map options) {
     String buildNumber = options.collectTrackedMetrics ? env.BUILD_NUMBER : ""
 
-    return """Core ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\""""
+    return """Core ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\""""
 }
 
 def executePreBuild(Map options)
@@ -487,26 +487,23 @@ def executePreBuild(Map options)
         println "Commit shortSHA: ${options.commitShortSHA}"
         println "Branch name: ${options.branchName}"
 
-        if (options.projectBranch){
-            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-        } else {
-            currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-        }
-
-        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
-
         if (env.BRANCH_NAME) {
             withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
                 GithubNotificator githubNotificator = new GithubNotificator(this, options)
                 githubNotificator.init(options)
                 options["githubNotificator"] = githubNotificator
                 githubNotificator.initPreBuild("${BUILD_URL}")
+                options.projectBranchName = githubNotificator.branchName
             }
+        } else {
+            options.projectBranchName = options.projectBranch
         }
-    }
 
+        currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
+        currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+        currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+        currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+    }
 
     def tests = []
     options.groupsUMS = []
@@ -551,7 +548,7 @@ def executePreBuild(Map options)
         }
     }
 
-    if (options.storeOnNAS && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+    if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
         options.reportUpdater = new ReportUpdater(this, env, options)
         options.reportUpdater.init(this.&getReportBuildArgs)
     }
@@ -562,19 +559,21 @@ def executeDeploy(Map options, List platformList, List testResultList)
 {
     try {
         cleanWS()
-
+Test-NVIDIA_GF1080TI-Windows_failures/test_report.html
+Test-NVIDIA_GF1080TI-Windows_failures/report.html
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.BUILDING_UNIT_TESTS_REPORT) {
                 String reportFiles = ""
                 dir("SummaryReport") {
                     testResultList.each() {
                         String stashName = it.replace("testResult", "unitTestFailures")
+
                         try {
                             if (!options.storeOnNAS) {
                                 makeUnstash(name: "${stashName}", storeOnNAS: options.storeOnNAS)
                                 reportFiles += ", ${stashName}_failures/report.html".replace("unitTestFailures-", "")
                             } else if (options["failedConfigurations"].contains(stashName)) {
-                                reportFiles += ",../${it}-${quality}_Failures/report.html".replace("testResult-", "Test-")
+                                reportFiles += ",../${it}_failures/report.html".replace("testResult-", "Test-")
                             }
                         } catch(e) {
                             println("[ERROR] Can't unstash ${stashName}")
@@ -585,7 +584,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
 
                 if (options.failedConfigurations.size() != 0) {
-                    utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^,', '')}", "Failures Report", reportFiles.replaceAll("../", ""), options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+                    utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^,', '')}", "Failures Report", reportFiles.replaceAll('^,', '').replaceAll("\\.\\./", ""), options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
                 }
             }
 
@@ -880,7 +879,8 @@ def call(String projectBranch = "",
                         parallelExecutionType:parallelExecutionType,
                         collectTrackedMetrics:collectTrackedMetrics,
                         failedConfigurations: [],
-                        storeOnNAS: true
+                        storeOnNAS: true,
+                        flexibleUpdates: true
                         ]
 
             if (sendToUMS) {

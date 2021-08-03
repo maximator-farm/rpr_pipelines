@@ -149,23 +149,26 @@ def executeTestCommand(String osName, String asicName, Map options) {
     }
 
     println "Set timeout to ${testTimeout}"
-    timeout(time: testTimeout, unit: 'MINUTES') {
-        UniverseManager.executeTests(osName, asicName, options) {
-            switch (osName) {
-                case "Windows":
-                    dir('scripts') {
-                        bat """
-                            run.bat \"${testsPackageName}\" \"${testsNames}\" 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
-                        """
-                    }
-                    break
 
-                case "OSX":
-                    println "OSX isn't supported"
-                    break
+    withEnv(["RPRVIEWER_RENDER_TIMINGS_LOG_FILE_NAME=$WORKSPACE\\render.log"]) {
+        timeout(time: testTimeout, unit: 'MINUTES') {
+            UniverseManager.executeTests(osName, asicName, options) {
+                switch (osName) {
+                    case "Windows":
+                        dir('scripts') {
+                            bat """
+                                run.bat \"${testsPackageName}\" \"${testsNames}\" 2022 ${options.testCaseRetries} ${options.updateRefs} 1>> \"../${options.stageName}_${options.currentTry}.log\"  2>&1
+                            """
+                        }
+                        break
 
-                default:
-                    println "Linux isn't supported"
+                    case "OSX":
+                        println "OSX isn't supported"
+                        break
+
+                    default:
+                        println "Linux isn't supported"
+                }
             }
         }
     }
@@ -180,6 +183,15 @@ def executeTests(String osName, String asicName, Map options) {
     }
 
     try {
+        if (env.NODE_NAME == "PC-TESTER-MILAN-WIN10") {
+            if (options.tests.contains("CPU") || options.tests.contains("weekly.2") || options.tests.contains("regression.2")) {
+                throw new ExpectedExceptionWrapper(
+                    "System shouldn't execute CPU group (render is too slow)", 
+                    new Exception("System shouldn't execute CPU group (render is too slow)")
+                )
+            }
+        }
+
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
@@ -417,7 +429,7 @@ def executeBuildWindows(Map options) {
             """
         }
         String buildName = "RadeonProUSDViewer_Windows.zip"
-        withNotifications(title: "Windows", options: options, artifactUrl: "${BUILD_URL}/artifact/${buildName}", configuration: NotificationConfiguration.BUILD_PACKAGE_USD_VIEWER)  {
+        withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.BUILD_PACKAGE_USD_VIEWER)  {
             // delete files before zipping
             bat """
                 del RPRViewer\\binary\\windows\\inst\\pxrConfig.cmake
@@ -451,16 +463,16 @@ def executeBuildWindows(Map options) {
                         """
                     }
 
-                    archiveArtifacts artifacts: "RPRViewer_Setup*.exe", allowEmptyArchive: false
-                    String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
-                    String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-                    rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                    String ARTIFACT_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
+                    String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
                     /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
                     if (options.sendToUMS) {
                         // WARNING! call sendToMinio in build stage only from parent directory
                         options.universeManager.sendToMINIO(options, "Windows", "..", "RPRViewer_Setup.exe", false)
                     }*/
+
+                    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
                 }
             }
         }
@@ -567,7 +579,7 @@ def getReportBuildArgs(Map options) {
     if (options["isPreBuilt"]) {
         return """USDViewer "PreBuilt" "PreBuilt" "PreBuilt" """
     } else {
-        return """USDViewer ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\""""
+        return """USDViewer ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\""""
     }
 }
 
@@ -627,6 +639,7 @@ def executePreBuild(Map options) {
                     githubNotificator.init(options)
                     options["githubNotificator"] = githubNotificator
                     githubNotificator.initPreBuild("${BUILD_URL}")
+                    options.projectBranchName = githubNotificator.branchName
                 }
                 
                 if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
@@ -677,9 +690,11 @@ def executePreBuild(Map options) {
                     }
 
                 }
+            } else {
+                options.projectBranchName = options.projectBranch
             }
 
-            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch ?: env.BRANCH_NAME}<br/>"
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
             currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
             currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
             currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -793,7 +808,7 @@ def executePreBuild(Map options) {
         }
     }
 
-    if (options.storeOnNAS && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+    if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
         options.reportUpdater = new ReportUpdater(this, env, options)
         options.reportUpdater.init(this.&getReportBuildArgs)
     }
@@ -967,7 +982,7 @@ def call(String projectBranch = "",
          String tester_tag = 'USDViewer',
          String customBuildLinkWindows = "",
          String parallelExecutionTypeString = "TakeAllNodes",
-         Integer testCaseRetries = 2,
+         Integer testCaseRetries = 3,
          Boolean sendToUMS = true,
          String baselinePluginPath = "/volume1/CIS/bin-storage/RPRViewer_Setup.release-99.exe") {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -1016,7 +1031,8 @@ def call(String projectBranch = "",
                         universePlatforms: convertPlatforms(platforms),
                         sendToUMS: sendToUMS,
                         baselinePluginPath: baselinePluginPath,
-                        storeOnNAS: true
+                        storeOnNAS: true,
+                        flexibleUpdates: true
                         ]
             if (sendToUMS) {
                 UniverseManager manager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)

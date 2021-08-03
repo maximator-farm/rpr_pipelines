@@ -528,6 +528,8 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(Map options) {
+    utils.reboot(this, "Windows")
+
     options.winBuildConfiguration.each() { winBuildConf ->
         options.winVisualStudioVersion.each() { winVSVersion ->
 
@@ -591,6 +593,8 @@ def executeBuildWindows(Map options) {
 
 
 def executeBuildAndroid(Map options) {
+    utils.reboot(this, "Windows")
+
     options.androidBuildConfiguration.each() { androidBuildConf ->
 
         println "Current build configuration: ${androidBuildConf}."
@@ -1023,9 +1027,9 @@ def call(String projectBranch = "",
     String testsBranch = "master",
     String platforms = "Windows:AMD_RX5700XT;Android",
     String clientTag = "PC-TESTER-VILNIUS-WIN10",
-    String winBuildConfiguration = "release",
-    String winVisualStudioVersion = "2017,2019",
-    String winTestingBuildName = "release_vs2019",
+    String winBuildConfiguration = "release,debug",
+    String winVisualStudioVersion = "2019",
+    String winTestingBuildName = "debug_vs2019",
     String testsPackage = "General.json",
     String tests = "",
     String testerTag = "StreamingSDK",
@@ -1033,7 +1037,7 @@ def call(String projectBranch = "",
     Boolean clientCollectTraces = false,
     Boolean serverCollectTraces = false,
     String games = "Valorant",
-    String androidBuildConfiguration = "debug",
+    String androidBuildConfiguration = "release,debug",
     Boolean storeOnNAS = false
     )
 {

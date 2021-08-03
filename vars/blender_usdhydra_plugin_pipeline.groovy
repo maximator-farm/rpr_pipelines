@@ -49,7 +49,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
                     clearBinariesWin()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    makeUnstash(name: "appWindows", unzip: false)
+                    makeUnstash(name: "appWindows", unzip: false, storeOnNAS: options.storeOnNAS)
 
                     bat """
                         IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -99,7 +99,7 @@ def getBlenderAddonInstaller(String osName, Map options) {
                     clearBinariesUnix()
 
                     println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                    unstash "app${osName}"
+                    makeUnstash(name: "app${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
                    
                     sh """
                         mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -342,7 +342,7 @@ def executeTests(String osName, String asicName, Map options) {
                         }
 
                         println "Stashing test results to : ${options.testResultsName}"
-                        makeStash(includes: '**/*', name: "${options.testResultsName}", allowEmpty: true)
+                        utils.stashTestData(this, options, options.storeOnNAS)
 
                         // deinstalling broken addon
                         // if test group is fully errored or number of test cases is equal to zero
@@ -399,7 +399,9 @@ def executeBuildWindows(String osName, Map options) {
                     call python tools\\build.py -all -bin-dir ..\\bin -G "Visual Studio 15 2017 Win64" >> ..\\${STAGE_NAME}.log  2>&1
                 """
 
-                uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                if (options.updateDeps) {
+                    uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                }
             } else {
                 bat """
                     python --version >> ..\\${STAGE_NAME}.log  2>&1
@@ -420,18 +422,16 @@ def executeBuildWindows(String osName, Map options) {
                 """
             }
 
-            archiveArtifacts "BlenderUSDHydraAddon*.zip"
-            String BUILD_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.zip"
-            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+            String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.zip"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             bat """
                 rename BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_Windows.zip
             """
 
-            makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: "appWindows", preZip: false)
+            makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: "appWindows", preZip: false, storeOnNAS: options.storeOnNAS)
 
-            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -453,7 +453,10 @@ def executeBuildLinux(String osName, Map options) {
                 python --version >> ../${STAGE_NAME}.log  2>&1
                 python tools/build.py -all -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
             """
-            uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+            
+            if (options.updateDeps) {
+                uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+            }
         } else {
            sh """
                 export OS=
@@ -473,14 +476,12 @@ def executeBuildLinux(String osName, Map options) {
                 """
             }
 
-            archiveArtifacts "BlenderUSDHydraAddon*.zip"
-            String BUILD_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
-            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+            String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             if (options.sendToUMS) {
                 dir("../../../jobs_launcher") {
-                    sendToMINIO(options, "${osName}", "../BlenderUSDHydraAddon/BlenderPkg/build", BUILD_NAME)                            
+                    sendToMINIO(options, "${osName}", "../BlenderUSDHydraAddon/BlenderPkg/build", ARTIFACT_NAME)                            
                 }
             }
 
@@ -488,9 +489,9 @@ def executeBuildLinux(String osName, Map options) {
                 mv BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_${osName}.zip
             """
 
-            makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: "app${osName}", preZip: false)
+            makeStash(includes: "BlenderUSDHydraAddon_${osName}.zip", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
 
-            GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -588,12 +589,6 @@ def executePreBuild(Map options)
             println "Commit SHA: ${options.commitSHA}"
             println "Commit shortSHA: ${options.commitShortSHA}"
 
-            if (options.projectBranch) {
-                currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-            } else {
-                currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-            }
-
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\BlenderUSDHydraAddon\\src\\hdusd\\__init__.py", '"version": (', ', ').replace(', ', '.')
 
@@ -603,6 +598,7 @@ def executePreBuild(Map options)
                         githubNotificator.init(options)
                         options["githubNotificator"] = githubNotificator
                         githubNotificator.initPreBuild("${BUILD_URL}")
+                        options.projectBranchName = githubNotificator.branchName
                     }
                     
                     if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
@@ -641,7 +637,11 @@ def executePreBuild(Map options)
                         options.tests = utils.getTestsFromCommitMessage(options.commitMessage)
                         println "[INFO] Test groups mentioned in commit message: ${options.tests}"
                     }
+                } else {
+                    options.projectBranchName = options.projectBranch
                 }
+
+                currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
                 currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
                 currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
                 currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -780,7 +780,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                         String testName = testNameParts.subList(0, testNameParts.size() - 1).join("-")
                         dir(testName.replace("testResult-", "")) {
                             try {
-                                makeUnstash(name: "$it")
+                                makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                             } catch(e) {
                                 println("[ERROR] Failed to unstash ${it}")
                                 lostStashes.add("'${testName}'".replace("testResult-", ""))
@@ -839,7 +839,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                                 """
                             } else {
                                 bat """
-                                    build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
+                                    build_reports.bat ..\\summaryTestResults ${utils.escapeCharsByUnicode("Blender ")}${options.toolVersion} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
                                 """
                             }
                         } catch (e) {
@@ -864,7 +864,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                 if (!options.testDataSaved) {
                     try {
                         // Save test data for access it manually anyway
-                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
+                        utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
                         options.testDataSaved = true 
                     } catch(e1) {
                         println("[WARNING] Failed to publish test data.")
@@ -930,7 +930,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
             }
 
             withNotifications(title: "Building test report for ${engineName} engine", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report")
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${engineName}", "Summary Report", options.storeOnNAS)
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
@@ -967,6 +967,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
     String testsBranch = "master",
     String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800;Ubuntu20:AMD_RadeonVII',
     Boolean rebuildDeps = false,
+    Boolean updateDeps = false,
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
@@ -1078,6 +1079,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         PRJ_ROOT:"rpr-plugins",
                         incrementVersion:incrementVersion,
                         rebuildDeps:rebuildDeps,
+                        updateDeps:updateDeps,
                         testsPackage:testsPackage,
                         tests:tests,
                         toolVersion:toolVersion,
@@ -1105,7 +1107,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
-                        testCaseRetries:testCaseRetries
+                        testCaseRetries:testCaseRetries,
+                        storeOnNAS:true
                         ]
         }
 

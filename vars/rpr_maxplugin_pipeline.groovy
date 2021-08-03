@@ -305,14 +305,12 @@ def executeBuildWindows(Map options)
             """
         }
 
-        archiveArtifacts "RadeonProRender3dsMax*.msi"
-        String BUILD_NAME = options.branch_postfix ? "RadeonProRender3dsMax_${options.pluginVersion}.(${options.branch_postfix}).msi" : "RadeonProRender3dsMax_${options.pluginVersion}.msi"
-        String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+        String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRender3dsMax_${options.pluginVersion}.(${options.branch_postfix}).msi" : "RadeonProRender3dsMax_${options.pluginVersion}.msi"
+        String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
         if (options.sendToUMS) {
             dir ("../..") {
-                options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderMaxPlugin\\Package", BUILD_NAME, false)
+                options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderMaxPlugin\\Package", ARTIFACT_NAME, false)
             }
         }
 
@@ -332,7 +330,7 @@ def executeBuildWindows(Map options)
         println "[INFO] Built MSI product code: ${options.productCode}"
         makeStash(includes: 'RadeonProRenderMax.msi', name: 'appWindows', preZip: false, storeOnNAS: options.storeOnNAS)
 
-        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
     }
 }
 
@@ -377,7 +375,7 @@ def getReportBuildArgs(Map options) {
     if (options["isPreBuilt"]) {
         return """${utils.escapeCharsByUnicode("3ds Max")} "PreBuilt" "PreBuilt" "PreBuilt" """
     } else {
-        return """${utils.escapeCharsByUnicode("3ds Max")} ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\""""
+        return """${utils.escapeCharsByUnicode("3ds Max")} ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\""""
     }
 }
 
@@ -440,12 +438,6 @@ def executePreBuild(Map options)
             println "Commit shortSHA: ${options.commitShortSHA}"
             println "Branch name: ${options.branchName}"
 
-            if (options.projectBranch){
-                currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-            } else {
-                currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-            }
-
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMaxPlugin\\version.h", '#define VERSION_STR')
 
@@ -455,6 +447,7 @@ def executePreBuild(Map options)
                         githubNotificator.init(options)
                         options["githubNotificator"] = githubNotificator
                         githubNotificator.initPreBuild("${BUILD_URL}")
+                        options.projectBranchName = githubNotificator.branchName
                     }
                     
                     if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
@@ -492,8 +485,11 @@ def executePreBuild(Map options)
                         options.tests = utils.getTestsFromCommitMessage(options.commitMessage)
                         println "[INFO] Test groups mentioned in commit message: ${options.tests}"
                     }
+                } else {
+                    options.projectBranchName = options.projectBranch
                 }
 
+                currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
                 currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
                 currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
                 currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -593,7 +589,7 @@ def executePreBuild(Map options)
         options.universeManager.createBuilds(options)
     }
 
-    if (options.storeOnNAS && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+    if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
         options.reportUpdater = new ReportUpdater(this, env, options)
         options.reportUpdater.init(this.&getReportBuildArgs)
     }
@@ -899,7 +895,8 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/RadeonPro
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
                         parallelExecutionTypeString: parallelExecutionTypeString,
-                        storeOnNAS: true
+                        storeOnNAS: true,
+                        flexibleUpdates: true
                         ]
 
             if (sendToUMS) {
