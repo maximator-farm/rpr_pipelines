@@ -136,7 +136,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
         if (options['updateRefs']) {
             println "Updating Reference Images"
             executeGenTestRefCommand(asicName, osName, options)
-            uploadFiles('./BaikalNext/RprTest/ReferenceImages/*.*', REF_PATH_PROFILE)
+            uploadFiles('./BaikalNext/RprTest/ReferenceImages/', REF_PATH_PROFILE)
         } else {
             println "Execute Tests"
             downloadFiles("${REF_PATH_PROFILE}/*", "./BaikalNext/RprTest/ReferenceImages/")
@@ -324,7 +324,7 @@ def executePerfTests(String osName, String asicName, Map options) {
         if (options["updateRefsPerf"]) {
             println "Updating references for performance tests"
             executeGenPerfTestRefCommand(asicName, osName, options)
-            uploadFiles('./BaikalNext/RprPerfTest/Telemetry/*.*', REF_PATH_PROFILE)
+            uploadFiles('./BaikalNext/RprPerfTest/Telemetry/', REF_PATH_PROFILE)
         } else {
             println "Execute Tests"
             downloadFiles("${REF_PATH_PROFILE}/*", "./BaikalNext/RprPerfTest/References/")
