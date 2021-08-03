@@ -129,7 +129,7 @@ def executeWindowsBuildCommand(String osName, Map options, String buildType){
     bat """
         mkdir build-${buildType}
         cd build-${buildType}
-        cmake ${options.cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
+        cmake ${options.cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen -DDirectML_INCLUDE_DIR=${WORKSPACE}/third_party/directml -DDirectML_LIBRARY_DIR=${WORKSPACE}/third_party/directml .. >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
         set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
         %msbuild% RadeonML.sln -property:Configuration=${buildType} >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
     """
@@ -138,6 +138,7 @@ def executeWindowsBuildCommand(String osName, Map options, String buildType){
         cd build-${buildType}
         xcopy ..\\third_party\\miopen\\MIOpen.dll ${buildType}
         xcopy ..\\third_party\\tensorflow\\windows\\* ${buildType}
+        xcopy ..\\third_party\\directml\\DirectML.dll ${buildType}
         mkdir ${buildType}\\rml
         mkdir ${buildType}\\rml_internal
         xcopy ..\\rml\\include\\rml\\*.h* ${buildType}\\rml
@@ -167,7 +168,7 @@ def executeWindowsBuildCommand(String osName, Map options, String buildType){
         artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
     }
 
-    zip archive: true, dir: "build-${buildType}\\${buildType}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe", zipFile: "build-${buildType}\\${osName}_${buildType}.zip"
+    zip archive: true, dir: "build-${buildType}\\${buildType}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, DirectML.dll, libtensorflow*, test*.exe", zipFile: "build-${buildType}\\${osName}_${buildType}.zip"
 
     return artifactURL
 }
@@ -180,6 +181,7 @@ def executeBuildWindows(String osName, Map options) {
     bat """
         xcopy /s/y/i ..\\RML_thirdparty\\MIOpen third_party\\miopen
         xcopy /s/y/i ..\\RML_thirdparty\\tensorflow third_party\\tensorflow
+        xcopy /s/y/i ..\\RML_thirdparty\\DirectML third_party\\directml
     """
 
     options.cmakeKeysWin ='-G "Visual Studio 15 2017 Win64" -DRML_DIRECTML=ON -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
