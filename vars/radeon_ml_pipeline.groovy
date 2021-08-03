@@ -129,7 +129,7 @@ def executeWindowsBuildCommand(String osName, Map options, String buildType){
     bat """
         mkdir build-${buildType}
         cd build-${buildType}
-        cmake ${options.cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen .. >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
+        cmake ${options.cmakeKeysWin} -DRML_TENSORFLOW_DIR=${WORKSPACE}/third_party/tensorflow -DMIOpen_INCLUDE_DIR=${WORKSPACE}/third_party/miopen -DMIOpen_LIBRARY_DIR=${WORKSPACE}/third_party/miopen -DDirectML_INCLUDE_DIR=${WORKSPACE}/third_party/directml -DDirectML_LIBRARY_DIR=${WORKSPACE}/third_party/directml .. >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
         set msbuild=\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe\"
         %msbuild% RadeonML.sln -property:Configuration=${buildType} >> ..\\${STAGE_NAME}_${buildType}.log 2>&1
     """
@@ -138,6 +138,7 @@ def executeWindowsBuildCommand(String osName, Map options, String buildType){
         cd build-${buildType}
         xcopy ..\\third_party\\miopen\\MIOpen.dll ${buildType}
         xcopy ..\\third_party\\tensorflow\\windows\\* ${buildType}
+        xcopy ..\\third_party\\directml\\DirectML.dll ${buildType}
         mkdir ${buildType}\\rml
         mkdir ${buildType}\\rml_internal
         xcopy ..\\rml\\include\\rml\\*.h* ${buildType}\\rml
@@ -159,17 +160,10 @@ def executeWindowsBuildCommand(String osName, Map options, String buildType){
         }
     }
 
-    String ARTIFACT_NAME = "${osName}_${buildType}.zip"
-    String artifactURL
+    zip archive: true, dir: "build-${buildType}\\${buildType}", zipFile: "${osName}_${buildType}.zip"
+    
+    zip archive: true, dir: "build-${buildType}\\${buildType}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, DirectML.dll, libtensorflow*, test*.exe", zipFile: "build-${buildType}\\${osName}_${buildType}.zip"
 
-    dir("build-${buildType}\\${buildType}") {
-        bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" .")
-        artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
-    }
-
-    zip archive: true, dir: "build-${buildType}\\${buildType}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe", zipFile: "build-${buildType}\\${osName}_${buildType}.zip"
-
-    return artifactURL
 }
 
 
@@ -180,16 +174,21 @@ def executeBuildWindows(String osName, Map options) {
     bat """
         xcopy /s/y/i ..\\RML_thirdparty\\MIOpen third_party\\miopen
         xcopy /s/y/i ..\\RML_thirdparty\\tensorflow third_party\\tensorflow
+        xcopy /s/y/i ..\\RML_thirdparty\\DirectML third_party\\directml
     """
 
     options.cmakeKeysWin ='-G "Visual Studio 15 2017 Win64" -DRML_DIRECTML=ON -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
 
-    String releaseLink = executeWindowsBuildCommand(osName, options, "Release")
-    String debugLink = executeWindowsBuildCommand(osName, options, "Debug")
+    executeWindowsBuildCommand(osName, options, "Release")
+    executeWindowsBuildCommand(osName, options, "Debug")
+
+    String releaseLink = "${BUILD_URL}artifact/Windows_Release.zip"
+    String debugLink = "${BUILD_URL}artifact/Windows_Debug.zip"
 
     rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${releaseLink}">Release</a> / <a href="${debugLink}">Debug</a> </h4>"""
 
     GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, "${BUILD_URL}/artifact")
+
 }
 
 
@@ -227,16 +226,18 @@ def executeOSXBuildCommand(String osName, Map options, String buildType) {
         }
     }
 
-    String artifactURL
+    String artifactLink = ""
 
-    dir("build-${buildType}") {
-        String ARTIFACT_NAME = "${osName}_${buildType}.tar"
-        artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
+    if (!options.storeOnNAS) {
+        archiveArtifacts "build-${buildType}/${osName}_${buildType}.tar"
+    } else {
+        dir("build-${buildType}") {
+            artifactLink = makeArchiveArtifacts("${osName}_${buildType}.tar", false)
+        }
     }
-
     zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.dylib, test*", zipFile: "${osName}_${buildType}.zip"
 
-    return artifactURL
+    return artifactLink
 }
 
 
@@ -315,16 +316,18 @@ def executeLinuxBuildCommand(String osName, Map options, String buildType) {
         }
     }
 
-    String artifactURL
+    String artifactLink = ""
 
-    dir("build-${buildType}") {
-        String ARTIFACT_NAME = "${osName}_${buildType}.tar"
-        artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
+    if (!options.storeOnNAS) {
+        archiveArtifacts "build-${buildType}/${osName}_${buildType}.tar"
+    } else {
+        dir("build-${buildType}") {
+            artifactLink = makeArchiveArtifacts("${osName}_${buildType}.tar", false)
+        }
     }
-
     zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.so, libMIOpen*.so, libtensorflow*.so, test*", zipFile: "${osName}_${buildType}.zip"
 
-    return artifactURL
+    return artifactLink
 }
 
 
@@ -360,7 +363,7 @@ def executeBuild(String osName, Map options) {
         
         downloadFiles("/volume1/CIS/rpr-ml/MIOpen/${osName}/release/*", "../RML_thirdparty/MIOpen")
         downloadFiles("/volume1/CIS/rpr-ml/tensorflow/*", "../RML_thirdparty/tensorflow")
-        //downloadFiles("/volume1/CIS/rpr-ml/DirectML/*", "./DirectML")
+        downloadFiles("/volume1/CIS/rpr-ml/DirectML/*", "../RML_thirdparty/DirectML")
 
         outputEnvironmentInfo(osName, "${STAGE_NAME}_Release")
         outputEnvironmentInfo(osName, "${STAGE_NAME}_Debug")
@@ -402,11 +405,20 @@ def executePreBuild(Map options) {
     options.commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true).split('\r\n')[2].trim()
     options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
     options.commitShortSHA = options.commitSHA[0..6]
-
     println "The last commit was written by ${options.commitAuthor}."
     println "Commit message: ${options.commitMessage}"
     println "Commit SHA: ${options.commitSHA}"
     println "Commit shortSHA: ${options.commitShortSHA}"
+
+    if (options.projectBranch) {
+        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
+    } else {
+        currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
+    }
+
+    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
     if (env.BRANCH_NAME) {
         withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
@@ -414,16 +426,8 @@ def executePreBuild(Map options) {
             githubNotificator.init(options)
             options.githubNotificator = githubNotificator
             githubNotificator.initPreBuild(BUILD_URL)
-            options.projectBranchName = githubNotificator.branchName
         }
-    } else {
-        options.projectBranchName = options.projectBranch
     }
-
-    currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
-    currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-    currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-    currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         if (options.executeFT) {
