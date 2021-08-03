@@ -8,12 +8,12 @@ class SlackUtils {
     // TODO: add other workspaces
     static enum SlackWorkspace {
         // FIXME: get rprlux.slack.com & baikal webhooks
-        DEFAULT('rprlux.slack.com'), LUXCIS('cisAppSlackWebhook'), BAIKAL('baikal');
+        DEFAULT('rprlux.slack.com'), LUXCIS('cisAppSlackWebhook'), BAIKAL('baikal')
 
-        private final String webhookCredential;
+        private final String webhookCredential
   
-        private SlackWorkspace(String s) {
-            webhookCredential = s
+        private SlackWorkspace(String webhookCredentialName) {
+            webhookCredential = webhookCredentialName
         }
         
         String getCredential() {
@@ -22,12 +22,12 @@ class SlackUtils {
     }
 
     static enum Color {
-        RED('#fc0356'), GREEN('#2EFF2E'), LIGHT_YELLOW('#f4f4c8'), LIGHT_GREY('#d3d3d3'), ORANGE('#ff8833'), BLUE('#0000ff');
+        RED('#fc0356'), GREEN('#2EFF2E'), LIGHT_YELLOW('#f4f4c8'), LIGHT_GREY('#d3d3d3'), ORANGE('#ff8833'), BLUE('#0000ff')
 
-        private final String colorCode;
+        private final String colorCode
   
-        private Color(String s) {
-            colorCode = s
+        private Color(String code) {
+            colorCode = code
         }
         
         String getCode() {
@@ -79,11 +79,9 @@ class SlackUtils {
 
             try {
                 if ((context.env.BRANCH_NAME && context.env.BRANCH_NAME == "master") || context.env.CHANGE_BRANCH || context.env.JOB_NAME.contains("Weekly")) {
-                    // sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, "cis_failed_master")
-                    sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, "test_jenkins_messages")
+                    sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, "cis_failed_master")
                 } else {
-                    // sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, context.env.debagChannel)
-                    sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, "test_jenkins_messages")
+                    sendMessageToWorkspaceChannel(context, context.currentBuild.result, text, Color.RED, SlackWorkspace.LUXCIS, context.env.debagChannel)
                 }
             } catch (e) {
                 context.println("[WARNING] Error during slack notification to debug channel")
