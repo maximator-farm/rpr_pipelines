@@ -639,12 +639,6 @@ def executePreBuild(Map options)
             println "Commit SHA: ${options.commitSHA}"
             println "Commit shortSHA: ${options.commitShortSHA}"
 
-            if (options.projectBranch){
-                currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-            } else {
-                currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-            }
-
             withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
                 options.pluginVersion = version_read("${env.WORKSPACE}\\RadeonProRenderMayaPlugin\\version.h", '#define PLUGIN_VERSION')
 
@@ -654,6 +648,7 @@ def executePreBuild(Map options)
                         githubNotificator.init(options)
                         options["githubNotificator"] = githubNotificator
                         githubNotificator.initPreBuild("${BUILD_URL}")
+                        options.projectBranchName = githubNotificator.branchName
                     }
                     
                     if(env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
@@ -691,8 +686,11 @@ def executePreBuild(Map options)
                         options.tests = utils.getTestsFromCommitMessage(options.commitMessage)
                         println "[INFO] Test groups mentioned in commit message: ${options.tests}"
                     }
+                } else {
+                    options.projectBranchName = options.projectBranch
                 }
 
+                currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
                 currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
                 currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
                 currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -916,7 +914,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String en
                                 """
                             } else {
                                 bat """
-                                    build_reports.bat ..\\summaryTestResults "Maya" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
+                                    build_reports.bat ..\\summaryTestResults "Maya" ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(engineName)}\"
                                 """
                             }
                         } catch (e) {

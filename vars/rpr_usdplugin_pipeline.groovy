@@ -622,7 +622,6 @@ def executePreBuild(Map options) {
             Commit message: ${options.commitMessage}
             Commit SHA: ${options.commitSHA}
         """
-        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch ?: env.BRANCH_NAME}<br/>"
 
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
             options.majorVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_MAJOR_VERSION "', '')
@@ -630,16 +629,13 @@ def executePreBuild(Map options) {
             options.patchVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_PATCH_VERSION "', '')
             options.pluginVersion = "${options.majorVersion}.${options.minorVersion}.${options.patchVersion}"
 
-            currentBuild.description += "<b>Version:</b> ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}<br/>"
-            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-
             if (options['incrementVersion']) {
                 withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
                     GithubNotificator githubNotificator = new GithubNotificator(this, options)
                     githubNotificator.init(options)
                     options["githubNotificator"] = githubNotificator
                     githubNotificator.initPreBuild("${BUILD_URL}")
+                    options.projectBranchName = githubNotificator.branchName
                 }
                 
                 if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
@@ -664,7 +660,14 @@ def executePreBuild(Map options) {
                     options['projectBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
                     println "[INFO] Project branch hash: ${options.projectBranch}"
                 }
+            } else {
+                options.projectBranchName = options.projectBranch
             }
+
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
+            currentBuild.description += "<b>Version:</b> ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}<br/>"
+            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
         }
     }
 
@@ -751,11 +754,11 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                             def python3 = options.houdini_python3 ? "py3" : "py2.7"
                             def tool = "Houdini ${options.houdiniVersion} ${python3}"
                             bat """
-                                build_reports.bat ..\\summaryTestResults \"${utils.escapeCharsByUnicode(tool)}\" ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults \"${utils.escapeCharsByUnicode(tool)}\" ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         } else {
                             bat """
-                                build_reports.bat ..\\summaryTestResults USD ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults USD ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }
                         bat "get_status.bat ..\\summaryTestResults"

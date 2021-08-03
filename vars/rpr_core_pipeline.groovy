@@ -531,24 +531,22 @@ def executePreBuild(Map options) {
             println("Commit message: ${options.commitMessage}")
             println("Commit SHA: ${options.commitSHA}")
 
-            if (options.projectBranch){
-                currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-            } else {
-                currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-            }
-
-            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-            currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
-
             if (env.BRANCH_NAME) {
                 withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
                     GithubNotificator githubNotificator = new GithubNotificator(this, options)
                     githubNotificator.init(options)
                     options["githubNotificator"] = githubNotificator
                     githubNotificator.initPreBuild("${BUILD_URL}")
+                    options.projectBranchName = githubNotificator.branchName
                 }
+            } else {
+                options.projectBranchName = options.projectBranch
             }
+
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
+            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+            currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
         }
     }
 
@@ -688,7 +686,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             """
                         } else {
                             bat """
-                                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
+                                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
                             """
                         }
 

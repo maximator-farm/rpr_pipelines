@@ -625,6 +625,7 @@ def executePreBuild(Map options) {
                     githubNotificator.init(options)
                     options["githubNotificator"] = githubNotificator
                     githubNotificator.initPreBuild("${BUILD_URL}")
+                    options.projectBranchName = githubNotificator.branchName
                 }
                 
                 if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
@@ -675,9 +676,11 @@ def executePreBuild(Map options) {
                     }
 
                 }
+            } else {
+                options.projectBranchName = options.projectBranch
             }
 
-            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch ?: env.BRANCH_NAME}<br/>"
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
             currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
             currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
             currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -846,7 +849,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                             """
                         } else {
                             bat """
-                                build_reports.bat ..\\summaryTestResults "USDViewer" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults "USDViewer" ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }                        
                     }
