@@ -294,7 +294,11 @@ def executePerfTests(String osName, String asicName, Map options) {
             dir("bin") {
                 makeUnstash(name: "perf${osName}", unzip: false, storeOnNAS: options.storeOnNAS)
             }
-            makeUnstash(name: "perfTestsConf", storeOnNAS: options.storeOnNAS)
+
+            dir("RprPerfTest") {
+                makeUnstash(name: "perfTestsConf", storeOnNAS: options.storeOnNAS)
+            }
+
             dir("RprPerfTest/Scenarios") {
                 if (options.scenarios == "all") {
                     List scenariosList = []
@@ -565,7 +569,9 @@ def executePreBuild(Map options) {
         println("Build was detected as Pull Request")
     }
 
-    makeStash(includes: "RprPerfTest/", name: "perfTestsConf", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+    dir("RprPerfTest") {
+        makeStash(includes: "**/*", name: "perfTestsConf", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+    }
 
     options.commitMessage = []
     commitMessage = commitMessage.split('\r\n')
