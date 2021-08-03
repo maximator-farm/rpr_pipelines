@@ -20,7 +20,7 @@ def getCoreSDK(String osName, Map options)
                 clearBinariesWin()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash(name: "WindowsSDK", unzip: false)
+                makeUnstash(name: "WindowsSDK", unzip: false, storeOnNAS: options.storeOnNAS)
 
                 bat """
                     IF NOT EXIST "${CIS_TOOLS}\\..\\PluginsBinaries" mkdir "${CIS_TOOLS}\\..\\PluginsBinaries"
@@ -44,7 +44,7 @@ def getCoreSDK(String osName, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash(name: "OSXSDK", unzip: false)
+                makeUnstash(name: "OSXSDK", unzip: false, storeOnNAS: options.storeOnNAS)
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -68,7 +68,7 @@ def getCoreSDK(String osName, Map options)
                 clearBinariesUnix()
 
                 println "[INFO] The plugin does not exist in the storage. Unstashing and copying..."
-                makeUnstash(name: "Ubuntu18SDK", unzip: false)
+                makeUnstash(name: "Ubuntu18SDK", unzip: false, storeOnNAS: options.storeOnNAS)
 
                 sh """
                     mkdir -p "${CIS_TOOLS}/../PluginsBinaries"
@@ -159,9 +159,13 @@ def executeUnitTests(String osName, String asicName, Map options)
             python3("hybrid_report.py --xml_path ../${STAGE_NAME}.gtest.xml --images_basedir ../RadeonProRenderSDK/Northstar/UnitTest/result  --report_path ../${asicName}-${osName}_failures --tool_name \"Core Internal\" --compare_with_refs=False")
         }
 
-        makeStash(includes: "${asicName}-${osName}_failures/**/*", name: "unitTestFailures-${asicName}-${osName}", allowEmpty: true)
+        if (!options.storeOnNAS) {
+            makeStash(includes: "${asicName}-${osName}_failures/**/*", name: "unitTestFailures-${asicName}-${osName}", allowEmpty: true, storeOnNAS: options.storeOnNAS)
+        }
 
-        utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}_failures", "report.html", "${STAGE_NAME}_failures", "${STAGE_NAME}_failures")
+        utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}_failures", "report.html", "${STAGE_NAME}_failures", "${STAGE_NAME}_failures", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+
+        options["failedConfigurations"].add("unitTestFailures-" + asicName + "-" + osName)
     } finally {
         archiveArtifacts "*.log, *.gtest.xml"
         junit "*.gtest.xml"
@@ -319,7 +323,8 @@ def executeTests(String osName, String asicName, Map options)
                         }
 
                         println("Stashing test results to : ${options.testResultsName}")
-                        makeStash(includes: '**/*', excludes: '**/cache/**', name: "${options.testResultsName}", allowEmpty: true)
+
+                        utils.stashTestData(this, options, options.storeOnNAS, "**/cache/**")
 
                         // reallocate node if there are still attempts
                         if (sessionReport.summary.total == sessionReport.summary.error + sessionReport.summary.skipped || sessionReport.summary.total == 0) {
@@ -367,7 +372,7 @@ def executeBuildWindows(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RPR/RadeonProRender/lib/x64") {
             zip archive: true, dir: ".", glob: "", zipFile: "binWin64.zip"
-            makeStash(includes: "binWin64.zip", name: 'WindowsSDK', preZip: false)
+            makeStash(includes: "binWin64.zip", name: 'WindowsSDK', preZip: false, storeOnNAS: options.storeOnNAS)
             options.pluginWinSha = sha1 "binWin64.zip"
         }
         if (options.sendToUMS) {
@@ -381,7 +386,7 @@ def executeBuildOSX(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binMacOS.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binMacOS") {
             zip archive: true, dir: ".", glob: "", zipFile: "binMacOS.zip"
-            makeStash(includes: "binMacOS.zip", name: "OSXSDK", preZip: false)
+            makeStash(includes: "binMacOS.zip", name: "OSXSDK", preZip: false, storeOnNAS: options.storeOnNAS)
             options.pluginOSXSha = sha1 "binMacOS.zip"
         }
         if (options.sendToUMS) {
@@ -395,7 +400,7 @@ def executeBuildLinux(Map options) {
         artifactUrl: "${BUILD_URL}/artifact/binUbuntu18.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
             zip archive: true, dir: ".", glob: "", zipFile: "binUbuntu18.zip"
-            makeStash(includes: "binUbuntu18.zip", name: "Ubuntu18SDK", preZip: false)
+            makeStash(includes: "binUbuntu18.zip", name: "Ubuntu18SDK", preZip: false, storeOnNAS: options.storeOnNAS)
             options.pluginUbuntuSha = sha1 "binUbuntu18.zip"
         }
         if (options.sendToUMS) {
@@ -529,16 +534,22 @@ def executeDeploy(Map options, List platformList, List testResultList)
 {
     try {
         cleanWS()
-
+Test-NVIDIA_GF1080TI-Windows_failures/test_report.html
+Test-NVIDIA_GF1080TI-Windows_failures/report.html
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.BUILDING_UNIT_TESTS_REPORT) {
                 String reportFiles = ""
                 dir("SummaryReport") {
                     testResultList.each() {
                         String stashName = it.replace("testResult", "unitTestFailures")
+
                         try {
-                            makeUnstash(name: "${stashName}")
-                            reportFiles += ", ${stashName}_failures/report.html".replace("unitTestFailures-", "")
+                            if (!options.storeOnNAS) {
+                                makeUnstash(name: "${stashName}", storeOnNAS: options.storeOnNAS)
+                                reportFiles += ", ${stashName}_failures/report.html".replace("unitTestFailures-", "")
+                            } else if (options["failedConfigurations"].contains(stashName)) {
+                                reportFiles += ",../${it}_failures/report.html".replace("testResult-", "Test-")
+                            }
                         } catch(e) {
                             println("[ERROR] Can't unstash ${stashName}")
                             println(e.toString())
@@ -546,7 +557,10 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         }
                     }
                 }
-                utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^, ', '')}", "Failures Report", "${STAGE_NAME}_failures")
+
+                if (options.failedConfigurations.size() != 0) {
+                    utils.publishReport(this, "${BUILD_URL}", "SummaryReport", "${reportFiles.replaceAll('^,', '')}", "Failures Report", reportFiles.replaceAll('^,', '').replaceAll("\\.\\./", ""), options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
+                }
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
@@ -560,7 +574,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 testResultList.each() {
                     dir("$it".replace("testResult-", "")) {
                         try {
-                            makeUnstash(name: "$it")
+                            makeUnstash(name: "$it", storeOnNAS: options.storeOnNAS)
                         } catch(e) {
                             println("Can't unstash ${it}")
                             lostStashes.add("'$it'".replace("testResult-", ""))
@@ -662,7 +676,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
                         try {
                             // Save test data for access it manually anyway
                             utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                                "Test Report", "Summary Report, Performance Report, Compare Report")
+                                "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
+                                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
                             options.testDataSaved = true 
                         } catch(e1) {
                             println("[WARNING] Failed to publish test data.")
@@ -723,7 +738,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
                 utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
-                    "Test Report", "Summary Report, Performance Report, Compare Report")
+                    "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
@@ -846,7 +862,9 @@ def call(String projectBranch = "",
                         prRepoName:prRepoName,
                         prBranchName:prBranchName,
                         parallelExecutionType:parallelExecutionType,
-                        collectTrackedMetrics:collectTrackedMetrics
+                        collectTrackedMetrics:collectTrackedMetrics,
+                        failedConfigurations: [],
+                        storeOnNAS: true
                         ]
 
             if (sendToUMS) {

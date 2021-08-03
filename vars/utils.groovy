@@ -116,18 +116,17 @@ class utils {
         }
     }
 
-    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false) {
+    static def publishReport(Object self, String buildUrl, String reportDir, String reportFiles, String reportName, String reportTitles = "", Boolean publishOnNAS = false, Map nasReportInfo = [:]) {
         Map params
+
+        String redirectReportName = "redirect_report.html"
+        String wrapperReportName = "test_report.html"
 
         if (publishOnNAS) {
             String remotePath = "/volume1/web/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
 
-            self.dir(reportDir) {
-                // upload report to NAS in archive and unzip it
-                self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, preZip: true, postUnzip: true, storeOnNAS: true)
-            }
-
             String reportLinkBase
+            String authReportLinkBase
 
             self.withCredentials([self.string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
                 self.string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
@@ -135,18 +134,55 @@ class utils {
             }
 
             reportLinkBase = "${reportLinkBase}/${self.env.JOB_NAME}/${self.env.BUILD_NUMBER}/${reportName}/".replace(" ", "_")
+
+            self.withCredentials([self.usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
+                authReportLinkBase = reportLinkBase.replace("https://", "https://${self.NAS_USER}:${self.NAS_PASSWORD}@")
+            }
+
+            def links = []
+            def linksTitles
+
+            reportFiles.split(",").each { reportFile ->
+                links << "${authReportLinkBase}${reportFile.trim()}"
+            }
+
+            links = links.join(",")
+
+            if (reportTitles) {
+                linksTitles = reportTitles
+            } else {
+                linksTitles = reportFiles
+            }
+
+            String jenkinsBuildUrl = ""
+            String jenkinsBuildName = "Test report"
+
+            if (nasReportInfo.containsKey("jenkinsBuildUrl")) {
+                jenkinsBuildUrl = nasReportInfo["jenkinsBuildUrl"]
+            }
+
+            if (nasReportInfo.containsKey("jenkinsBuildName")) {
+                jenkinsBuildName = nasReportInfo["jenkinsBuildName"]
+            }
+
+            self.dir(reportDir) {
+                if (self.isUnix()) {
+                    self.sh(script: '$CIS_TOOLS/make_wrapper_page.sh ' + " \"${jenkinsBuildUrl}\" \"${jenkinsBuildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
+                } else {
+                    self.bat(script: '%CIS_TOOLS%\\make_wrapper_page.bat ' + " \"${jenkinsBuildUrl}\" \"${jenkinsBuildName}\" \"${links}\" \"${linksTitles}\" \"${reportName}\" \".\" \"${wrapperReportName}\"")
+                }
+            }
+
+            self.dir(reportDir) {
+                // upload report to NAS in archive and unzip it
+                self.makeStash(includes: '**/*', name: "report", allowEmpty: true, customLocation: remotePath, preZip: true, postUnzip: true, storeOnNAS: true)
+            }
             
             self.dir("redirect_links") {
-                self.withCredentials([self.usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
-                    String authReportLinkBase = reportLinkBase.replace("https://", "https://${self.NAS_USER}:${self.NAS_PASSWORD}@")
-
-                    reportFiles.split(",").each { reportFile ->
-                        if (self.isUnix()) {
-                            self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${authReportLinkBase}${reportFile.trim()}\" \".\" \"${reportFile.trim().replace('/', '_')}\"")
-                        } else {
-                            self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${authReportLinkBase}${reportFile.trim()}\"  \".\" \"${reportFile.trim().replace('/', '_')}\"")
-                        }
-                    }
+                if (self.isUnix()) {
+                    self.sh(script: '$CIS_TOOLS/make_redirect_page.sh ' + " \"${authReportLinkBase}${wrapperReportName}\" \".\" \"${redirectReportName}\"")
+                } else {
+                    self.bat(script: '%CIS_TOOLS%\\make_redirect_page.bat ' + " \"${authReportLinkBase}${wrapperReportName}\"  \".\" \"${redirectReportName}\"")
                 }
             }
             
@@ -161,7 +197,7 @@ class utils {
                           alwaysLinkToLastBuild: false,
                           keepAll: true,
                           reportDir: "redirect_links",
-                          reportFiles: updateReportFiles,
+                          reportFiles: redirectReportName,
                           // TODO: custom reportName (issues with escaping)
                           reportName: reportName]
         } else {
@@ -172,11 +208,12 @@ class utils {
                           reportFiles: reportFiles,
                           // TODO: custom reportName (issues with escaping)
                           reportName: reportName]
+
+            if (reportTitles) {
+                params['reportTitles'] = reportTitles
+            }
         }
 
-        if (reportTitles) {
-            params['reportTitles'] = reportTitles
-        }
         self.publishHTML(params)
         try {
             self.httpRequest(
