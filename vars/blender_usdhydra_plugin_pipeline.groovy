@@ -399,7 +399,9 @@ def executeBuildWindows(String osName, Map options) {
                     call python tools\\build.py -all -bin-dir ..\\bin -G "Visual Studio 15 2017 Win64" >> ..\\${STAGE_NAME}.log  2>&1
                 """
 
-                uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                if (options.updateDeps) {
+                    uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+                }
             } else {
                 bat """
                     python --version >> ..\\${STAGE_NAME}.log  2>&1
@@ -453,7 +455,10 @@ def executeBuildLinux(String osName, Map options) {
                 python --version >> ../${STAGE_NAME}.log  2>&1
                 python tools/build.py -all -bin-dir ../bin -j 8 >> ../${STAGE_NAME}.log  2>&1
             """
-            uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+            
+            if (options.updateDeps) {
+                uploadFiles("../bin/*", "/volume1/CIS/${options.PRJ_ROOT}/${options.PRJ_NAME}/3rdparty/${osName}/bin")
+            }
         } else {
            sh """
                 export OS=
@@ -975,6 +980,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
     String testsBranch = "master",
     String platforms = 'Windows:AMD_RXVEGA,AMD_WX9100,AMD_RadeonVII,AMD_RX5700XT,NVIDIA_GF1080TI,NVIDIA_RTX2080TI,AMD_RX6800;Ubuntu20:AMD_RadeonVII',
     Boolean rebuildDeps = false,
+    Boolean updateDeps = false,
     String updateRefs = 'No',
     Boolean enableNotifications = true,
     Boolean incrementVersion = true,
@@ -1086,6 +1092,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         PRJ_ROOT:"rpr-plugins",
                         incrementVersion:incrementVersion,
                         rebuildDeps:rebuildDeps,
+                        updateDeps:updateDeps,
                         testsPackage:testsPackage,
                         tests:tests,
                         toolVersion:toolVersion,
