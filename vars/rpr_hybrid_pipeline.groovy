@@ -182,7 +182,7 @@ def executeTestsCustomQuality(String osName, String asicName, Map options) {
 
                 utils.publishReport(this, "${BUILD_URL}", "${asicName}-${osName}-Failures", "report.html", "${STAGE_NAME}_Failures", "${STAGE_NAME}_Failures", options.storeOnNAS, ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
-                options["failedConfigurations"].add("testResult-" + asicName + "-" + osName})
+                options["failedConfigurations"].add("testResult-" + asicName + "-" + osName)
             } catch (err) {
                 println("[ERROR] Failed to publish HTML report.")
                 println(err.getMessage())
