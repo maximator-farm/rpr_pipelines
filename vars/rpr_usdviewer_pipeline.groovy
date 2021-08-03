@@ -184,7 +184,7 @@ def executeTests(String osName, String asicName, Map options) {
 
     try {
         if (env.NODE_NAME == "PC-TESTER-MILAN-WIN10") {
-            if (options.parsedTests.contains("CPU") || options.parsedTests.contains("weekly.2") || options.parsedTests.contains("regression.2")) {
+            if (options.tests.contains("CPU") || options.tests.contains("weekly.2") || options.tests.contains("regression.2")) {
                 throw new ExpectedExceptionWrapper(
                     "System shouldn't execute CPU group (render is too slow)", 
                     new Exception("System shouldn't execute CPU group (render is too slow)")
