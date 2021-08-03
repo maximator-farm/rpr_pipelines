@@ -159,10 +159,17 @@ def executeWindowsBuildCommand(String osName, Map options, String buildType){
         }
     }
 
-    zip archive: true, dir: "build-${buildType}\\${buildType}", zipFile: "${osName}_${buildType}.zip"
-    
+    String ARTIFACT_NAME = "${osName}_${buildType}.zip"
+    String artifactURL
+
+    dir("build-${buildType}\\${buildType}") {
+        bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" .")
+        artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
+    }
+
     zip archive: true, dir: "build-${buildType}\\${buildType}", glob: "RadeonML*.lib, RadeonML*.dll, MIOpen.dll, libtensorflow*, test*.exe", zipFile: "build-${buildType}\\${osName}_${buildType}.zip"
 
+    return artifactURL
 }
 
 
@@ -177,16 +184,12 @@ def executeBuildWindows(String osName, Map options) {
 
     options.cmakeKeysWin ='-G "Visual Studio 15 2017 Win64" -DRML_DIRECTML=ON -DRML_MIOPEN=ON -DRML_TENSORFLOW_CPU=ON -DRML_TENSORFLOW_CUDA=OFF -DRML_MPS=OFF'
 
-    executeWindowsBuildCommand(osName, options, "Release")
-    executeWindowsBuildCommand(osName, options, "Debug")
-
-    String releaseLink = "${BUILD_URL}artifact/Windows_Release.zip"
-    String debugLink = "${BUILD_URL}artifact/Windows_Debug.zip"
+    String releaseLink = executeWindowsBuildCommand(osName, options, "Release")
+    String debugLink = executeWindowsBuildCommand(osName, options, "Debug")
 
     rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${releaseLink}">Release</a> / <a href="${debugLink}">Debug</a> </h4>"""
 
     GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, "${BUILD_URL}/artifact")
-
 }
 
 
@@ -224,18 +227,16 @@ def executeOSXBuildCommand(String osName, Map options, String buildType) {
         }
     }
 
-    String artifactLink = ""
+    String artifactURL
 
-    if (!options.storeOnNAS) {
-        archiveArtifacts "build-${buildType}/${osName}_${buildType}.tar"
-    } else {
-        dir("build-${buildType}") {
-            artifactLink = makeArchiveArtifacts("${osName}_${buildType}.tar", false)
-        }
+    dir("build-${buildType}") {
+        String ARTIFACT_NAME = "${osName}_${buildType}.tar"
+        artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
     }
+
     zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.dylib, test*", zipFile: "${osName}_${buildType}.zip"
 
-    return artifactLink
+    return artifactURL
 }
 
 
@@ -314,18 +315,16 @@ def executeLinuxBuildCommand(String osName, Map options, String buildType) {
         }
     }
 
-    String artifactLink = ""
+    String artifactURL
 
-    if (!options.storeOnNAS) {
-        archiveArtifacts "build-${buildType}/${osName}_${buildType}.tar"
-    } else {
-        dir("build-${buildType}") {
-            artifactLink = makeArchiveArtifacts("${osName}_${buildType}.tar", false)
-        }
+    dir("build-${buildType}") {
+        String ARTIFACT_NAME = "${osName}_${buildType}.tar"
+        artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
     }
+
     zip archive: true, dir: "build-${buildType}/${buildType}", glob: "libRadeonML*.so, libMIOpen*.so, libtensorflow*.so, test*", zipFile: "${osName}_${buildType}.zip"
 
-    return artifactLink
+    return artifactURL
 }
 
 

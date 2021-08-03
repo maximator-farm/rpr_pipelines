@@ -301,14 +301,12 @@ def executeBuildWindows(Map options)
             """
         }
 
-        archiveArtifacts "RadeonProRender3dsMax*.msi"
-        String BUILD_NAME = options.branch_postfix ? "RadeonProRender3dsMax_${options.pluginVersion}.(${options.branch_postfix}).msi" : "RadeonProRender3dsMax_${options.pluginVersion}.msi"
-        String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+        String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRender3dsMax_${options.pluginVersion}.(${options.branch_postfix}).msi" : "RadeonProRender3dsMax_${options.pluginVersion}.msi"
+        String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
         if (options.sendToUMS) {
             dir ("../..") {
-                options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderMaxPlugin\\Package", BUILD_NAME, false)
+                options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderMaxPlugin\\Package", ARTIFACT_NAME, false)
             }
         }
 
@@ -328,7 +326,7 @@ def executeBuildWindows(Map options)
         println "[INFO] Built MSI product code: ${options.productCode}"
         makeStash(includes: 'RadeonProRenderMax.msi', name: 'appWindows', preZip: false, storeOnNAS: options.storeOnNAS)
 
-        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
     }
 }
 

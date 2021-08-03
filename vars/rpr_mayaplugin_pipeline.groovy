@@ -466,14 +466,12 @@ def executeBuildWindows(Map options)
             """
         }
 
-        archiveArtifacts "RadeonProRender*.msi"
-        String BUILD_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).msi" : "RadeonProRenderMaya_${options.pluginVersion}.msi"
-        String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-        rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+        String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).msi" : "RadeonProRenderMaya_${options.pluginVersion}.msi"
+        String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
         if (options.sendToUMS) {
             dir ("../..") {
-                options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderMayaPlugin\\MayaPkg", BUILD_NAME, false)
+                options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderMayaPlugin\\MayaPkg", ARTIFACT_NAME, false)
             }
         }
 
@@ -498,7 +496,7 @@ def executeBuildWindows(Map options)
         options.pluginWinSha = sha1 'RadeonProRenderMaya.msi'
         makeStash(includes: 'RadeonProRenderMaya.msi', name: 'appWindows', preZip: false, storeOnNAS: options.storeOnNAS)
 
-        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+        GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
     }
 }
 
@@ -517,14 +515,12 @@ def executeBuildOSX(Map options)
                 """
             }
 
-            archiveArtifacts "RadeonProRender*.dmg"
-            String BUILD_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).dmg" : "RadeonProRenderMaya_${options.pluginVersion}.dmg"
-            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+            String ARTIFACT_NAME = options.branch_postfix ? "RadeonProRenderMaya_${options.pluginVersion}.(${options.branch_postfix}).dmg" : "RadeonProRenderMaya_${options.pluginVersion}.dmg"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             if (options.sendToUMS) {
                 dir ("../../..") {
-                    options.universeManager.sendToMINIO(options, "OSX", "../RadeonProRenderMayaPlugin/MayaPkg/.installer_build", BUILD_NAME, false)
+                    options.universeManager.sendToMINIO(options, "OSX", "../RadeonProRenderMayaPlugin/MayaPkg/.installer_build", ARTIFACT_NAME, false)
                 }                
             }
 
@@ -534,7 +530,7 @@ def executeBuildOSX(Map options)
             // TODO: detect ID of installed plugin
             options.pluginOSXSha = sha1 'RadeonProRenderMaya.dmg'
 
-            GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }

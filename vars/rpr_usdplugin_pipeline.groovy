@@ -340,19 +340,20 @@ def executeBuildWindows(String osName, Map options) {
             } else if (options.buildType == "USD") {
                 options.win_build_name = "hdRpr-${options.pluginVersion}-USD-${osName}"
             }
-            archiveArtifacts "hdRpr*.tar.gz"
-            String buildName = "${options.win_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
+
+            String ARTIFACT_NAME = "${options.win_build_name}.tar.gz"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
                 dir("../..") {
-                    options.universeManager.sendToMINIO(options, osName, "..\\RadeonProRenderUSD\\build", buildName, false)
+                    options.universeManager.sendToMINIO(options, osName, "..\\RadeonProRenderUSD\\build", ARTIFACT_NAME, false)
                 }
             }
+
             bat "rename hdRpr* hdRpr_${osName}.tar.gz"
             makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -404,19 +405,21 @@ def executeBuildOSX(String osName, Map options) {
             } else if (options.buildType == "USD") {
                 options.osx_build_name = "hdRpr-${options.pluginVersion}-USD-macOS"
             }
-            archiveArtifacts "hdRpr*.tar.gz"
-            String buildName = "${options.osx_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
+
+            String ARTIFACT_NAME = "${options.osx_build_name}.tar.gz"
+            sh "mv hdRpr*.tar.gz ${ARTIFACT_NAME}"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
                 dir("../..") {
-                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderUSD/build", buildName, false)
+                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderUSD/build", ARTIFACT_NAME, false)
                 }
             }
+
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
             makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -483,27 +486,18 @@ def executeBuildUnix(String osName, Map options) {
                 }
             }
             if (osName == "Ubuntu18") options.unix_build_name = options.ubuntu_build_name else options.unix_build_name = options.centos_build_name
-            
-            String buildName = "${options.unix_build_name}.tar.gz"
 
-            sh "mv hdRpr*.tar.gz ${buildName}"
-
-            String artifactURL
-
-            if (!options.storeOnNAS) {
-                artifactURL = "${BUILD_URL}artifact/${buildName}"
-                rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${artifactURL}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
-                archiveArtifacts("hdRpr*.tar.gz")
-            } else {
-                artifactURL = makeArchiveArtifacts(buildName)
-            }
+            String ARTIFACT_NAME = "${options.unix_build_name}.tar.gz"
+            sh "mv hdRpr*.tar.gz ${ARTIFACT_NAME}"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
                 dir("../..") {
-                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderUSD/build", buildName, false)
+                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderUSD/build", ARTIFACT_NAME, false)
                 }
             }
+
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
             makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)

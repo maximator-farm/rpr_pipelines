@@ -422,10 +422,8 @@ def executeBuildWindows(String osName, Map options) {
                 """
             }
 
-            archiveArtifacts "BlenderUSDHydraAddon*.zip"
-            String BUILD_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.zip"
-            String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+            String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_Windows.zip"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             bat """
                 rename BlenderUSDHydraAddon*.zip BlenderUSDHydraAddon_Windows.zip
@@ -433,7 +431,7 @@ def executeBuildWindows(String osName, Map options) {
 
             makeStash(includes: "BlenderUSDHydraAddon_Windows.zip", name: "appWindows", preZip: false, storeOnNAS: options.storeOnNAS)
 
-            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -478,22 +476,12 @@ def executeBuildLinux(String osName, Map options) {
                 """
             }
 
-            
-            String BUILD_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
-
-            String artifactURL
-
-            if (!options.storeOnNAS) {
-                artifactURL = "${BUILD_URL}artifact/${BUILD_NAME}"
-                rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${artifactURL}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
-                archiveArtifacts("BlenderUSDHydraAddon*.zip")
-            } else {
-                artifactURL = makeArchiveArtifacts(BUILD_NAME)
-            }
+            String ARTIFACT_NAME = options.branch_postfix ? "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.(${options.branch_postfix}).zip" : "BlenderUSDHydraAddon_${options.pluginVersion}_${osName}.zip"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             if (options.sendToUMS) {
                 dir("../../../jobs_launcher") {
-                    sendToMINIO(options, "${osName}", "../BlenderUSDHydraAddon/BlenderPkg/build", BUILD_NAME)                            
+                    sendToMINIO(options, "${osName}", "../BlenderUSDHydraAddon/BlenderPkg/build", ARTIFACT_NAME)                            
                 }
             }
 

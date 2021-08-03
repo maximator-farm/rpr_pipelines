@@ -517,7 +517,24 @@ def executeBuild(String osName, Map options) {
         throw e
     } finally {
         archiveArtifacts "*.log"
-        archiveArtifacts "Build/BaikalNext_${STAGE_NAME}*"
+
+        String artifactName
+
+        switch (osName) {
+            case 'Windows': 
+                artifactName = "BaikalNext_${STAGE_NAME}.zip"
+                break
+            case 'OSX':
+                artifactName = "BaikalNext_${STAGE_NAME}.zip"
+                break
+            default: 
+                artifactName = "BaikalNext_${STAGE_NAME}.tar.xz"
+        }
+
+        dir("Build") {
+            makeArchiveArtifacts(name: artifactName, storeOnNAS: options.storeOnNAS)
+        }
+
         String status = error_message ? "failure" : "success"
         GithubNotificator.updateStatus("Build", osName, status, options, "Build finished as '${status}'", "${env.BUILD_URL}/artifact/${STAGE_NAME}.log")
     }

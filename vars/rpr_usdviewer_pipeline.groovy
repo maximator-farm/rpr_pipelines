@@ -425,7 +425,7 @@ def executeBuildWindows(Map options) {
             """
         }
         String buildName = "RadeonProUSDViewer_Windows.zip"
-        withNotifications(title: "Windows", options: options, artifactUrl: "${BUILD_URL}/artifact/${buildName}", configuration: NotificationConfiguration.BUILD_PACKAGE_USD_VIEWER)  {
+        withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.BUILD_PACKAGE_USD_VIEWER)  {
             // delete files before zipping
             bat """
                 del RPRViewer\\binary\\windows\\inst\\pxrConfig.cmake
@@ -459,16 +459,16 @@ def executeBuildWindows(Map options) {
                         """
                     }
 
-                    archiveArtifacts artifacts: "RPRViewer_Setup*.exe", allowEmptyArchive: false
-                    String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
-                    String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-                    rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                    String ARTIFACT_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
+                    String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
                     /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
                     if (options.sendToUMS) {
                         // WARNING! call sendToMinio in build stage only from parent directory
                         options.universeManager.sendToMINIO(options, "Windows", "..", "RPRViewer_Setup.exe", false)
                     }*/
+
+                    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
                 }
             }
         }
