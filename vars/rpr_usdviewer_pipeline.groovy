@@ -1,5 +1,7 @@
 import groovy.transform.Field
 import groovy.json.JsonOutput
+import java.util.concurrent.ConcurrentHashMap
+import java.util.function.BiFunction
 import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
@@ -8,7 +10,21 @@ import universe.*
 
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20USDViewer"
+@Field final def installsPerformedMap = new ConcurrentHashMap()
 
+
+@NonCPS
+def shouldInstallationPerform(String key, String installationType, Integer maxTries) {
+    def installationInfo = installsPerformedMap.get(key)[installationType]
+    return installationInfo['tries'] < maxTries && installationInfo['status'] != 'success'
+}
+
+@NonCPS
+def updateMap(String keyName, String installationType, String status) {
+    if (installationType == 'dirt') {
+        installsPerformedMap.computeIfPresent(keyName, (BiFunction){ key, value -> ['dirt': ['tries': value['dirt']['tries'] + 1, 'status': status]] })
+    }
+}
 
 def getViewerTool(String osName, Map options) {
     switch (osName) {
@@ -210,48 +226,60 @@ def executeTests(String osName, String asicName, Map options) {
             downloadFiles("/volume1/Assets/usd_inventor_autotests/", assetsDir)
         }
 
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_DIRT) {
-            println "Uninstall old plugin and install \"baseline\" plugin"
+        installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active']])
 
-            String baselinePluginPath = options["baselinePluginPath"]
+        if (shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {
+            try {
+                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_DIRT) {
+                    println "Uninstall old plugin and install \"baseline\" plugin"
 
-            // Download "baseline" plugin
-            timeout(time: "15", unit: "MINUTES") {
-                downloadFiles(baselinePluginPath, "${CIS_TOOLS}/../PluginsBinaries/".replace("C:", "/mnt/c").replace("\\", "/"))
-            }
+                    String baselinePluginPath = options["baselinePluginPath"]
 
-            println "Install \"baseline\" plugin"
+                    // Download "baseline" plugin
+                    timeout(time: "15", unit: "MINUTES") {
+                        downloadFiles(baselinePluginPath, "${CIS_TOOLS}/../PluginsBinaries/".replace("C:", "/mnt/c").replace("\\", "/"))
+                    }
 
-            timeout(time: "15", unit: "MINUTES") {
-                installInventorPlugin(osName, options, false, baselinePluginPath.split("/")[-1])
-            }
+                    println "Install \"baseline\" plugin"
 
-            println "Start \"dirt\" installation"
+                    timeout(time: "15", unit: "MINUTES") {
+                        installInventorPlugin(osName, options, false, baselinePluginPath.split("/")[-1])
+                    }
 
-            timeout(time: "8", unit: "MINUTES") {
-                installInventorPlugin(osName, options, false)
-            }
-        }
+                    println "Start \"dirt\" installation"
 
-        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
-            timeout(time: "10", unit: "MINUTES") {
-                try {
-                    buildRenderCache(osName, "2022", options, false)
-                } catch (e) {
-                    throw e
-                } finally {
-                    dir("scripts") {
-                        utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_dirt_${options.currentTry}")
-                        archiveArtifacts artifacts: "${options.stageName}_dirt_${options.currentTry}/*.jpg", allowEmptyArchive: true
+                    timeout(time: "8", unit: "MINUTES") {
+                        installInventorPlugin(osName, options, false)
                     }
                 }
-                dir("scripts") {
-                    String cacheImgPath = "./${options.stageName}_dirt_${options.currentTry}/RESULT.jpg"
-                    if(!fileExists(cacheImgPath)){
-                        throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+            
+
+                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_DIRT) {                        
+                    timeout(time: "10", unit: "MINUTES") {
+                        try {
+                            buildRenderCache(osName, "2022", options, false)
+                        } catch (e) {
+                            throw e
+                        } finally {
+                            dir("scripts") {
+                                utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_dirt_${options.currentTry}")
+                                archiveArtifacts artifacts: "${options.stageName}_dirt_${options.currentTry}/*.jpg", allowEmptyArchive: true
+                            }
+                        }
+                        dir("scripts") {
+                            String cacheImgPath = "./${options.stageName}_dirt_${options.currentTry}/RESULT.jpg"
+                            if(!fileExists(cacheImgPath)){
+                                throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                            }
+                        }
                     }
                 }
+            } catch (e) {
+                updateMap("${asicName}-${osName}", 'dirt', 'failed')
+                throw e
             }
+
+            updateMap("${asicName}-${osName}", 'dirt', 'success')
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
