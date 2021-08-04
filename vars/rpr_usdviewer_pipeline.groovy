@@ -225,10 +225,12 @@ def executeTests(String osName, String asicName, Map options) {
             String assetsDir = isUnix() ? "${CIS_TOOLS}/../TestResources/usd_inventor_autotests_assets" : "/mnt/c/TestResources/usd_inventor_autotests_assets"
             downloadFiles("/volume1/Assets/usd_inventor_autotests/", assetsDir)
         }
-
+        println("[DEBUG] Before put if absent")
         installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active']])
+        println("[DEBUG] After put if absent")
 
         if (shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {
+            println("[DEBUG] Dirt installation should perform")
             try {
                 withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_DIRT) {
                     println "Uninstall old plugin and install \"baseline\" plugin"
@@ -275,11 +277,14 @@ def executeTests(String osName, String asicName, Map options) {
                     }
                 }
             } catch (e) {
+                println("[DEBUG] Error during dirt intsallation: ${e}")
                 updateMap("${asicName}-${osName}", 'dirt', 'failed')
+                println("[DEBUG] Map updated with failed status")
                 throw e
             }
-
+            println("[DEBUG] Dirt installation succeded")
             updateMap("${asicName}-${osName}", 'dirt', 'success')
+            println("[DEBUG] Map updated with success status")
         }
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CLEAN) {
