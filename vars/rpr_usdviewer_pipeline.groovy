@@ -10,6 +10,7 @@ import universe.*
 
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20USDViewer"
+@Field final String CUSTOM_INSTALL_PATH = "C:\\Users\\${env.USERNAME}\\testRPRViewer\\subdir"
 @Field final def installsPerformedMap = new ConcurrentHashMap()
 
 
@@ -24,7 +25,9 @@ def shouldInstallationPerform(String key, String installationType, Integer maxTr
 @NonCPS
 def updateMap(String keyName, String installationType, String status) {
     if (installationType == 'dirt') {
-        installsPerformedMap.computeIfPresent(keyName, (BiFunction){ key, value -> ['dirt': ['tries': value['dirt']['tries'] + 1, 'status': status]] })
+        installsPerformedMap.computeIfPresent(keyName, (BiFunction){ key, value -> ['dirt': ['tries': value['dirt']['tries'] + 1, 'status': status], 'custom_path': value['custom_path']] })
+    } else if (installationType == 'custom_path') {
+        installsPerformedMap.computeIfPresent(keyName, (BiFunction){ key, value -> ['custom_path': ['tries': value['custom_path']['tries'] + 1, 'status': status], 'dirt': value['dirt']] })
     }
 }
 
@@ -69,17 +72,42 @@ def getViewerTool(String osName, Map options) {
 
 
 def checkExistenceOfPlugin(String osName, Map options) {
-    String uninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
+    String defaultUninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
+    String customUninstallerPath = "${CUSTOM_INSTALL_PATH}\\unins000.exe"
 
-    return fileExists(uninstallerPath)
+    return fileExists(defaultUninstallerPath) || fileExists(customUninstallerPath)
+}
+
+def getUninstallerPath() {
+    String defaultUninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
+    String customUninstallerPath = "${CUSTOM_INSTALL_PATH}\\unins000.exe"
+
+    if (fileExists(defaultUninstallerPath)) {
+        return defaultUninstallerPath
+    } else if fileExists(customUninstallerPath)) {
+        return customUninstallerPath
+    } else {
+        return null
+    }
 }
 
 
-def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true, String customPluginName = "") {
-    String uninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
-
+def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true, Boolean customPathInstall=false, String customPluginName = "") {
     String installerName = ""
-    String logPostfix = cleanInstall ? "clean" : "dirt"
+    String dirOption = ""
+    String logPostfix
+    
+
+    if (cleanInstall) {
+        if (customPathInstall) {
+            logPostfix = "custom_path"
+            dirOption = "/DIR=\"${CUSTOM_INSTALL_PATH}\""
+        } else {
+            logPostfix = "clean"
+        }
+    } else {
+        logPostfix = "dirt"
+    }
 
     if (customPluginName) {
         installerName = customPluginName
@@ -94,7 +122,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
         if (cleanInstall && checkExistenceOfPlugin(osName, options)) {
             println "[INFO] Uninstalling Inventor Plugin"
             bat """
-                start "" /wait "${uninstallerPath}" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall.log
+                start "" /wait "${getUninstallerPath()}" /SILENT /NORESTART /LOG=${options.stageName}_${logPostfix}_${options.currentTry}.uninstall.log
             """
         }
     } catch (e) {
@@ -105,7 +133,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
         println "[INFO] Install Inventor Plugin"
 
         bat """
-            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART /LOG=${options.stageName}${logPostfix}_${options.currentTry}.install${logPostfix}.log
+            start /wait ${CIS_TOOLS}\\..\\PluginsBinaries\\${installerName} /SILENT /NORESTART ${dirOption} /LOG=${options.stageName}${logPostfix}_${options.currentTry}.install${logPostfix}.log
         """
     } catch (e) {
         throw new Exception("Failed to install new plugin")
@@ -113,8 +141,9 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
 }
 
 
-def buildRenderCache(String osName, String toolVersion, Map options, Boolean cleanInstall=true) {
+def buildRenderCache(String osName, String toolVersion, Map options, Boolean cleanInstall=true, Boolean customPathInstall=false) {
     String logPostfix = cleanInstall ? "clean" : "dirt"
+    logPostfix = customPathInstall ? "custom_path" : logPostfix
 
     dir("scripts") {
         switch(osName) {
@@ -228,7 +257,7 @@ def executeTests(String osName, String asicName, Map options) {
             downloadFiles("/volume1/Assets/usd_inventor_autotests/", assetsDir)
         }
         println("[DEBUG] Before put if absent")
-        installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active']])
+        installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active'], 'custom_path': ['tries': 0, 'status': 'active']])
         println("[DEBUG] After put if absent")
 
         if (shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {
@@ -247,7 +276,7 @@ def executeTests(String osName, String asicName, Map options) {
                     println "Install \"baseline\" plugin"
 
                     timeout(time: "15", unit: "MINUTES") {
-                        installInventorPlugin(osName, options, false, baselinePluginPath.split("/")[-1])
+                        installInventorPlugin(osName, options, false, false, baselinePluginPath.split("/")[-1])
                     }
 
                     println "Start \"dirt\" installation"
@@ -286,6 +315,47 @@ def executeTests(String osName, String asicName, Map options) {
             }
             println("[DEBUG] Dirt installation succeded")
             updateMap("${asicName}-${osName}", 'dirt', 'success')
+            println("[DEBUG] Map updated with success status")
+        }
+
+        if (shouldInstallationPerform("${asicName}-${osName}", 'custom_path', options.nodeReallocateTries)) {
+            println("[DEBUG] Custom path installation should perform")
+            try {
+                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN_CUSTOM_PATH) {
+                    timeout(time: "15", unit: "MINUTES") {
+                        installInventorPlugin(osName, options, true, true)
+                    }
+                }
+            
+                withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.BUILD_CACHE_CUSTOM_PATH) {                        
+                    timeout(time: "10", unit: "MINUTES") {
+                        try {
+                            buildRenderCache(osName, "2022", options, true, true)
+                        } catch (e) {
+                            throw e
+                        } finally {
+                            dir("scripts") {
+                                utils.renameFile(this, osName, "cache_building_results", "${options.stageName}_custom_path_${options.currentTry}")
+                                archiveArtifacts artifacts: "${options.stageName}_custom_path_${options.currentTry}/*.jpg", allowEmptyArchive: true
+                            }
+                        }
+                        dir("scripts") {
+                            String cacheImgPath = "./${options.stageName}_custom_path_${options.currentTry}/RESULT.jpg"
+                            if(!fileExists(cacheImgPath)){
+                                throw new ExpectedExceptionWrapper(NotificationConfiguration.NO_OUTPUT_IMAGE, new Exception(NotificationConfiguration.NO_OUTPUT_IMAGE))
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                println("[DEBUG] Error during custom_path intsallation: ${e}")
+                updateMap("${asicName}-${osName}", 'custom_path', 'failed')
+                println("[DEBUG] Map updated with failed status")
+                throw e
+            }
+
+            println("[DEBUG] Custom_path installation succeded")
+            updateMap("${asicName}-${osName}", 'custom_path', 'success')
             println("[DEBUG] Map updated with success status")
         }
 
