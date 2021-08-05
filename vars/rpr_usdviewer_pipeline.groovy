@@ -257,12 +257,16 @@ def executeTests(String osName, String asicName, Map options) {
             downloadFiles("/volume1/Assets/usd_inventor_autotests/", assetsDir)
         }
         println("[DEBUG] Before put if absent")
-        installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active'], 'custom_path': ['tries': 0, 'status': 'active']])
         println("[DEBUG] Printing map:")
         for (entry in installsPerformedMap.entrySet()) {
             println("    [DEBUG] KEY: ${entry.getKey()} | VALUE: ${entry.getValue()}")
         }
+        installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active'], 'custom_path': ['tries': 0, 'status': 'active']])
         println("[DEBUG] After put if absent")
+        println("[DEBUG] Printing map:")
+        for (entry in installsPerformedMap.entrySet()) {
+            println("    [DEBUG] KEY: ${entry.getKey()} | VALUE: ${entry.getValue()}")
+        }
 
         if (shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {
             println("[DEBUG] Dirt installation should perform")
