@@ -340,19 +340,20 @@ def executeBuildWindows(String osName, Map options) {
             } else if (options.buildType == "USD") {
                 options.win_build_name = "hdRpr-${options.pluginVersion}-USD-${osName}"
             }
-            archiveArtifacts "hdRpr*.tar.gz"
-            String buildName = "${options.win_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
+
+            String ARTIFACT_NAME = "${options.win_build_name}.tar.gz"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
                 dir("../..") {
-                    options.universeManager.sendToMINIO(options, osName, "..\\RadeonProRenderUSD\\build", buildName, false)
+                    options.universeManager.sendToMINIO(options, osName, "..\\RadeonProRenderUSD\\build", ARTIFACT_NAME, false)
                 }
             }
+
             bat "rename hdRpr* hdRpr_${osName}.tar.gz"
             makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -404,19 +405,21 @@ def executeBuildOSX(String osName, Map options) {
             } else if (options.buildType == "USD") {
                 options.osx_build_name = "hdRpr-${options.pluginVersion}-USD-macOS"
             }
-            archiveArtifacts "hdRpr*.tar.gz"
-            String buildName = "${options.osx_build_name}.tar.gz"
-            String pluginUrl = "${BUILD_URL}artifact/${buildName}"
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
+
+            String ARTIFACT_NAME = "${options.osx_build_name}.tar.gz"
+            sh "mv hdRpr*.tar.gz ${ARTIFACT_NAME}"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
                 dir("../..") {
-                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderUSD/build", buildName, false)
+                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderUSD/build", ARTIFACT_NAME, false)
                 }
             }
+
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
             makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
-            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, pluginUrl)
+            GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
         }
     }
 }
@@ -483,27 +486,18 @@ def executeBuildUnix(String osName, Map options) {
                 }
             }
             if (osName == "Ubuntu18") options.unix_build_name = options.ubuntu_build_name else options.unix_build_name = options.centos_build_name
-            
-            String buildName = "${options.unix_build_name}.tar.gz"
 
-            sh "mv hdRpr*.tar.gz ${buildName}"
-
-            String artifactURL
-
-            if (!options.storeOnNAS) {
-                artifactURL = "${BUILD_URL}artifact/${buildName}"
-                rtp nullAction: '1', parserName: 'HTML', stableText: """<h3><a href="${artifactURL}">[BUILD: ${BUILD_ID}] ${buildName}</a></h3>"""
-                archiveArtifacts("hdRpr*.tar.gz")
-            } else {
-                artifactURL = makeArchiveArtifacts(buildName)
-            }
+            String ARTIFACT_NAME = "${options.unix_build_name}.tar.gz"
+            sh "mv hdRpr*.tar.gz ${ARTIFACT_NAME}"
+            String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
             if (options.sendToUMS) {
                 // WARNING! call sendToMinio in build stage only from parent directory
                 dir("../..") {
-                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderUSD/build", buildName, false)
+                    options.universeManager.sendToMINIO(options, osName, "../RadeonProRenderUSD/build", ARTIFACT_NAME, false)
                 }
             }
+
             sh "mv hdRpr*.tar.gz hdRpr_${osName}.tar.gz"
             makeStash(includes: "hdRpr_${osName}.tar.gz", name: "app${osName}", preZip: false, storeOnNAS: options.storeOnNAS)
             GithubNotificator.updateStatus("Build", osName, "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
@@ -622,7 +616,6 @@ def executePreBuild(Map options) {
             Commit message: ${options.commitMessage}
             Commit SHA: ${options.commitSHA}
         """
-        currentBuild.description = "<b>Project branch:</b> ${options.projectBranch ?: env.BRANCH_NAME}<br/>"
 
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
             options.majorVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_MAJOR_VERSION "', '')
@@ -630,16 +623,13 @@ def executePreBuild(Map options) {
             options.patchVersion = version_read("${env.WORKSPACE}\\RadeonProRenderUSD\\cmake\\defaults\\Version.cmake", 'set(HD_RPR_PATCH_VERSION "', '')
             options.pluginVersion = "${options.majorVersion}.${options.minorVersion}.${options.patchVersion}"
 
-            currentBuild.description += "<b>Version:</b> ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}<br/>"
-            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-
             if (options['incrementVersion']) {
                 withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
                     GithubNotificator githubNotificator = new GithubNotificator(this, options)
                     githubNotificator.init(options)
                     options["githubNotificator"] = githubNotificator
                     githubNotificator.initPreBuild("${BUILD_URL}")
+                    options.projectBranchName = githubNotificator.branchName
                 }
                 
                 if (env.BRANCH_NAME == "develop" && options.commitAuthor != "radeonprorender") {
@@ -664,7 +654,14 @@ def executePreBuild(Map options) {
                     options['projectBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
                     println "[INFO] Project branch hash: ${options.projectBranch}"
                 }
+            } else {
+                options.projectBranchName = options.projectBranch
             }
+
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
+            currentBuild.description += "<b>Version:</b> ${options.majorVersion}.${options.minorVersion}.${options.patchVersion}<br/>"
+            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
         }
     }
 
@@ -751,11 +748,11 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                             def python3 = options.houdini_python3 ? "py3" : "py2.7"
                             def tool = "Houdini ${options.houdiniVersion} ${python3}"
                             bat """
-                                build_reports.bat ..\\summaryTestResults \"${utils.escapeCharsByUnicode(tool)}\" ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults \"${utils.escapeCharsByUnicode(tool)}\" ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         } else {
                             bat """
-                                build_reports.bat ..\\summaryTestResults USD ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
+                                build_reports.bat ..\\summaryTestResults USD ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
                             """
                         }
                         bat "get_status.bat ..\\summaryTestResults"

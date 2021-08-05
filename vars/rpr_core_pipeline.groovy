@@ -259,7 +259,7 @@ def executeTests(String osName, String asicName, Map options)
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "5", unit: "MINUTES") {
                 cleanWS(osName)
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_core.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
         }
 
@@ -396,6 +396,10 @@ def executeTests(String osName, String asicName, Map options)
                                 throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
                             }
                         }
+
+                        if (options.reportUpdater) {
+                            options.reportUpdater.updateReport(options.engine)
+                        }
                     }
                 }
             }
@@ -416,13 +420,20 @@ def executeTests(String osName, String asicName, Map options)
 
 
 def executeBuildWindows(Map options) {
+    String artifactURL
+
     withNotifications(title: "Windows", options: options, logUrl: "${BUILD_URL}/artifact/Build-Windows.log",
-        artifactUrl: "${BUILD_URL}/artifact/binWin64.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binWin64") {
-            zip archive: true, dir: ".", glob: "", zipFile: "binWin64.zip"
-            makeStash(includes: "binWin64.zip", name: 'WindowsSDK', preZip: false, storeOnNAS: options.storeOnNAS)
-            options.pluginWinSha = sha1 "binWin64.zip"
+            String ARTIFACT_NAME = "binWin64.zip"
+            bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${ARTIFACT_NAME}\" .")
+
+            artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+
+            makeStash(includes: ARTIFACT_NAME, name: 'WindowsSDK', preZip: false, storeOnNAS: options.storeOnNAS)
+            options.pluginWinSha = sha1 ARTIFACT_NAME
         }
+
         if (options.sendToUMS) {
             options.universeManager.sendToMINIO(options, "Windows", "..\\RadeonProRenderSDK\\RadeonProRender\\binWin64", "binWin64.zip", false)
         }
@@ -435,37 +446,58 @@ def executeBuildWindows(Map options) {
                 newBinaryFile: "RadeonProRenderSDK\\RadeonProRender\\binWin64\\Northstar64.dll", 
                 targetFileName: "Northstar64.dll", osName: "Windows", compareChecksum: true
             )
+
         }
     }
+
+    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
 }
 
 def executeBuildOSX(Map options) {
+    String artifactURL
+
     withNotifications(title: "OSX", options: options, logUrl: "${BUILD_URL}/artifact/Build-OSX.log",
-        artifactUrl: "${BUILD_URL}/artifact/binMacOS.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
+        configuration: NotificationConfiguration.BUILD_PACKAGE) {
         dir("RadeonProRenderSDK/RadeonProRender/binMacOS") {
-            zip archive: true, dir: ".", glob: "", zipFile: "binMacOS.zip"
-            makeStash(includes: "binMacOS.zip", name: "OSXSDK", preZip: false, storeOnNAS: options.storeOnNAS)
-            options.pluginOSXSha = sha1 "binMacOS.zip"
+            String ARTIFACT_NAME = "binMacOS.zip"
+            sh(script: 'zip -r' + " \"${ARTIFACT_NAME}\" .")
+
+            artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+
+            makeStash(includes: ARTIFACT_NAME, name: 'OSXSDK', preZip: false, storeOnNAS: options.storeOnNAS)
+            options.pluginWinSha = sha1 ARTIFACT_NAME
         }
+
         if (options.sendToUMS) {
             options.universeManager.sendToMINIO(options, "OSX", "../RadeonProRenderSDK/RadeonProRender/binWin64", "binMacOS.zip", false)
         }
     }
+
+    GithubNotificator.updateStatus("Build", "OSX", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
 }
 
 def executeBuildLinux(String osName, Map options) {
+    String artifactURL
+
     withNotifications(title: "${osName}", options: options, logUrl: "${BUILD_URL}/artifact/Build-${osName}.log",
         artifactUrl: "${BUILD_URL}/artifact/bin${osName}.zip", configuration: NotificationConfiguration.BUILD_PACKAGE) {
         // no artifacts in repo for ubuntu20
         dir("RadeonProRenderSDK/RadeonProRender/binUbuntu18") {
-            zip archive: true, dir: ".", glob: "", zipFile: "bin${osName}.zip"
-            makeStash(includes: "bin${osName}.zip", name: "${osName}SDK", preZip: false, storeOnNAS: options.storeOnNAS)
-            options.pluginUbuntuSha = sha1 "bin${osName}.zip"
+            String ARTIFACT_NAME = "bin${osName}.zip"
+            sh(script: 'zip -r' + " \"${ARTIFACT_NAME}\" .")
+
+            artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
+
+            makeStash(includes: ARTIFACT_NAME, name: '${osName}SDK', preZip: false, storeOnNAS: options.storeOnNAS)
+            options.pluginWinSha = sha1 ARTIFACT_NAME
         }
+
         if (options.sendToUMS) {
             options.universeManager.sendToMINIO(options, "${osName}", "../RadeonProRenderSDK/RadeonProRender/binUbuntu18", "bin${osName}.zip", false)
         }
     }
+
+    GithubNotificator.updateStatus("Build", "${osName}", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
 }
 
 def executeBuild(String osName, Map options)
@@ -504,6 +536,16 @@ def executeBuild(String osName, Map options)
     }
 }
 
+def getReportBuildArgs(Map options) {
+    String buildNumber = options.collectTrackedMetrics ? env.BUILD_NUMBER : ""
+
+    if (options["isPreBuilt"]) {
+        return """Core "PreBuilt" "PreBuilt" "PreBuilt" \"\" \"${buildNumber}\""""
+    } else {
+        return """Core ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\""""
+    }
+}
+
 def executePreBuild(Map options) {
     if (options['isPreBuilt']) {
         println "[INFO] Build was detected as prebuilt. Build stage will be skipped"
@@ -527,19 +569,19 @@ def executePreBuild(Map options) {
             options.commitMessage = bat (script: "git log --format=%%s -n 1", returnStdout: true).split('\r\n')[2].trim().replace('\n', '')
             options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
 
+            if (options.projectBranch != "") {
+                options.branchName = options.projectBranch
+            } else {
+                options.branchName = env.BRANCH_NAME
+            }
+            if (options.incrementVersion) {
+                options.branchName = "master"
+            }
+
             println("The last commit was written by ${options.commitAuthor}.")
             println("Commit message: ${options.commitMessage}")
             println("Commit SHA: ${options.commitSHA}")
-
-            if (options.projectBranch){
-                currentBuild.description = "<b>Project branch:</b> ${options.projectBranch}<br/>"
-            } else {
-                currentBuild.description = "<b>Project branch:</b> ${env.BRANCH_NAME}<br/>"
-            }
-
-            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
-            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
-            currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
+            println "Branch name: ${options.branchName}"
 
             if (env.BRANCH_NAME) {
                 withNotifications(title: "Jenkins build configuration", printMessage: true, options: options, configuration: NotificationConfiguration.CREATE_GITHUB_NOTIFICATOR) {
@@ -547,8 +589,16 @@ def executePreBuild(Map options) {
                     githubNotificator.init(options)
                     options["githubNotificator"] = githubNotificator
                     githubNotificator.initPreBuild("${BUILD_URL}")
+                    options.projectBranchName = githubNotificator.branchName
                 }
+            } else {
+                options.projectBranchName = options.projectBranch
             }
+
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
+            currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
+            currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
+            currentBuild.description += "<b>Commit SHA:</b> ${options.commitSHA}<br/>"
         }
     }
 
@@ -558,7 +608,7 @@ def executePreBuild(Map options) {
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_core') {
-            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_core.git")
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             dir ('jobs_launcher') {
                 options['jobsLauncherBranch'] = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
             }
@@ -595,6 +645,11 @@ def executePreBuild(Map options) {
             options.githubNotificator.initChecks(options, "${BUILD_URL}")
         }
     }
+
+    if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+        options.reportUpdater = new ReportUpdater(this, env, options)
+        options.reportUpdater.init(this.&getReportBuildArgs)
+    }
 }
 
 
@@ -604,7 +659,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
         if (options['executeTests'] && testResultList) {
 
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_core.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
 
             List lostStashes = []
@@ -649,9 +704,8 @@ def executeDeploy(Map options, List platformList, List testResultList)
             try {
                 String metricsRemoteDir = "/volume1/Baselines/TrackedMetrics/${env.JOB_NAME}"
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
-                def buildNumber = ""
+
                 if (options.collectTrackedMetrics) {
-                    buildNumber = env.BUILD_NUMBER
                     try {
                         dir("summaryTestResults/tracked_metrics") {
                             downloadFiles("${metricsRemoteDir}/", ".")
@@ -664,15 +718,6 @@ def executeDeploy(Map options, List platformList, List testResultList)
                 }
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
                     dir("jobs_launcher") {
-                        if (options.projectBranch != "") {
-                            options.branchName = options.projectBranch
-                        } else {
-                            options.branchName = env.BRANCH_NAME
-                        }
-                        if (options.incrementVersion) {
-                            options.branchName = "master"
-                        }
-
                         def retryInfo = JsonOutput.toJson(options.nodeRetry)
                         dir("..\\summaryTestResults") {
                             JSON jsonResponse = JSONSerializer.toJSON(retryInfo, new JsonConfig())
@@ -682,15 +727,7 @@ def executeDeploy(Map options, List platformList, List testResultList)
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
 
-                        if (options['isPreBuilt']) {
-                            bat """
-                                build_reports.bat ..\\summaryTestResults Core "PreBuilt" "PreBuilt" "PreBuilt" \"\" \"${buildNumber}\"
-                            """
-                        } else {
-                            bat """
-                                build_reports.bat ..\\summaryTestResults Core ${options.commitSHA} ${options.branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"\" \"${buildNumber}\"
-                            """
-                        }
+                        bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(options)}"
 
                         bat "get_status.bat ..\\summaryTestResults"
                     }
@@ -714,10 +751,14 @@ def executeDeploy(Map options, List platformList, List testResultList)
                     println("[ERROR] Failed to build test report.")
                     println(e.toString())
                     println(e.getMessage())
-                    if (!options.testDataSaved) {
+
+                    if (!options.testDataSaved && !options.storeOnNAS) {
                         try {
                             // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                                "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
+                                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                             options.testDataSaved = true 
                         } catch(e1) {
                             println("[WARNING] Failed to publish test data.")
@@ -776,7 +817,9 @@ def executeDeploy(Map options, List platformList, List testResultList)
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, performance_report.html, compare_report.html", \
+                    "Test Report", "Summary Report, Performance Report, Compare Report", options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
 
                 if (summaryTestResults) {
                     // add in description of status check information about tests statuses
@@ -905,6 +948,7 @@ def call(String projectBranch = "",
             }
 
             options << [projectBranch:projectBranch,
+                        testRepo:"git@github.com:luxteam/jobs_test_core.git",
                         testsBranch:testsBranch,
                         updateRefs:updateRefs,
                         enableNotifications:enableNotifications,
@@ -940,7 +984,8 @@ def call(String projectBranch = "",
                         customBuildLinkUbuntu18: customBuildLinkUbuntu18,
                         customBuildLinkUbuntu20: customBuildLinkUbuntu20,
                         customBuildLinkOSX: customBuildLinkOSX,
-                        storeOnNAS: true
+                        storeOnNAS: true,
+                        flexibleUpdates: true
                         ]
 
             if (sendToUMS) {
