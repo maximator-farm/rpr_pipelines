@@ -9,6 +9,8 @@ public class GithubNotificator {
     def context
     String repositoryUrl
     String commitSHA
+    // original name of branch (instead of PR-*)
+    String branchName
     GithubApiProvider githubApiProvider
     List buildCases = []
     List testCases = []
@@ -42,9 +44,12 @@ public class GithubNotificator {
     def init(Map options) {
         // check that it's PR or not
         if (context.env.CHANGE_URL) {
-            this.commitSHA = githubApiProvider.getPullRequest(context.env.CHANGE_URL)["head"]["sha"]
+            def pullRequestData = githubApiProvider.getPullRequest(context.env.CHANGE_URL)
+            this.commitSHA = pullRequestData["head"]["sha"]
+            this.branchName = pullRequestData["head"]["label"]
         } else {
             this.commitSHA = options["commitSHA"]
+            this.branchName = context.env.BRANCH_NAME
         }
         context.println("Github Notificator initialized for commit ${commitSHA} in repo ${repositoryUrl}")
     }
