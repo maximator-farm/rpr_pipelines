@@ -82,7 +82,7 @@ def getUninstallerPath() {
 
     if (fileExists(defaultUninstallerPath)) {
         return defaultUninstallerPath
-    } else if fileExists(customUninstallerPath)) {
+    } else if (fileExists(customUninstallerPath)) {
         return customUninstallerPath
     } else {
         return null
