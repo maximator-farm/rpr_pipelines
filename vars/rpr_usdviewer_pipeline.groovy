@@ -16,6 +16,8 @@ import universe.*
 
 @NonCPS
 def shouldInstallationPerform(String key, String installationType, Integer maxTries) {
+    println("[DEBUG] Trying to get value by key:")
+    println("[DEBUG] VALUE: ${installsPerformedMap.get(key.toString())}")
     // Cast key to string to avoid false comparison of equal GString and String
     def installationInfo = installsPerformedMap.get(key.toString())[installationType]
     println("[DEBUG] Installation info: ${installationInfo}")
@@ -258,6 +260,10 @@ def executeTests(String osName, String asicName, Map options) {
         }
         println("[DEBUG] Before put if absent")
         installsPerformedMap.putIfAbsent("${asicName}-${osName}", ['dirt': ['tries': 0, 'status': 'active'], 'custom_path': ['tries': 0, 'status': 'active']])
+        println("[DEBUG] Printing map:")
+        for (entry in installsPerformedMap.entrySet()) {
+            println("    [DEBUG] KEY: ${entry.getKey()} | VALUE: ${entry.getValue()}")
+        }
         println("[DEBUG] After put if absent")
 
         if (shouldInstallationPerform("${asicName}-${osName}", 'dirt', options.nodeReallocateTries)) {
