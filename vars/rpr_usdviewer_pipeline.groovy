@@ -11,7 +11,7 @@ import universe.*
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20USDViewer"
 @Field final String CUSTOM_INSTALL_PATH = "C:\\Users\\${env.USERNAME}\\testRPRViewer\\subdir"
-@Field final def installsPerformedMap = new ConcurrentHashMap()
+@Field final def installsPerformedMap
 
 
 @NonCPS
@@ -23,7 +23,7 @@ def shouldInstallationPerform(def key, String installationType, Integer maxTries
 }
 
 @NonCPS
-def updateMap(String keyName, String installationType, String status) {
+def updateMap(def keyName, String installationType, String status) {
     if (installationType == 'dirt') {
         installsPerformedMap.computeIfPresent(keyName, (BiFunction){ key, value -> ['dirt': ['tries': value['dirt']['tries'] + 1, 'status': status], 'custom_path': value['custom_path']] })
     } else if (installationType == 'custom_path') {
@@ -1095,6 +1095,7 @@ def call(String projectBranch = "",
          Boolean sendToUMS = true,
          String baselinePluginPath = "/volume1/CIS/bin-storage/RPRViewer_Setup.release-99.exe") {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
+    installsPerformedMap = new ConcurrentHashMap()
     Map options = [stage: "Init", problemMessageManager: problemMessageManager]
     try {
         withNotifications(options: options, configuration: NotificationConfiguration.INITIALIZATION) {
