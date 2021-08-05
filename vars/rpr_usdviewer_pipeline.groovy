@@ -15,11 +15,9 @@ import universe.*
 
 
 @NonCPS
-def shouldInstallationPerform(String key, String installationType, Integer maxTries) {
-    println("[DEBUG] Trying to get value by key:")
-    println("[DEBUG] VALUE: ${installsPerformedMap.get(key.toString())}")
+def shouldInstallationPerform(def key, String installationType, Integer maxTries) {
     // Cast key to string to avoid false comparison of equal GString and String
-    def installationInfo = installsPerformedMap.get(key.toString())[installationType]
+    def installationInfo = installsPerformedMap.get(key)[installationType]
     println("[DEBUG] Installation info: ${installationInfo}")
     return installationInfo['tries'] < maxTries && installationInfo['status'] != 'success'
 }
