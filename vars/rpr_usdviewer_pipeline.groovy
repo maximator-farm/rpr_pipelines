@@ -102,6 +102,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
         if (customPathInstall) {
             logPostfix = "custom_path"
             dirOption = "/DIR=\"${CUSTOM_INSTALL_PATH}\""
+            throw new Exception("[DEBUG] Exception while custom path install phase to check instalaltions retries")
         } else {
             logPostfix = "clean"
         }
