@@ -599,7 +599,7 @@ def executePreBuild(Map options) {
         options.testsPackage = "regression.json"
     // auto job
     } else if (env.BRANCH_NAME) {
-        options.testsPackage = "regression.json"
+        options.testsPackage = "pr.json"
     }
 
     options["branch_postfix"] = ""
