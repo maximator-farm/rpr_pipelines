@@ -10,6 +10,7 @@ import universe.*
 
 
 @Field final String PRODUCT_NAME = "AMD%20Radeon™%20ProRender%20for%20USDViewer"
+@Field final String CUSTOM_INSTALL_PATH = "C:\\Program Files\\testRPRViewer\\subdir"
 @Field final def installsPerformedMap
 
 
@@ -70,14 +71,14 @@ def getViewerTool(String osName, Map options) {
 
 def checkExistenceOfPlugin(String osName, Map options) {
     String defaultUninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
-    String customUninstallerPath = "C:\\Users\\${env.USERNAME}\\testRPRViewer\\subdir\\unins000.exe"
+    String customUninstallerPath = "${CUSTOM_INSTALL_PATH}\\unins000.exe"
 
     return fileExists(defaultUninstallerPath) || fileExists(customUninstallerPath)
 }
 
 def getUninstallerPath() {
     String defaultUninstallerPath = "C:\\Program Files\\RPRViewer\\unins000.exe"
-    String customUninstallerPath = "C:\\Users\\${env.USERNAME}\\testRPRViewer\\subdir\\unins000.exe"
+    String customUninstallerPath = "${CUSTOM_INSTALL_PATH}\\unins000.exe"
 
     if (fileExists(defaultUninstallerPath)) {
         return defaultUninstallerPath
@@ -98,7 +99,7 @@ def installInventorPlugin(String osName, Map options, Boolean cleanInstall=true,
     if (cleanInstall) {
         if (customPathInstall) {
             logPostfix = "custom_path"
-            dirOption = "/DIR=\"C:\\Users\\${env.USERNAME}\\testRPRViewer\\subdir\""
+            dirOption = "/DIR=\"${CUSTOM_INSTALL_PATH}\""
         } else {
             logPostfix = "clean"
         }
