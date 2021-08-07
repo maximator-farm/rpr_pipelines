@@ -229,7 +229,7 @@ def executeTests(String osName, String asicName, Map options) {
 
     try {
         if (env.NODE_NAME == "PC-TESTER-MILAN-WIN10") {
-            if (options.parsedTests.contains("CPU") || options.parsedTests.contains("weekly.2") || options.parsedTests.contains("regression.2")) {
+            if (options.tests.contains("CPU") || options.tests.contains("weekly.2") || options.tests.contains("regression.2")) {
                 throw new ExpectedExceptionWrapper(
                     "System shouldn't execute CPU group (render is too slow)", 
                     new Exception("System shouldn't execute CPU group (render is too slow)")
@@ -240,7 +240,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "10", unit: "MINUTES") {
                 cleanWS(osName)
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_inventor.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
         }
 
@@ -473,6 +473,10 @@ def executeTests(String osName, String asicName, Map options) {
                                 throw new ExpectedExceptionWrapper(errorMessage, new Exception(errorMessage))
                             }
                         }
+
+                        if (options.reportUpdater) {
+                            options.reportUpdater.updateReport(options.engine)
+                        }
                     }
                 }
             }
@@ -518,7 +522,7 @@ def executeBuildWindows(Map options) {
             """
         }
         String buildName = "RadeonProUSDViewer_Windows.zip"
-        withNotifications(title: "Windows", options: options, artifactUrl: "${BUILD_URL}/artifact/${buildName}", configuration: NotificationConfiguration.BUILD_PACKAGE_USD_VIEWER)  {
+        withNotifications(title: "Windows", options: options, configuration: NotificationConfiguration.BUILD_PACKAGE_USD_VIEWER)  {
             // delete files before zipping
             bat """
                 del RPRViewer\\binary\\windows\\inst\\pxrConfig.cmake
@@ -552,16 +556,16 @@ def executeBuildWindows(Map options) {
                         """
                     }
 
-                    archiveArtifacts artifacts: "RPRViewer_Setup*.exe", allowEmptyArchive: false
-                    String BUILD_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
-                    String pluginUrl = "${BUILD_URL}artifact/${BUILD_NAME}"
-                    rtp nullAction: "1", parserName: "HTML", stableText: """<h3><a href="${pluginUrl}">[BUILD: ${BUILD_ID}] ${BUILD_NAME}</a></h3>"""
+                    String ARTIFACT_NAME = options.branch_postfix ? "RPRViewer_Setup_${options.pluginVersion}_(${options.branch_postfix}).exe" : "RPRViewer_Setup.exe"
+                    String artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
                     /* due to the weight of the artifact, its sending is postponed until the logic for removing old builds is added to UMS
                     if (options.sendToUMS) {
                         // WARNING! call sendToMinio in build stage only from parent directory
                         options.universeManager.sendToMINIO(options, "Windows", "..", "RPRViewer_Setup.exe", false)
                     }*/
+
+                    GithubNotificator.updateStatus("Build", "Windows", "success", options, NotificationConfiguration.BUILD_SOURCE_CODE_END_MESSAGE, artifactURL)
                 }
             }
         }
@@ -664,6 +668,13 @@ def executeBuild(String osName, Map options) {
     }
 }
 
+def getReportBuildArgs(Map options) {
+    if (options["isPreBuilt"]) {
+        return """USDViewer "PreBuilt" "PreBuilt" "PreBuilt" """
+    } else {
+        return """USDViewer ${options.commitSHA} ${options.projectBranchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\""""
+    }
+}
 
 def executePreBuild(Map options) {
     if (options['isPreBuilt']) {
@@ -678,7 +689,7 @@ def executePreBuild(Map options) {
         options['executeTests'] = true
     // auto job (master)
     } else if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        options.testsPackage = "master.json"
+        options.testsPackage = "regression.json"
     // auto job
     } else if (env.BRANCH_NAME) {
         options.testsPackage = "pr.json"
@@ -703,10 +714,13 @@ def executePreBuild(Map options) {
         options.commitAuthor = utils.getBatOutput(this, "git show -s --format=%%an HEAD ")
         options.commitMessage = utils.getBatOutput(this, "git log --format=%%s -n 1").replace('\n', '')
         options.commitSHA = utils.getBatOutput(this, "git log --format=%%H -1 ")
+        options.branchName = env.BRANCH_NAME ?: options.projectBranch
+
         println """
             The last commit was written by ${options.commitAuthor}.
             Commit message: ${options.commitMessage}
             Commit SHA: ${options.commitSHA}
+            Branch name: ${options.branchName}
         """
 
         withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.INCREMENT_VERSION) {
@@ -718,6 +732,7 @@ def executePreBuild(Map options) {
                     githubNotificator.init(options)
                     options["githubNotificator"] = githubNotificator
                     githubNotificator.initPreBuild("${BUILD_URL}")
+                    options.projectBranchName = githubNotificator.branchName
                 }
                 
                 if (env.BRANCH_NAME == "master" && options.commitAuthor != "radeonprorender") {
@@ -768,9 +783,11 @@ def executePreBuild(Map options) {
                     }
 
                 }
+            } else {
+                options.projectBranchName = options.projectBranch
             }
 
-            currentBuild.description = "<b>Project branch:</b> ${options.projectBranch ?: env.BRANCH_NAME}<br/>"
+            currentBuild.description = "<b>Project branch:</b> ${options.projectBranchName}<br/>"
             currentBuild.description += "<b>Version:</b> ${options.pluginVersion}<br/>"
             currentBuild.description += "<b>Commit author:</b> ${options.commitAuthor}<br/>"
             currentBuild.description += "<b>Commit message:</b> ${options.commitMessage}<br/>"
@@ -785,7 +802,7 @@ def executePreBuild(Map options) {
 
     withNotifications(title: "Jenkins build configuration", options: options, configuration: NotificationConfiguration.CONFIGURE_TESTS) {
         dir('jobs_test_usdviewer') {
-            checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_inventor.git")
+            checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             options['testsBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
             dir('jobs_launcher') {
                 options['jobsLauncherBranch'] = utils.getBatOutput(this, "git log --format=%%H -1 ")
@@ -883,6 +900,11 @@ def executePreBuild(Map options) {
             options.universeManager.createBuilds(options)
         }
     }
+
+    if (options.flexibleUpdates && multiplatform_pipeline.shouldExecuteDelpoyStage(options)) {
+        options.reportUpdater = new ReportUpdater(this, env, options)
+        options.reportUpdater.init(this.&getReportBuildArgs)
+    }
 }
 
 
@@ -890,7 +912,7 @@ def executeDeploy(Map options, List platformList, List testResultList) {
     try {
         if (options['executeTests'] && testResultList) {
             withNotifications(title: "Building test report", options: options, startUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
-                checkoutScm(branchName: options.testsBranch, repositoryUrl: "git@github.com:luxteam/jobs_test_inventor.git")
+                checkoutScm(branchName: options.testsBranch, repositoryUrl: options.testRepo)
             }
 
             List lostStashes = []
@@ -921,7 +943,6 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                 println "[ERROR] Can't generate number of lost tests"
             }
             
-            String branchName = env.BRANCH_NAME ?: options.projectBranch
             try {
                 GithubNotificator.updateStatus("Deploy", "Building test report", "in_progress", options, NotificationConfiguration.BUILDING_REPORT, "${BUILD_URL}")
                 withEnv(["JOB_STARTED_TIME=${options.JOB_STARTED_TIME}", "BUILD_NAME=${options.baseBuildName}"]) {
@@ -933,15 +954,8 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         if (options.sendToUMS) {
                             options.universeManager.sendStubs(options, "..\\summaryTestResults\\lost_tests.json", "..\\summaryTestResults\\skipped_tests.json", "..\\summaryTestResults\\retry_info.json")
                         }
-                        if (options['isPreBuilt']) {
-                            bat """
-                                build_reports.bat ..\\summaryTestResults "USDViewer" "PreBuilt" "PreBuilt" "PreBuilt"
-                            """
-                        } else {
-                            bat """
-                                build_reports.bat ..\\summaryTestResults "USDViewer" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\"
-                            """
-                        }                        
+
+                        bat "build_reports.bat ..\\summaryTestResults ${getReportBuildArgs(options)}"
                     }
                 }
             } catch (e) {
@@ -953,10 +967,13 @@ def executeDeploy(Map options, List platformList, List testResultList) {
                         [ERROR] Failed to build test report.
                         ${e.toString()}
                     """
-                    if (!options.testDataSaved) {
+                    if (!options.testDataSaved && !options.storeOnNAS) {
                         try {
                             // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, compare_report.html", \
+                                "Test Report", "Summary Report, Compare Report", options.storeOnNAS, \
+                                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                             options.testDataSaved = true 
                         } catch (e1) {
                             println """
@@ -1026,7 +1043,10 @@ def executeDeploy(Map options, List platformList, List testResultList) {
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report", "Summary Report", options.storeOnNAS)
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, compare_report.html", \
+                    "Test Report", "Summary Report, Compare Report", options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName, "updatable": options.containsKey("reportUpdater")])
+
                 if (summaryTestResults) {
                     GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
                             "${NotificationConfiguration.REPORT_PUBLISHED} Results: passed - ${summaryTestResults.passed}, failed - ${summaryTestResults.failed}, error - ${summaryTestResults.error}.", "${BUILD_URL}/Test_20Report")
@@ -1055,7 +1075,7 @@ def call(String projectBranch = "",
          String tester_tag = 'USDViewer',
          String customBuildLinkWindows = "",
          String parallelExecutionTypeString = "TakeAllNodes",
-         Integer testCaseRetries = 2,
+         Integer testCaseRetries = 3,
          Boolean sendToUMS = true,
          String baselinePluginPath = "/volume1/CIS/bin-storage/RPRViewer_Setup.release-99.exe") {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -1072,6 +1092,7 @@ def call(String projectBranch = "",
                 Tests execution type: ${parallelExecutionTypeString}
             """
             options << [projectBranch: projectBranch,
+                        testRepo:"git@github.com:luxteam/jobs_test_inventor.git",
                         testsBranch: testsBranch,
                         updateRefs: updateRefs,
                         enableNotifications: enableNotifications,
@@ -1103,7 +1124,8 @@ def call(String projectBranch = "",
                         universePlatforms: convertPlatforms(platforms),
                         sendToUMS: sendToUMS,
                         baselinePluginPath: baselinePluginPath,
-                        storeOnNAS: true
+                        storeOnNAS: true,
+                        flexibleUpdates: true
                         ]
             if (sendToUMS) {
                 UniverseManager manager = UniverseManagerFactory.get(this, options, env, PRODUCT_NAME)

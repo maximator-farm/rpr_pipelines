@@ -165,14 +165,25 @@ def executeBuildWindows(String cmakeKeys, String osName, Map options)
         xcopy models RIF_Models\\models /s/y/i
     """
 
-    zip archive: true, dir: 'RIF_Dynamic', glob: '', zipFile: "${options.packageName}-${osName}-dynamic.zip"
-    zip archive: true, dir: 'RIF_Static_Runtime', glob: '', zipFile: "${options.packageName}-${osName}-static-runtime.zip"
-    zip archive: true, dir: 'RIF_Samples', glob: '', zipFile: "${options.samplesName}.zip"
-    zip archive: true, dir: 'RIF_Models', glob: '', zipFile: "${options.modelsName}.zip"
+    String DYNAMIC_PACKAGE_NAME = "${options.packageName}-${osName}-dynamic.zip"
+    bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${DYNAMIC_PACKAGE_NAME}\" \"RIF_Dynamic\"")
+    String dynamicPackageURL = makeArchiveArtifacts(name: DYNAMIC_PACKAGE_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
 
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}artifact/${options.packageName}-${osName}-dynamic.zip">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.zip">static-runtime</a> </h4>"""
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Samples: <a href="${BUILD_URL}artifact/${options.samplesName}.zip">${options.samplesName}.zip</a></h4>"""
-    rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>Models: <a href="${BUILD_URL}artifact/${options.modelsName}.zip">${options.modelsName}.zip</a></h4>"""
+    String STATIC_RUNTIME_PACKAGE_NAME = "${options.packageName}-${osName}-static-runtime.zip"
+    bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${STATIC_RUNTIME_PACKAGE_NAME}\" \"RIF_Static_Runtime\"")
+    String statisRuntimePackageURL = makeArchiveArtifacts(name: STATIC_RUNTIME_PACKAGE_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
+
+    String SAMPLES_NAME = "${options.samplesName}.zip"
+    bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${SAMPLES_NAME}\" \"RIF_Samples\"")
+    String samplesURL = makeArchiveArtifacts(name: DYNAMIC_PACKAGE_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
+
+    String MODELES_NAME = "${options.modelsName}.zip"
+    bat(script: '%CIS_TOOLS%\\7-Zip\\7z.exe a' + " \"${MODELES_NAME}\" \"RIF_Models\"")
+    String modelesURL = makeArchiveArtifacts(name: MODELES_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
+
+    rtp nullAction: "1", parserName: "HTML", stableText: """<h4>${osName}: <a href="${dynamicPackageURL}">dynamic</a> / <a href="${statisRuntimePackageURL}">static-runtime</a> </h4>"""
+    rtp nullAction: "1", parserName: "HTML", stableText: """<h4>Samples: <a href="${samplesURL}">${SAMPLES_NAME}</a></h4>"""
+    rtp nullAction: "1", parserName: "HTML", stableText: """<h4>Models: <a href="${modelesURL}">${MODELES_NAME}</a></h4>"""
 }
 
 def executeBuildUnix(String cmakeKeys, String osName, Map options, String compilerName="gcc")
@@ -234,29 +245,13 @@ def executeBuildUnix(String cmakeKeys, String osName, Map options, String compil
         tar cf ${options.packageName}-${osName}-static-runtime.tar ${options.packageName}-${osName}-static-runtime
     """
 
-    if (!options.storeOnNAS) {
-        archiveArtifacts "${options.packageName}-${osName}*.tar"
-        rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${BUILD_URL}artifact/${options.packageName}-${osName}-dynamic.tar">dynamic</a> / <a href="${BUILD_URL}/artifact/${options.packageName}-${osName}-static-runtime.tar">static-runtime</a> </h4>"""
-    } else {
-        String path = "/volume1/web/${env.JOB_NAME}/${env.BUILD_NUMBER}/Artifacts/"
-        makeStash(includes: "${options.packageName}-${osName}-dynamic.tar", name: "${options.packageName}-${osName}-dynamic.tar", allowEmpty: true, customLocation: path, preZip: false, postUnzip: false, storeOnNAS: true)
-        makeStash(includes: "${options.packageName}-${osName}-static-runtime.tar", name: "${options.packageName}-${osName}-static-runtime.tar", allowEmpty: true, customLocation: path, preZip: false, postUnzip: false, storeOnNAS: true)
+    String DYNAMIC_PACKAGE_NAME = "${options.packageName}-${osName}-dynamic.tar"
+    String dynamicPackageURL = makeArchiveArtifacts(name: DYNAMIC_PACKAGE_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
 
-        String artifactURL
+    String STATIC_RUNTIME_PACKAGE_NAME = "${options.packageName}-${osName}-static-runtime.tar"
+    String statisRuntimePackageURL = makeArchiveArtifacts(name: STATIC_RUNTIME_PACKAGE_NAME, storeOnNAS: options.storeOnNAS, createLink: false)
 
-        withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST"),
-            string(credentialsId: "nasURLFrontend", variable: "REMOTE_URL")]) {
-            artifactURL = "${REMOTE_URL}/${env.JOB_NAME}/${env.BUILD_NUMBER}/Artifacts/${options.packageName}-${osName}-dynamic.tar"
-        }
-
-        String authArtifactURL
-
-        withCredentials([usernamePassword(credentialsId: "reportsNAS", usernameVariable: "NAS_USER", passwordVariable: "NAS_PASSWORD")]) {
-            authArtifactURL = artifactURL.replace("https://", "https://${NAS_USER}:${NAS_PASSWORD}@")
-
-            rtp nullAction: '1', parserName: 'HTML', stableText: """<h4>${osName}: <a href="${authArtifactURL}">dynamic</a> / <a href="${authArtifactURL.replace('dynamic', 'static-runtime')}">static-runtime</a> </h4>"""
-        }
-    }
+    rtp nullAction: "1", parserName: "HTML", stableText: """<h4>${osName}: <a href="${dynamicPackageURL}">dynamic</a> / <a href="${statisRuntimePackageURL}">static-runtime</a> </h4>"""
 
     dir("${options.packageName}-${osName}-dynamic/bin/") {
         makeStash(includes: "*", excludes: '*.exp, *.pdb', name: "deploy-dynamic-${osName}", storeOnNAS: options.storeOnNAS)
