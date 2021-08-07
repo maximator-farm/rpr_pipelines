@@ -708,7 +708,7 @@ def executePreBuild(Map options) {
         options['executeTests'] = true
     // auto job (master)
     } else if (env.BRANCH_NAME && env.BRANCH_NAME == "master") {
-        options.testsPackage = "master.json"
+        options.testsPackage = "regression.json"
     // auto job
     } else if (env.BRANCH_NAME) {
         options.testsPackage = "pr.json"
