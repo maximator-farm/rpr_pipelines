@@ -528,6 +528,8 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(Map options) {
+    utils.reboot(this, "Windows")
+
     options.winBuildConfiguration.each() { winBuildConf ->
         options.winVisualStudioVersion.each() { winVSVersion ->
 
@@ -591,6 +593,8 @@ def executeBuildWindows(Map options) {
 
 
 def executeBuildAndroid(Map options) {
+    utils.reboot(this, "Windows")
+
     options.androidBuildConfiguration.each() { androidBuildConf ->
 
         println "Current build configuration: ${androidBuildConf}."
@@ -927,7 +931,9 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                     if (!options.testDataSaved) {
                         try {
                             // Save test data for access it manually anyway
-                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${game}", "Summary Report", options.storeOnNAS)
+                            utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, compare_report.html", \
+                                "Test Report ${game}", "Summary Report, Compare Report", options.storeOnNAS, \
+                                ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
                             options.testDataSaved = true 
                         } catch (e1) {
                             println """
@@ -997,7 +1003,9 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
             }
 
             withNotifications(title: "Building test report", options: options, configuration: NotificationConfiguration.PUBLISH_REPORT) {
-                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html", "Test Report ${game}", "Summary Report", options.storeOnNAS)
+                utils.publishReport(this, "${BUILD_URL}", "summaryTestResults", "summary_report.html, compare_report.html", \
+                    "Test Report ${game}", "Summary Report, Compare Report", options.storeOnNAS, \
+                    ["jenkinsBuildUrl": BUILD_URL, "jenkinsBuildName": currentBuild.displayName])
 
                 if (summaryTestResults) {
                     GithubNotificator.updateStatus("Deploy", "Building test report", "success", options,
@@ -1019,9 +1027,9 @@ def call(String projectBranch = "",
     String testsBranch = "master",
     String platforms = "Windows:AMD_RX5700XT;Android",
     String clientTag = "PC-TESTER-VILNIUS-WIN10",
-    String winBuildConfiguration = "release",
-    String winVisualStudioVersion = "2017,2019",
-    String winTestingBuildName = "release_vs2019",
+    String winBuildConfiguration = "release,debug",
+    String winVisualStudioVersion = "2019",
+    String winTestingBuildName = "debug_vs2019",
     String testsPackage = "General.json",
     String tests = "",
     String testerTag = "StreamingSDK",
@@ -1029,7 +1037,7 @@ def call(String projectBranch = "",
     Boolean clientCollectTraces = false,
     Boolean serverCollectTraces = false,
     String games = "Valorant",
-    String androidBuildConfiguration = "debug",
+    String androidBuildConfiguration = "release,debug",
     Boolean storeOnNAS = false
     )
 {
