@@ -58,21 +58,21 @@ def executeBuild(String osName, Map options) {
 def executePreBuild(Map options) {
     dir("RPRHybrid") {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+    
+        options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
+        commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
+        options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
+        println "The last commit was written by ${options.commitAuthor}."
+        println "Commit message: ${commitMessage}"
+        println "Commit SHA: ${options.commitSHA}"
+
+        options.commitMessage = []
+        commitMessage = commitMessage.split('\r\n')
+        commitMessage[2..commitMessage.size()-1].collect(options.commitMessage) { it.trim() }
+        options.commitMessage = options.commitMessage.join('\n')
+
+        println "Commit list message: ${options.commitMessage}"
     }
-
-    options.commitAuthor = bat (script: "git show -s --format=%%an HEAD ",returnStdout: true).split('\r\n')[2].trim()
-    commitMessage = bat (script: "git log --format=%%B -n 1", returnStdout: true)
-    options.commitSHA = bat (script: "git log --format=%%H -1 ", returnStdout: true).split('\r\n')[2].trim()
-    println "The last commit was written by ${options.commitAuthor}."
-    println "Commit message: ${commitMessage}"
-    println "Commit SHA: ${options.commitSHA}"
-
-    options.commitMessage = []
-    commitMessage = commitMessage.split('\r\n')
-    commitMessage[2..commitMessage.size()-1].collect(options.commitMessage) { it.trim() }
-    options.commitMessage = options.commitMessage.join('\n')
-
-    println "Commit list message: ${options.commitMessage}"
 }
 
 
