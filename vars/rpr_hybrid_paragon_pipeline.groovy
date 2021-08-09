@@ -20,14 +20,14 @@ def executeBuildWindows(Map options) {
     downloadFiles("/volume1/CIS/bin-storage/HybridParagon/BuildScripts/*", ".")
 
     // download textures
-    downloadFiles("/volume1/CIS/bin-storage/HybridParagon/textures/*", ".")
+    downloadFiles("/volume1/CIS/bin-storage/HybridParagon/textures/*", "textures")
 
     bat("mkdir PARAGON_BINARY")
 
-    bat("1_UpdateRPRHybrid.bat >> \"1_UpdateRPRHybrid.log\" 2>&1")
-    bat("2_CopyDLLsFromRPRtoUE.bat >> \"2_CopyDLLsFromRPRtoUE.log\" 2>&1")
-    bat("3_UpdateUE4.bat >> \"3_UpdateUE4.log\" 2>&1")
-    bat("4_PackageParagon.bat >> \"4_PackageParagon.log\" 2>&1")
+    bat("1_UpdateRPRHybrid.bat > \"1_UpdateRPRHybrid.log\" 2>&1")
+    bat("2_CopyDLLsFromRPRtoUE.bat > \"2_CopyDLLsFromRPRtoUE.log\" 2>&1")
+    bat("3_UpdateUE4.bat > \"3_UpdateUE4.log\" 2>&1")
+    bat("4_PackageParagon.bat > \"4_PackageParagon.log\" 2>&1")
 
     dir("PARAGON_BINARY\\WindowsNoEditor") {
         String ARTIFACT_NAME = "ParagonGame.zip"
