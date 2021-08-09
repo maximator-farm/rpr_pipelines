@@ -20,10 +20,10 @@ def call(String server_path, String local_path, String customKeys = "", String r
                 // See docs for more details: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#string-interpolation
                 if (isUnix()) {
                     status = sh(returnStatus: true, 
-                        script: '$CIS_TOOLS/downloadFilesSync.sh' + " \"${server_path}\" ${local_path} " + '$REMOTE_HOST' + " \"${customKeys}\"")
+                        script: '$CIS_TOOLS/downloadFilesSync.sh' + " \"${server_path}\" \"${local_path}\" " + '$REMOTE_HOST' + " \"${customKeys}\"")
                 } else {
                     status = bat(returnStatus: true, 
-                        script: '%CIS_TOOLS%\\downloadFilesSync.bat' + " \"${server_path}\" ${local_path} " + '%REMOTE_HOST%' + " \"${customKeys}\"")
+                        script: '%CIS_TOOLS%\\downloadFilesSync.bat' + " \"${server_path}\" \"${local_path}\" " + '%REMOTE_HOST%' + " \"${customKeys}\"")
                 }
             }
             if (status != 24) {
