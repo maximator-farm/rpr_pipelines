@@ -1,4 +1,6 @@
 def executeBuildWindows(Map options) {
+    bat("if exist \"PARAGON_BINARY\" rmdir /Q /S PARAGON_BINARY")
+
     dir("ParagonGame") {
         withCredentials([string(credentialsId: "artNasIP", variable: 'ART_NAS_IP')]) {
             String paragonGameURL = "svn://" + ART_NAS_IP + "/ParagonGame"
@@ -17,7 +19,7 @@ def executeBuildWindows(Map options) {
     // download build scripts
     downloadFiles("/volume1/CIS/bin-storage/ParagonBuildScripts/*", ".")
 
-    bat("if not exist \"PARAGON_BINARY\" mkdir PARAGON_BINARY")
+    bat("mkdir PARAGON_BINARY")
 
     bat("1_UpdateRPRHybrid.bat >> \"1_UpdateRPRHybrid.log\" 2>&1")
     bat("2_CopyDLLsFromRPRtoUE.bat >> \"2_CopyDLLsFromRPRtoUE.log\" 2>&1")
