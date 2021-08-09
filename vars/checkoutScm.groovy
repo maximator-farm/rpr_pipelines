@@ -116,9 +116,11 @@ def checkoutSubversionScm(Map checkoutOptions) {
     println "[INFO] SCM Class: ${checkoutOptions['checkoutClass']}"
     println "[INFO] Repository URL: ${checkoutOptions['repositoryUrl']}"
 
+    String credentialsId = checkoutOptions['credentialsId'] ?: ''
+
     checkout([$class: checkoutOptions['checkoutClass'], additionalCredentials: [], excludedCommitMessages: '', excludedRegions: '', excludedRevprop: '', 
                 excludedUsers: '', filterChangelog: false, ignoreDirPropChanges: false, includedRegions: '', 
-                locations: [[cancelProcessOnExternalsFail: true, credentialsId: '', depthOption: 'infinity', 
+                locations: [[cancelProcessOnExternalsFail: true, credentialsId: credentialsId, depthOption: 'infinity', 
                 ignoreExternalsOption: true, local: '.', remote: checkoutOptions['repositoryUrl']]], 
                 quietOperation: true, workspaceUpdater: [$class: 'UpdateUpdater']])
 }
