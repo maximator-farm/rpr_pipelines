@@ -270,6 +270,25 @@ def executeTests(String osName, String asicName, Map options)
             downloadFiles("/volume1/Assets/rpr_blender_autotests/", assets_dir)
         }
 
+        withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PREFERENCES) {
+            timeout(time: "5", unit: "MINUTES") {
+                String prefs_dir
+                switch (osName) {
+                    case "Windows":
+                        prefs_dir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Blender Foundation/Blender/${options.toolVersion}/config"
+                        break
+                    case "OSX":
+                        prefs_dir = "/Users/${env.USERNAME}/Library/Application Support/Blender/${options.toolVersion}/config"
+                        break
+                    default:
+                        prefs_dir = "/home/${env.USERNAME}/.config/blender/${options.toolVersion}/config"
+                        break
+                }
+
+                downloadFiles("/volume1/CIS/tools-preferences/Blender/${osName}/${options.toolVersion}", prefs_dir)
+            }
+        }
+
         try {
             Boolean newPluginInstalled = false
             withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.INSTALL_PLUGIN) {
