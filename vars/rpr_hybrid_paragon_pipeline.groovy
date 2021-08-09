@@ -17,7 +17,7 @@ def executeBuildWindows(Map options) {
     // download build scripts
     downloadFiles("/volume1/CIS/bin-storage/ParagonBuildScripts/*", ".")
 
-    bat("if not exists PARAGON_BINARY mkdir PARAGON_BINARY")
+    bat("if not exist \"PARAGON_BINARY\" mkdir PARAGON_BINARY")
 
     bat("1_UpdateRPRHybrid.bat >> \"1_UpdateRPRHybrid.log\" 2>&1")
     bat("2_CopyDLLsFromRPRtoUE.bat >> \"2_CopyDLLsFromRPRtoUE.log\" 2>&1")
@@ -82,10 +82,11 @@ def call(String projectBranch = "",
 
     multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, null, null,
                            [platforms:platforms,
-                            projectBranch:projectBranch,
                             PRJ_NAME:"HybridParagon",
                             projectRepo:"git@github.com:Radeon-Pro/RPRHybrid.git",
+                            projectBranch:projectBranch,
                             ueRepo:"git@github.com:Radeon-Pro/RPRHybrid-UE.git",
+                            ueBranch:ueBranch,
                             BUILDER_TAG:"BuilderU",
                             TESTER_TAG:"HybridTester",
                             executeBuild:true,
