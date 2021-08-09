@@ -278,7 +278,7 @@ def executeTests(String osName, String asicName, Map options)
                         prefs_dir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Blender Foundation/Blender/${options.toolVersion}/config"
                         break
                     case "OSX":
-                        prefs_dir = "/Users/${env.USERNAME}/Library/Application Support/Blender/${options.toolVersion}/config"
+                        prefs_dir = "/Users/${env.USER}/Library/Application Support/Blender/${options.toolVersion}/config"
                         break
                     default:
                         prefs_dir = "/home/${env.USERNAME}/.config/blender/${options.toolVersion}/config"
