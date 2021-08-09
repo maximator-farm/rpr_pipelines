@@ -1082,6 +1082,12 @@ def call(String projectBranch = "",
                 Android build configuration: ${androidBuildConfiguration}"
             """
 
+            Integer testTimeout = (clientCollectTraces || serverCollectTraces) ? 600 : 420
+
+            println """
+                Test stage timeout: ${testTimeout}
+            """
+
             options << [projectRepo: PROJECT_REPO,
                         projectBranch: projectBranch,
                         testsBranch: testsBranch,
@@ -1100,7 +1106,7 @@ def call(String projectBranch = "",
                         clientTag: clientTag,
                         BUILD_TIMEOUT: 15,
                         // update timeouts dynamicly based on number of cases + traces are generated or not
-                        TEST_TIMEOUT: 360,
+                        TEST_TIMEOUT: testTimeout,
                         DEPLOY_TIMEOUT: 90,
                         ADDITIONAL_XML_TIMEOUT: 15,
                         BUILDER_TAG: "BuilderStreamingSDK",
