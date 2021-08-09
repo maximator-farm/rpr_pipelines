@@ -17,7 +17,10 @@ def executeBuildWindows(Map options) {
     }
 
     // download build scripts
-    downloadFiles("/volume1/CIS/bin-storage/ParagonBuildScripts/*", ".")
+    downloadFiles("/volume1/CIS/bin-storage/HybridParagon/BuildScripts/*", ".")
+
+    // download textures
+    downloadFiles("/volume1/CIS/bin-storage/HybridParagon/textures/*", ".")
 
     bat("mkdir PARAGON_BINARY")
 
