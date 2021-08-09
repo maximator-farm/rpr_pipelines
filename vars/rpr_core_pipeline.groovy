@@ -488,7 +488,7 @@ def executeBuildLinux(String osName, Map options) {
 
             artifactURL = makeArchiveArtifacts(name: ARTIFACT_NAME, storeOnNAS: options.storeOnNAS)
 
-            makeStash(includes: ARTIFACT_NAME, name: '${osName}SDK', preZip: false, storeOnNAS: options.storeOnNAS)
+            makeStash(includes: ARTIFACT_NAME, name: "${osName}SDK", preZip: false, storeOnNAS: options.storeOnNAS)
             options.pluginWinSha = sha1 ARTIFACT_NAME
         }
 

@@ -607,7 +607,7 @@ def executePreBuild(Map options) {
         options.testsPackage = "regression.json"
     // auto job
     } else if (env.BRANCH_NAME) {
-        options.testsPackage = "pr.json"
+        options.testsPackage = "regression.json"
     }
 
     options["branch_postfix"] = ""
@@ -1026,7 +1026,7 @@ def call(String projectBranch = "",
                         BUILD_TIMEOUT: 120,
                         TEST_TIMEOUT: 195,
                         ADDITIONAL_XML_TIMEOUT: 15,
-                        NON_SPLITTED_PACKAGE_TIMEOUT: 150,
+                        NON_SPLITTED_PACKAGE_TIMEOUT: 180,
                         DEPLOY_TIMEOUT: 45,
                         tests: tests,
                         customBuildLinkWindows: customBuildLinkWindows,
