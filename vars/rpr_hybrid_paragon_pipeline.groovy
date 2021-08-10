@@ -58,7 +58,13 @@ def executeBuildWindows(Map options) {
     bat("1_UpdateRPRHybrid.bat > \"1_UpdateRPRHybrid.log\" 2>&1")
     bat("2_CopyDLLsFromRPRtoUE.bat > \"2_CopyDLLsFromRPRtoUE.log\" 2>&1")
     bat("3_UpdateUE4.bat > \"3_UpdateUE4.log\" 2>&1")
-    bat("4_PackageParagon.bat > \"4_PackageParagon.log\" 2>&1")
+
+    // the last script can return non-zero exit code, but build can be ok
+    try {
+        bat("4_PackageParagon.bat > \"4_PackageParagon.log\" 2>&1")
+    } catch (e) {
+        println(e.getMessage())
+    }
 
     dir("PARAGON_BINARY\\WindowsNoEditor") {
         String ARTIFACT_NAME = "ParagonGame.zip"
