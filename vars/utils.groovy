@@ -386,7 +386,7 @@ class utils {
         
         self.println("Try to download preferences from ${server_path}")
         try {
-            self.withCredentials([self.string(credentialsId: remoteHost, variable: 'nasURL')]) {
+            self.withCredentials([self.string(credentialsId: 'nasURL', variable: 'REMOTE_HOST')]) {
                 // Avoid warnings connected with using Groovy String interpolation with credentials
                 // See docs for more details: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#string-interpolation
                 if (self.isUnix()) {
