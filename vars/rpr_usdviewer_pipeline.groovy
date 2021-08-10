@@ -213,7 +213,7 @@ def executeTests(String osName, String asicName, Map options) {
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PREFERENCES) {
             timeout(time: "5", unit: "MINUTES") {
                 String prefs_dir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Autotesk/Inventor 2022"
-                downloadFiles("/volume1/CIS/tools-preferences/Inventor/${osName}/2022", prefs_dir)
+                utils.downloadPreferences("/volume1/CIS/tools-preferences/Inventor/${osName}/2022/*", prefs_dir)
                 bat "reg import \"${prefs_dir.replace("/mnt/c", "C:").replace("/", "\\")}\\inventor_window.reg\""
             }
         }
