@@ -285,7 +285,7 @@ def executeTests(String osName, String asicName, Map options)
                         break
                 }
 
-                utils.downloadPreferences("/volume1/CIS/tools-preferences/Blender/${osName}/${options.toolVersion}/*", prefs_dir)
+                utils.downloadPreferences(this, "/volume1/CIS/tools-preferences/Blender/${osName}/${options.toolVersion}/*", prefs_dir)
             }
         }
 
