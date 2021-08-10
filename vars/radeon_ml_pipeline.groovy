@@ -197,14 +197,14 @@ def executeBuildWindows(String osName, Map options) {
 
 
 def executeOSXBuildCommand(String osName, Map options, String buildType) {
-    
+
     sh """
         mkdir build-${buildType}
         cd build-${buildType}
-        cmake -DCMAKE_OSX_SYSROOT=$MACOS_SDK_10_15 -DCMAKE_buildType=${buildType} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
+        cmake -DCMAKE_OSX_SYSROOT=$MACOS_SDK -DCMAKE_buildType=${buildType} ${options.cmakeKeysOSX} .. >> ../${STAGE_NAME}_${buildType}.log 2>&1
         make -j 4 >> ../${STAGE_NAME}_${buildType}.log 2>&1
     """
-    
+
     sh """
         cd build-${buildType}
         mv bin ${buildType}
