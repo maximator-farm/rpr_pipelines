@@ -11,6 +11,7 @@ def executeUnitTestsCommand(String osName, Map options) {
             """
             break
         case 'OSX':
+        case 'MacOS_ARM':
             sh """
                 chmod +x tests
                 export LD_LIBRARY_PATH=\$PWD:\$LD_LIBRARY_PATH
@@ -373,6 +374,7 @@ def executeBuild(String osName, Map options) {
                     executeBuildWindows(osName, options)
                     break
                 case 'OSX':
+                case 'MacOS_ARM':
                     executeBuildOSX(osName, options)
                     break
                 default:
