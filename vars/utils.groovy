@@ -391,10 +391,10 @@ class utils {
                 // See docs for more details: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#string-interpolation
                 if (self.isUnix()) {
                     status = self.sh(returnStatus: true, 
-                        script: '$CIS_TOOLS/downloadFiles.sh' + " \"${server_path}\" \"${local_path.replace(" ", "\\\\\\ ")}\" " + '$REMOTE_HOST' + " \"${customKeys}\"")
+                        script: '$CIS_TOOLS/downloadFiles.sh' + " \"${server_path}\" \"${local_path.replace(" ", "\\\\\\ ")}\" " + '$REMOTE_HOST')
                 } else {
                     status = self.bat(returnStatus: true, 
-                        script: '%CIS_TOOLS%\\downloadFiles.bat' + " \"${server_path}\" \"${local_path.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%' + " \"${customKeys}\"")
+                        script: '%CIS_TOOLS%\\downloadFiles.bat' + " \"${server_path}\" \"${local_path.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
                 }
             }
             if (status != 24) {
