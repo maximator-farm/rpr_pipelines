@@ -1,5 +1,5 @@
-def getPreparedUE(String sha) {
-    String targetFolderPath = "${CIS_TOOLS}\\..\\PreparedUE\\${sha}"
+def getPreparedUE(Map options) {
+    String targetFolderPath = "${CIS_TOOLS}\\..\\PreparedUE\\${options.ueSha}"
 
     if (!fileExists(targetFolderPath)) {
         println("[INFO] UnrealEngine will be downloaded and configured")
@@ -14,7 +14,6 @@ def getPreparedUE(String sha) {
 
         bat """
             xcopy /s/y/i RPRHybrid-UE ${targetFolderPath} >> nul
-            rename RPRHybrid-UE ${sha}
         """
     } else {
         println("[INFO] Prepared UnrealEngine found. Copying it...")
@@ -32,6 +31,8 @@ def executeBuildWindows(Map options) {
     bat("if exist \"PARAGON_BINARY\" rmdir /Q /S PARAGON_BINARY")
     bat("if exist \"RPRHybrid-UE\" rmdir /Q /S RPRHybrid-UE")
 
+    utils.removeFile(this, "Windows", "*.log")
+
     dir("ParagonGame") {
         withCredentials([string(credentialsId: "artNasIP", variable: 'ART_NAS_IP')]) {
             String paragonGameURL = "svn://" + ART_NAS_IP + "/ParagonGame"
@@ -43,11 +44,11 @@ def executeBuildWindows(Map options) {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
     }
 
-    // copy prepared UE if it exists
-    getPreparedUE(options.ueSha)
-
     // download build scripts
     downloadFiles("/volume1/CIS/bin-storage/HybridParagon/BuildScripts/*", ".")
+
+    // copy prepared UE if it exists
+    getPreparedUE(options)
 
     // download textures
     downloadFiles("/volume1/CIS/bin-storage/HybridParagon/textures/*", "textures")
@@ -111,7 +112,12 @@ def executePreBuild(Map options) {
         options.githubApiProvider = new GithubApiProvider(this)
 
         // get UE hash to know it should be rebuilt or not
-        options.ueSha = options.githubApiProvider.getBranch(options.ueRepo, options.ueBranch)["commit"]["sha"]
+        options.ueSha = options.githubApiProvider.getBranch(
+            options.ueRepo.replace("git@github.com:", "https://github.com/"). replace(".git", ""),
+            options.ueBranch.replace("origin/", "")
+        )["commit"]["sha"]
+
+        println("UE target commit hash: ${options.ueSha}")
     }
 }
 
