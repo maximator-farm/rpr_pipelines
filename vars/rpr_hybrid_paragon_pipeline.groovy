@@ -1,5 +1,36 @@
+def getPreparedUE(String sha) {
+    String targetFolderPath = "${CIS_TOOLS}\\..\\PreparedUE\\${sha}"
+
+    if (!fileExists(targetFolderPath)) {
+        println("[INFO] UnrealEngine will be downloaded and configured")
+
+        dir("RPRHybrid-UE") {
+            checkoutScm(branchName: options.ueBranch, repositoryUrl: options.ueRepo)
+        }
+
+        bat("0_SetupUE.bat > \"0_SetupUE.log\" 2>&1")
+
+        println("[INFO] Prepared UE is ready. Saving it for use in future builds...")
+
+        bat """
+            xcopy /s/y/i RPRHybrid-UE ${targetFolderPath} >> nul
+            rename RPRHybrid-UE ${sha}
+        """
+    } else {
+        println("[INFO] Prepared UnrealEngine found. Copying it...")
+
+        dir("RPRHybrid-UE") {
+            bat """
+                xcopy /s/y/i ${targetFolderPath} . >> nul
+            """
+        }
+    }
+}
+
+
 def executeBuildWindows(Map options) {
     bat("if exist \"PARAGON_BINARY\" rmdir /Q /S PARAGON_BINARY")
+    bat("if exist \"RPRHybrid-UE\" rmdir /Q /S RPRHybrid-UE")
 
     dir("ParagonGame") {
         withCredentials([string(credentialsId: "artNasIP", variable: 'ART_NAS_IP')]) {
@@ -12,9 +43,8 @@ def executeBuildWindows(Map options) {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
     }
 
-    dir("RPRHybrid-UE") {
-        checkoutScm(branchName: options.ueBranch, repositoryUrl: options.ueRepo)
-    }
+    // copy prepared UE if it exists
+    getPreparedUE(options.ueSha)
 
     // download build scripts
     downloadFiles("/volume1/CIS/bin-storage/HybridParagon/BuildScripts/*", ".")
@@ -77,6 +107,11 @@ def executePreBuild(Map options) {
         options.commitMessage = options.commitMessage.join('\n')
 
         println "Commit list message: ${options.commitMessage}"
+
+        options.githubApiProvider = new GithubApiProvider(this)
+
+        // get UE hash to know it should be rebuilt or not
+        options.ueSha = options.githubApiProvider.getBranch(options.ueRepo, options.ueBranch)["commit"]["sha"]
     }
 }
 
