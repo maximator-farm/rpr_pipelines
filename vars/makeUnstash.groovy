@@ -22,22 +22,22 @@ def call(Map params) {
         Boolean debug = params["debug"]
 
         if (storeOnNAS) {
-            String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
+            String remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/".replace(" ", "?")
 
             int times = 3
             int retries = 0
             int status = 0
 
-            String zipName = "stash_${stashName}.zip"
+            String zipName = "stash_${stashName}.zip".replace(" ", "?")
 
             while (retries++ < times) {
                 try {
                     print("Try to make unstash №${retries}")
                     withCredentials([string(credentialsId: "nasURL", variable: "REMOTE_HOST")]) {
                         if (isUnix()) {
-                            status = sh(returnStatus: true, script: '$CIS_TOOLS/downloadFiles.sh' + " \"${remotePath.replace(" ", "\\\\\\ ")}\" . " + '$REMOTE_HOST')
+                            status = sh(returnStatus: true, script: '$CIS_TOOLS/downloadFiles.sh' + " \"${remotePath}\" . " + '$REMOTE_HOST')
                         } else {
-                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\downloadFiles.bat' + " \"${remotePath.replace(" ", "\\\\\\ ")}\" . " + '%REMOTE_HOST%')
+                            status = bat(returnStatus: true, script: '%CIS_TOOLS%\\downloadFiles.bat' + " \"${remotePath}\" . " + '%REMOTE_HOST%')
                         }
                     }
 
