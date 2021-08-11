@@ -63,14 +63,14 @@ def call(Map params) {
             String remotePath
 
             if (params["customLocation"]) {
-                remotePath = params["customLocation"]
+                remotePath = params["customLocation"].replace('(', '\\(').replace(')', '\\)').replace(" ", "?")
             } else {
-                remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/"
+                remotePath = "/volume1/Stashes/${env.JOB_NAME}/${env.BUILD_NUMBER}/${stashName}/".replace('(', '\\(').replace(')', '\\)').replace(" ", "?")
             }
 
             String stdout
 
-            String zipName = "stash_${stashName}.zip"
+            String zipName = "stash_${stashName}.zip".replace('(', '\\(').replace(')', '\\)').replace(" ", "?")
 
             if (preZip) {
                 if (isUnix()) {
@@ -101,15 +101,15 @@ def call(Map params) {
                         // Read more about it here: https://rsync.samba.org/FAQ.html#9
                         if (isUnix()) {
                             if (preZip) {
-                                status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " \"${zipName.replace('(', '\\(').replace(')', '\\)')}\" \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
+                                status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " \"${zipName}\" \"${remotePath}\" " + '$REMOTE_HOST')
                             } else {
-                                status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " ${includes.replace('(', '\\(').replace(')', '\\)')} \"${remotePath.replace(" ", "\\ ")}\" " + '$REMOTE_HOST')
+                                status = sh(returnStatus: true, script: '$CIS_TOOLS/uploadFiles.sh' + " ${includes.replace('(', '\\(').replace(')', '\\)').replace(" ", "?")}\" " + '$REMOTE_HOST')
                             }
                         } else {
                             if (preZip) {
-                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " \"${zipName.replace(" ", "\\ ").replace('(', '\\(').replace(')', '\\)')}\" \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
+                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " \"${zipName}\" \"${remotePath}\" " + '%REMOTE_HOST%')
                             } else {
-                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " ${includes.replace('(', '\\(').replace(')', '\\)')} \"${remotePath.replace(" ", "\\\\\\ ")}\" " + '%REMOTE_HOST%')
+                                status = bat(returnStatus: true, script: '%CIS_TOOLS%\\uploadFiles.bat' + " ${includes.replace('(', '\\(').replace(')', '\\)').replace(" ", "?")} \"${remotePath}\" " + '%REMOTE_HOST%')
                             }
                         }
                     }
@@ -142,7 +142,7 @@ def call(Map params) {
                         if (isUnix()) {
                             stdout = sh(returnStdout: true, script: '$CIS_TOOLS/unzipFile.sh $REMOTE_HOST' + " \"${remotePath}${zipName}\" \"${remotePath}\" true")
                         } else {
-                            stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " \"${remotePath.replace(" ", "\\ ")}${zipName.replace(" ", "\\ ")}\" \"${remotePath.replace(" ", "\\ ")}\" true")
+                            stdout = bat(returnStdout: true, script: '%CIS_TOOLS%\\unzipFile.bat %REMOTE_HOST%' + " \"${remotePath}${zipName}\" \"${remotePath}\" true")
                         }
                     }
 
