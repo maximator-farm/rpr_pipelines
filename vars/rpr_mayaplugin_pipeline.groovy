@@ -246,7 +246,7 @@ def executeTests(String osName, String asicName, Map options)
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PREFERENCES) {
             timeout(time: "5", unit: "MINUTES") {
                 String prefsDir = isUnix() ? "/Users/${env.USER}/Library/Preferences/Autodesk/Maya/${options.toolVersion}/prefs" : "/mnt/c/Users/${env.USERNAME}/Documents/Maya/${options.toolVersion}/prefs"
-                utils.downloadPreferences(this, "/volume1/CIS/tools-preferences/Maya/${osName}/${options.toolVersion}/prefs/*", prefsDir)
+                downloadFiles("/volume1/CIS/tools-preferences/Maya/${osName}/${options.toolVersion}/prefs/*", prefsDir, "", false)
             }
         }
 

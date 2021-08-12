@@ -381,34 +381,6 @@ class utils {
         }
     }
 
-    static def downloadPreferences(Object self, String server_path, String local_path) {
-        int status = 0
-        
-        self.println("Try to download preferences from ${server_path}")
-        try {
-            self.withCredentials([self.string(credentialsId: 'nasURL', variable: 'REMOTE_HOST')]) {
-                // Avoid warnings connected with using Groovy String interpolation with credentials
-                // See docs for more details: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#string-interpolation
-                if (self.isUnix()) {
-                    status = self.sh(returnStatus: true, 
-                        script: '$CIS_TOOLS/downloadFiles.sh' + " \"${server_path}\" \"${local_path}\" " + '$REMOTE_HOST')
-                } else {
-                    status = self.bat(returnStatus: true, 
-                        script: '%CIS_TOOLS%\\downloadFiles.bat' + " \"${server_path}\" \"${local_path.replace(" ", "\\ ")}\" " + '%REMOTE_HOST%')
-                }
-            }
-            if (status != 24) {
-                return
-            } else {
-                self.println("Partial transfer due to vanished source files")
-            }
-        } catch(e) {
-            self.println(e.toString())
-            self.println(e.getMessage())
-            self.println(e.getStackTrace())
-        }
-    }
-
     @NonCPS
     static def parseJson(Object self, String jsonString) {
         try {
