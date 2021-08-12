@@ -512,4 +512,8 @@ public class NotificationConfiguration {
 
     def static CORRUPTED_MSI_PLUGIN = "Corrupted .msi plugin."
 
+    def static SEGMENTATION_FAULT = "Segmentation fault detected."
+
+    def static FILES_CRASHED = "Corrupted autotest JSON files detected."
+
 }
