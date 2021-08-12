@@ -992,11 +992,20 @@ def call(String projectBranch = "",
 
             Boolean isPreBuilt = customBuildLinkWindows
 
+            Integer testStageTimeout
+
+            if (tests.contains("Material_Library") || testsPackage.contains("weekly")) {
+                testStageTimeout = 270
+            } else {
+                testStageTimeout = 195
+            }
+
             println """
                 Platforms: ${platforms}
                 Tests: ${tests}
                 Tests package: ${testsPackage}
                 Tests execution type: ${parallelExecutionTypeString}
+                Test stage timeout: ${testStageTimeout}
             """
             options << [projectBranch: projectBranch,
                         testRepo:"git@github.com:luxteam/jobs_test_inventor.git",
@@ -1016,7 +1025,7 @@ def call(String projectBranch = "",
                         DEPLOY_FOLDER: "USDViewer",
                         testsPackage: testsPackage,
                         BUILD_TIMEOUT: 120,
-                        TEST_TIMEOUT: 195,
+                        TEST_TIMEOUT: testStageTimeout,
                         ADDITIONAL_XML_TIMEOUT: 15,
                         NON_SPLITTED_PACKAGE_TIMEOUT: 180,
                         DEPLOY_TIMEOUT: 45,
