@@ -212,9 +212,9 @@ def executeTests(String osName, String asicName, Map options) {
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PREFERENCES) {
             timeout(time: "5", unit: "MINUTES") {
-                String prefs_dir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Autodesk/Inventor 2022"
-                utils.downloadPreferences(this, "/volume1/CIS/tools-preferences/Inventor/${osName}/2022/*", prefs_dir)
-                bat "reg import \"${prefs_dir.replace("/mnt/c", "C:").replace("/", "\\")}\\inventor_window.reg\""
+                String prefsDir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Autodesk/Inventor 2022"
+                utils.downloadPreferences(this, "/volume1/CIS/tools-preferences/Inventor/${osName}/2022/*", prefsDir)
+                bat "reg import \"${prefsDir.replace("/mnt/c", "C:").replace("/", "\\")}\\inventor_window.reg\""
             }
         }
 

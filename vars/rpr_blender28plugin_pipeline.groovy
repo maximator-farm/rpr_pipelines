@@ -272,20 +272,20 @@ def executeTests(String osName, String asicName, Map options)
 
         withNotifications(title: options["stageName"], options: options, configuration: NotificationConfiguration.DOWNLOAD_PREFERENCES) {
             timeout(time: "5", unit: "MINUTES") {
-                String prefs_dir
+                String prefsDir
                 switch (osName) {
                     case "Windows":
-                        prefs_dir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Blender Foundation/Blender/${options.toolVersion}/config"
+                        prefsDir = "/mnt/c/Users/${env.USERNAME}/AppData/Roaming/Blender Foundation/Blender/${options.toolVersion}/config"
                         break
                     case "OSX":
-                        prefs_dir = "/Users/${env.USER}/Library/Application Support/Blender/${options.toolVersion}/config"
+                        prefsDir = "/Users/${env.USER}/Library/Application Support/Blender/${options.toolVersion}/config"
                         break
                     default:
-                        prefs_dir = "/home/${env.USERNAME}/.config/blender/${options.toolVersion}/config"
+                        prefsDir = "/home/${env.USERNAME}/.config/blender/${options.toolVersion}/config"
                         break
                 }
 
-                utils.downloadPreferences(this, "/volume1/CIS/tools-preferences/Blender/${osName}/${options.toolVersion}/*", prefs_dir)
+                utils.downloadPreferences(this, "/volume1/CIS/tools-preferences/Blender/${osName}/${options.toolVersion}/*", prefsDir)
             }
         }
 
