@@ -1096,6 +1096,7 @@ def call(String projectRepo = "git@github.com:GPUOpen-LibrariesAndSDKs/BlenderUS
                         ADDITIONAL_XML_TIMEOUT:30,
                         NON_SPLITTED_PACKAGE_TIMEOUT:60,
                         DEPLOY_TIMEOUT:30,
+                        BUILDER_TAG:'BuilderHydra',
                         TESTER_TAG:tester_tag,
                         resX: resX,
                         resY: resY,
