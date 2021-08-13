@@ -7,8 +7,8 @@ import net.sf.json.JsonConfig
 import TestsExecutionType
 
 
-@Field final String PROJECT_REPO = "git@github.com:amfdev/StreamingSDK.git"
-@Field final String TESTS_REPO = "git@github.com:luxteam/jobs_test_streaming_sdk.git"
+@Field final String PROJECT_REPO = "git@github.amd.com:AMD-Radeon-Driver/drivers.git"
+@Field final String TESTS_REPO = "git@github.com:maximator-farm/jobs_test_streaming_sdk.git"
 
 
 String getClientLabels(Map options) {
@@ -1025,8 +1025,8 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
 def call(String projectBranch = "",
     String testsBranch = "master",
-    String platforms = "Windows:AMD_RX5700XT;Android",
-    String clientTag = "PC-TESTER-VILNIUS-WIN10",
+    String platforms = "Windows:gpuNavi23;Android",
+    String clientTag = "LuxSDK_Client",
     String winBuildConfiguration = "release,debug",
     String winVisualStudioVersion = "2019",
     String winTestingBuildName = "debug_vs2019",
