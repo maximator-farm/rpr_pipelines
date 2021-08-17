@@ -1025,7 +1025,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
 def call(String projectBranch = "",
     String testsBranch = "master",
-    String platforms = "Windows:gpuNavi23;Android",
+    String platforms = "Windows:Navi23;Android",
     String clientTag = "LuxSDK_Client",
     String winBuildConfiguration = "release,debug",
     String winVisualStudioVersion = "2019",
