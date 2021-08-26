@@ -1036,7 +1036,7 @@ def call(String projectBranch = "",
     Integer testCaseRetries = 2,
     Boolean clientCollectTraces = false,
     Boolean serverCollectTraces = false,
-    String games = "Valorant",
+    String games = "League of Legends",
     String androidBuildConfiguration = "release,debug",
     Boolean storeOnNAS = false
     )
