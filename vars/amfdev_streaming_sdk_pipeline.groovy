@@ -1104,7 +1104,7 @@ def call(String projectBranch = "",
                         nodeRetry: nodeRetry,
                         platforms: platforms,
                         clientTag: clientTag,
-                        BUILD_TIMEOUT: 15,
+                        BUILD_TIMEOUT: 50,
                         // update timeouts dynamicly based on number of cases + traces are generated or not
                         TEST_TIMEOUT: testTimeout,
                         DEPLOY_TIMEOUT: 90,
