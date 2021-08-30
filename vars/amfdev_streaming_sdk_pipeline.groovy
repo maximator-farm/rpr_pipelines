@@ -321,7 +321,7 @@ def executeTestsClient(String osName, String asicName, Map options) {
 
         utils.reboot(this, osName)
 
-        timeout(time: "10", unit: "MINUTES") {
+        timeout(time: "30", unit: "MINUTES") {
             cleanWS(osName)
             checkoutScm(branchName: options.testsBranch, repositoryUrl: TESTS_REPO)
         }
