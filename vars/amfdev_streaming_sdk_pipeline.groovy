@@ -1108,6 +1108,8 @@ def call(String projectBranch = "",
                         // update timeouts dynamicly based on number of cases + traces are generated or not
                         TEST_TIMEOUT: testTimeout,
                         DEPLOY_TIMEOUT: 90,
+                        PREBUILD_TIMEOUT: 60,
+                        BUILD_TIMEOUT: 60,
                         ADDITIONAL_XML_TIMEOUT: 15,
                         BUILDER_TAG: "BuilderStreamingSDK",
                         TESTER_TAG: testerTag,
