@@ -10,7 +10,7 @@ import TestsExecutionType
 @Field final String PROJECT_REPO = "git@github.amd.com:AMD-Radeon-Driver/drivers.git"
 @Field final String TESTS_REPO = "git@github.com:maximator-farm/jobs_test_streaming_sdk.git"
 @Field final def SPARSE_CHECKOUT_PATH = ['make', 'drivers/amf', 'drivers/dal', 'drivers/make']
-@Field final String PRIMARY_REPO_DIR = "drivers/amf/stable"
+@Field final String BASE_PROJECT_DIR = "drivers\\amf\\stable"
 
 
 String getClientLabels(Map options) {
@@ -562,7 +562,7 @@ def executeBuildWindows(Map options) {
                     throw Exception("Unsupported VS version")
             }
 
-            dir("StreamingSDK\\amf\\protected\\samples") {
+            dir("StreamingSDK\\${BASE_PROJECT_DIR}\\protected\\samples") {
                 GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
 
                 bat """
@@ -573,7 +573,7 @@ def executeBuildWindows(Map options) {
 
             String archiveUrl = ""
 
-            dir("StreamingSDK\\amf\\bin\\${winArtifactsDir}") {
+            dir("StreamingSDK\\${BASE_PROJECT_DIR}\\bin\\${winArtifactsDir}") {
                 String BUILD_NAME = "StreamingSDK_Windows_${winBuildName}.zip"
 
                 zip archive: true, zipFile: BUILD_NAME
