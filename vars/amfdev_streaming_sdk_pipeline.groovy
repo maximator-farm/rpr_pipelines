@@ -11,7 +11,8 @@ import TestsExecutionType
 @Field final String TESTS_REPO = "git@github.com:maximator-farm/jobs_test_streaming_sdk.git"
 @Field final def SPARSE_CHECKOUT_PATH = ['make', 'drivers/amf', 'drivers/dal', 'drivers/make']
 @Field final String BASE_PROJECT_DIR = "drivers\\amf\\stable"
-
+@Field final String AMF_SOLUTION = "AMF_All"
+@Field final String AMF_SOLUTION_DIR = "drivers\\amf\\stable\\build\\solution"
 
 String getClientLabels(Map options) {
     return "${options.osName} && ${options.TESTER_TAG} && ${options.CLIENT_TAG}"
@@ -547,13 +548,13 @@ def executeBuildWindows(Map options) {
 
             switch(winVSVersion) {
                 case "2017":
-                    buildSln = "StreamingSDK_vs2017.sln"
+                    buildSln = "${AMF_SOLUTION}_vs2017.sln"
 
                     msBuildPath = bat(script: "echo %VS2017_PATH%",returnStdout: true).split('\r\n')[2].trim()
                     
                     break
                 case "2019":
-                    buildSln = "StreamingSDK_vs2019.sln"
+                    buildSln = "${AMF_SOLUTION}_vs2019.sln"
 
                     msBuildPath = bat(script: "echo %VS2019_PATH%",returnStdout: true).split('\r\n')[2].trim()
 
@@ -562,7 +563,7 @@ def executeBuildWindows(Map options) {
                     throw Exception("Unsupported VS version")
             }
 
-            dir("StreamingSDK\\${BASE_PROJECT_DIR}\\protected\\samples") {
+            dir("StreamingSDK\\${AMF_SOLUTION_DIR}") {
                 GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
 
                 bat """
