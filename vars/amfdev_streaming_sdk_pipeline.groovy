@@ -13,6 +13,8 @@ import TestsExecutionType
 @Field final String BASE_PROJECT_DIR = "drivers\\amf\\stable"
 @Field final String AMF_SOLUTION = "AMF_All"
 @Field final String AMF_SOLUTION_DIR = "drivers\\amf\\stable\\build\\solution"
+@Field final String AMF_BOOTSTRAP_REPO = "C:\\AMFSDK"
+@Field final String AMF_THIRDPARTY = "drivers\\amf\\Thirdparty"
 
 String getClientLabels(Map options) {
     return "${options.osName} && ${options.TESTER_TAG} && ${options.CLIENT_TAG}"
@@ -565,7 +567,18 @@ def executeBuildWindows(Map options) {
 
             dir("StreamingSDK\\${AMF_SOLUTION_DIR}") {
                 GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
-
+                //coying over the ffmpeg file
+                bat """
+                    cd ../../../../../
+                    set Luxoft_Dir=%CD%
+                    cd ${AMF_BOOTSTRAP_REPO}
+                    git pull
+                    if NOT %ERRORLEVEL% EQU 0 git pull
+                    if NOT %ERRORLEVEL% EQU 0 echo WARNING: Issue with bootstrap repo
+                    rd /q /s %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg
+                    robocopy ${AMF_BOOTSTRAP_REPO}\\${AMF_THRIDPARTY}\\ffmpeg %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg /E
+                    if %ERRORLEVEL% LSS 4 set /a ERRORLEVEL=0
+                """
                 bat """
                     set msbuild="${msBuildPath}"
                     %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
