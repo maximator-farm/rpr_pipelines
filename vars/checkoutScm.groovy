@@ -77,7 +77,7 @@ def checkoutGitScm(Map checkoutOptions) {
             [$class: 'PruneStaleBranch'],
             [$class: 'CleanBeforeCheckout'],
             [$class: 'CleanCheckout', deleteUntrackedNestedRepositories: true],
-            [$class: 'CheckoutOption', timeout: 30],
+            [$class: 'CheckoutOption', timeout: 60],
             [$class: 'AuthorInChangelog'],
             [$class: 'CloneOption', timeout: 60, noTags: false],
             [$class: 'SubmoduleOption', disableSubmodules: checkoutOptions['disableSubmodules'],
