@@ -9,6 +9,7 @@ import TestsExecutionType
 
 @Field final String PROJECT_REPO = "git@github.amd.com:AMD-Radeon-Driver/drivers.git"
 @Field final String TESTS_REPO = "git@github.com:maximator-farm/jobs_test_streaming_sdk.git"
+@Field final def SPARSE_CHECKOUT_PATH = ['path1', 'path2']
 
 
 String getClientLabels(Map options) {
@@ -633,7 +634,7 @@ def executeBuild(String osName, Map options) {
     try {
         dir("StreamingSDK") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
-                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
+                checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, SparseCheckoutPaths: SPARSE_CHECKOUT_PATH)
             }
         }
 
@@ -686,7 +687,7 @@ def executePreBuild(Map options) {
     }
 
     if ("StreamingSDK") {
-        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
+        checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true, SparseCheckoutPaths: SPARSE_CHECKOUT_PATH)
     }
 
     if (options.projectBranch) {
