@@ -569,6 +569,7 @@ def executeBuildWindows(Map options) {
                 GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
                 //coying over the ffmpeg file
                 bat """
+                    echo Copying ffmpeg files
                     cd ../../../../../
                     set Luxoft_Dir=%CD%
                     cd ${AMF_BOOTSTRAP_REPO}
