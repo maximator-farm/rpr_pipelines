@@ -9,7 +9,7 @@ import TestsExecutionType
 
 @Field final String PROJECT_REPO = "git@github.amd.com:AMD-Radeon-Driver/drivers.git"
 @Field final String TESTS_REPO = "git@github.com:maximator-farm/jobs_test_streaming_sdk.git"
-@Field final def SPARSE_CHECKOUT_PATH = ['path1', 'path2']
+@Field final def SPARSE_CHECKOUT_PATH = ['drivers', 'make']
 
 
 String getClientLabels(Map options) {
