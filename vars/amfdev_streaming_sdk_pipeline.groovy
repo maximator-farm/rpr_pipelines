@@ -569,7 +569,7 @@ def executeBuildWindows(Map options) {
                 GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
                 //coying over the ffmpeg file
                 bat """
-                    echo Copying ffmpeg files
+                    echo Copying ffmpeg files...
                     cd ../../../../../
                     set Luxoft_Dir=%CD%
                     cd ${AMF_BOOTSTRAP_REPO}
@@ -577,7 +577,7 @@ def executeBuildWindows(Map options) {
                     if NOT %ERRORLEVEL% EQU 0 git pull
                     if NOT %ERRORLEVEL% EQU 0 echo WARNING: Issue with bootstrap repo
                     rd /q /s %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg
-                    robocopy ${AMF_BOOTSTRAP_REPO}\\${AMF_THRIDPARTY}\\ffmpeg %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg /E
+                    robocopy ${AMF_BOOTSTRAP_REPO}\\${AMF_THIRDPARTY}\\ffmpeg %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg /E
                     if %ERRORLEVEL% LSS 4 set /a ERRORLEVEL=0
                 """
                 bat """
