@@ -15,7 +15,7 @@ import TestsExecutionType
 @Field final String AMF_SOLUTION_DIR = "drivers\\amf\\stable\\build\\solution"
 @Field final String AMF_BOOTSTRAP_REPO = "C:\\AMFSDK"
 @Field final String AMF_THIRDPARTY = "drivers\\amf\\Thirdparty"
-
+//'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11'
 @Field final def LUXSDK_AUTOJOB_CONFIG = [
       'projectBranch' : '',
       'testsBranch' : 'master',
@@ -30,7 +30,7 @@ import TestsExecutionType
       'testCaseRetries' : 2,
       'clientCollectTraces' : false,
       'serverCollectTraces' : false,
-      'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11',
+      'games' : 'HeavenDX11',
       'androidBuildConfiguration' : 'release,debug',
       'storeOnNAS' : false
   ]
@@ -597,7 +597,7 @@ def executeBuildWindows(Map options) {
                     if NOT %ERRORLEVEL% EQU 0 git pull
                     if NOT %ERRORLEVEL% EQU 0 echo WARNING: Issue with bootstrap repo
                     rd /q /s %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg
-                    robocopy ${AMF_BOOTSTRAP_REPO}\\${AMF_THIRDPARTY}\\ffmpeg %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg /E /log:C:\\Users\\amd\\Desktop\\ffmpegcopy.log
+                    robocopy ${AMF_BOOTSTRAP_REPO}\\${AMF_THIRDPARTY}\\ffmpeg %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg /E /log:C:\\JN\\ffmpegcopy.log
                     if %ERRORLEVEL% LSS 4 set /a ERRORLEVEL=0
 
                     echo Building Project...
