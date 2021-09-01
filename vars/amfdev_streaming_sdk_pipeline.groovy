@@ -577,10 +577,11 @@ def executeBuildWindows(Map options) {
                     if NOT %ERRORLEVEL% EQU 0 git pull
                     if NOT %ERRORLEVEL% EQU 0 echo WARNING: Issue with bootstrap repo
                     rd /q /s %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg
-                    robocopy ${AMF_BOOTSTRAP_REPO}\\${AMF_THIRDPARTY}\\ffmpeg %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg /E
+                    robocopy ${AMF_BOOTSTRAP_REPO}\\${AMF_THIRDPARTY}\\ffmpeg %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg /E /log:C:\\Users\\amd\\Desktop\\ffmpegcopy.log
                     if %ERRORLEVEL% LSS 4 set /a ERRORLEVEL=0
-                """
-                bat """
+
+                    echo Building Project...
+                    cd %Luxoft_Dir%\\${AMF_SOLUTION_DIR}
                     set msbuild="${msBuildPath}"
                     %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
                 """
