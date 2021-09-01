@@ -16,6 +16,26 @@ import TestsExecutionType
 @Field final String AMF_BOOTSTRAP_REPO = "C:\\AMFSDK"
 @Field final String AMF_THIRDPARTY = "drivers\\amf\\Thirdparty"
 
+@Field final def LUXSDK_AUTOJOB_CONFIG = [
+      'projectBranch' : '',
+      'testsBranch' : 'master',
+      'platforms' : 'Windows:Navi23',
+      'clientTag' : 'LuxSDK_Client',
+      'winBuildConfiguration' : 'release',
+      'winVisualStudioVersion' : '2019',
+      'winTestingBuildName' : 'release_vs2019',
+      'testsPackage' : 'General.json',
+      'tests' : '',
+      'testerTag' : 'StreamingSDK',
+      'testCaseRetries' : 2,
+      'clientCollectTraces' : false,
+      'serverCollectTraces' : false,
+      'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11',
+      'androidBuildConfiguration' : 'release,debug',
+      'storeOnNAS' : false
+  ]
+
+
 String getClientLabels(Map options) {
     return "${options.osName} && ${options.TESTER_TAG} && ${options.CLIENT_TAG}"
 }
@@ -1041,22 +1061,22 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 }
 
 
-def call(String projectBranch = "",
-    String testsBranch = "master",
-    String platforms = "Windows:Navi23;Android",
-    String clientTag = "LuxSDK_Client",
-    String winBuildConfiguration = "release,debug",
-    String winVisualStudioVersion = "2019",
-    String winTestingBuildName = "debug_vs2019",
-    String testsPackage = "General.json",
-    String tests = "",
-    String testerTag = "StreamingSDK",
-    Integer testCaseRetries = 2,
-    Boolean clientCollectTraces = false,
-    Boolean serverCollectTraces = false,
-    String games = "League of Legends",
-    String androidBuildConfiguration = "release,debug",
-    Boolean storeOnNAS = false
+def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
+    String testsBranch = LUXSDK_AUTOJOB_CONFIG['testsBranch'],
+    String platforms = LUXSDK_AUTOJOB_CONFIG['platforms'],
+    String clientTag = LUXSDK_AUTOJOB_CONFIG['clientTag'],
+    String winBuildConfiguration = LUXSDK_AUTOJOB_CONFIG['winBuildConfiguration'],
+    String winVisualStudioVersion = LUXSDK_AUTOJOB_CONFIG['winVisualStudioVersion'],
+    String winTestingBuildName = LUXSDK_AUTOJOB_CONFIG['winTestingBuildName'],
+    String testsPackage = LUXSDK_AUTOJOB_CONFIG['testsPackage'],
+    String tests = LUXSDK_AUTOJOB_CONFIG['tests'],
+    String testerTag = LUXSDK_AUTOJOB_CONFIG['testerTag'],
+    Integer testCaseRetries = LUXSDK_AUTOJOB_CONFIG['testCaseRetries'],
+    Boolean clientCollectTraces = LUXSDK_AUTOJOB_CONFIG['clientCollectTraces'],
+    Boolean serverCollectTraces = LUXSDK_AUTOJOB_CONFIG['serverCollectTraces'],
+    String games = LUXSDK_AUTOJOB_CONFIG['games'],
+    String androidBuildConfiguration = LUXSDK_AUTOJOB_CONFIG['androidBuildConfiguration'],
+    Boolean storeOnNAS = LUXSDK_AUTOJOB_CONFIG['storeOnNAS']
     )
 {
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
