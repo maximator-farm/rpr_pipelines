@@ -528,6 +528,8 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(Map options) {
+    return
+
     utils.reboot(this, "Windows")
 
     options.winBuildConfiguration.each() { winBuildConf ->
@@ -684,6 +686,8 @@ def executePreBuild(Map options) {
             println "[INFO] ${env.BRANCH_NAME} branch was detected"
         }
     }
+
+    return
 
     if ("StreamingSDK") {
         checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo, disableSubmodules: true)
