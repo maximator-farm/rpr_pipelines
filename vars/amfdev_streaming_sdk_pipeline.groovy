@@ -32,8 +32,8 @@ Boolean isIdleClient(Map options) {
 def prepareTool(String osName, Map options) {
     switch(osName) {
         case "Windows":
-            makeUnstash(name: "ToolWindows", unzip: false, storeOnNAS: options.storeOnNAS)
-            unzip(zipFile: "${options.winTestingBuildName}.zip")
+            //makeUnstash(name: "ToolWindows", unzip: false, storeOnNAS: options.storeOnNAS)
+            //unzip(zipFile: "${options.winTestingBuildName}.zip")
             break
         case "OSX":
             println("Unsupported OS")
@@ -528,7 +528,6 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(Map options) {
-    return
 
     utils.reboot(this, "Windows")
 
@@ -633,6 +632,8 @@ def executeBuildAndroid(Map options) {
 
 def executeBuild(String osName, Map options) {
     try {
+        return
+
         dir("StreamingSDK") {
             withNotifications(title: osName, options: options, configuration: NotificationConfiguration.DOWNLOAD_SOURCE_CODE_REPO) {
                 checkoutScm(branchName: options.projectBranch, repositoryUrl: options.projectRepo)
