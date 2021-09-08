@@ -1158,7 +1158,8 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
                         games: games,
                         clientCollectTraces:clientCollectTraces,
                         serverCollectTraces:serverCollectTraces,
-                        storeOnNAS: storeOnNAS
+                        storeOnNAS: storeOnNAS,
+                        retriesForTestStage: 1
                         ]
         }
 
