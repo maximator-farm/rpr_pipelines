@@ -1120,7 +1120,8 @@ def call(String projectBranch = "",
                         games: games,
                         clientCollectTraces:clientCollectTraces,
                         serverCollectTraces:serverCollectTraces,
-                        storeOnNAS: storeOnNAS
+                        storeOnNAS: storeOnNAS,
+                        retriesForTestStage: 1
                         ]
         }
 
