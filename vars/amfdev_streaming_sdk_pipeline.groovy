@@ -344,7 +344,7 @@ def executeTestsClient(String osName, String asicName, Map options) {
 
     try {
 
-        utils.reboot(this, osName)
+        //utils.reboot(this, osName)
 
         timeout(time: "45", unit: "MINUTES") {
             cleanWS(osName)
@@ -421,7 +421,7 @@ def executeTestsServer(String osName, String asicName, Map options) {
 
     try {
 
-        utils.reboot(this, osName)
+        //utils.reboot(this, osName)
 
         withNotifications(title: options["stageName"], options: options, logUrl: "${BUILD_URL}", configuration: NotificationConfiguration.DOWNLOAD_TESTS_REPO) {
             timeout(time: "45", unit: "MINUTES") {
@@ -553,7 +553,7 @@ def executeTests(String osName, String asicName, Map options) {
 
 
 def executeBuildWindows(Map options) {
-    utils.reboot(this, "Windows")
+    //utils.reboot(this, "Windows")
 
     options.winBuildConfiguration.each() { winBuildConf ->
         options.winVisualStudioVersion.each() { winVSVersion ->
@@ -631,7 +631,7 @@ def executeBuildWindows(Map options) {
 
 
 def executeBuildAndroid(Map options) {
-    utils.reboot(this, "Windows")
+    //utils.reboot(this, "Windows")
 
     options.androidBuildConfiguration.each() { androidBuildConf ->
 
