@@ -25,7 +25,7 @@ import TestsExecutionType
       'winVisualStudioVersion' :    '2019',
       'winTestingBuildName' :       'release_vs2019',
       'androidBuildConfiguration' : 'release,debug',
-      'games' :                     'LoL,HeavenDX11',
+      'games' :                     'LoL,HeavenDX9,HeavenDX11,ValleyDX11',
       'testsPackage' :              'General.json',
       'tests' :                     'General',
       'testerTag' :                 'StreamingSDK',
