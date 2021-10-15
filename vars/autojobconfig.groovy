@@ -9,7 +9,7 @@ def call() {
       'winVisualStudioVersion' :    '2019',
       'winTestingBuildName' :       'release_vs2019',
       'androidBuildConfiguration' : 'release,debug',
-      'games' :                     'LoL,HeavenDX9,HeavenDX11,ValleyDX11,ValleyDX9',
+      'games' :                     'HeavenDX11',
       'testsPackage' :              'General.json',
       'tests' :                     'General',
       'testerTag' :                 'StreamingSDK',
@@ -18,6 +18,7 @@ def call() {
       'serverCollectTraces' :       false,
       'storeOnNAS' :                false
     ]
-    
+
+    //'LoL,HeavenDX9,HeavenDX11,ValleyDX11,ValleyDX9',
     return LUXSDK_AUTOJOB_CONFIG    
 }

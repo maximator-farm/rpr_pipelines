@@ -17,24 +17,7 @@ import static autojobconfig.getConfig as getConfig
 @Field final String AMF_BOOTSTRAP_REPO = "C:\\AMFSDK"
 @Field final String AMF_THIRDPARTY = "drivers\\amf\\Thirdparty"
 //'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11'
-@Field final def LUXSDK_AUTOJOB_CONFIG = [
-      'projectBranch' :             'origin/amd/stg/amf',
-      'testsBranch' :               'origin/master',
-      'platforms' :                 'Windows:Navi23',
-      'clientTag' :                 'LuxSDK_Client',
-      'winBuildConfiguration' :     'release',
-      'winVisualStudioVersion' :    '2019',
-      'winTestingBuildName' :       'release_vs2019',
-      'androidBuildConfiguration' : 'release,debug',
-      'games' :                     'HeavenDX11',
-      'testsPackage' :              'General.json',
-      'tests' :                     'General',
-      'testerTag' :                 'StreamingSDK',
-      'testCaseRetries' :           2,
-      'clientCollectTraces' :       false,
-      'serverCollectTraces' :       false,
-      'storeOnNAS' :                false
-]
+@Field final def LUXSDK_AUTOJOB_CONFIG = autojobconfig()
 
 
 String getClientLabels(Map options) {
