@@ -5,6 +5,7 @@ import net.sf.json.JSON
 import net.sf.json.JSONSerializer
 import net.sf.json.JsonConfig
 import TestsExecutionType
+import static autojobconfig.getConfig as getConfig
 
 
 @Field final String PROJECT_REPO = "git@github.amd.com:AMD-Radeon-Driver/drivers.git"
@@ -25,7 +26,7 @@ import TestsExecutionType
       'winVisualStudioVersion' :    '2019',
       'winTestingBuildName' :       'release_vs2019',
       'androidBuildConfiguration' : 'release,debug',
-      'games' :                     'LoL,HeavenDX9,HeavenDX11,ValleyDX11',
+      'games' :                     'HeavenDX11',
       'testsPackage' :              'General.json',
       'tests' :                     'General',
       'testerTag' :                 'StreamingSDK',
@@ -33,7 +34,7 @@ import TestsExecutionType
       'clientCollectTraces' :       false,
       'serverCollectTraces' :       false,
       'storeOnNAS' :                false
-  ]
+]
 
 
 String getClientLabels(Map options) {
