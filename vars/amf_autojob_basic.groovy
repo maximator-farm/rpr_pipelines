@@ -20,6 +20,6 @@ def call() {
       'storeOnNAS' :                false
     ]
 
-    print(str(LUXSDK_AUTOJOB_CONFIG))
-        
+    print(LUXSDK_AUTOJOB_CONFIG)
+    return LUXSDK_AUTOJOB_CONFIG    
 }
