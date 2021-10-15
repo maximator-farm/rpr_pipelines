@@ -17,7 +17,7 @@ import static autojobconfig.getConfig as getConfig
 @Field final String AMF_BOOTSTRAP_REPO = "C:\\AMFSDK"
 @Field final String AMF_THIRDPARTY = "drivers\\amf\\Thirdparty"
 //'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11'
-@Field final def LUXSDK_AUTOJOB_CONFIG = aLUXSDK_AUTOJOB_CONFIG = [
+@Field final def LUXSDK_AUTOJOB_CONFIG = [
       'projectBranch' :             'origin/amd/stg/amf',
       'testsBranch' :               'origin/master',
       'platforms' :                 'Windows:Navi23',
@@ -26,7 +26,7 @@ import static autojobconfig.getConfig as getConfig
       'winVisualStudioVersion' :    '2019',
       'winTestingBuildName' :       'release_vs2019',
       'androidBuildConfiguration' : 'release,debug',
-      'games' :                     'HeavenDX11',
+      'games' :                     'LoL,HeavenDX9,HeavenDX11,ValleyDX11,ValleyDX9',
       'testsPackage' :              'General.json',
       'tests' :                     'General',
       'testerTag' :                 'StreamingSDK',
