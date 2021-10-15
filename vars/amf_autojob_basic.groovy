@@ -1,3 +1,3 @@
-import static autojobconfig.getConfig as getConfig
+import static vars.autojobconfig.getConfig as getConfig
 
 print(getConfig())
