@@ -1063,6 +1063,7 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
     Boolean storeOnNAS = LUXSDK_AUTOJOB_CONFIG['storeOnNAS']
     )
 {
+    print('IN SCRIPT')
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
     options["stage"] = "Init"
