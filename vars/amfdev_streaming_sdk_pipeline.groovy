@@ -16,6 +16,7 @@ import static autojobconfig.getConfig as getConfig
 @Field final String AMF_SOLUTION_DIR = "drivers\\amf\\stable\\build\\solution"
 @Field final String AMF_BOOTSTRAP_REPO = "C:\\AMFSDK"
 @Field final String AMF_THIRDPARTY = "drivers\\amf\\Thirdparty"
+@Field final String BINARY_PACKAGER_SCRIPT = "drivers\\amf\\stable\\build\\package\\packageStreaming_SDK_Binaries.bat"
 //'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11'
 @Field final def LUXSDK_AUTOJOB_CONFIG = [
       'projectBranch' :             'origin/amd/stg/amf',
@@ -594,6 +595,7 @@ def executeBuildWindows(Map options) {
                     cd ../../../../../
                     set Luxoft_Dir=%CD%
                     cd ${AMF_BOOTSTRAP_REPO}
+                    git checkout amd/stg/amf
                     git pull
                     if NOT %ERRORLEVEL% EQU 0 git pull
                     if NOT %ERRORLEVEL% EQU 0 echo WARNING: Issue with bootstrap repo
@@ -605,6 +607,10 @@ def executeBuildWindows(Map options) {
                     cd %Luxoft_Dir%\\${AMF_SOLUTION_DIR}
                     set msbuild="${msBuildPath}"
                     %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
+
+                    set bin_packager=%Luxoft_Dir%\\${BINARY_PACKAGER_SCRIPT}
+                    echo Making AMF public archives...
+                    if exist %bin_packager% %bin_packager% /nobuild
                 """
             }
 
