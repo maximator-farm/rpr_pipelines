@@ -27,7 +27,7 @@ import static autojobconfig.getConfig as getConfig
       'winVisualStudioVersion' :    '2019',
       'winTestingBuildName' :       'release_vs2019',
       'androidBuildConfiguration' : 'release,debug',
-      'games' :                     'HeavenDX9,HeavenDX11',
+      'games' :                     'HeavenDX9,HeavenDX11,LoL',
       'testsPackage' :              'General.json',
       'tests' :                     'General',
       'testerTag' :                 'StreamingSDK',
