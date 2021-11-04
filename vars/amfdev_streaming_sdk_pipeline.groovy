@@ -17,6 +17,7 @@ import static autojobconfig.getConfig as getConfig
 @Field final String AMF_BOOTSTRAP_REPO = "C:\\AMFSDK"
 @Field final String AMF_THIRDPARTY = "drivers\\amf\\Thirdparty"
 @Field final String BINARY_PACKAGER_SCRIPT = "drivers\\amf\\stable\\build\\package\\packageStreaming_SDK_Binaries.bat"
+@Field final String BUILD_PACKAGE_PATH = "drivers\\amf\\stable\\build\\package"
 //'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11'
 @Field final def LUXSDK_AUTOJOB_CONFIG = [
       'projectBranch' :             'origin/amd/stg/amf',
@@ -608,9 +609,9 @@ def executeBuildWindows(Map options) {
                     set msbuild="${msBuildPath}"
                     %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
 
-                    set bin_packager=%Luxoft_Dir%\\${BINARY_PACKAGER_SCRIPT}
+                    set package_dir=%Luxoft_Dir%\\${BUILD_PACKAGE_PATH}
                     echo Making AMF public archives...
-                    if exist %bin_packager% %bin_packager% /nobuild
+                    if exist %package_dir% cd %package_dir% && packageStreaming_SDK_Binaries.bat /nobuild
                 """
             }
 
