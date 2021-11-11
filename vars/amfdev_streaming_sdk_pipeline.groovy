@@ -610,8 +610,10 @@ def executeBuildWindows(Map options) {
                     %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
 
                     set package_dir=%Luxoft_Dir%\\${BUILD_PACKAGE_PATH}
-                    echo Making AMF public archives...
-                    if exist %package_dir% cd %package_dir% && packageStreaming_SDK_Binaries.bat /nobuild
+                    echo ==^>^> RUNNING BINARY PACKAGER
+                    if exist %package_dir% cd %package_dir% && %package_dir%\\packageStreaming_SDK_Binaries.bat /nobuild
+                    echo ==^>^> END BINARY PACKAGER
+
                 """
             }
 
