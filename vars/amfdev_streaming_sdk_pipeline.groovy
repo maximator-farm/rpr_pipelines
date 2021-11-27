@@ -11,13 +11,19 @@ import static autojobconfig.getConfig as getConfig
 @Field final String PROJECT_REPO = "git@github.amd.com:AMD-Radeon-Driver/drivers.git"
 @Field final String TESTS_REPO = "git@github.com:maximator-farm/jobs_test_streaming_sdk.git"
 @Field final def SPARSE_CHECKOUT_PATH = ['make', 'drivers/amf', 'drivers/dal', 'drivers/make']
+
 @Field final String BASE_PROJECT_DIR = "drivers\\amf\\stable"
 @Field final String AMF_SOLUTION = "AMF_All"
 @Field final String AMF_SOLUTION_DIR = "drivers\\amf\\stable\\build\\solution"
 @Field final String AMF_BOOTSTRAP_REPO = "C:\\AMFSDK"
 @Field final String AMF_THIRDPARTY = "drivers\\amf\\Thirdparty"
+
 @Field final String BINARY_PACKAGER_SCRIPT = "drivers\\amf\\stable\\build\\package\\packageStreaming_SDK_Binaries.bat"
 @Field final String BUILD_PACKAGE_PATH = "drivers\\amf\\stable\\build\\package"
+
+@Field final String JENKINS_PYTHON = "C:\\AMF-Jenkins\\python\\Python37\\python"
+@Field final String LUXSDK_POST_TO_CONFLUENCE_SCRIPT = "C:\\AMF-Jenkins\\4test\\tests-amf\\post_to_confluence_luxsdk.py"
+@Field final String LUXSDK_POST_TO_CONFLUENCE_ENABLE="0"
 //'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11'
 @Field final def LUXSDK_AUTOJOB_CONFIG = [
       'projectBranch' :             'origin/amd/stg/amf',
@@ -965,6 +971,23 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                         bat """
                             build_reports.bat ..\\summaryTestResults "StreamingSDK" ${options.commitSHA} ${branchName} \"${utils.escapeCharsByUnicode(options.commitMessage)}\" \"${utils.escapeCharsByUnicode(game)}\"
                         """
+
+
+                        dir("..\\summaryTestResults") {
+                           bat """
+                                echo =============== LUXOFT SDK POST TO CONFLUENCE =======================
+                                if ${LUXSDK_POST_TO_CONFLUENCE_ENABLE} EQU 0 echo ENABLE IS NOT SET & goto :done
+                                
+                                set temp_script=C:\\Users\\amd\\Desktop\\post_to_confluence_luxsdk.py
+                                set script=${LUXSDK_POST_TO_CONFLUENCE_SCRIPT}
+                                if not exist %script% set script=%temp_script%
+                                ${JENKINS_PYTHON} %script% -commit ${options.commitSHA} -buildurl ${env.BUILD_URL} -game ${utils.escapeCharsByUnicode(game)} -json_file summary_report.json
+
+                                :done
+
+                                echo =============== END LUXOFT SDK POST TO CONFLUENCE =======================
+                            """ 
+                        }
                     }
                 }
             } catch (e) {
