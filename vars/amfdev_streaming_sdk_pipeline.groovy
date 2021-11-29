@@ -23,7 +23,7 @@ import static autojobconfig.getConfig as getConfig
 
 @Field final String JENKINS_PYTHON = "C:\\AMF-Jenkins\\python\\Python37\\python"
 @Field final String LUXSDK_POST_TO_CONFLUENCE_SCRIPT = "C:\\AMF-Jenkins\\4test\\tests-amf\\post_to_confluence_luxsdk.py"
-@Field final String LUXSDK_POST_TO_CONFLUENCE_ENABLE="0"
+@Field String LUXSDK_POST_TO_CONFLUENCE_ENABLE="0"
 //'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11'
 @Field final def LUXSDK_AUTOJOB_CONFIG = [
       'projectBranch' :             'origin/amd/stg/amf',
@@ -41,7 +41,8 @@ import static autojobconfig.getConfig as getConfig
       'testCaseRetries' :           2,
       'clientCollectTraces' :       false,
       'serverCollectTraces' :       false,
-      'storeOnNAS' :                false
+      'storeOnNAS' :                false,
+      'post_to_confluence':         true
 ]
 
 
@@ -1116,10 +1117,18 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
     Boolean serverCollectTraces = LUXSDK_AUTOJOB_CONFIG['serverCollectTraces'],
     String games = LUXSDK_AUTOJOB_CONFIG['games'],
     String androidBuildConfiguration = LUXSDK_AUTOJOB_CONFIG['androidBuildConfiguration'],
-    Boolean storeOnNAS = LUXSDK_AUTOJOB_CONFIG['storeOnNAS']
+    Boolean storeOnNAS = LUXSDK_AUTOJOB_CONFIG['storeOnNAS'],
+    Boolean post_to_confluence = LUXSDK_AUTOJOB_CONFIG['post_to_confluence']
     )
 {
     print('IN SCRIPT')
+    if (post_to_confluence):
+        print('Will be posting to confluence')
+        LUXSDK_POST_TO_CONFLUENCE_ENABLE = '1'
+    else:
+        print('Will NOT be posting to confluence')
+        LUXSDK_POST_TO_CONFLUENCE_ENABLE = '0'
+
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
     options["stage"] = "Init"
