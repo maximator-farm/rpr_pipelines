@@ -979,6 +979,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 echo =============== LUXOFT SDK POST TO CONFLUENCE =======================
                                 echo PRINTING REQUIRED ARGUMENTS
                                 echo COMMIT HASH: ${options.commitSHA}
+                                echo COMMIT AUTHOR: ${options.commitAuthor}
                                 echo BUILD URL: -buildurl ${env.BUILD_URL}
                                 echo GAME: -game ${utils.escapeCharsByUnicode(game)}
                                 echo JSON FILE: %CD%\\summary_report.json
@@ -989,7 +990,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 set temp_script=C:\\Users\\amd\\Desktop\\post_to_confluence_luxsdk.py
                                 set script=${LUXSDK_POST_TO_CONFLUENCE_SCRIPT}
                                 if not exist %script% set script=%temp_script%
-                                ${JENKINS_PYTHON} %script% -commit ${options.commitSHA} -buildurl ${env.BUILD_URL} -game ${utils.escapeCharsByUnicode(game)} -json_file summary_report.json
+                                ${JENKINS_PYTHON} %script% -commit ${options.commitSHA} -author "${options.commitAuthor}" -buildurl ${env.BUILD_URL} -game ${utils.escapeCharsByUnicode(game)} -json_file summary_report.json
 
                                 :done
 
