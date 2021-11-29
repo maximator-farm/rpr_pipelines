@@ -1122,12 +1122,14 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
     )
 {
     print('IN SCRIPT')
-    if (post_to_confluence):
+    if (post_to_confluence){
         print('Will be posting to confluence')
         LUXSDK_POST_TO_CONFLUENCE_ENABLE = '1'
-    else:
+    } else {
         print('Will NOT be posting to confluence')
         LUXSDK_POST_TO_CONFLUENCE_ENABLE = '0'
+    }
+
 
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
     Map options = [:]
