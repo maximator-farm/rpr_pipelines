@@ -976,8 +976,15 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                         dir("..\\summaryTestResults") {
                            bat """
                                 echo =============== LUXOFT SDK POST TO CONFLUENCE =======================
+                                echo PRINTING REQUIRED ARGUMENTS
+                                echo COMMIT HASH: ${options.commitSHA}
+                                echo BUILD URL: -buildurl ${env.BUILD_URL}
+                                echo GAME: -game ${utils.escapeCharsByUnicode(game)}
+                                echo JSON FILE: %CD%\\summary_report.json
+                                if not exist summary_report.json echo JSON FILE does not exist
+
                                 if ${LUXSDK_POST_TO_CONFLUENCE_ENABLE} EQU 0 echo ENABLE IS NOT SET & goto :done
-                                
+
                                 set temp_script=C:\\Users\\amd\\Desktop\\post_to_confluence_luxsdk.py
                                 set script=${LUXSDK_POST_TO_CONFLUENCE_SCRIPT}
                                 if not exist %script% set script=%temp_script%
