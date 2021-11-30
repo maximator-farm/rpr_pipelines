@@ -990,7 +990,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 if (fileExists('summary_report.json')){
                                     cmd_args = ['-commit', options.commitSHA, 
                                                 '-author', "\"${options.commitAuthor}\"", 
-                                                '-buildurl', env.BUILD_URL, 
+                                                '-buildurl', env.BUILD_URL.replace("%","%%"), 
                                                 '-game', game,
                                                 '-json_file', 'summary_report.json']
 
