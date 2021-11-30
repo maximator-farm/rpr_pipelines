@@ -990,7 +990,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 if (fileExists('summary_report.json')){
                                     cmd_args = ['-commit', options.commitSHA, 
                                                 '-author', "\"${options.commitAuthor}\"", 
-                                                '-buildurl', env.BUILD_URL.replace("%","%%"), 
+                                                '-buildurl', env.BUILD_URL, 
                                                 '-game', game,
                                                 '-json_file', 'summary_report.json']
 
@@ -999,7 +999,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                         cmd_arg_str = cmd_arg_str + ' ' + cmd_args[i]
                                     }
 
-                                    bat "${JENKINS_PYTHON} ${LUXSDK_POST_TO_CONFLUENCE_SCRIPT} " + cmd_arg_str
+                                    bat ${JENKINS_PYTHON} ${LUXSDK_POST_TO_CONFLUENCE_SCRIPT}+' ' + cmd_arg_str
 
                                 } else {
                                     print('Cannot run post to confluence because summary_report.json does not exist')
