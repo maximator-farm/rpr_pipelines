@@ -23,7 +23,7 @@ import static autojobconfig.getConfig as getConfig
 
 @Field final String JENKINS_PYTHON = "C:\\AMF-Jenkins\\python\\Python37\\python"
 @Field final String LUXSDK_POST_TO_CONFLUENCE_SCRIPT = "C:\\AMF-Jenkins\\4test\\tests-amf\\post_to_confluence_luxsdk.py"
-@Field String LUXSDK_POST_TO_CONFLUENCE_ENABLE="0"
+@Field Boolean LUXSDK_POST_TO_CONFLUENCE_ENABLE = true
 //'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11'
 @Field final def LUXSDK_AUTOJOB_CONFIG = [
       'projectBranch' :             'origin/amd/stg/amf',
@@ -863,6 +863,8 @@ def executePreBuild(Map options) {
 }
 
 
+
+
 def executeDeploy(Map options, List platformList, List testResultList, String game) {
     try {
 
@@ -975,27 +977,38 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
 
                         dir("..\\summaryTestResults") {
-                           bat """
-                                echo =============== LUXOFT SDK POST TO CONFLUENCE =======================
-                                echo PRINTING REQUIRED ARGUMENTS
-                                echo COMMIT HASH: ${options.commitSHA}
-                                echo COMMIT AUTHOR: ${options.commitAuthor}
-                                echo BUILD URL: -buildurl ${env.BUILD_URL}
-                                echo GAME: -game ${utils.escapeCharsByUnicode(game)}
-                                echo JSON FILE: %CD%\\summary_report.json
-                                if not exist summary_report.json echo JSON FILE does not exist
+                            if (LUXSDK_POST_TO_CONFLUENCE_ENABLE){
+                                print('=============== LUXOFT SDK POST TO CONFLUENCE =======================')
+                                //we should be posting to confluence
+                                print('Printing Required Arguments:')
+                                print("COMMIT HASH: ${options.commitSHA}")
+                                print("COMMIT AUTHOR: ${options.commitAuthor}")
+                                print("BUILD URL: ${env.BUILD_URL}")
+                                print("GAME: ${game}")
+                                print("SUMMARY JSON FILE: summary_report.json")
 
-                                if ${LUXSDK_POST_TO_CONFLUENCE_ENABLE} EQU 0 echo ENABLE IS NOT SET & goto :done
+                                if (fileExists('summary_report.json')){
+                                    cmd_args = ['-commit', options.commitSHA, 
+                                                '-author', "\"${options.commitAuthor}\"", 
+                                                '-buildurl', env.BUILD_URL.replace("%","%%"), 
+                                                '-game', game,
+                                                '-json_file', 'summary_report.json']
 
-                                set temp_script=C:\\Users\\amd\\Desktop\\post_to_confluence_luxsdk.py
-                                set script=${LUXSDK_POST_TO_CONFLUENCE_SCRIPT}
-                                if not exist %script% set script=%temp_script%
-                                ${JENKINS_PYTHON} %script% -commit ${options.commitSHA} -author "${options.commitAuthor}" -buildurl ${env.BUILD_URL} -game ${utils.escapeCharsByUnicode(game)} -json_file summary_report.json
+                                    cmd_arg_str = cmd_args[0]
+                                    for(int i=1; i<cmd_args.size(); i++){
+                                        cmd_arg_str = cmd_arg_str + ' ' + cmd_args[i]
+                                    }
 
-                                :done
+                                    bat "${LUXSDK_POST_TO_CONFLUENCE_SCRIPT}" + cmd_arg_str
 
-                                echo =============== END LUXOFT SDK POST TO CONFLUENCE =======================
-                            """ 
+                                } else {
+                                    print('Cannot run post to confluence because summary_report.json does not exist')
+                                }
+
+                                print('=============== END LUXOFT SDK POST TO CONFLUENCE =======================') 
+                            } else {
+                                print('POSTING TO CONFLUENCE IS DISABLED')
+                            }
                         }
                     }
                 }
@@ -1124,11 +1137,9 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
 {
     print('IN SCRIPT')
     if (post_to_confluence){
-        print('Will be posting to confluence')
-        LUXSDK_POST_TO_CONFLUENCE_ENABLE = '1'
+        LUXSDK_POST_TO_CONFLUENCE_ENABLE = true
     } else {
-        print('Will NOT be posting to confluence')
-        LUXSDK_POST_TO_CONFLUENCE_ENABLE = '0'
+        LUXSDK_POST_TO_CONFLUENCE_ENABLE = false
     }
 
 
