@@ -999,7 +999,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                         cmd_arg_str = cmd_arg_str + ' ' + cmd_args[i]
                                     }
 
-                                    bat "${LUXSDK_POST_TO_CONFLUENCE_SCRIPT}" + cmd_arg_str
+                                    bat "${LUXSDK_POST_TO_CONFLUENCE_SCRIPT} " + cmd_arg_str
 
                                 } else {
                                     print('Cannot run post to confluence because summary_report.json does not exist')
