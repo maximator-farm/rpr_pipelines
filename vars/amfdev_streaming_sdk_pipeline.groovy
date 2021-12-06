@@ -617,11 +617,11 @@ def executeBuildWindows(Map options) {
                     %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
 
                     set package_dir=%Luxoft_Dir%\\${BUILD_PACKAGE_PATH}
-                    echo ==^>^> RUNNING BINARY PACKAGER
+                    echo =========== RUNNING BINARY PACKAGER ===========
                     if exist %package_dir% cd %package_dir% && %package_dir%\\packageStreaming_SDK_Binaries.bat /nobuild
-                    echo ==^>^> END BINARY PACKAGER
-
+                    echo =========== END BINARY PACKAGER ===============
                 """
+
             }
 
             String archiveUrl = ""
@@ -1227,6 +1227,8 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
+
+        print('In POST PART')
     } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString())
