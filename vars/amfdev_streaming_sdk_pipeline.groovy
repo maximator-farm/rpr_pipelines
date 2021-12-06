@@ -1227,8 +1227,6 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
-
-        print('In POST PART')
     } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString())
