@@ -22,7 +22,7 @@ import static autojobconfig.getConfig as getConfig
 @Field final String BUILD_PACKAGE_PATH = "drivers\\amf\\stable\\build\\package"
 
 @Field final String JENKINS_PYTHON = "C:\\AMF-Jenkins\\python\\Python37\\python"
-@Field final String LUXSDK_POST_TO_CONFLUENCE_SCRIPT = "C:\\AMF-Jenkins\\4test\\tests-amf\\post_to_confluence_luxsdk.py"
+@Field final String LUXSDK_POST_TO_CONFLUENCE_SCRIPT = "C:\\AMF-Jenkins\\4test\\tests-amf\\confluence_and_email_scripts\\post_to_confluence_luxsdk.py"
 @Field Boolean LUXSDK_POST_TO_CONFLUENCE_ENABLE = true
 //'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11'
 @Field final def LUXSDK_AUTOJOB_CONFIG = [
