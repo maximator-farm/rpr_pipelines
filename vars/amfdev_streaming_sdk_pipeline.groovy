@@ -1148,14 +1148,17 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 }
 
 def stash_results_for_jenkins(){
-    script {
-            def now = new Date()
-            cur_time = now.format("yyyyMMddHHmm", TimeZone.getTimeZone('UTC'))
-        }
-
+    
     //copy temp files
-    bat """robocopy ${TEMP_RESULTS_DIR} ${RESULTS_DIR}\\${cur_time} /E """
-    //remove temp directory 
+    bat """
+        for /F "usebackq tokens=1,2 delims==" %%i in (`wmic os get LocalDateTime /VALUE 2^>NUL`) do if '.%%i.'=='.LocalDateTime.' set ldt=%%j
+        REM set ldt=%ldt:~0,4%-%ldt:~4,2%-%ldt:~6,2% %ldt:~8,2%:%ldt:~10,2%:%ldt:~12,6%
+        set LOCALTESTTIME=%ldt:~0,4%%ldt:~4,2%%ldt:~6,2%%ldt:~8,2%%ldt:~10,2%
+
+        robocopy ${TEMP_RESULTS_DIR} ${RESULTS_DIR}\\%LOCALTESTTIME% /E
+
+    """
+    //remove temp directory
     bat """if exist ${TEMP_RESULTS_DIR} rd /q /s ${TEMP_RESULTS_DIR} """
 }
 
