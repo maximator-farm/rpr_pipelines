@@ -21,9 +21,12 @@ import static autojobconfig.getConfig as getConfig
 @Field final String BINARY_PACKAGER_SCRIPT = "drivers\\amf\\stable\\build\\package\\packageStreaming_SDK_Binaries.bat"
 @Field final String BUILD_PACKAGE_PATH = "drivers\\amf\\stable\\build\\package"
 
-@Field final String JENKINS_PYTHON = "C:\\AMF-Jenkins\\python\\Python37\\python"
-@Field final String LUXSDK_POST_TO_CONFLUENCE_SCRIPT = "C:\\AMF-Jenkins\\4test\\tests-amf\\confluence_and_email_scripts\\post_to_confluence_luxsdk.py"
+@Field final AMF_JENKINS_DIR = "C:\\AMF-Jenkins"
+@Field final String JENKINS_PYTHON = AMF_JENKINS_DIR+"\\python\\Python37\\python"
+@Field final String LUXSDK_POST_TO_CONFLUENCE_SCRIPT = AMF_JENKINS_DIR+"\\4test\\tests-amf\\confluence_and_email_scripts\\post_to_confluence_luxsdk.py"
 @Field Boolean LUXSDK_POST_TO_CONFLUENCE_ENABLE = true
+@Field String RESULTS_DIR = AMF_JENKINS_DIR + '\\4test\\tests-amf\\_results'
+@Field String TEMP_RESULTS_DIR = RESULTS_DIR + '\\_temp'
 //'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11'
 @Field final def LUXSDK_AUTOJOB_CONFIG = [
       'projectBranch' :             'origin/amd/stg/amf',
@@ -1009,6 +1012,35 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                             } else {
                                 print('POSTING TO CONFLUENCE IS DISABLED')
                             }
+
+                            print('Moving to temporary location...')
+                            //we move the summary report to the temp folder in AMF-Jenkins
+
+                            //first check if the directory exists and make the directory if not
+                            bat """if NOT exist ${TEMP_RESULTS_DIR} mkdir ${TEMP_RESULTS_DIR}"""
+
+                            info_folder = TEMP_RESULTS_DIR + "\\info"
+
+                            //add info to the info folder
+                            bat """
+                                if exist ${info_folder} goto :done_info
+                                mkdir ${info_folder}
+                                echo ${env.BUILD_URL.replace("%","%%")} > ${info_folder}\\build_url.txt
+                                echo ${options.commitSHA} > ${info_folder}\\commit_hash.txt
+                                echo ${options.commitAuthor} > ${info_folder}\\commit_author.txt
+                                :done_info
+                            """
+
+                            games_folder = TEMP_RESULTS_DIR + "\\games"
+                            cur_game_folder = "${games_folder}\\${game}"
+
+                            //add the summary report to the games folder
+                            bat """
+                                if NOT exist ${games_folder} mkdir ${games_folder}
+                                if exist ${cur_game_folder} rd /q /s ${cur_game_folder}
+                                mkdir ${cur_game_folder}
+                                xcopy summary_report.json ${cur_game_folder}
+                            """
                         }
                     }
                 }
@@ -1115,6 +1147,17 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
     }
 }
 
+def stash_results_for_jenkins(){
+    script {
+            def now = new Date()
+            cur_time = now.format("yyyyMMddHHmm", TimeZone.getTimeZone('UTC'))
+        }
+
+    //copy temp files
+    bat """robocopy ${TEMP_RESULTS_DIR} ${RESULTS_DIR}\\${cur_time} /E """
+    //remove temp directory 
+    bat """if exist ${TEMP_RESULTS_DIR} rd /q /s ${TEMP_RESULTS_DIR} """
+}
 
 def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
     String testsBranch = LUXSDK_AUTOJOB_CONFIG['testsBranch'],
@@ -1233,6 +1276,7 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
         println(e.getMessage())
         throw e
     } finally {
+        stash_results_for_jenkins()
         problemMessageManager.publishMessages()
     }
 
