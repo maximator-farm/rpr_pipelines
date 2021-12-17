@@ -1279,7 +1279,7 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
         println(e.getMessage())
         throw e
     } finally {
-        stash_results_for_jenkins()
+        //stash_results_for_jenkins()
         problemMessageManager.publishMessages()
     }
 
