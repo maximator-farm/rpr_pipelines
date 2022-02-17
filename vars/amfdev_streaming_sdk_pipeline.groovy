@@ -1019,7 +1019,7 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                             //DEPLOYING RESULTS FOLDER -------------------------------------
 
                             //first create the job folder if it doesnt already exist
-                            bat """ net use ${AMF_RESULTS_SHARE} """
+                            bat """ net use ${AMF_RESULTS_SHARE} /user:amd Amd1234"""
                             job_folder = "${AMF_RESULTS_SHARE}\\" + env.JOB_NAME.replace(" ","_")
 
                             bat """ if NOT exist ${job_folder} mkdir ${job_folder} """
