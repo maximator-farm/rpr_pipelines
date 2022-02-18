@@ -1288,7 +1288,10 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
         println(e.getMessage())
         throw e
     } finally {
-        //stash_results_for_jenkins()
+        build job: 'Luxoft Streaming SDK/LuxSDK Post Test Results', parameters: [
+        string(name: 'LSDK_JOB_NAME', value: env.JOB_NAME), 
+        string(name: 'LSDK_BUILD_URL', value: env.BUILD_URL), 
+        string(name: 'LSDK_BUILD_NUMBER', value: env.BUILD_NUMBER)]
         problemMessageManager.publishMessages()
     }
 
