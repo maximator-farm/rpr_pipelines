@@ -27,6 +27,7 @@ import static autojobconfig.getConfig as getConfig
 @Field Boolean LUXSDK_POST_TO_CONFLUENCE_ENABLE = true
 @Field String RESULTS_DIR = AMF_JENKINS_DIR + '\\4test\\tests-amf\\_results'
 @Field String TEMP_RESULTS_DIR = RESULTS_DIR + '\\_temp'
+@Field String AMF_RESULTS_SHARE = '\\\\amf-farm\\Luxoft_Streaming_SDK_Results'
 //'games' : 'LoL,HeavenDX11,ApexLegends,ValleyDX11'
 @Field final def LUXSDK_AUTOJOB_CONFIG = [
       'projectBranch' :             'origin/amd/stg/amf',
@@ -866,7 +867,9 @@ def executePreBuild(Map options) {
 }
 
 
+def deploy_results_to_amf_shared(){
 
+}
 
 def executeDeploy(Map options, List platformList, List testResultList, String game) {
     try {
@@ -1013,27 +1016,33 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
                                 print('POSTING TO CONFLUENCE IS DISABLED')
                             }
 
-                            print('Moving to temporary location...')
-                            //we move the summary report to the temp folder in AMF-Jenkins
+                            //DEPLOYING RESULTS FOLDER -------------------------------------
 
-                            //first check if the directory exists and make the directory if not
-                            bat """if NOT exist ${TEMP_RESULTS_DIR} mkdir ${TEMP_RESULTS_DIR}"""
+                            //first create the job folder if it doesnt already exist
+                            bat """ net use ${AMF_RESULTS_SHARE} /user:amd Amd1234"""
+                            job_folder = "${AMF_RESULTS_SHARE}\\" + env.JOB_NAME.replace(" ","_").replace("/","_")
 
-                            info_folder = TEMP_RESULTS_DIR + "\\info"
+                            bat """ if NOT exist ${job_folder} mkdir ${job_folder} """
 
-                            //add info to the info folder
+                            //then create build folder
+                            build_folder = "${job_folder}\\${env.BUILD_NUMBER}"
+
+                            bat """ if NOT exist ${build_folder} mkdir ${build_folder} """
+
+                            //now check if the info folder already exists for us to put stuff
+                            info_folder = "${build_folder}\\info"
+
                             bat """
                                 if exist ${info_folder} goto :done_info
                                 mkdir ${info_folder}
-                                echo ${env.BUILD_URL.replace("%","%%")} > ${info_folder}\\build_url.txt
                                 echo ${options.commitSHA} > ${info_folder}\\commit_hash.txt
                                 echo ${options.commitAuthor} > ${info_folder}\\commit_author.txt
                                 :done_info
                             """
 
-                            games_folder = TEMP_RESULTS_DIR + "\\games"
+                            //now create the games folder
+                            games_folder = "${build_folder}\\games"
                             cur_game_folder = "${games_folder}\\${game}"
-
                             //add the summary report to the games folder
                             bat """
                                 if NOT exist ${games_folder} mkdir ${games_folder}
@@ -1279,7 +1288,18 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
         println(e.getMessage())
         throw e
     } finally {
-        //stash_results_for_jenkins()
+        if (LUXSDK_POST_TO_CONFLUENCE_ENABLE){
+            post_str = 'TRUE'
+        } else{
+            post_str = 'FALSE'
+        }
+        build job: 'Luxoft Streaming SDK/LuxSDK Post Test Results', parameters: [
+        string(name: 'LSDK_JOB_NAME', value: env.JOB_NAME), 
+        string(name: 'LSDK_BUILD_URL', value: env.BUILD_URL.replace("%", "%%")), 
+        string(name: 'LSDK_BUILD_NUMBER', value: env.BUILD_NUMBER),
+        string(name: 'EMAIL_RECIPIENTS', value: AMF_Email_Recipients),
+        string(name: 'POST_TO_CONFLUENCE', value: post_str)
+        ]
         problemMessageManager.publishMessages()
     }
 
