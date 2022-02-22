@@ -601,30 +601,41 @@ def executeBuildWindows(Map options) {
 
             dir("StreamingSDK\\${AMF_SOLUTION_DIR}") {
                 GithubNotificator.updateStatus("Build", "Windows", "in_progress", options, NotificationConfiguration.BUILD_SOURCE_CODE_START_MESSAGE, "${BUILD_URL}/artifact/${logName}")
-                //coying over the ffmpeg file
-                bat """
-                    echo Copying ffmpeg files...
-                    cd ../../../../../
-                    set Luxoft_Dir=%CD%
-                    cd ${AMF_BOOTSTRAP_REPO}
-                    git checkout amd/stg/amf
-                    git pull
-                    if NOT %ERRORLEVEL% EQU 0 git pull
-                    if NOT %ERRORLEVEL% EQU 0 echo WARNING: Issue with bootstrap repo
-                    rd /q /s %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg
-                    robocopy ${AMF_BOOTSTRAP_REPO}\\${AMF_THIRDPARTY}\\ffmpeg %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg /E /log:C:\\JN\\ffmpegcopy.log
-                    if %ERRORLEVEL% LSS 4 set /a ERRORLEVEL=0
+                try{
+                    print('Getting ffmpeg files....')
+                    bat """
+                        cd ..\\..\\..\\..\\..\\
+                        set Luxoft_Dir=%CD%
+                        cd ${AMF_BOOTSTRAP_REPO}
+                        git checkout amd/stg/amf
+                        git pull
+                        if NOT %ERRORLEVEL% EQU 0 git pull
+                        if NOT %ERRORLEVEL% EQU 0 echo WARNING: Issue with bootstrap repo
+                        rd /q /s %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg
+                        robocopy ${AMF_BOOTSTRAP_REPO}\\${AMF_THIRDPARTY}\\ffmpeg %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg /E /log:C:\\JN\\ffmpegcopy.log
+                        if %ERRORLEVEL% LSS 4 set /a ERRORLEVEL=0
+                    """
+                } catch (e) {
+                    print('AMF_JENKINS_ERROR: Could not get ffmpeg files')
+                }
 
-                    echo Building Project...
-                    cd %Luxoft_Dir%\\${AMF_SOLUTION_DIR}
+                print("Building Solution...")
+                bat """
                     set msbuild="${msBuildPath}"
                     %msbuild% ${buildSln} /target:build /maxcpucount /nodeReuse:false /property:Configuration=${winBuildConf};Platform=x64 >> ..\\..\\..\\..\\${logName} 2>&1
-
-                    set package_dir=%Luxoft_Dir%\\${BUILD_PACKAGE_PATH}
-                    echo =========== RUNNING BINARY PACKAGER ===========
-                    if exist %package_dir% cd %package_dir% && %package_dir%\\packageStreaming_SDK_Binaries.bat /nobuild
-                    echo =========== END BINARY PACKAGER ===============
                 """
+
+                try{
+                    print('AMF: Archiving Binaries...')
+                    bat """
+                        cd ..\\..\\..\\..\\..\\
+                        set Luxoft_Dir=%CD%
+                        set package_dir=%Luxoft_Dir%\\${BUILD_PACKAGE_PATH}
+                        if exist %package_dir% cd %package_dir% && %package_dir%\\packageStreaming_SDK_Binaries.bat /nobuild
+                    """
+                } catch (e) {
+                    print('AMF_JENKINS_ERROR: Could not archive the build binaries')
+                }
 
             }
 
@@ -983,73 +994,58 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
 
 
                         dir("..\\summaryTestResults") {
-                            if (LUXSDK_POST_TO_CONFLUENCE_ENABLE){
-                                print('=============== LUXOFT SDK POST TO CONFLUENCE =======================')
-                                //we should be posting to confluence
-                                print('Printing Required Arguments:')
-                                print("COMMIT HASH: ${options.commitSHA}")
-                                print("COMMIT AUTHOR: ${options.commitAuthor}")
-                                print("BUILD URL: ${env.BUILD_URL}")
-                                print("GAME: ${game}")
-                                print("SUMMARY JSON FILE: summary_report.json")
+                            print("AMF: DEPLOY RESULTS: ${env.JOB_NAME}.${env.BUILD_NUMBER}.${game} ==> ${AMF_RESULTS_SHARE}")
+                            try {
+                                // step([
+                                //     $class: 'CopyArtifact', 
+                                //     filter: '**/vs2019x32Release/*.*', 
+                                //     fingerprintArtifacts: true, 
+                                //     flatten: true, 
+                                //     projectName: AMF_Job_Name, 
+                                //     selector: [
+                                //         $class: 'SpecificBuildSelector', 
+                                //         buildNumber: AMF_JOB_BUILD_NUMBER
+                                //     ], 
+                                //     target: 'vs2019x32Release'
+                                // ])
+                                //DEPLOYING RESULTS FOLDER -------------------------------------
 
-                                if (fileExists('summary_report.json')){
-                                    cmd_args = ['-commit', options.commitSHA, 
-                                                '-author', "\"${options.commitAuthor}\"", 
-                                                '-buildurl', env.BUILD_URL.replace("%","%%"), 
-                                                '-game', game,
-                                                '-json_file', 'summary_report.json']
+                                //first create the job folder if it doesnt already exist
+                                bat """ net use ${AMF_RESULTS_SHARE} /user:amd Amd1234"""
+                                job_folder = "${AMF_RESULTS_SHARE}\\" + env.JOB_NAME.replace(" ","_").replace("/","_")
 
-                                    cmd_arg_str = cmd_args[0]
-                                    for(int i=1; i<cmd_args.size(); i++){
-                                        cmd_arg_str = cmd_arg_str + ' ' + cmd_args[i]
-                                    }
+                                bat """ if NOT exist ${job_folder} mkdir ${job_folder} """
 
-                                    bat JENKINS_PYTHON+' '+LUXSDK_POST_TO_CONFLUENCE_SCRIPT+' '+cmd_arg_str
+                                //then create build folder
+                                build_folder = "${job_folder}\\${env.BUILD_NUMBER}"
 
-                                } else {
-                                    print('Cannot run post to confluence because summary_report.json does not exist')
-                                }
+                                bat """ if NOT exist ${build_folder} mkdir ${build_folder} """
 
-                                print('=============== END LUXOFT SDK POST TO CONFLUENCE =======================') 
-                            } else {
-                                print('POSTING TO CONFLUENCE IS DISABLED')
+                                //now check if the info folder already exists for us to put stuff
+                                info_folder = "${build_folder}\\info"
+
+                                bat """
+                                    if exist ${info_folder} goto :done_info
+                                    mkdir ${info_folder}
+                                    echo ${options.commitSHA} > ${info_folder}\\commit_hash.txt
+                                    echo ${options.commitAuthor} > ${info_folder}\\commit_author.txt
+                                    :done_info
+                                """
+
+                                //now create the games folder
+                                games_folder = "${build_folder}\\games"
+                                cur_game_folder = "${games_folder}\\${game}"
+                                //add the summary report to the games folder
+                                bat """
+                                    if NOT exist ${games_folder} mkdir ${games_folder}
+                                    if exist ${cur_game_folder} rd /q /s ${cur_game_folder}
+                                    mkdir ${cur_game_folder}
+                                    xcopy summary_report.json ${cur_game_folder}
+                                """
+                            } catch (e) {
+                                String errormsg = e.getMessage()
+                                print("AMF_JENKINS_ERROR: DEPLOY RESULTS ${env.JOB_NAME}.${env.BUILD_NUMBER}.${game} FAILED!: ${errormsg}")
                             }
-
-                            //DEPLOYING RESULTS FOLDER -------------------------------------
-
-                            //first create the job folder if it doesnt already exist
-                            bat """ net use ${AMF_RESULTS_SHARE} /user:amd Amd1234"""
-                            job_folder = "${AMF_RESULTS_SHARE}\\" + env.JOB_NAME.replace(" ","_").replace("/","_")
-
-                            bat """ if NOT exist ${job_folder} mkdir ${job_folder} """
-
-                            //then create build folder
-                            build_folder = "${job_folder}\\${env.BUILD_NUMBER}"
-
-                            bat """ if NOT exist ${build_folder} mkdir ${build_folder} """
-
-                            //now check if the info folder already exists for us to put stuff
-                            info_folder = "${build_folder}\\info"
-
-                            bat """
-                                if exist ${info_folder} goto :done_info
-                                mkdir ${info_folder}
-                                echo ${options.commitSHA} > ${info_folder}\\commit_hash.txt
-                                echo ${options.commitAuthor} > ${info_folder}\\commit_author.txt
-                                :done_info
-                            """
-
-                            //now create the games folder
-                            games_folder = "${build_folder}\\games"
-                            cur_game_folder = "${games_folder}\\${game}"
-                            //add the summary report to the games folder
-                            bat """
-                                if NOT exist ${games_folder} mkdir ${games_folder}
-                                if exist ${cur_game_folder} rd /q /s ${cur_game_folder}
-                                mkdir ${cur_game_folder}
-                                xcopy summary_report.json ${cur_game_folder}
-                            """
                         }
                     }
                 }
