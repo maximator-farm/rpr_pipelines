@@ -1293,7 +1293,7 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
         } else{
             post_str = 'FALSE'
         }
-        build job: 'Luxoft Streaming SDK/LuxSDK Post Test Results', parameters: [
+        build job: 'Luxoft Streaming SDK/LuxSDK Post Test Actions', parameters: [
         string(name: 'LSDK_JOB_NAME', value: env.JOB_NAME), 
         string(name: 'LSDK_BUILD_URL', value: env.BUILD_URL.replace("%", "%%")), 
         string(name: 'LSDK_BUILD_NUMBER', value: env.BUILD_NUMBER),
