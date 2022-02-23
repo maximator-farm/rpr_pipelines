@@ -25,6 +25,8 @@ import static autojobconfig.getConfig as getConfig
 @Field final String JENKINS_PYTHON = AMF_JENKINS_DIR+"\\python\\Python37\\python"
 @Field final String LUXSDK_POST_TO_CONFLUENCE_SCRIPT = AMF_JENKINS_DIR+"\\4test\\tests-amf\\confluence_and_email_scripts\\post_to_confluence_luxsdk.py"
 @Field Boolean LUXSDK_POST_TO_CONFLUENCE_ENABLE = true
+@Field Boolean LUXDSK_IS_MANUAL_BUILD = false
+@Field String BUILD_AUTHOR_EMAIL = ''
 @Field String RESULTS_DIR = AMF_JENKINS_DIR + '\\4test\\tests-amf\\_results'
 @Field String TEMP_RESULTS_DIR = RESULTS_DIR + '\\_temp'
 @Field String AMF_RESULTS_SHARE = '\\\\amf-farm\\Luxoft_Streaming_SDK_Results'
@@ -46,7 +48,8 @@ import static autojobconfig.getConfig as getConfig
       'clientCollectTraces' :       false,
       'serverCollectTraces' :       false,
       'storeOnNAS' :                false,
-      'post_to_confluence':         true
+      'is_manual_build':               false,
+      'build_author_email':         ''
 ]
 
 
@@ -1183,15 +1186,12 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
     String games = LUXSDK_AUTOJOB_CONFIG['games'],
     String androidBuildConfiguration = LUXSDK_AUTOJOB_CONFIG['androidBuildConfiguration'],
     Boolean storeOnNAS = LUXSDK_AUTOJOB_CONFIG['storeOnNAS'],
-    Boolean post_to_confluence = LUXSDK_AUTOJOB_CONFIG['post_to_confluence']
+    Boolean manual_build = LUXSDK_AUTOJOB_CONFIG['is_manual_build'],
+    String build_author_email = LUXSDK_AUTOJOB_CONFIG['build_author_email']
     )
 {
-    print('IN SCRIPT')
-    if (post_to_confluence){
-        LUXSDK_POST_TO_CONFLUENCE_ENABLE = true
-    } else {
-        LUXSDK_POST_TO_CONFLUENCE_ENABLE = false
-    }
+    LUXDSK_IS_MANUAL_BUILD = manual_build
+    BUILD_AUTHOR_EMAIL = build_author_email
 
 
     ProblemMessageManager problemMessageManager = new ProblemMessageManager(this, currentBuild)
@@ -1278,24 +1278,21 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
         }
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
+
+        build job: 'Luxoft Streaming SDK/LuxSDK Post Test Actions', parameters: [
+        string(name: 'LSDK_JOB_NAME',       value: env.JOB_NAME), 
+        string(name: 'LSDK_BUILD_URL',      value: env.BUILD_URL), 
+        string(name: 'LSDK_BUILD_NUMBER',   value: env.BUILD_NUMBER),
+        string(name: 'EMAIL_RECIPIENTS',    value: AMF_Email_Recipients),
+        string(name: 'IS_MANUAL_BUILD',     value: (LUXDSK_IS_MANUAL_BUILD) ? 'TRUE' : 'FALSE' ),
+        string(name: 'BUILD_AUTHOR_EMAIL',  value: (LUXDSK_IS_MANUAL_BUILD) ? BUILD_AUTHOR_EMAIL : '' )
+        ]
     } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString())
         println(e.getMessage())
         throw e
     } finally {
-        if (LUXSDK_POST_TO_CONFLUENCE_ENABLE){
-            post_str = 'TRUE'
-        } else{
-            post_str = 'FALSE'
-        }
-        build job: 'Luxoft Streaming SDK/LuxSDK Post Test Actions', parameters: [
-        string(name: 'LSDK_JOB_NAME', value: env.JOB_NAME), 
-        string(name: 'LSDK_BUILD_URL', value: env.BUILD_URL.replace("%", "%%")), 
-        string(name: 'LSDK_BUILD_NUMBER', value: env.BUILD_NUMBER),
-        string(name: 'EMAIL_RECIPIENTS', value: AMF_Email_Recipients),
-        string(name: 'POST_TO_CONFLUENCE', value: post_str)
-        ]
         problemMessageManager.publishMessages()
     }
 
