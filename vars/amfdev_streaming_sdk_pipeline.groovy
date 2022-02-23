@@ -1155,19 +1155,56 @@ def executeDeploy(Map options, List platformList, List testResultList, String ga
     }
 }
 
-def stash_results_for_jenkins(){
-    
-    //copy temp files
-    bat """
-        for /F "usebackq tokens=1,2 delims==" %%i in (`wmic os get LocalDateTime /VALUE 2^>NUL`) do if '.%%i.'=='.LocalDateTime.' set ldt=%%j
-        REM set ldt=%ldt:~0,4%-%ldt:~4,2%-%ldt:~6,2% %ldt:~8,2%:%ldt:~10,2%:%ldt:~12,6%
-        set LOCALTESTTIME=%ldt:~0,4%%ldt:~4,2%%ldt:~6,2%%ldt:~8,2%%ldt:~10,2%
+def amf_jenkins_post_test_actions(){
+    node ("MasterNode"){
+        //copy the results from the temp results folder 
+        print('Copying build files to archive')
 
-        robocopy ${TEMP_RESULTS_DIR} ${RESULTS_DIR}\\%LOCALTESTTIME% /E
+        //make the archive folder
+        String local_results_folder = "E:\\Luxoft_Streaming_SDK_Results\\" + env.JOB_NAME.replace(" ","_").replace("/","_") + "\\${env.BUILD_NUMBER}"
 
-    """
-    //remove temp directory
-    bat """if exist ${TEMP_RESULTS_DIR} rd /q /s ${TEMP_RESULTS_DIR} """
+        //get the jenkins archive folder for the build
+        String jenkins_folder = "E:\\Jenkins\\jobs"
+        String job_folder = ""
+        for (String s : env.JOB_NAME.split("/")) {
+            job_folder = (job_folder == "") ? s : "${job_folder}\\jobs\\${s}"
+        }
+
+        String archive_folder = "${jenkins_folder}\\${job_folder}\\${env.BUILD_NUMBER}\\archive"
+
+        //check if the folder exists, should already exist
+        try {
+            bat """
+                if not exist ${archive_folder} exit 1
+                exit 0
+            """
+        } catch(e) {
+            print("Archive Folder Exists for Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+        }
+
+        String archive_results_folder = "${archive_folder}\\amf_results"
+
+        //make results and copy it over
+        try {
+            bat """
+                mkdir ${archive_results_folder}
+                robocopy ${local_results_folder} ${archive_results_folder} /mt:32 /mir /FFT
+                if %ERRORLEVEL% LSS 4 exit 0
+            """
+        } catch(e) {
+            print("Could not copy and deploy local results folder")
+        }
+
+    }
+
+    build job: 'Luxoft Streaming SDK/LuxSDK Post Test Actions', parameters: [
+        string(name: 'LSDK_JOB_NAME',       value: env.JOB_NAME), 
+        string(name: 'LSDK_BUILD_URL',      value: env.BUILD_URL), 
+        string(name: 'LSDK_BUILD_NUMBER',   value: env.BUILD_NUMBER),
+        string(name: 'EMAIL_RECIPIENTS',    value: AMF_Email_Recipients),
+        string(name: 'IS_MANUAL_BUILD',     value: (LUXDSK_IS_MANUAL_BUILD) ? 'TRUE' : 'FALSE' ),
+        string(name: 'BUILD_AUTHOR_EMAIL',  value: (LUXDSK_IS_MANUAL_BUILD) ? BUILD_AUTHOR_EMAIL : '' )
+    ]
 }
 
 def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
@@ -1279,14 +1316,8 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
 
-        build job: 'Luxoft Streaming SDK/LuxSDK Post Test Actions', parameters: [
-        string(name: 'LSDK_JOB_NAME',       value: env.JOB_NAME), 
-        string(name: 'LSDK_BUILD_URL',      value: env.BUILD_URL), 
-        string(name: 'LSDK_BUILD_NUMBER',   value: env.BUILD_NUMBER),
-        string(name: 'EMAIL_RECIPIENTS',    value: AMF_Email_Recipients),
-        string(name: 'IS_MANUAL_BUILD',     value: (LUXDSK_IS_MANUAL_BUILD) ? 'TRUE' : 'FALSE' ),
-        string(name: 'BUILD_AUTHOR_EMAIL',  value: (LUXDSK_IS_MANUAL_BUILD) ? BUILD_AUTHOR_EMAIL : '' )
-        ]
+        amf_jenkins_post_test_actions()
+
     } catch(e) {
         currentBuild.result = "FAILURE"
         println(e.toString())
