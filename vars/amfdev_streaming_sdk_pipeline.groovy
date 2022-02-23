@@ -1170,7 +1170,7 @@ def amf_jenkins_post_test_actions(){
             job_folder = (job_folder == "") ? s : "${job_folder}\\jobs\\${s}"
         }
 
-        String archive_folder = "${jenkins_folder}\\${job_folder}\\${env.BUILD_NUMBER}\\archive"
+        String archive_folder = "${jenkins_folder}\\${job_folder}\\builds\\${env.BUILD_NUMBER}\\archive"
 
         //check if the folder exists, should already exist
         try {
@@ -1178,21 +1178,22 @@ def amf_jenkins_post_test_actions(){
                 if not exist ${archive_folder} exit 1
                 exit 0
             """
-        } catch(e) {
-            print("Archive Folder Exists for Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
-        }
+            String archive_results_folder = "${archive_folder}\\amf_results"
 
-        String archive_results_folder = "${archive_folder}\\amf_results"
-
-        //make results and copy it over
-        try {
+            //make results and copy it over
             bat """
                 mkdir ${archive_results_folder}
                 robocopy ${local_results_folder} "${archive_results_folder}" /mt:32 /mir /FFT
                 if %ERRORLEVEL% LSS 4 exit 0
             """
+
+            //delete old folder
+            bat """
+                rd /q /s ${local_results_folder}
+                exit 0
+            """
         } catch(e) {
-            print("Could not copy and deploy local results folder")
+            print("Could not archive job: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
 
     }
