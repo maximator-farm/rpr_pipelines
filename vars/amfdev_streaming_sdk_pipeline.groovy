@@ -1188,7 +1188,7 @@ def amf_jenkins_post_test_actions(){
         try {
             bat """
                 mkdir ${archive_results_folder}
-                robocopy ${local_results_folder} ${archive_results_folder} /mt:32 /mir /FFT
+                robocopy ${local_results_folder} "${archive_results_folder}" /mt:32 /mir /FFT
                 if %ERRORLEVEL% LSS 4 exit 0
             """
         } catch(e) {
