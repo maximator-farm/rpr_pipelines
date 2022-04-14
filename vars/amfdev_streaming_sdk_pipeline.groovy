@@ -1318,7 +1318,7 @@ def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
 
         multiplatform_pipeline(platforms, this.&executePreBuild, this.&executeBuild, this.&executeTests, this.&executeDeploy, options)
 
-        amf_jenkins_post_test_actions()
+        if (currentBuild.result != "ABORTED" ) amf_jenkins_post_test_actions()
 
     } catch(e) {
         currentBuild.result = "FAILURE"
