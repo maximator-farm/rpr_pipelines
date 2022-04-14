@@ -1182,7 +1182,7 @@ def amf_jenkins_post_test_actions(){
 
             //make results and copy it over
             bat """
-                mkdir ${archive_results_folder}
+                mkdir "${archive_results_folder}"
                 robocopy ${local_results_folder} "${archive_results_folder}" /mt:32 /mir /FFT
                 if %ERRORLEVEL% LSS 4 exit 0
             """
@@ -1192,20 +1192,21 @@ def amf_jenkins_post_test_actions(){
                 rd /q /s ${local_results_folder}
                 exit 0
             """
+
+            //run post test actions if everything went properly
+            build job: 'Luxoft Streaming SDK/LuxSDK Post Test Actions', parameters: [
+                string(name: 'LSDK_JOB_NAME',       value: env.JOB_NAME), 
+                string(name: 'LSDK_BUILD_URL',      value: env.BUILD_URL), 
+                string(name: 'LSDK_BUILD_NUMBER',   value: env.BUILD_NUMBER),
+                string(name: 'EMAIL_RECIPIENTS',    value: AMF_Email_Recipients),
+                string(name: 'IS_MANUAL_BUILD',     value: (LUXDSK_IS_MANUAL_BUILD) ? 'TRUE' : 'FALSE' ),
+                string(name: 'BUILD_AUTHOR_EMAIL',  value: (LUXDSK_IS_MANUAL_BUILD) ? BUILD_AUTHOR_EMAIL : '' )
+            ]
         } catch(e) {
             print("Could not archive job: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
 
     }
-
-    build job: 'Luxoft Streaming SDK/LuxSDK Post Test Actions', parameters: [
-        string(name: 'LSDK_JOB_NAME',       value: env.JOB_NAME), 
-        string(name: 'LSDK_BUILD_URL',      value: env.BUILD_URL), 
-        string(name: 'LSDK_BUILD_NUMBER',   value: env.BUILD_NUMBER),
-        string(name: 'EMAIL_RECIPIENTS',    value: AMF_Email_Recipients),
-        string(name: 'IS_MANUAL_BUILD',     value: (LUXDSK_IS_MANUAL_BUILD) ? 'TRUE' : 'FALSE' ),
-        string(name: 'BUILD_AUTHOR_EMAIL',  value: (LUXDSK_IS_MANUAL_BUILD) ? BUILD_AUTHOR_EMAIL : '' )
-    ]
 }
 
 def call(String projectBranch = LUXSDK_AUTOJOB_CONFIG['projectBranch'],
