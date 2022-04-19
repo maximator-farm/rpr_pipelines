@@ -15,7 +15,7 @@ import static autojobconfig.getConfig as getConfig
 @Field final String BASE_PROJECT_DIR = "drivers\\amf\\stable"
 @Field final String AMF_SOLUTION = "AMF_All"
 @Field final String AMF_SOLUTION_DIR = "drivers\\amf\\stable\\build\\solution"
-@Field final String AMF_BOOTSTRAP_REPO = "C:\\AMFSDK"
+@Field final String AMF_RADEON_DRIVERS = "C:\\AMF-Radeon-Drivers"
 @Field final String AMF_THIRDPARTY = "drivers\\amf\\Thirdparty"
 
 @Field final String BINARY_PACKAGER_SCRIPT = "drivers\\amf\\stable\\build\\package\\packageStreaming_SDK_Binaries.bat"
@@ -609,14 +609,9 @@ def executeBuildWindows(Map options) {
                     bat """
                         cd ..\\..\\..\\..\\..\\
                         set Luxoft_Dir=%CD%
-                        cd ${AMF_BOOTSTRAP_REPO}
-                        git checkout amd/stg/amf
-                        git pull
-                        if NOT %ERRORLEVEL% EQU 0 git pull
-                        if NOT %ERRORLEVEL% EQU 0 echo WARNING: Issue with bootstrap repo
-                        rd /q /s %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg
-                        robocopy ${AMF_BOOTSTRAP_REPO}\\${AMF_THIRDPARTY}\\ffmpeg %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg /E /log:C:\\JN\\ffmpegcopy.log
-                        if %ERRORLEVEL% LSS 4 set /a ERRORLEVEL=0
+                        robocopy ${AMF_RADEON_DRIVERS}\\${AMF_THIRDPARTY}\\ffmpeg %Luxoft_Dir%\\${AMF_THIRDPARTY}\\ffmpeg /mir /mt:32 /FFT /log:C:\\JN\\ffmpegcopy.log
+                        if %ERRORLEVEL% GEQ 4 exit 1
+                        exit 0
                     """
                 } catch (e) {
                     print('AMF_JENKINS_ERROR: Could not get ffmpeg files')
